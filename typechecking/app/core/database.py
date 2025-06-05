@@ -1,9 +1,8 @@
 import pymongo
 import pymongo.database
 import pymongo.collection
-import pymongo.database
-import pymongo.errors
-from config import settings
+
+from app.core.config import settings
 
 
 class MongoConnection:
@@ -37,7 +36,7 @@ class MongoConnection:
     def count_documents(self, filter: dict = {}) -> int:
         """Count the number of documents in the collection."""
         return self.__collection.count_documents(filter)
-    
+
     def find(self, filter: dict = {}, projection: dict = None):
         """Find documents in the collection."""
         return self.__collection.find(filter, projection)

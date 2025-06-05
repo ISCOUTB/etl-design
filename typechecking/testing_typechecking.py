@@ -6,7 +6,7 @@ import pandas as pd
 from json import loads
 from jsonschema import validate
 
-from mongo_connection import mongo_connection
+from app.core.database import mongo_connection
 
 import threading
 
