@@ -1,6 +1,6 @@
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import MongoDsn, computed_field, BeforeValidator
+from pydantic import MongoDsn, computed_field, BeforeValidator, AmqpDsn
 
 from typing import Any, Annotated
 
@@ -35,9 +35,33 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-
+    # API Configuration
     API_V1_STR: str
     CORS_ORIGINS: Annotated[list[str] | str, BeforeValidator(split_list)]
+
+    # RabbitMQ Configuration
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: int
+    RABBITMQ_VHOST: str
+    RABBITMQ_USER: str
+    RABBITMQ_PASSWORD: str
+
+    @computed_field
+    @property
+    def RABBITMQ_URI(self) -> AmqpDsn:
+        return MultiHostUrl.build(
+            scheme="amqp",
+            username=self.RABBITMQ_USER,
+            password=self.RABBITMQ_PASSWORD,
+            host=self.RABBITMQ_HOST,
+            port=self.RABBITMQ_PORT,
+            path=self.RABBITMQ_VHOST,
+        )
+
+    # Workers Configuration
+    MAX_WORKERS: int = 1
+    WORKER_CONCURRENCY: int = 4
+    WORKER_PREFETCH_COUNT: int = 1
 
     # MongoDB Configuration
     MONGO_HOST: str
