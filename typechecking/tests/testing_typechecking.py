@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 import pandas as pd
+import polars as pl
 
 from json import loads
 from jsonschema import validate
@@ -71,8 +72,9 @@ def main() -> None:
     csv_path = "./static/acme__users__sample1.csv"
     schema_path = "./static/acme__users_sample1.json"
 
-    df = pd.read_csv(csv_path)
-    print(df.head())
+    # df = pd.read_csv(csv_path)
+    df = pl.read_csv(csv_path)
+    print(df)
 
     with open(schema_path, "r") as file:
         schema = loads(file.read())
@@ -85,7 +87,7 @@ def main() -> None:
     threads = []
     for chunk in chunks:
         thread = threading.Thread(
-            target=validate_data, args=(chunk.to_dict(orient="records"), schema)
+            target=validate_data, args=(chunk.to_dicts(), schema)
         )
         threads.append(thread)
         thread.start()
