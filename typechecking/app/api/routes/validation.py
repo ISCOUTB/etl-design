@@ -1,69 +1,42 @@
+from fastapi import APIRouter, UploadFile
+from app.messaging.publishers import ValidationPublisher
 from app.schemas.api import ApiResponse
-from app.controllers.validation import validate_file_against_schema, get_validation_summary
-from fastapi import APIRouter, UploadFile, HTTPException
-
 
 router = APIRouter()
+publisher = ValidationPublisher()
 
 
 @router.post("/validate")
 async def validate(spreadsheet_file: UploadFile, import_name: str) -> ApiResponse:
     """
-    Endpoint to validate a spreadsheet file with its jsonschema.
-
-    This endpoint accepts a file upload and an import name, and returns the validation result.
-    Args:
-        spreadsheet_file (UploadFile): The file to validate.
-        import_name (str): The name of the import, used to identify the schema.
-
-    Returns:
-        ApiResponse: A dictionary containing the validation result.
+    Endpoint asíncrono para validación usando RabbitMQ
     """
     try:
-        # Validate the file against the schema
-        validation_result = await validate_file_against_schema(
-            file=spreadsheet_file,
-            import_name=import_name,
-            n_workers=4  # You can make this configurable
+        # Leer archivo
+        file_content = await spreadsheet_file.read()
+
+        # Metadatos
+        metadata = {
+            "filename": spreadsheet_file.filename,
+            "content_type": spreadsheet_file.content_type,
+            "size": len(file_content),
+        }
+
+        # Publish in RabbitMQ
+        task_id = publisher.publish_validation_request(
+            file_data=file_content, import_name=import_name, metadata=metadata
         )
-        
-        if not validation_result["success"]:
-            return ApiResponse(
-                status="error",
-                code=400,
-                message=validation_result["error"],
-                data=None
-            )
-        
-        # Get validation summary
-        summary = get_validation_summary(validation_result)
-        
-        # Determine response based on validation results
-        validation_data = validation_result["validation_results"]
-        
-        if validation_data["is_valid"]:
-            return ApiResponse(
-                status="success",
-                code=200,
-                message=f"File validation completed successfully. {summary['summary']}",
-                data={
-                    "validation_summary": summary,
-                    "validation_details": validation_data
-                }
-            )
-        else:
-            return ApiResponse(
-                status="warning",
-                code=200,
-                message=f"File validation completed with errors. {summary['summary']}",
-                data={
-                    "validation_summary": summary,
-                    "validation_details": validation_data
-                }
-            )
-            
+
+        return ApiResponse(
+            status="accepted",
+            code=202,
+            message="Validation request submitted successfully",
+            data={"task_id": task_id},
+        )
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during validation: {str(e)}"
+        return ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to submit validation request: {str(e)}",
         )
