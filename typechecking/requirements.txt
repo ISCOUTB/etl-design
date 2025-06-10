@@ -66,6 +66,9 @@ pydantic_core==2.33.2
 Pygments==2.19.1
 pymongo==4.13.0
 pyparsing==3.2.3
+alembic==1.13.1
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-multipart==0.0.20

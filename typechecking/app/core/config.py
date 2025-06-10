@@ -1,6 +1,6 @@
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import MongoDsn, computed_field, BeforeValidator, AmqpDsn
+from pydantic import computed_field, BeforeValidator, AmqpDsn, MongoDsn, PostgresDsn
 
 from typing import Any, Annotated
 
@@ -80,6 +80,25 @@ class Settings(BaseSettings):
             password=self.MONGO_INITDB_ROOT_PASSWORD,
             host=self.MONGO_HOST,
             port=self.MONGO_PORT,
+        )
+
+    # PostgreSQL Configuration
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+
+    @computed_field
+    @property
+    def POSTGRES_URI(self) -> PostgresDsn:
+        return MultiHostUrl.build(
+            scheme="postgresql+psycopg2",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_HOST,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
         )
 
 
