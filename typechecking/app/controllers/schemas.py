@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple
 from jsonschema import validate, ValidationError, Draft7Validator
 
 import pymongo.results
-from app.core.database import mongo_connection
+from app.core.database_mongo import mongo_connection
 
 
 def compare_schemas(schema1: dict, schema2: dict) -> bool:

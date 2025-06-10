@@ -1,13 +1,11 @@
 import os
 from datetime import datetime
 
-import pandas as pd
 import polars as pl
-
 from json import loads
 from jsonschema import validate
 
-from app.core.database import mongo_connection
+from app.core.database_mongo import mongo_connection
 
 import threading
 
