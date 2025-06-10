@@ -17,7 +17,7 @@ async def check_mongodb_connection() -> Dict[str, Any]:
 
         # Get server info
         server_info = await client.server_info()
-        await client.close()
+        client.close()
 
         return {
             "status": "healthy",

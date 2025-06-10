@@ -41,7 +41,7 @@ class ValidationPublisher:
 
         return task_id
 
-    def publish_schema_update(self, schema: Dict, import_name: str) -> str:
+    def publish_schema_update(self, schema: Dict, import_name: str, raw: bool) -> str:
         """Publish a schema update message to the RabbitMQ exchange."""
         task_id = str(uuid.uuid4())
 
@@ -50,6 +50,7 @@ class ValidationPublisher:
             "timestamp": datetime.now().isoformat(),
             "schema": schema,
             "import_name": import_name,
+            "raw": raw,
         }
 
         self._channel.basic_publish(

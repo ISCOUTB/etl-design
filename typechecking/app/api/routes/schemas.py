@@ -7,7 +7,7 @@ publisher = ValidationPublisher()
 
 
 @router.post("/{import_name}/upload")
-async def upload_schema(import_name: str, schema: dict) -> ApiResponse:
+async def upload_schema(import_name: str, schema: dict, raw: bool = False) -> ApiResponse:
     """
     Upload a schema for validation.
     This endpoint allows users to upload a JSON schema for validation purposes.
@@ -17,7 +17,7 @@ async def upload_schema(import_name: str, schema: dict) -> ApiResponse:
     """
     try:
         task_id = publisher.publish_schema_update(
-            schema=schema, import_name=import_name
+            schema=schema, import_name=import_name, raw=raw
         )
 
         return ApiResponse(

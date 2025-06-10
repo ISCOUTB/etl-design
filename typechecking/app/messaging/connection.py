@@ -35,6 +35,7 @@ class RabbitMQConnection:
 
             # Declare exchanges and queues
             self._setup_messaging_infrastructure()
+            return True
 
         except Exception as e:
             logger.error(f"Failed to connect to RabbitMQ: {e}")
@@ -68,7 +69,7 @@ class RabbitMQConnection:
         )
 
     @property
-    def channel(self) -> Optional[pika.channel.Channel]:
+    def channel(self) -> pika.channel.Channel:
         """Get the RabbitMQ channel."""
         if not self._channel or self._channel.is_closed:
             self.connect()

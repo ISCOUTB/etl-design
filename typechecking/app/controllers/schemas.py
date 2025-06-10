@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Dict, Tuple
 
-from jsonschema import validate, ValidationError
+from jsonschema import validate, ValidationError, Draft7Validator
 
 import pymongo.results
 from app.core.database import mongo_connection
@@ -55,22 +55,30 @@ def get_active_schema(import_name: str) -> Dict | None:
     return None
 
 
-def create_schema(**kwargs) -> Dict:
+def create_schema(raw: bool, kwargs) -> Dict:
     """
     Create a JSON schema from the provided keyword arguments.
 
     Args:
-        **kwargs: Key-value pairs representing the schema properties.
+        raw (bool): Indicates if the schema is raw or not.
+        kwargs: Key-value pairs representing the schema properties.
 
     Returns:
         Dict: The created JSON schema.
+
+    Raises:
+        SchemaError: If the raw schema is invalid.
     """
-    return {
-        "type": "object",
-        "properties": kwargs,
-        "required": list(kwargs.keys()),
-        "additionalProperties": False,
-    }
+    if not raw:
+        return {
+            "type": "object",
+            "properties": kwargs,
+            "required": list(kwargs.keys()),
+            "additionalProperties": False,
+        }
+
+    Draft7Validator.check_schema(kwargs)
+    return kwargs
 
 
 def save_schema(
