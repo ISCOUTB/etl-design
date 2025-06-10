@@ -1,0 +1,553 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "col_0-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_1-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_2-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_3-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_4-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_5-Boolean": {
+      "type": "boolean"
+    },
+    "col_6-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_7-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_8-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_9-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_10-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_11-String": {
+      "type": "string"
+    },
+    "col_12-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_13-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_14-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_15-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_16-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_17-Boolean": {
+      "type": "boolean"
+    },
+    "col_18-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_19-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_20-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_21-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_22-String": {
+      "type": "string"
+    },
+    "col_23-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_24-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_25-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_26-String": {
+      "type": "string"
+    },
+    "col_27-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_28-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_29-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_30-String": {
+      "type": "string"
+    },
+    "col_31-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_32-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_33-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_34-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_35-Boolean": {
+      "type": "boolean"
+    },
+    "col_36-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_37-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_38-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_39-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_40-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_41-Boolean": {
+      "type": "boolean"
+    },
+    "col_42-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_43-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_44-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_45-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_46-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_47-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_48-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_49-String": {
+      "type": "string"
+    },
+    "col_50-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_51-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_52-Boolean": {
+      "type": "boolean"
+    },
+    "col_53-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_54-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_55-String": {
+      "type": "string"
+    },
+    "col_56-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_57-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_58-String": {
+      "type": "string"
+    },
+    "col_59-String": {
+      "type": "string"
+    },
+    "col_60-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_61-String": {
+      "type": "string"
+    },
+    "col_62-Boolean": {
+      "type": "boolean"
+    },
+    "col_63-Boolean": {
+      "type": "boolean"
+    },
+    "col_64-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_65-Boolean": {
+      "type": "boolean"
+    },
+    "col_66-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_67-String": {
+      "type": "string"
+    },
+    "col_68-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_69-String": {
+      "type": "string"
+    },
+    "col_70-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_71-Boolean": {
+      "type": "boolean"
+    },
+    "col_72-Boolean": {
+      "type": "boolean"
+    },
+    "col_73-Boolean": {
+      "type": "boolean"
+    },
+    "col_74-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_75-String": {
+      "type": "string"
+    },
+    "col_76-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_77-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_78-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_79-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_80-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_81-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_82-Boolean": {
+      "type": "boolean"
+    },
+    "col_83-UInt8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_84-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_85-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_86-UInt32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_87-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_88-Boolean": {
+      "type": "boolean"
+    },
+    "col_89-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_90-Boolean": {
+      "type": "boolean"
+    },
+    "col_91-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "col_92-Int32": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_93-Boolean": {
+      "type": "boolean"
+    },
+    "col_94-Int8": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_95-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_96-Int16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_97-Boolean": {
+      "type": "boolean"
+    },
+    "col_98-UInt16": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "col_99-Float32": {
+      "type": "number",
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    }
+  },
+  "required": [
+    "col_0-UInt16",
+    "col_1-UInt8",
+    "col_2-Int16",
+    "col_3-Int8",
+    "col_4-UInt16",
+    "col_5-Boolean",
+    "col_6-Float32",
+    "col_7-UInt16",
+    "col_8-UInt32",
+    "col_9-Int32",
+    "col_10-UInt16",
+    "col_11-String",
+    "col_12-UInt8",
+    "col_13-UInt16",
+    "col_14-Int8",
+    "col_15-Int16",
+    "col_16-UInt32",
+    "col_17-Boolean",
+    "col_18-UInt8",
+    "col_19-UInt8",
+    "col_20-Float32",
+    "col_21-Int8",
+    "col_22-String",
+    "col_23-UInt32",
+    "col_24-Int8",
+    "col_25-UInt8",
+    "col_26-String",
+    "col_27-Int16",
+    "col_28-UInt16",
+    "col_29-Int32",
+    "col_30-String",
+    "col_31-UInt8",
+    "col_32-Int8",
+    "col_33-UInt16",
+    "col_34-UInt8",
+    "col_35-Boolean",
+    "col_36-Int32",
+    "col_37-UInt32",
+    "col_38-UInt32",
+    "col_39-Int32",
+    "col_40-Float32",
+    "col_41-Boolean",
+    "col_42-Int16",
+    "col_43-Int32",
+    "col_44-Int32",
+    "col_45-Float32",
+    "col_46-Float32",
+    "col_47-UInt8",
+    "col_48-UInt8",
+    "col_49-String",
+    "col_50-Float32",
+    "col_51-UInt32",
+    "col_52-Boolean",
+    "col_53-Int32",
+    "col_54-UInt32",
+    "col_55-String",
+    "col_56-Float32",
+    "col_57-Int16",
+    "col_58-String",
+    "col_59-String",
+    "col_60-UInt32",
+    "col_61-String",
+    "col_62-Boolean",
+    "col_63-Boolean",
+    "col_64-Int16",
+    "col_65-Boolean",
+    "col_66-UInt16",
+    "col_67-String",
+    "col_68-Int32",
+    "col_69-String",
+    "col_70-Float32",
+    "col_71-Boolean",
+    "col_72-Boolean",
+    "col_73-Boolean",
+    "col_74-UInt32",
+    "col_75-String",
+    "col_76-Int16",
+    "col_77-Int16",
+    "col_78-Int32",
+    "col_79-UInt32",
+    "col_80-Float32",
+    "col_81-UInt16",
+    "col_82-Boolean",
+    "col_83-UInt8",
+    "col_84-UInt16",
+    "col_85-UInt32",
+    "col_86-UInt32",
+    "col_87-UInt16",
+    "col_88-Boolean",
+    "col_89-Int8",
+    "col_90-Boolean",
+    "col_91-Float32",
+    "col_92-Int32",
+    "col_93-Boolean",
+    "col_94-Int8",
+    "col_95-UInt16",
+    "col_96-Int16",
+    "col_97-Boolean",
+    "col_98-UInt16",
+    "col_99-Float32"
+  ],
+  "additionalProperties": false
+}
