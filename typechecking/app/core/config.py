@@ -1,6 +1,13 @@
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import computed_field, BeforeValidator, AmqpDsn, MongoDsn, PostgresDsn
+from pydantic import (
+    computed_field,
+    BeforeValidator,
+    AmqpDsn,
+    MongoDsn,
+    PostgresDsn,
+    RedisDsn,
+)
 
 from typing import Any, Annotated
 
@@ -82,6 +89,22 @@ class Settings(BaseSettings):
             port=self.MONGO_PORT,
         )
 
+    # Redis Configuration
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str
+
+    @computed_field
+    @property
+    def REDIS_URI(self) -> RedisDsn:
+        return MultiHostUrl.build(
+            scheme="redis",
+            password=self.REDIS_PASSWORD,
+            host=self.REDIS_HOST,
+            port=self.REDIS_PORT,
+        )
+
     # PostgreSQL Configuration
     POSTGRES_HOST: str
     POSTGRES_PORT: int
@@ -93,7 +116,7 @@ class Settings(BaseSettings):
     @property
     def POSTGRES_URI(self) -> PostgresDsn:
         return MultiHostUrl.build(
-            scheme="postgresql+psycopg2",
+            scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
             host=self.POSTGRES_HOST,
