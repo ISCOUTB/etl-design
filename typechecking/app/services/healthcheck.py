@@ -4,6 +4,7 @@ from typing import Dict, Any
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import settings
+from app.core.database_redis import redis_db
 
 
 async def check_mongodb_connection() -> Dict[str, Any]:
@@ -48,6 +49,37 @@ async def check_rabbitmq_connection() -> Dict[str, Any]:
         channel = await connection.channel()
         await channel.close()
         await connection.close()
+
+        return {"status": "healthy", "response_time_ms": "< 5000"}
+    except asyncio.TimeoutError:
+        return {
+            "status": "unhealthy",
+            "error": "Connection timeout",
+            "response_time_ms": "> 5000",
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+
+async def check_redis_connection() -> Dict[str, Any]:
+    """Check Redis connection health."""
+    try:
+        # Test Redis connection with ping and a simple operation
+        def test_redis():
+            # Test ping
+            redis_db.ping()
+
+            # Test basic operations
+            test_key = "healthcheck:test"
+            redis_db.set(test_key, "test_value", ex=60)
+            result = redis_db.get(test_key)
+            redis_db.delete(test_key)
+            return result == "test_value"
+
+        # Run Redis operations with timeout
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(None, test_redis), timeout=5.0
+        )
 
         return {"status": "healthy", "response_time_ms": "< 5000"}
     except asyncio.TimeoutError:
