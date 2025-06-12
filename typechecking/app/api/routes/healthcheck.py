@@ -1,24 +1,35 @@
 import asyncio
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
-from app.services.healthcheck import check_mongodb_connection, check_rabbitmq_connection
+from app.services.healthcheck import (
+    check_mongodb_connection,
+    check_rabbitmq_connection,
+    check_redis_connection,
+)
+
+import json
+from app.core.database_redis import redis_db
 
 router = APIRouter()
 
 
-@router.get("/")
-async def healthcheck() -> Dict[str, Any]:
+@router.get("")
+async def healthcheck(use_cache: bool = True) -> Dict[str, Any]:
     """
     Comprehensive health check endpoint that verifies:
     - API status
     - MongoDB connection
     - RabbitMQ connection
     """
+    if use_cache and (cached_health := redis_db.get("healthcheck")):
+        return json.loads(cached_health)
+
     try:
         # Run health checks concurrently
-        mongodb_check, rabbitmq_check = await asyncio.gather(
+        mongodb_check, rabbitmq_check, redisdb_check = await asyncio.gather(
             check_mongodb_connection(),
             check_rabbitmq_connection(),
+            check_redis_connection(),
             return_exceptions=True,
         )
 
@@ -29,11 +40,15 @@ async def healthcheck() -> Dict[str, Any]:
         if isinstance(rabbitmq_check, Exception):
             rabbitmq_check = {"status": "unhealthy", "error": str(rabbitmq_check)}
 
+        if isinstance(redisdb_check, Exception):
+            redisdb_check = {"status": "unhealthy", "error": str(redisdb_check)}
+
         # Determine overall health
         overall_status = "healthy"
         if (
             mongodb_check["status"] != "healthy"
             or rabbitmq_check["status"] != "healthy"
+            or redisdb_check["status"] != "healthy"
         ):
             overall_status = "degraded"
 
@@ -44,6 +59,7 @@ async def healthcheck() -> Dict[str, Any]:
                 "api": {"status": "healthy", "message": "API is running"},
                 "mongodb": mongodb_check,
                 "rabbitmq": rabbitmq_check,
+                "redisdb": redisdb_check,
             },
         }
 
@@ -51,10 +67,8 @@ async def healthcheck() -> Dict[str, Any]:
         if overall_status == "degraded":
             raise HTTPException(status_code=503, detail=health_report)
 
+        redis_db.set("healthcheck", json.dumps(health_report), ex=60)
         return health_report
-
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -71,4 +85,10 @@ async def simple_healthcheck() -> dict:
     """
     Simple health check endpoint for basic API status.
     """
-    return {"status": "ok", "message": "API is running"}
+    cached_health = redis_db.get("healthcheck_simple")
+    if cached_health:
+        return json.loads(cached_health)
+
+    response = {"status": "ok", "message": "API is running"}
+    redis_db.set("healthcheck_simple", json.dumps(response), ex=60)
+    return response

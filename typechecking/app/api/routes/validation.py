@@ -1,21 +1,35 @@
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, UploadFile, HTTPException
 from app.messaging.publishers import ValidationPublisher
 from app.schemas.api import ApiResponse
+from app.core.database_redis import redis_db
 
+ENDPOINT = "validation"
 router = APIRouter()
 publisher = ValidationPublisher()
 
 
-@router.post("/validate")
-async def validate(spreadsheet_file: UploadFile, import_name: str) -> ApiResponse:
+@router.post("/upload/{import_name}")
+async def validate(
+    spreadsheet_file: UploadFile, import_name: str, new: bool = False
+) -> ApiResponse:
     """
-    Endpoint asíncrono para validación usando RabbitMQ
+    Upload a spreadsheet file in order to be validated.
     """
+    if not import_name:
+        raise HTTPException(400, "import_name must be provided.")
+
+    if not new and (
+        cached_response := redis_db.get_tasks_by_import_name(
+            import_name, endpoint=ENDPOINT
+        )
+    ):
+        return cached_response
+
     try:
-        # Leer archivo
+        # Read the file content
         file_content = await spreadsheet_file.read()
 
-        # Metadatos
+        # Metadata
         metadata = {
             "filename": spreadsheet_file.filename,
             "content_type": spreadsheet_file.content_type,
@@ -23,20 +37,47 @@ async def validate(spreadsheet_file: UploadFile, import_name: str) -> ApiRespons
         }
 
         # Publish in RabbitMQ
+        # file_content = UploadFile(file_content)
         task_id = publisher.publish_validation_request(
             file_data=file_content, import_name=import_name, metadata=metadata
         )
 
-        return ApiResponse(
+        response = ApiResponse(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id},
+            data={"task_id": task_id, "import_name": import_name},
         )
 
     except Exception as e:
-        return ApiResponse(
+        response = ApiResponse(
             status="error",
             code=500,
             message=f"Failed to submit validation request: {str(e)}",
         )
+
+    redis_db.set_task_id(task_id, response, endpoint=ENDPOINT)
+    return response
+
+
+@router.get("/status")
+async def get_validation_status(
+    task_id: str = "", import_name: str = ""
+) -> ApiResponse | list[ApiResponse]:
+    """
+    Get the status of the file being validated.
+    """
+    if not task_id and not import_name:
+        raise HTTPException(400, "Either `task_id` or `import_name` must be provided.")
+
+    if import_name:
+        cached_responses = redis_db.get_tasks_by_import_name(
+            import_name, endpoint=ENDPOINT
+        )
+        return cached_responses
+
+    cached_response = redis_db.get_task_id(task_id, endpoint=ENDPOINT)
+    if not cached_response:
+        HTTPException(404, f"Task with ID {task_id} not found.")
+
+    return cached_response
