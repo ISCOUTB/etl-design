@@ -4,7 +4,7 @@ from app.core.database_redis import redis_db
 router = APIRouter()
 
 
-@router.get("/cache")
+@router.get("")
 async def get_cache() -> dict:
     """
     Get all cached data from Redis.
@@ -13,7 +13,7 @@ async def get_cache() -> dict:
     return redis_db.get_cache()
 
 
-@router.delete("/cache/clear")
+@router.delete("/clear")
 async def clear_cache() -> bool:
     """
     Clear the Redis cache.
