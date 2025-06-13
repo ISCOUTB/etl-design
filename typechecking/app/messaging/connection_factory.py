@@ -117,7 +117,6 @@ class RabbitMQConnectionFactory:
             Exception: If connection creation fails.
         """
         thread_id = threading.get_ident()
-        print(f"DEBUG: Getting connection for thread {thread_id}")
 
         with cls._lock:
             if (
@@ -183,9 +182,7 @@ class RabbitMQConnectionFactory:
             ]
 
             for queue in queues:
-                print(f"DEBUG: Declaring queue {queue}...")
                 channel.queue_declare(queue=queue, durable=True)
-                print(f"DEBUG: Queue {queue} declared")
 
             # Bind queues to exchange
             channel.queue_bind(
@@ -198,6 +195,12 @@ class RabbitMQConnectionFactory:
                 exchange="typechecking.exchange",
                 queue="typechecking.schema.queue",
                 routing_key="schema.*",
+            )
+
+            channel.queue_bind(
+                exchange="typechecking.exchange",
+                queue="typechecking.results.queue",
+                routing_key="results.*",
             )
 
             logger.info("RabbitMQ infrastructure setup completed")
