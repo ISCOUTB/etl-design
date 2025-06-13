@@ -70,6 +70,7 @@ def create_schema(raw: bool, kwargs) -> Dict:
         SchemaError: If the raw schema is invalid.
     """
     if not raw:
+        # TODO: Implement proper schema creation logic for non-raw schemas.
         return {
             "type": "object",
             "properties": kwargs,
