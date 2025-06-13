@@ -8,20 +8,21 @@ the distributed worker system.
 The schemas define the contract between message publishers and consumers,
 ensuring reliable message processing and proper data serialization.
 """
+
 from typing import TypedDict
 
 
 class ValidationMessage(TypedDict):
     """Validation request message schema.
-    
+
     Represents a message sent to validation workers for processing
     file validation requests. Contains all necessary information
     for workers to validate files against specified schemas.
-    
+
     The file data is hex-encoded for safe transmission through JSON
     message serialization, and metadata provides additional context
     for processing priorities and options.
-    
+
     Attributes:
         id: Unique identifier (UUID) for tracking the validation request.
         timestamp: ISO format timestamp of when the message was created.
@@ -30,7 +31,7 @@ class ValidationMessage(TypedDict):
         metadata: Additional context including filename, processing options,
             and other request-specific information.
         priority: Message priority level (1-10) for queue processing order.
-        
+
     Example:
         >>> message: ValidationMessage = {
         ...     "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -41,6 +42,7 @@ class ValidationMessage(TypedDict):
         ...     "priority": 5
         ... }
     """
+
     id: str
     timestamp: str
     file_data: str  # Hex-encoded file data
@@ -51,14 +53,14 @@ class ValidationMessage(TypedDict):
 
 class SchemaMessage(TypedDict):
     """Schema update message schema.
-    
+
     Represents a message sent to schema workers for creating or
     updating schema definitions. Contains the schema definition
     and associated metadata for proper storage and indexing.
-    
+
     Schema messages are used to maintain the schema registry
     that validation workers use to validate incoming files.
-    
+
     Attributes:
         id: Unique identifier (UUID) for tracking the schema update request.
         timestamp: ISO format timestamp of when the message was created.
@@ -66,7 +68,8 @@ class SchemaMessage(TypedDict):
             field types, constraints, and other schema metadata.
         import_name: Unique identifier for the schema used for storage
             and retrieval operations.
-        
+        raw: Boolean flag indicating if the schema is raw.
+
     Example:
         >>> message: SchemaMessage = {
         ...     "id": "550e8400-e29b-41d4-a716-446655440001",
@@ -79,10 +82,13 @@ class SchemaMessage(TypedDict):
         ...         },
         ...         "required": ["name", "age"]
         ...     },
-        ...     "import_name": "person_schema"
+        ...     "import_name": "person_schema",
+        ...     "raw": False
         ... }
     """
+
     id: str
     timestamp: str
     schema: dict  # The JSON schema to be updated
     import_name: str  # The name of the import associated with the schema
+    raw: bool = False  # Flag to indicate if the schema is raw or processed
