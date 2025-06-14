@@ -200,7 +200,7 @@ class RabbitMQConnectionFactory:
             channel.queue_bind(
                 exchange="typechecking.exchange",
                 queue="typechecking.results.queue",
-                routing_key="results.*",
+                routing_key="results.*.*",
             )
 
             logger.info("RabbitMQ infrastructure setup completed")

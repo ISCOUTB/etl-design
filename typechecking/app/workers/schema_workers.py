@@ -18,7 +18,6 @@ Example:
 
 import json
 import logging
-from typing import Dict
 from jsonschema import SchemaError
 
 from app.core.config import settings
@@ -134,9 +133,9 @@ class SchemaPublisher:
             # Update the task status to 'processing' in Redis
             logger.info(f"Processing schema update: {task_id}")
             redis_db.update_task_id(
-                task_id,
-                "status",
-                "processing-schema-update",
+                task_id=task_id,
+                field="status",
+                value="processing-schema-update",
                 endpoint=self.ENDPOINT,
             )
             result = self._update_schema(message)
@@ -182,9 +181,9 @@ class SchemaPublisher:
 
         # Update the task status in Redis
         redis_db.update_task_id(
-            task_id,
-            "status",
-            "creating-schema",
+            task_id=task_id,
+            field="status",
+            value="creating-schema",
             endpoint=self.ENDPOINT,
             message=f"Creating schema for import: {import_name}",
         )
@@ -193,18 +192,18 @@ class SchemaPublisher:
         try:
             schema = create_schema(raw, message["schema"])
             redis_db.update_task_id(
-                task_id,
-                "status",
-                "schema-created",
+                task_id=task_id,
+                field="status",
+                value="schema-created",
                 endpoint=self.ENDPOINT,
                 message=f"Schema created for import: {import_name}",
             )
         except SchemaError as e:
             logger.error(f"Schema creation failed: {e}")
             redis_db.update_task_id(
-                task_id,
-                "status",
-                "failed-creating-schema",
+                task_id=task_id,
+                field="status",
+                value="failed-creating-schema",
                 endpoint=self.ENDPOINT,
                 message=repr(e),
             )
@@ -219,9 +218,9 @@ class SchemaPublisher:
 
         # Save the schema and return the result
         redis_db.update_task_id(
-            task_id,
-            "status",
-            "saving-schema",
+            task_id=task_id,
+            field="status",
+            value="saving-schema",
             endpoint=self.ENDPOINT,
         )
         try:
@@ -232,9 +231,9 @@ class SchemaPublisher:
             status = "failed-saving-schema"
 
         redis_db.update_task_id(
-            task_id,
-            "status",
-            status,
+            task_id=task_id,
+            field="status",
+            value=status,
             endpoint=self.ENDPOINT,
             message="Validation completed and uploaded to the database.",
             data={
@@ -252,7 +251,7 @@ class SchemaPublisher:
             "result": result,
         }
 
-    def _publish_result(self, task_id: str, result: Dict) -> None:
+    def _publish_result(self, task_id: str, result: SchemaUpdated) -> None:
         """Publish the result of the schema update to the RabbitMQ exchange.
 
         Sends the schema update result to the 'typechecking.exchange' with
@@ -269,8 +268,9 @@ class SchemaPublisher:
                 for proper error handling and message acknowledgment.
         """
         logger.info(f"Publishing schema update result for task: {task_id}")
+        success = "success" if result["status"] == "success" else "error"
         self.channel.basic_publish(
             exchange="typechecking.exchange",
-            routing_key="results.schema",
+            routing_key=f"results.schema.{success}",
             body=json.dumps(result),
         )
