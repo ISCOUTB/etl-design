@@ -19,7 +19,7 @@ Example:
 
 import json
 import logging
-from typing import Dict
+import asyncio
 
 from app.core.config import settings
 from app.controllers.validation import (
@@ -27,6 +27,7 @@ from app.controllers.validation import (
     get_validation_summary,
 )
 from app.messaging.connection_factory import RabbitMQConnectionFactory
+from app.core.database_redis import redis_db
 
 from app.schemas.messaging import ValidationMessage
 from app.schemas.workers import DataValidated
@@ -54,6 +55,8 @@ class ValidationWorker:
         publisher: ValidationPublisher instance for publishing results.
         connection: RabbitMQ connection established during consumption.
     """
+
+    ENDPOINT: str = "validation"
 
     def start_consuming(self) -> None:
         """Start consuming messages from the RabbitMQ queue.
@@ -137,7 +140,7 @@ class ValidationWorker:
 
             logger.info(f"Process validation request: {task_id}")
 
-            result = self._validate_data(message)
+            result = asyncio.run(self._validate_data(message))
             self._publish_result(task_id, result)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -176,25 +179,46 @@ class ValidationWorker:
             This method is async due to the validate_file_against_schema
             function requiring async execution for file processing.
         """
+        task_id = message["id"]
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value="processing-file",
+            endpoint=self.ENDPOINT,
+        )
         file_bytes = bytes.fromhex(message["file_data"])
         file_obj = BytesIO(file_bytes)
         upload_file = UploadFile(
             filename=message.get("filename", "uploaded_file"), file=file_obj
         )
 
-        # TODO: Fix this to use a proper schema lookup function
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value="validating-file",
+            endpoint=self.ENDPOINT,
+        )
+
         results = await validate_file_against_schema(
             file=upload_file, import_name=message["import_name"]
         )
         summary = get_validation_summary(results)
 
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value=summary["status"],
+            endpoint=self.ENDPOINT,
+            data={"results": summary},
+        )
+
         return {
-            "task_id": message["task_id"],
+            "task_id": task_id,
             "status": summary["status"],
             "results": summary,
         }
 
-    def _publish_result(self, task_id: str, result: Dict) -> None:
+    def _publish_result(self, task_id: str, result: DataValidated) -> None:
         """Publish the validation result back to the exchange.
 
         Sends the validation result to the 'typechecking.exchange' with
@@ -211,8 +235,9 @@ class ValidationWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
+        success = "success" if result["status"] == "completed" else "error"
         self.channel.basic_publish(
             exchange="typechecking.exchange",
-            routing_key="validation.result",
+            routing_key=f"result.validation.{success}",
             body=json.dumps(result),
         )
