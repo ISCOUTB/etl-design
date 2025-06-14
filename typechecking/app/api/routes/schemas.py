@@ -16,7 +16,7 @@ async def upload_schema(
     schema: dict,
     raw: bool = False,
     new: bool = False,
-) -> ApiResponse:
+) -> ApiResponse | list[ApiResponse]:
     """
     Upload a schema for validation.
     This endpoint allows users to upload a JSON schema for validation purposes.

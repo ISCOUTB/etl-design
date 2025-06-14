@@ -182,11 +182,11 @@ class RedisConnection:
             ApiResponse object if task exists, None otherwise.
         """
         task_data = self.redis_client.hgetall(f"{endpoint}:task:{task_id}")
-        if not task_data:
-            return None
-
         task_data["data"] = json.loads(task_data["data"]) if "data" in task_data else {}
-        return ApiResponse(**task_data)
+        try:
+            return ApiResponse(**task_data)
+        except Exception:
+            return None
 
     def get_tasks_by_import_name(
         self, import_name: str, endpoint: str

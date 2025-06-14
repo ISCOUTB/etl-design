@@ -11,7 +11,7 @@ publisher = ValidationPublisher()
 @router.post("/upload/{import_name}")
 async def validate(
     spreadsheet_file: UploadFile, import_name: str, new: bool = False
-) -> ApiResponse:
+) -> ApiResponse | list[ApiResponse]:
     """
     Upload a spreadsheet file in order to be validated.
     """
