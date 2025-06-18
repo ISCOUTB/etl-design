@@ -137,10 +137,14 @@ class ValidationWorker:
         try:
             message: ValidationMessage = json.loads(body.decode())
             task_id = message["id"]
+            task = message.get("task", "sample_validation")
 
-            logger.info(f"Process validation request: {task_id}")
+            if task == "sample_validation":
+                logger.info(f"Process validation request: {task_id}")
+                result = asyncio.run(self._validate_data(message))
+            
+            # Add more cases here if needed for other tasks
 
-            result = asyncio.run(self._validate_data(message))
             self._publish_result(task_id, result)
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -218,7 +222,7 @@ class ValidationWorker:
             "results": summary,
         }
 
-    def _publish_result(self, task_id: str, result: DataValidated) -> None:
+    def _publish_result(self, task_id: str, result: DataValidated) -> str:
         """Publish the validation result back to the exchange.
 
         Sends the validation result to the 'typechecking.exchange' with
@@ -230,14 +234,38 @@ class ValidationWorker:
             result: Dictionary containing the validation result to be published.
                 Should be JSON-serializable and contain validation summary data.
 
+        Returns:
+            str: Confirmation message indicating the result was published.
+                
         Raises:
             Exception: If message publishing fails due to connection issues
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        success = "success" if result["status"] == "completed" else "error"
+        if result["status"] != "completed":
+            redis_db.update_task_id(
+                task_id=task_id,
+                field="status",
+                value="failed-publishing-result",
+                endpoint=self.ENDPOINT,
+                message="Failed to publish validation result",
+                data={"error": "Failed to publish validation result"},
+                reset_data=True
+            )
+            logger.error(f"Failed to publish result for task: {task_id}")
+            return None
+
         self.channel.basic_publish(
             exchange="typechecking.exchange",
-            routing_key=f"results.validation.{success}",
+            routing_key="results.validation",
             body=json.dumps(result),
         )
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value="published",
+            endpoint=self.ENDPOINT,
+            message="Validation result published",
+        )
+        logger.info(f"Validation result published for task: {task_id}")
+        return None

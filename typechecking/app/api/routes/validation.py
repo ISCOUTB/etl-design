@@ -39,7 +39,10 @@ async def validate(
         # Publish in RabbitMQ
         # file_content = UploadFile(file_content)
         task_id = publisher.publish_validation_request(
-            file_data=file_content, import_name=import_name, metadata=metadata
+            file_data=file_content,
+            import_name=import_name,
+            metadata=metadata,
+            task="sample_validation",
         )
 
         response = ApiResponse(

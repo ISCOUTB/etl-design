@@ -36,7 +36,7 @@ async def upload_schema(
 
     try:
         task_id = publisher.publish_schema_update(
-            schema=schema, import_name=import_name, raw=raw
+            schema=schema, import_name=import_name, raw=raw, task="upload_schema"
         )
 
         response = ApiResponse(
@@ -78,3 +78,37 @@ async def get_schema_task(
         raise HTTPException(404, f"Task with ID {task_id} not found.")
 
     return cached_response
+
+
+@router.delete("/remove/{import_name}")
+async def remove_schema(
+    import_name: str,
+) -> ApiResponse:
+    """
+    Remove a schema by its import name.
+    This endpoint allows users to remove a schema from the system by its import name.
+    It publishes a message to remove the schema and returns the task ID for tracking.
+    """
+    if not import_name:
+        raise HTTPException(400, "import_name must be provided.")
+
+    try:
+        task_id = publisher.publish_schema_update(
+            import_name=import_name, task="remove_schema"
+        )
+
+        response = ApiResponse(
+            status="accepted",
+            code=202,
+            message="Schema removal request submitted successfully",
+            data={"task_id": task_id, "import_name": import_name},
+        )
+    except Exception as e:
+        response = ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to remove schema: {str(e)}",
+        )
+
+    redis_db.set_task_id(task_id, response, endpoint=ENDPOINT)
+    return response

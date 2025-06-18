@@ -23,7 +23,7 @@ from jsonschema import SchemaError
 from app.core.config import settings
 from app.schemas.messaging import SchemaMessage
 from app.schemas.workers import SchemaUpdated
-from app.controllers.schemas import save_schema, create_schema
+from app.controllers.schemas import save_schema, create_schema, remove_schema
 
 import pika
 from app.messaging.connection_factory import RabbitMQConnectionFactory
@@ -129,16 +129,23 @@ class SchemaPublisher:
         try:
             message: SchemaMessage = json.loads(body.decode())
             task_id = message["id"]
+            task = message.get("task", "upload_schema")
 
-            # Update the task status to 'processing' in Redis
-            logger.info(f"Processing schema update: {task_id}")
-            redis_db.update_task_id(
-                task_id=task_id,
-                field="status",
-                value="processing-schema-update",
-                endpoint=self.ENDPOINT,
-            )
-            result = self._update_schema(message)
+            if task == "upload_schema":
+                # Update the task status to 'processing' in Redis
+                logger.info(f"Processing schema update: {task_id}")
+                redis_db.update_task_id(
+                    task_id=task_id,
+                    field="status",
+                    value="processing-schema-update",
+                    endpoint=self.ENDPOINT,
+                )
+                result = self._update_schema(message)
+
+            if task == "remove_schema":
+                result = self._remove_schema(message)
+            
+            # Add more cases here if needed for other tasks
 
             # Publish the result back to the exchange
             self._publish_result(task_id, result)
@@ -251,6 +258,65 @@ class SchemaPublisher:
             "result": result,
         }
 
+    def _remove_schema(self, message: SchemaMessage) -> SchemaUpdated:
+        """Remove the schema based on the incoming message.
+
+        Processes a schema removal request by deleting the schema associated
+        with the provided import name. Returns a structured result containing
+        the operation status and details.
+
+        Args:
+            message: Dictionary containing schema removal parameters including:
+                - task_id: Unique task identifier
+                - import_name: Schema import identifier
+
+        Returns:
+            SchemaUpdated: Dictionary containing the removal result with fields:
+                - task_id: Original task identifier
+                - status: 'completed' or 'failed' based on operation result
+                - import_name: Schema import name
+                - result: Boolean result from removal operation
+
+        Note:
+            The function updates the task status in Redis and handles errors
+            during schema removal.
+        """
+        task_id = message["id"]
+        import_name = message["import_name"]
+
+        # Update the task status in Redis
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value="removing-schema",
+            endpoint=self.ENDPOINT,
+            message=f"Removing schema for import: {import_name}",
+        )
+
+        # Remove the schema and return the result
+        try:
+            result = remove_schema(import_name)
+            status = "completed"
+        except Exception as e:
+            result = repr(e)
+            status = "failed-removing-schema"
+
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value=status,
+            endpoint=self.ENDPOINT,
+            message="Schema removal completed.",
+            data={"results": result if result else "Active Schema not found."}
+        )
+
+        return {
+            "task_id": task_id,
+            "status": status,
+            "import_name": import_name,
+            "result": result,
+        }
+
     def _publish_result(self, task_id: str, result: SchemaUpdated) -> None:
         """Publish the result of the schema update to the RabbitMQ exchange.
 
@@ -267,10 +333,30 @@ class SchemaPublisher:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        logger.info(f"Publishing schema update result for task: {task_id}")
-        success = "success" if result["status"] == "success" else "error"
+        if result["status"] != "completed":
+            redis_db.update_task_id(
+                task_id=task_id,
+                field="status",
+                value="failed-publishing-result",
+                endpoint=self.ENDPOINT,
+                message="Failed to publish validation result",
+                data={"error": "Failed to publish validation result"},
+                reset_data=True,
+            )
+            logger.error(f"Failed to publish result for task: {task_id}")
+            return None
+
         self.channel.basic_publish(
             exchange="typechecking.exchange",
-            routing_key=f"results.schema.{success}",
+            routing_key="results.schema",
             body=json.dumps(result),
         )
+        redis_db.update_task_id(
+            task_id=task_id,
+            field="status",
+            value="published",
+            endpoint=self.ENDPOINT,
+            message="Validation result published",
+        )
+        logger.info(f"Validation result published for task: {task_id}")
+        return None

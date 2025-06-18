@@ -9,7 +9,11 @@ The schemas define the contract between message publishers and consumers,
 ensuring reliable message processing and proper data serialization.
 """
 
-from typing import TypedDict
+from typing import TypedDict, Literal
+
+
+ValidationTasks = Literal["sample_validation"]
+SchemasTasks = Literal["upload_schema", "remove_schema"]
 
 
 class ValidationMessage(TypedDict):
@@ -25,6 +29,7 @@ class ValidationMessage(TypedDict):
 
     Attributes:
         id: Unique identifier (UUID) for tracking the validation request.
+        task: Task type. This can be for sample validation or adding new data.
         timestamp: ISO format timestamp of when the message was created.
         file_data: Hexadecimal-encoded binary file content for validation.
         import_name: Schema identifier to validate the file against.
@@ -44,6 +49,7 @@ class ValidationMessage(TypedDict):
     """
 
     id: str
+    task: ValidationTasks
     timestamp: str
     file_data: str  # Hex-encoded file data
     import_name: str
@@ -63,6 +69,7 @@ class SchemaMessage(TypedDict):
 
     Attributes:
         id: Unique identifier (UUID) for tracking the schema update request.
+        task: Task type, this can be used for uploading schemas or removing them.
         timestamp: ISO format timestamp of when the message was created.
         schema: JSON schema definition containing validation rules,
             field types, constraints, and other schema metadata.
@@ -88,6 +95,7 @@ class SchemaMessage(TypedDict):
     """
 
     id: str
+    task: SchemasTasks
     timestamp: str
     schema: dict  # The JSON schema to be updated
     import_name: str  # The name of the import associated with the schema

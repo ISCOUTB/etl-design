@@ -120,7 +120,8 @@ class RedisConnection:
         endpoint: str,
         *,
         message: str = "",
-        data: dict | None = None
+        data: dict | None = None,
+        reset_data: bool = False,
     ) -> None:
         """Update a specific field in a task ID's data in the Redis cache.
 
@@ -131,6 +132,7 @@ class RedisConnection:
             endpoint: The endpoint or context under which the task is stored.
             message: Optional message to log or store with the update.
             data: Optional additional data to merge with existing task data.
+            reset_data: If True, reset the existing data before merging new data.
 
         Returns:
             None
@@ -144,7 +146,9 @@ class RedisConnection:
             self.redis_client.hset(task_key, "message", message)
 
         if data:
-            cached_data = self.get_task_id(task_id, endpoint).data
+            cached_data = (
+                self.get_task_id(task_id, endpoint).data if not reset_data else {}
+            )
             cached_data = {**cached_data, **data}
             self.redis_client.hset(task_key, "data", json.dumps(cached_data))
 
