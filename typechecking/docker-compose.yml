@@ -67,7 +67,7 @@ services:
       - rabbitmq
       - mongodb
       - redisdb
-      - typechecking-workers
+      - workers
     env_file:
       - .env
     environment:
