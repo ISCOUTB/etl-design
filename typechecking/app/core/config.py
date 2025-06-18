@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     # MongoDB Configuration
     MONGO_HOST: str
     MONGO_PORT: int
-    MONGO_INITDB_ROOT_USERNAME: str
-    MONGO_INITDB_ROOT_PASSWORD: str
+    MONGO_INITDB_ROOT_USERNAME: str | None = None
+    MONGO_INITDB_ROOT_PASSWORD: str | None = None
     MONGO_DB: str
     MONGO_COLLECTION: str
 
