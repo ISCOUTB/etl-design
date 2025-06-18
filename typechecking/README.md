@@ -53,6 +53,10 @@ cd typechecking
 
 2. Edit environment file.
 
+```bash
+cp .env.example .env
+```
+
 3. Start the services:
 
 ```bash
@@ -200,12 +204,124 @@ python tests/testing_typechecking.py
 - **Database Scaling**: Use MongoDB replica sets
 - **Cache Scaling**: Use Redis clustering
 
-### Current Version
+## Recent Updates
 
-- Multi-format file support (CSV, XLSX, XLS)
-- Parallel validation processing
-- RabbitMQ message queuing
-- MongoDB schema storage
-- Redis caching
-- Performance benchmarking tools
-- Docker deployment support
+### API Endpoints Enhancements
+
+#### Schema Management API (`api/v1/schemas`)
+
+- **New Upload Endpoint**: `POST /schemas/upload/{import_name}` - Upload and manage JSON schemas with versioning support
+  - Parameters: `raw` (boolean) for raw schema processing, `new` (boolean) to force new task creation
+  - Returns task ID for asynchronous processing
+  - Implements schema comparison to avoid duplicate uploads
+- **Status Tracking**: `GET /schemas/status` - Track schema upload tasks by task_id or import_name
+- **Schema Removal**: `DELETE /schemas/remove/{import_name}` - Remove schemas with rollback to previous versions
+- **Caching Integration**: Redis-based task caching with import_name indexing
+
+#### Validation API (`api/v1/validation`)
+
+- **File Upload Endpoint**: `POST /validation/upload/{import_name}` - Validate spreadsheet files against schemas
+  - Support for CSV, XLSX, and XLS file formats
+  - Asynchronous processing with task tracking
+  - File metadata extraction (filename, content_type, size)
+- **Status Monitoring**: `GET /validation/status` - Monitor validation progress by task_id or import_name
+- **Cache Optimization**: Improved response caching with import_name grouping
+
+### Worker System Improvements
+
+#### Schema Workers
+
+- **Enhanced Task Processing**: Improved schema creation and validation logic
+- **Better Error Handling**: Comprehensive error catching with detailed logging
+- **Redis Integration**: Real-time task status updates throughout processing pipeline
+- **Version Control**: Support for schema versioning with rollback capabilities
+- **Message Acknowledgment**: Reliable message processing with proper ACK/NACK handling
+
+#### Validation Workers
+
+- **File Processing Pipeline**: Enhanced file data conversion from hex to binary format
+- **Async Processing**: Improved asynchronous file validation with better resource management
+- **Progress Tracking**: Real-time validation progress updates via Redis
+- **Result Publishing**: Structured validation results with detailed summaries
+
+### Messaging System Updates
+
+#### Message Schemas
+
+- **Typed Message Contracts**: New TypedDict schemas for ValidationMessage and SchemaMessage
+- **Task Classification**: Defined ValidationTasks and SchemasTasks literal types
+- **Priority Support**: Message priority system for queue processing optimization
+- **Metadata Enhancement**: Rich metadata support for better processing context
+
+#### Publishers
+
+- **Validation Publisher**: Enhanced with detailed message documentation and error handling
+- **Schema Publisher**: Improved schema update publishing with task type support
+- **Message Formatting**: Standardized message structure with UUID generation and timestamps
+- **Routing Keys**: Optimized routing for better message distribution
+
+### Infrastructure Enhancements
+
+#### Redis Integration
+
+- **Task Management**: Comprehensive task ID tracking and status management
+- **Import Name Indexing**: Efficient task lookup by import_name
+- **Cache Operations**: Advanced caching with TTL and key pattern management
+- **Data Structures**: Optimized use of Redis hashes and sets for task relationships
+
+#### Database Operations
+
+- **Schema Storage**: Enhanced MongoDB operations for schema versioning
+- **Comparison Logic**: Improved schema comparison for duplicate detection
+- **Rollback Support**: Schema removal with automatic rollback to previous versions
+- **Result Tracking**: Better database result handling and status reporting
+
+## Summary of Recent Changes
+
+The Typechecking ETL System has undergone significant enhancements across all layers of the architecture. These improvements focus on robustness, scalability, and developer experience.
+
+### 🚀 Key Improvements
+
+**API Layer:**
+
+- Enhanced schema management with versioning and rollback capabilities
+- Improved file validation endpoints with multi-format support
+- Redis-based caching for task tracking and performance optimization
+- Comprehensive error handling with standardized response formats
+
+**Worker System:**
+
+- Strengthened message processing with proper ACK/NACK handling
+- Real-time progress tracking via Redis integration
+- Enhanced file processing pipeline with hex encoding for safe transmission
+- Improved connection management with thread-safe operations
+
+**Messaging Infrastructure:**
+
+- Strongly typed message contracts using TypedDict schemas
+- Priority-based message queuing for optimal processing order
+- Enhanced publishers with comprehensive documentation and error handling
+- Robust connection factory with automatic recovery mechanisms
+
+**Data Management:**
+
+- Advanced Redis operations for task management and caching
+- MongoDB schema versioning with comparison logic and rollback support
+- Optimized database operations with atomic updates and error handling
+- Enhanced query patterns for efficient data retrieval
+
+### 📊 Technical Metrics
+
+- **Endpoint Coverage**: 6 API endpoints with comprehensive functionality
+- **Message Types**: 2 strongly typed message schemas (Validation, Schema)
+- **Task Types**: 3 distinct task types (sample_validation, upload_schema, remove_schema, meanwhile)
+- **File Formats**: 3 supported formats (CSV, XLSX, XLS)
+- **Database Integration**: 3 storage systems (MongoDB, Redis, RabbitMQ)
+
+### 🔧 Developer Experience
+
+- **Type Safety**: TypedDict schemas for compile-time validation
+- **Documentation**: Comprehensive README files for each module
+- **Error Handling**: Detailed error messages with context
+- **Monitoring**: Real-time task tracking and progress updates
+- **Testing**: Enhanced error scenarios and edge case handling
