@@ -110,7 +110,8 @@ class RabbitMQConnection:
         queues = [
             "typechecking.validation.queue",
             "typechecking.schema.queue",
-            "typechecking.results.queue",
+            "typechecking.results.schema.queue",
+            "typechecking.results.validation.queue",
         ]
 
         for queue in queues:
@@ -127,6 +128,19 @@ class RabbitMQConnection:
             queue="typechecking.schema.queue",
             routing_key="schema.*",
         )
+
+        self._channel.queue_bind(
+            exchange="typechecking.exchange",
+            queue="typechecking.results.schema.queue",
+            routing_key="results.schema.*",
+        )
+
+        self._channel.queue_bind(
+            exchange="typechecking.exchange",
+            queue="typechecking.results.validation.queue",
+            routing_key="results.validation.*",
+        )
+
 
     @property
     def channel(self) -> pika.channel.Channel:

@@ -178,7 +178,8 @@ class RabbitMQConnectionFactory:
             queues = [
                 "typechecking.validation.queue",
                 "typechecking.schema.queue",
-                "typechecking.results.queue",
+                "typechecking.results.schema.queue",
+                "typechecking.results.validation.queue",
             ]
 
             for queue in queues:
@@ -199,8 +200,14 @@ class RabbitMQConnectionFactory:
 
             channel.queue_bind(
                 exchange="typechecking.exchange",
-                queue="typechecking.results.queue",
-                routing_key="results.*.*",
+                queue="typechecking.results.schema.queue",
+                routing_key="results.schema.*",
+            )
+
+            channel.queue_bind(
+                exchange="typechecking.exchange",
+                queue="typechecking.results.validation.queue",
+                routing_key="results.validation.*",
             )
 
             logger.info("RabbitMQ infrastructure setup completed")

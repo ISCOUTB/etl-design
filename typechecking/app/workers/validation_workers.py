@@ -238,6 +238,6 @@ class ValidationWorker:
         success = "success" if result["status"] == "completed" else "error"
         self.channel.basic_publish(
             exchange="typechecking.exchange",
-            routing_key=f"result.validation.{success}",
+            routing_key=f"results.validation.{success}",
             body=json.dumps(result),
         )
