@@ -1,7 +1,6 @@
 services:
   rabbitmq:
     image: rabbitmq:4-management
-    container_name: etl-rabbitmq
     env_file:
       - .env
     environment:
@@ -16,7 +15,6 @@ services:
 
   mongodb:
     image: mongo:7
-    container_name: etl-mongodb
     env_file:
       - .env
     environment:
@@ -29,7 +27,6 @@ services:
 
   postgresdb:
     image: postgres:17
-    container_name: etl-postgres
     env_file:
       - .env
     environment:
@@ -44,7 +41,6 @@ services:
 
   redisdb:
     image: redis:7.4.1
-    container_name: etl-redis
     env_file:
       - .env
     ports:
@@ -57,8 +53,8 @@ services:
 
   workers:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     command: python -m app.workers.worker_manager
     depends_on:
       - rabbitmq
@@ -76,9 +72,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: ./Dockerfile
-    container_name: etl-typechecking-api
+      context: ./backend
+      dockerfile: Dockerfile
     depends_on:
       - rabbitmq
       - mongodb
