@@ -13,7 +13,7 @@ services:
       - "15672:15672"  # Management UI
     volumes:
       - typechecking_rabbitmq_data:/var/lib/rabbitmq
-  
+
   mongodb:
     image: mongo:7
     container_name: etl-mongodb
@@ -26,6 +26,21 @@ services:
       - "${MONGO_PORT}:27017"
     volumes:
       - typechecking_mongodb_data:/data/db
+
+  postgresdb:
+    image: postgres:17
+    container_name: etl-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - typechecking_postgresdb_data:/var/lib/postgresql/data
 
   redisdb:
     image: redis:7.4.1
@@ -48,6 +63,7 @@ services:
     depends_on:
       - rabbitmq
       - mongodb
+      - postgresdb
       - redisdb
     env_file:
       - .env
@@ -66,6 +82,7 @@ services:
     depends_on:
       - rabbitmq
       - mongodb
+      - postgresdb
       - redisdb
       - workers
     env_file:
@@ -85,4 +102,5 @@ services:
 volumes:
   typechecking_rabbitmq_data:
   typechecking_mongodb_data:
+  typechecking_postgresdb_data:
   typechecking_redisdb_data:
