@@ -1,3 +1,18 @@
+"""
+Type definitions for Excel formula AST processing and SQL generation.
+
+This module defines all the TypedDict classes and type aliases used throughout
+the DDL generator. It provides comprehensive type definitions for AST nodes,
+input data structures, and output mappings to ensure type safety and clear
+interfaces between components.
+
+The types are organized into:
+- Basic type aliases for AST and reference types
+- Input data structures
+- Output type definitions for different AST node processing results
+- Union types for flexible type handling
+"""
+
 from typing import TypedDict, Literal, Optional, Dict, Union
 
 
@@ -189,6 +204,10 @@ AllOutputs = Union[
     BinaryExpressionMapsOutput,
     FunctionMapsOutput,
 ]
+"""Union type representing all possible output types from AST processing functions."""
 
 SingleOutput = Union[CellMapsOutput, NumberMapsOutput, LogicalMapsOutput]
+"""Union type for simple, single-value outputs (cells, numbers, logical values)."""
+
 ComplexOutput = Union[FunctionMapsOutput, BinaryExpressionMapsOutput]
+"""Union type for complex outputs that contain nested structures (functions, expressions)."""
