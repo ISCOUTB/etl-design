@@ -1,3 +1,5 @@
+import secrets
+
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import (
@@ -45,6 +47,12 @@ class Settings(BaseSettings):
     # API Configuration
     API_V1_STR: str
     CORS_ORIGINS: Annotated[list[str] | str, BeforeValidator(split_list)]
+
+    SECRET_KEY: str = secrets.token_urlsafe(32)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day by default
+    
+    FIRST_SUPERUSER: str
+    FIRST_SUPERUSER_PASSWORD: str
 
     # RabbitMQ Configuration
     RABBITMQ_HOST: str
