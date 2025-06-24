@@ -30,6 +30,7 @@ from app.messaging.connection_factory import RabbitMQConnectionFactory
 
 from app.core.database_redis import redis_db
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

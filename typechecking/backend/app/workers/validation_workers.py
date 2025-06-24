@@ -35,7 +35,7 @@ from app.schemas.workers import DataValidated
 from fastapi import UploadFile
 from io import BytesIO
 
-
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

@@ -33,6 +33,7 @@ import logging
 from app.workers.validation_workers import ValidationWorker
 from app.workers.schema_workers import SchemaPublisher
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

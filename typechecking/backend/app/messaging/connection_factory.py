@@ -32,6 +32,7 @@ from typing import Dict, Generator
 from contextlib import contextmanager
 from app.core.config import settings
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
