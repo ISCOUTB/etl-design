@@ -54,7 +54,6 @@ services:
   workers:
     build:
       context: ./backend
-      dockerfile: Dockerfile
     command: python -m app.workers.worker_manager
     depends_on:
       - rabbitmq
@@ -67,8 +66,26 @@ services:
       RABBITMQ_HOST: rabbitmq
       MONGO_HOST: mongodb
       REDIS_HOST: redisdb
+      POSTGRES_HOST: postgresdb
     deploy:
       replicas: ${WORKER_CONCURRENCY}
+
+  prestart:
+    build:
+      context: ./backend
+    depends_on:
+      - rabbitmq
+      - mongodb
+      - postgresdb
+      - redisdb
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MONGO_HOST: mongodb
+      REDIS_HOST: redisdb
+      POSTGRES_HOST: postgresdb
+      command: bash scripts/prestart.sh
 
   api:
     build:
@@ -80,16 +97,18 @@ services:
       - postgresdb
       - redisdb
       - workers
+      - prestart
     env_file:
       - .env
     environment:
       RABBITMQ_HOST: rabbitmq
       MONGO_HOST: mongodb
       REDIS_HOST: redisdb
+      POSTGRES_HOST: postgresdb
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/${API_V1_STR}/healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000${API_V1_STR}/healthcheck"]
       interval: 60s
       timeout: 10s
       retries: 5
