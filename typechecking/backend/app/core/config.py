@@ -41,7 +41,7 @@ def split_list(v: Any) -> list[str] | str:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8",
+        env_ignore_empty=True,
         extra="ignore",
     )
     # API Configuration
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day by default
-    
+
     FIRST_SUPERUSER: str
     FIRST_SUPERUSER_PASSWORD: str
 
