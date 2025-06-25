@@ -105,7 +105,7 @@ class FileProcessor:
         """
         try:
             # Read Excel file from bytes
-            df = pl.read_excel(io.BytesIO(content))
+            df = pl.read_excel(io.BytesIO(content), engine="openpyxl")
 
             if df.height == 0:
                 return True, [], ""
