@@ -11,7 +11,7 @@ and provide proper typing for worker result handling and storage.
 
 from typing import TypedDict, Dict, Any
 from pymongo.results import UpdateResult, InsertOneResult
-from app.schemas.controllers import ValidationSummary
+from app.schemas.controllers import ValidationSummary, SummaryStatus
 
 
 class DataValidated(TypedDict):
@@ -26,7 +26,7 @@ class DataValidated(TypedDict):
 
     Attributes:
         task_id: Unique identifier linking back to the original validation request.
-        status: Completion status - 'completed' for successful validation,
+        status: Completion status - 'success' for successful validation,
             'failed' for validation processing errors.
         results: Detailed validation summary including statistics, status,
             and validation details from the ValidationSummary schema.
@@ -34,9 +34,9 @@ class DataValidated(TypedDict):
     Example:
         >>> result: DataValidated = {
         ...     "task_id": "550e8400-e29b-41d4-a716-446655440000",
-        ...     "status": "completed",
+        ...     "status": "success",
         ...     "results": {
-        ...         "status": "valid",
+        ...         "status": "success",
         ...         "summary": "All 100 records validated successfully",
         ...         "details": {
         ...             "total_items": 100,
@@ -51,7 +51,7 @@ class DataValidated(TypedDict):
     """
 
     task_id: str
-    status: str
+    status: SummaryStatus
     results: ValidationSummary
 
 

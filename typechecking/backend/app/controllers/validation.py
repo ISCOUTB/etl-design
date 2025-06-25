@@ -78,7 +78,7 @@ async def validate_file_against_schema(
     return {"success": True, "error": None, "validation_results": validation_results}
 
 
-def get_validation_summary(validation_results: Dict) -> ValidationSummary:
+def get_validation_summary(validation_results: ValidationResult) -> ValidationSummary:
     """
     Generate a summary of validation results.
 
@@ -173,25 +173,26 @@ def validate_data_parallel(
         chunk_size_actual = len(chunks[index])
         if is_valid:
             total_valid_items += chunk_size_actual
-        else:
-            # Adjust error indices to reflect their position in the original data
-            chunk_start = sum(len(chunks[j]) for j in range(index))
-            adjusted_errors = []
-            for error in errors:
-                # Extract the item number and adjust it
-                if error.startswith("Item "):
-                    try:
-                        item_num = int(error.split(":")[0].replace("Item ", ""))
-                        adjusted_error = error.replace(
-                            f"Item {item_num}:", f"Item {chunk_start + item_num}:"
-                        )
-                        adjusted_errors.append(adjusted_error)
-                    except Exception:
-                        adjusted_errors.append(error)
-                else:
+            continue
+
+        # Adjust error indices to reflect their position in the original data
+        chunk_start = sum(len(chunks[j]) for j in range(index))
+        adjusted_errors = []
+        for error in errors:
+            # Extract the item number and adjust it
+            if error.startswith("Item "):
+                try:
+                    item_num = int(error.split(":")[0].replace("Item ", ""))
+                    adjusted_error = error.replace(
+                        f"Item {item_num}:", f"Item {chunk_start + item_num}:"
+                    )
+                    adjusted_errors.append(adjusted_error)
+                except Exception:
                     adjusted_errors.append(error)
-            all_errors.extend(adjusted_errors)
-            total_valid_items += chunk_size_actual - len(errors)
+            else:
+                adjusted_errors.append(error)
+        all_errors.extend(adjusted_errors)
+        total_valid_items += chunk_size_actual - len(errors)
 
     total_items = len(data)
     invalid_items = total_items - total_valid_items

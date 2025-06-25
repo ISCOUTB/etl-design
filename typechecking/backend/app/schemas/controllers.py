@@ -8,16 +8,19 @@ The schemas support the validation workflow from individual validation
 results to comprehensive summaries with detailed statistics and error
 information.
 """
-from typing import TypedDict, Optional
+
+from typing import TypedDict, Optional, Literal
+
+SummaryStatus = Literal["success", "warning", "error"]
 
 
 class ValidationResults(TypedDict):
     """Detailed validation results schema.
-    
+
     Contains comprehensive validation information including validity status,
     item counts, error details, and summary messages. Used to represent
     the complete results of a file validation operation.
-    
+
     Attributes:
         is_valid: Overall validation status - True if all items are valid.
         total_items: Total number of items/records processed in the file.
@@ -25,7 +28,7 @@ class ValidationResults(TypedDict):
         invalid_items: Count of items that failed validation rules.
         errors: List of error messages describing validation failures.
         message: Human-readable summary message of the validation results.
-        
+
     Example:
         >>> results: ValidationResults = {
         ...     "is_valid": False,
@@ -36,6 +39,7 @@ class ValidationResults(TypedDict):
         ...     "message": "Validation completed with 5 errors"
         ... }
     """
+
     is_valid: bool
     total_items: int
     valid_items: int
@@ -46,16 +50,16 @@ class ValidationResults(TypedDict):
 
 class ValidationResult(TypedDict):
     """Validation operation result wrapper.
-    
+
     Wraps validation results with success status and error information.
     Used by controllers to return standardized validation responses
     with proper error handling.
-    
+
     Attributes:
         success: Boolean indicating if the validation operation completed successfully.
         error: Error message if the validation operation failed, None if successful.
         validation_results: Detailed validation results, None if operation failed.
-        
+
     Example:
         >>> result: ValidationResult = {
         ...     "success": True,
@@ -70,6 +74,7 @@ class ValidationResult(TypedDict):
         ...     }
         ... }
     """
+
     success: bool
     error: Optional[str]
     validation_results: Optional[ValidationResults]
@@ -77,11 +82,11 @@ class ValidationResult(TypedDict):
 
 class SummaryDetails(TypedDict):
     """Detailed summary information for validation results.
-    
+
     Provides comprehensive statistics and metadata about a validation
     operation including item counts, file information, and timing data.
     Used within validation summaries for detailed reporting.
-    
+
     Attributes:
         total_items: Total number of items processed.
         valid_items: Count of successfully validated items.
@@ -89,7 +94,7 @@ class SummaryDetails(TypedDict):
         error_count: Total number of validation errors encountered.
         file_name: Name of the validated file, None if not available.
         validated_at: ISO timestamp of when validation was performed, None if not recorded.
-        
+
     Example:
         >>> details: SummaryDetails = {
         ...     "total_items": 1000,
@@ -100,6 +105,7 @@ class SummaryDetails(TypedDict):
         ...     "validated_at": "2024-01-15T10:30:00Z"
         ... }
     """
+
     total_items: int
     valid_items: int
     invalid_items: int
@@ -110,16 +116,16 @@ class SummaryDetails(TypedDict):
 
 class ValidationSummary(TypedDict):
     """High-level validation summary schema.
-    
+
     Provides a concise summary of validation results with status,
     summary message, and optional detailed information. Used for
     API responses and result reporting.
-    
+
     Attributes:
         status: Overall validation status ('valid', 'invalid', 'error', etc.).
         summary: Brief human-readable summary of the validation results.
         details: Optional detailed summary information, None for simple summaries.
-        
+
     Example:
         >>> summary: ValidationSummary = {
         ...     "status": "partially_valid",
@@ -134,6 +140,7 @@ class ValidationSummary(TypedDict):
         ...     }
         ... }
     """
-    status: str
+
+    status: SummaryStatus
     summary: str
     details: Optional[SummaryDetails]
