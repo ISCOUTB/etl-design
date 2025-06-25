@@ -1,13 +1,14 @@
 import aio_pika
 import asyncio
-from typing import Dict, Any
+from asyncpg import connect
+from typing import Dict
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import settings
 from app.core.database_redis import redis_db
 
 
-async def check_mongodb_connection() -> Dict[str, Any]:
+async def check_mongodb_connection() -> Dict[str, str]:
     """Check MongoDB connection health."""
     try:
         mongo_url = str(settings.MONGO_URI)
@@ -35,7 +36,7 @@ async def check_mongodb_connection() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e)}
 
 
-async def check_rabbitmq_connection() -> Dict[str, Any]:
+async def check_rabbitmq_connection() -> Dict[str, str]:
     """Check RabbitMQ connection health."""
     try:
         rabbitmq_url = str(settings.RABBITMQ_URI)
@@ -61,7 +62,7 @@ async def check_rabbitmq_connection() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e)}
 
 
-async def check_redis_connection() -> Dict[str, Any]:
+async def check_redis_connection() -> Dict[str, str]:
     """Check Redis connection health."""
     try:
         # Test Redis connection with ping and a simple operation
@@ -90,3 +91,34 @@ async def check_redis_connection() -> Dict[str, Any]:
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
+
+
+async def check_postgres_connection() -> Dict[str, str]:
+    """Check PostgreSQL connection health."""
+    try:
+        postgres_uri = str(settings.POSTGRES_URI).replace(
+            "postgresql+psycopg", "postgresql"
+        )
+
+        # Connect with timeout
+        conn = await asyncio.wait_for(connect(postgres_uri), timeout=5.0)
+
+        # Execute a simple query to test the connection
+        await conn.execute("SELECT 1")
+        await conn.close()
+
+        return {"status": "healthy", "response_time_ms": "< 5000"}
+    except asyncio.TimeoutError:
+        return {
+            "status": "unhealthy",
+            "error": "Connection timeout",
+            "response_time_ms": "> 5000",
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    print(asyncio.run(check_postgres_connection()))

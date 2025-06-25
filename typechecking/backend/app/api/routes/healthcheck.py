@@ -5,6 +5,7 @@ from app.services.healthcheck import (
     check_mongodb_connection,
     check_rabbitmq_connection,
     check_redis_connection,
+    check_postgres_connection,
 )
 
 import json
@@ -26,12 +27,15 @@ async def healthcheck(use_cache: bool = True) -> Dict[str, Any]:
 
     try:
         # Run health checks concurrently
-        mongodb_check, rabbitmq_check, redisdb_check = await asyncio.gather(
+        healthchecks = await asyncio.gather(
             check_mongodb_connection(),
             check_rabbitmq_connection(),
             check_redis_connection(),
+            check_postgres_connection(),
             return_exceptions=True,
         )
+
+        mongodb_check, rabbitmq_check, redisdb_check, postgres_check = healthchecks
 
         # Handle exceptions from gather
         if isinstance(mongodb_check, Exception):
@@ -42,6 +46,9 @@ async def healthcheck(use_cache: bool = True) -> Dict[str, Any]:
 
         if isinstance(redisdb_check, Exception):
             redisdb_check = {"status": "unhealthy", "error": str(redisdb_check)}
+
+        if isinstance(postgres_check, Exception):
+            postgres_check = {"status": "unhealthy", "error": str(postgres_check)}
 
         # Determine overall health
         overall_status = "healthy"
@@ -60,6 +67,7 @@ async def healthcheck(use_cache: bool = True) -> Dict[str, Any]:
                 "mongodb": mongodb_check,
                 "rabbitmq": rabbitmq_check,
                 "redisdb": redisdb_check,
+                "postgres": postgres_check,
             },
         }
 
