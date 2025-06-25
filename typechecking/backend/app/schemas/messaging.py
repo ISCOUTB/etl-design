@@ -36,6 +36,7 @@ class ValidationMessage(TypedDict):
         metadata: Additional context including filename, processing options,
             and other request-specific information.
         priority: Message priority level (1-10) for queue processing order.
+      date: Date of the message creation in ISO format.
 
     Example:
         >>> message: ValidationMessage = {
@@ -55,6 +56,7 @@ class ValidationMessage(TypedDict):
     import_name: str
     metadata: dict  # Additional metadata for the request
     priority: int  # Priority of the request
+    date: str
 
 
 class SchemaMessage(TypedDict):
@@ -76,6 +78,7 @@ class SchemaMessage(TypedDict):
         import_name: Unique identifier for the schema used for storage
             and retrieval operations.
         raw: Boolean flag indicating if the schema is raw.
+        date: Date of the message creation in ISO format.
 
     Example:
         >>> message: SchemaMessage = {
@@ -100,3 +103,4 @@ class SchemaMessage(TypedDict):
     schema: dict  # The JSON schema to be updated
     import_name: str  # The name of the import associated with the schema
     raw: bool = False  # Flag to indicate if the schema is raw or processed
+    date: str  # Optional date field for additional context

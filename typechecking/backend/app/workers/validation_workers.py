@@ -20,6 +20,7 @@ Example:
 import json
 import logging
 import asyncio
+from app.workers.utils import get_datetime_now
 
 from app.core.config import settings
 from app.controllers.validation import (
@@ -141,8 +142,18 @@ class ValidationWorker:
 
             if task == "sample_validation":
                 logger.info(f"Process validation request: {task_id}")
+                redis_db.update_task_id(
+                    task_id=task_id,
+                    field="status",
+                    value="received-sample-validation",
+                    endpoint=self.ENDPOINT,
+                    data={
+                        "upload_date": message["date"],
+                        "update_date": get_datetime_now(),
+                    },
+                )
                 result = asyncio.run(self._validate_data(message))
-            
+
             # Add more cases here if needed for other tasks
 
             self._publish_result(task_id, result)
@@ -189,11 +200,12 @@ class ValidationWorker:
             field="status",
             value="processing-file",
             endpoint=self.ENDPOINT,
+            data={"update_date": get_datetime_now()},
         )
         file_bytes = bytes.fromhex(message["file_data"])
         file_obj = BytesIO(file_bytes)
         upload_file = UploadFile(
-            filename=message.get("filename", "uploaded_file"), file=file_obj
+            filename=message["metadata"]["filename"], file=file_obj
         )
 
         redis_db.update_task_id(
@@ -201,6 +213,7 @@ class ValidationWorker:
             field="status",
             value="validating-file",
             endpoint=self.ENDPOINT,
+            data={"update_date": get_datetime_now()},
         )
 
         results = await validate_file_against_schema(
@@ -213,7 +226,7 @@ class ValidationWorker:
             field="status",
             value=summary["status"],
             endpoint=self.ENDPOINT,
-            data={"results": summary},
+            data={"results": summary, "update_date": get_datetime_now()},
         )
 
         return {
@@ -236,21 +249,28 @@ class ValidationWorker:
 
         Returns:
             str: Confirmation message indicating the result was published.
-                
+
         Raises:
             Exception: If message publishing fails due to connection issues
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        if result["status"] != "completed":
+        if result["status"] == "error":
+            upload_date = redis_db.get_task_id(task_id, self.ENDPOINT).data.get(
+                "upload_date", get_datetime_now()
+            )
             redis_db.update_task_id(
                 task_id=task_id,
                 field="status",
                 value="failed-publishing-result",
                 endpoint=self.ENDPOINT,
                 message="Failed to publish validation result",
-                data={"error": "Failed to publish validation result"},
-                reset_data=True
+                data={
+                    "error": "Failed to publish validation result",
+                    "update_date": get_datetime_now(),
+                    "upload_date": upload_date,
+                },
+                reset_data=True,
             )
             logger.error(f"Failed to publish result for task: {task_id}")
             return None
@@ -266,6 +286,7 @@ class ValidationWorker:
             value="published",
             endpoint=self.ENDPOINT,
             message="Validation result published",
+            data={"update_date": get_datetime_now()},
         )
         logger.info(f"Validation result published for task: {task_id}")
         return None

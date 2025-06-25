@@ -19,6 +19,7 @@ Example:
 import json
 import logging
 from jsonschema import SchemaError
+from app.workers.utils import get_datetime_now
 
 from app.core.config import settings
 from app.schemas.messaging import SchemaMessage
@@ -138,14 +139,29 @@ class SchemaPublisher:
                 redis_db.update_task_id(
                     task_id=task_id,
                     field="status",
-                    value="processing-schema-update",
+                    value="received-schema-update",
                     endpoint=self.ENDPOINT,
+                    data={
+                        "upload_date": message["date"],
+                        "update_date": get_datetime_now(),
+                    },
                 )
                 result = self._update_schema(message)
 
             if task == "remove_schema":
+                logger.info(f"Removing schema: {task_id}")
+                redis_db.update_task_id(
+                    task_id=task_id,
+                    field="status",
+                    value="received-removing-schema",
+                    endpoint=self.ENDPOINT,
+                    data={
+                        "upload_date": message["date"],
+                        "update_date": get_datetime_now(),
+                    },
+                )
                 result = self._remove_schema(message)
-            
+
             # Add more cases here if needed for other tasks
 
             # Publish the result back to the exchange
@@ -194,6 +210,7 @@ class SchemaPublisher:
             value="creating-schema",
             endpoint=self.ENDPOINT,
             message=f"Creating schema for import: {import_name}",
+            data={"update_date": get_datetime_now()},
         )
 
         # Create the schema from the provided parameters
@@ -205,6 +222,7 @@ class SchemaPublisher:
                 value="schema-created",
                 endpoint=self.ENDPOINT,
                 message=f"Schema created for import: {import_name}",
+                data={"update_date": get_datetime_now()},
             )
         except SchemaError as e:
             logger.error(f"Schema creation failed: {e}")
@@ -214,6 +232,7 @@ class SchemaPublisher:
                 value="failed-creating-schema",
                 endpoint=self.ENDPOINT,
                 message=repr(e),
+                data={"update_date": get_datetime_now()},
             )
 
             return SchemaUpdated(
@@ -230,6 +249,7 @@ class SchemaPublisher:
             field="status",
             value="saving-schema",
             endpoint=self.ENDPOINT,
+            data={"update_date": get_datetime_now()},
         )
         try:
             result = save_schema(schema, import_name)
@@ -247,7 +267,8 @@ class SchemaPublisher:
             data={
                 "results": (
                     repr(result) if result else "Schema is the same, no update needed."
-                )
+                ),
+                "update_date": get_datetime_now(),
             },
         )
 
@@ -292,6 +313,7 @@ class SchemaPublisher:
             value="removing-schema",
             endpoint=self.ENDPOINT,
             message=f"Removing schema for import: {import_name}",
+            data={"update_date": get_datetime_now()},
         )
 
         # Remove the schema and return the result
@@ -308,7 +330,10 @@ class SchemaPublisher:
             value=status,
             endpoint=self.ENDPOINT,
             message="Schema removal completed.",
-            data={"results": result if result else "Active Schema not found."}
+            data={
+                "results": result if result else "Active Schema not found.",
+                "update_date": get_datetime_now(),
+            },
         )
 
         return {
@@ -335,13 +360,20 @@ class SchemaPublisher:
                 for proper error handling and message acknowledgment.
         """
         if result["status"] != "completed":
+            upload_date = redis_db.get_task_id(task_id, self.ENDPOINT).data.get(
+                "upload_date", get_datetime_now()
+            )
             redis_db.update_task_id(
                 task_id=task_id,
                 field="status",
                 value="failed-publishing-result",
                 endpoint=self.ENDPOINT,
                 message="Failed to publish validation result",
-                data={"error": "Failed to publish validation result"},
+                data={
+                    "error": "Failed to publish validation result",
+                    "update_date": get_datetime_now(),
+                    "upload_date": upload_date,
+                },
                 reset_data=True,
             )
             logger.error(f"Failed to publish result for task: {task_id}")
@@ -358,6 +390,7 @@ class SchemaPublisher:
             value="published",
             endpoint=self.ENDPOINT,
             message="Validation result published",
+            data={"update_date": get_datetime_now()},
         )
         logger.info(f"Validation result published for task: {task_id}")
         return None
