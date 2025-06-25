@@ -8,7 +8,8 @@
             "name": "Python Debugger: Workers",
             "type": "debugpy",
             "request": "launch",
-            "module": "app.workers.worker_manager"
+            "module": "app.workers.worker_manager",
+            "cwd": "${workspaceFolder}/backend",
         },
         {
             "name": "Python Debugger: FastAPI",
@@ -19,7 +20,8 @@
                 "app.main:app",
                 "--reload"
             ],
-            "jinja": true
+            "jinja": true,
+            "cwd": "${workspaceFolder}/backend",
         }
     ]
 }
