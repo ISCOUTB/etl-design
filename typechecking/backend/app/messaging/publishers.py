@@ -4,7 +4,7 @@ This module provides publishers for sending messages to RabbitMQ queues
 in the typechecking system. The publishers handle message formatting,
 routing, and delivery properties for validation and schema update operations.
 
-Publishers use the singleton RabbitMQ connection and handle message
+Publishers use the factory RabbitMQ connection and handle message
 serialization, unique ID generation, and proper message properties
 for reliable delivery and processing.
 
@@ -28,7 +28,7 @@ from typing import Any, Dict
 from datetime import datetime
 
 import pika
-from app.messaging.connection import rabbitmq_connection
+from app.messaging.connection_factory import RabbitMQConnectionFactory
 from app.schemas.messaging import (
     ValidationMessage,
     SchemaMessage,
@@ -44,21 +44,21 @@ class ValidationPublisher:
     to the RabbitMQ exchange. It manages message formatting, unique ID
     generation, and proper message properties for reliable delivery.
 
-    The publisher uses the singleton RabbitMQ connection and formats
+    The publisher uses the Factory RabbitMQ connection and formats
     messages according to the defined message schemas with appropriate
     routing keys for proper queue distribution.
 
     Attributes:
-        _channel: RabbitMQ channel obtained from the singleton connection.
+        _channel: RabbitMQ channel obtained from the factory connection.
     """
 
     def __init__(self):
         """Initialize the ValidationPublisher.
 
-        Sets up the publisher with a channel from the singleton RabbitMQ
+        Sets up the publisher with a channel from the factory RabbitMQ
         connection. The channel is used for all message publishing operations.
         """
-        self._channel = rabbitmq_connection.channel
+        self._channel = RabbitMQConnectionFactory.get_thread_channel()
 
     def publish_validation_request(
         self,
@@ -110,6 +110,7 @@ class ValidationPublisher:
             "import_name": import_name,
             "metadata": metadata,
             "priority": metadata.get("priority", 5),
+            "date": datetime.now().isoformat(),
         }
 
         self._channel.basic_publish(
@@ -174,6 +175,7 @@ class ValidationPublisher:
             "import_name": import_name,
             "raw": raw,
             "task": task,
+            "date": datetime.now().isoformat(),
         }
 
         self._channel.basic_publish(
