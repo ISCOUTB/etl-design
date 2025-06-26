@@ -48,10 +48,10 @@ async def validate_file_against_schema(
 
     if not data:
         return {
-            "success": True,
+            "success": False,
             "error": None,
             "validation_results": {
-                "is_valid": True,
+                "is_valid": False,
                 "total_items": 0,
                 "valid_items": 0,
                 "invalid_items": 0,
