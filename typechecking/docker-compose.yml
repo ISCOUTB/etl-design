@@ -1,6 +1,7 @@
 services:
   rabbitmq:
     image: rabbitmq:4-management
+    restart: always
     env_file:
       - .env
     environment:
@@ -27,6 +28,7 @@ services:
 
   postgresdb:
     image: postgres:17
+    restart: always
     env_file:
       - .env
     environment:
@@ -41,6 +43,7 @@ services:
 
   redisdb:
     image: redis:7.4.1
+    restart: always
     env_file:
       - .env
     ports:
@@ -54,6 +57,7 @@ services:
   workers:
     build:
       context: ./backend
+    restart: always
     command: python -m app.workers.worker_manager
     depends_on:
       - rabbitmq
@@ -91,6 +95,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: always
     depends_on:
       - rabbitmq
       - mongodb
