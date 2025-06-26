@@ -45,5 +45,10 @@ class CreateUser(User):
     password: str
 
 
+class UpdateUser(BaseUser):
+    password: Optional[str] = None
+    rol: Optional[Roles] = None
+
+
 class AllUser(BaseUser):
     roles: list[RolesInfo]

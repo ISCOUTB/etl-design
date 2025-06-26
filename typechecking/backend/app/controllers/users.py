@@ -1,10 +1,12 @@
 from typing import Literal
+import datetime
 
 import app.models as models
 import app.schemas as schemas
 from app.controllers.utils import valid_email, valid_phone
 from app.core.security import verify_password, get_password_hash
 
+import sqlalchemy.exc
 from sqlalchemy import select, Select
 from sqlalchemy.orm import Session
 
@@ -70,10 +72,10 @@ class ControllerUsers:
             models.user_roles.UserRoles | None: Returns a UserRoles object if the user was authenticated
             correctly. Otherwise returns None.
         """
-        user_search = schemas.users.SearchUser(
+        search_user = schemas.users.SearchUser(
             username=user_login.username, rol=user_login.rol
         )
-        user: models.user_roles.UserRoles | None = cls.get_user_rol(user_search, db)
+        user: models.user_roles.UserRoles | None = cls.get_user_rol(search_user, db)
 
         if user is None:
             return None
@@ -110,7 +112,6 @@ class ControllerUsers:
         if active:
             stmt = stmt.where(models.user_roles.UserRoles.is_active)
 
-        print(stmt, type(stmt))
         return stmt
 
     @classmethod
@@ -143,7 +144,7 @@ class ControllerUsers:
         if not query:
             return None
 
-        userbase = schemas.users.BaseUser(
+        base_user = schemas.users.BaseUser(
             username=query[0][0],
             name=query[0][1],
             surname=query[0][2],
@@ -155,9 +156,129 @@ class ControllerUsers:
             roles: list[schemas.users.RolesInfo] = list(
                 map(lambda row: {"rol": row[-2], "is_active": row[-1]}, query)
             )
-            return schemas.users.AllUser(**userbase.model_dump(), roles=roles)
+            return schemas.users.AllUser(**base_user.model_dump(), roles=roles)
 
-        return userbase
+        return base_user
+
+    @classmethod
+    def get_users(
+        cls,
+        db: Session,
+        *,
+        active: bool = True,
+        rol: bool = False,
+        limit: int = 100,
+        page: int = 1,
+    ) -> schemas.api.Paginated[schemas.users.BaseUser | schemas.users.AllUser]:
+        """
+        Gets all users in the system with their basic information using pagination.
+
+        Args:
+            db (Session): Database session for making queries to the sql database.
+            active (bool): Filter to ensure the user has at least one active role. Default is True.
+            rol (bool): Specifies if all roles of the same user should be shown.
+                When rol=True, the function returns `AllUser` objects and `BaseUser` when rol=False.
+                Default is False.
+            limit (int): Maximum number of users to return per page. Default is 100.
+            page (int): Page number (1-based). Default is 1.
+
+        Returns:
+            schemas.api.Paginated[schemas.users.BaseUser | schemas.users.AllUser]: Dictionary containing:
+                - items: List of users with their basic information
+                - total: Total number of users
+                - page: Current page number
+                - limit: Number of users per page
+                - total_pages: Total number of pages
+                - has_next: Whether there's a next page
+                - has_prev: Whether there's a previous page
+        """
+        # Calculate offset for pagination
+        offset = (page - 1) * limit
+
+        # Base query
+        stmt = cls.join_users(active)
+
+        # Get total count
+        count_stmt = select(models.user_info.UserInfo.username).select_from(
+            models.user_info.UserInfo.join(
+                models.user_roles.UserRoles,
+                models.user_info.UserInfo.username
+                == models.user_roles.UserRoles.username,
+            )
+        )
+        if active:
+            count_stmt = count_stmt.where(models.user_roles.UserRoles.is_active)
+
+        total = len(db.execute(count_stmt).all())
+
+        # Apply pagination
+        stmt = stmt.limit(limit).offset(offset)
+        query = db.execute(stmt).all()
+
+        if not query:
+            return {
+                "users": [],
+                "total": 0,
+                "page": page,
+                "limit": limit,
+                "total_pages": 0,
+                "has_next": False,
+                "has_prev": False,
+            }
+
+        # Group users by username to handle multiple roles
+        users_dict = {}
+        for row in query:
+            username = row[0]
+            if username not in users_dict:
+                users_dict[username] = {
+                    "username": row[0],
+                    "name": row[1],
+                    "surname": row[2],
+                    "sex": row[3],
+                    "phone": row[4],
+                    "email": row[5],
+                    "roles": [],
+                }
+
+            users_dict[username]["roles"].append({"rol": row[6], "is_active": row[7]})
+
+        # Convert to schemas
+        users = []
+        for user_data in users_dict.values():
+            base_user = schemas.users.BaseUser(
+                username=user_data["username"],
+                name=user_data["name"],
+                surname=user_data["surname"],
+                sex=user_data["sex"],
+                phone=user_data["phone"],
+                email=user_data["email"],
+            )
+
+            if rol:
+                users.append(
+                    schemas.users.AllUser(
+                        **base_user.model_dump(), roles=user_data["roles"]
+                    )
+                )
+                continue
+
+            users.append(base_user)
+
+        # Calculate pagination info
+        total_pages = (total + limit - 1) // limit  # Ceiling division
+        has_next = page < total_pages
+        has_prev = page > 1
+
+        return {
+            "users": users,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        }
 
     @classmethod
     def create_user(
@@ -236,4 +357,181 @@ class ControllerUsers:
         user_rol.is_active = True
         db.commit()
         db.refresh(user_rol)
+        return 0
+
+    @classmethod
+    def update_user(
+        cls,
+        search_user: schemas.users.SearchUser,
+        updated_info: schemas.users.UpdateUser,
+        db: Session,
+        admin: bool = False,
+    ) -> Literal[0, 1, 2, 3, 4, 5]:
+        """
+        Updates the complete information of any user within the system regardless of their current state (active or not).
+
+        Args:
+            search_user (schemas.users.SearchUser): User search information to find in the database.
+            updated_info (schemas.users.UpdateUser): Information to be updated.
+            db (Session): Database session for making queries to the sql database.
+            admin (bool): Validates if you want to update administrator information. Default is False.
+
+        Returns:
+            Literal[0, 1, 2, 3, 4, 5]: Returns an integer symbolizing the response status. These are the possible response states:
+                - 0: Successful response
+                - 1: User does not exist
+                - 2: User is administrator, cannot be edited. Only appears when admin=False.
+                - 3: Username already exists (when updating username)
+                - 4: Email already exists
+                - 5: Phone number already exists
+        """
+        # Get the user with all roles to check if exists and if is admin
+        user: schemas.users.AllUser = cls.get_user(
+            search_user.username, db, rol=True, active=False
+        )
+
+        if user is None:
+            return 1
+
+        # Check if user has admin role and admin updates are not allowed
+        if not admin and any(role["rol"] == "admin" for role in user.roles):
+            return 2
+
+        # Get the user info and user role objects for updating
+        user_info: models.user_info.UserInfo = (
+            db.query(models.user_info.UserInfo)
+            .filter(models.user_info.UserInfo.username == search_user.username)
+            .first()
+        )
+
+        user_rol: models.user_roles.UserRoles = cls.get_user_rol(search_user, db, False)
+
+        # Get only the fields that are not None from updated_info
+        update_data = updated_info.model_dump(exclude_unset=True, exclude_none=True)
+
+        # Handle special validations for unique fields
+        if "username" in update_data and update_data["username"] != user_info.username:
+            existing_user = cls.get_user_by_username(
+                update_data["username"], db, active=False
+            )
+            if existing_user is not None:
+                return 3
+
+        if "email" in update_data and update_data["email"] != user_info.email:
+            if not valid_email(update_data["email"], db):
+                return 4
+
+        if "phone" in update_data and update_data["phone"] != user_info.phone:
+            if not valid_phone(update_data["phone"], db):
+                return 5
+
+        # Update user_info fields
+        user_info_fields = {"username", "name", "surname", "sex", "phone", "email"}
+        for field, value in update_data.items():
+            if field not in user_info_fields:
+                continue
+
+            setattr(user_info, field, value)
+
+            # If username changes, also update it in user_rol
+            if field == "username":
+                setattr(user_rol, field, value)
+                # TODO: Make a call to update import_names too
+
+        # Update user_rol specific fields
+        user_rol_fields = {"password", "rol"}
+        for field, value in update_data.items():
+            if field in user_rol_fields:
+                if field == "password":
+                    # Hash the password before storing
+                    setattr(user_rol, field, get_password_hash(value))
+                    continue
+                setattr(user_rol, field, value)
+
+        try:
+            db.commit()
+            db.refresh(user_info)
+            db.refresh(user_rol)
+        except sqlalchemy.exc.IntegrityError:
+            db.rollback()
+            return 3
+
+        return 0
+
+    @classmethod
+    def delete_user(
+        cls,
+        search_user: schemas.users.SearchUser,
+        db: Session,
+        admin: bool = False,
+    ) -> Literal[0, 1, 2]:
+        """
+        "Deletes" an active user within the system. In reality, what is done is to set the user as inactive.
+
+        Args:
+            search_user (schemas.users.SearchUser): User search information to find in the database.
+            db (Session): Database session for making queries to the sql database.
+            admin (bool): Specifies if it is possible to delete an administrator within the database.
+                         By default, admin=False.
+
+        Returns:
+            Literal[0, 1, 2]: Returns an integer symbolizing the response status. These are the possible response states:
+                - 0: Successful response
+                - 1: User does not exist
+                - 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
+        """
+        if search_user.rol == "admin" and not admin:
+            return 2
+
+        user: models.user_roles.UserRoles | None = cls.get_user_rol(search_user, db)
+
+        if user is None:
+            return 1
+
+        user.is_active = False
+        user.inactivity = datetime.date.today()
+
+        db.commit()
+        db.refresh(user)
+
+        return 0
+
+    @classmethod
+    def delete_completely_user(
+        cls,
+        search_user: schemas.users.SearchUser,
+        db: Session,
+        admin: bool = False,
+    ) -> Literal[0, 1, 2, 3]:
+        """
+        Completely deletes a user from the system. This operation is exclusively reserved for system administrators,
+        and, if wanting to delete an administrator, only the superuser could perform it.
+
+        Args:
+            search_user (schemas.users.SearchUser): User search information to find in the database.
+            db (Session): Database session for making queries to the sql database.
+            admin (bool): Specifies if it is possible to delete an administrator within the database.
+                         By default, admin=False.
+
+        Returns:
+            Literal[0, 1, 2]: Returns an integer symbolizing the response status. These are the possible response states:
+                - 0: Successful response
+                - 1: User does not exist
+                - 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
+                - 3: User is active, cannot be deleted completely.
+        """
+        if search_user.rol == "admin" and not admin:
+            return 2
+
+        user: models.user_roles.UserRoles | None = cls.get_user_rol(search_user, db)
+
+        if user is None:
+            return 1
+
+        if user.is_active:
+            return 3
+
+        db.delete(user)
+        db.commit()
+
         return 0
