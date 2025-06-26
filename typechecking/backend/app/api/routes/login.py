@@ -20,8 +20,8 @@ async def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     rol: Annotated[schemas.users.Roles, Body()],
 ) -> schemas.token.Token:
-    user_login = schemas.LoginUser(
-        num_document=form_data.username, password=form_data.password, rol=rol
+    user_login = schemas.users.LoginUser(
+        username=form_data.username, password=form_data.password, rol=rol
     )
 
     user = ControllerUsers.authenticate_user(user_login, db)
