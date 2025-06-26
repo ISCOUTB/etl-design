@@ -202,13 +202,13 @@ class RabbitMQConnectionFactory:
             channel.queue_bind(
                 exchange="typechecking.exchange",
                 queue="typechecking.results.schema.queue",
-                routing_key="results.schema.*",
+                routing_key="results.schema",
             )
 
             channel.queue_bind(
                 exchange="typechecking.exchange",
                 queue="typechecking.results.validation.queue",
-                routing_key="results.validation.*",
+                routing_key="results.validation",
             )
 
             logger.info("RabbitMQ infrastructure setup completed")
