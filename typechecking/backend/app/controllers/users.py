@@ -217,7 +217,7 @@ class ControllerUsers:
 
         if not query:
             return {
-                "users": [],
+                "items": [],
                 "total": 0,
                 "page": page,
                 "limit": limit,
@@ -271,7 +271,7 @@ class ControllerUsers:
         has_prev = page > 1
 
         return {
-            "users": users,
+            "items": users,
             "total": total,
             "page": page,
             "limit": limit,
@@ -283,7 +283,7 @@ class ControllerUsers:
     @classmethod
     def create_user(
         cls, new_user: schemas.users.CreateUser, db: Session, admin: bool = True
-    ) -> Literal[0, 1, 2, 3, 4]:
+    ) -> schemas.users.Output:
         """
         Creates a new user in the system. This operation is exclusively reserved for system administrators,
         and, if wanting to add an administrator, only the superuser could perform it.
@@ -298,15 +298,15 @@ class ControllerUsers:
             admin (bool): Validates if you want to add administrator information. Default is True.
 
         Returns:
-            Literal[0, 1, 2, 3, 4]: Returns an integer symbolizing the response status. These are the possible response states:
-                - 0: Successful response
-                - 1: User is administrator, cannot be edited. Only appears when admin=False.
-                - 2: Active user with same username
-                - 3: User with same email
-                - 4: User with same phone number
+            schemas.users.Output: Returns a dictionary symbolizing the response status. These are the possible response states:
+                - number 0: Successful response
+                - number 1: User is administrator, cannot be created. Only appears when admin=False.
+                - number 2: Active user with same username and role
+                - number 3: User with same email
+                - number 4: User with same phone number
         """
         if new_user.rol == "admin" and not admin:
-            return 1
+            return {"number": 1, "message": "Cannot create admin user.", "status": 403}
 
         user: schemas.users.AllUser = cls.get_user(
             new_user.username, db, rol=True, active=False
@@ -324,10 +324,10 @@ class ControllerUsers:
             )
 
             if new_user.email is not None and not valid_email(new_user.email, db):
-                return 3
+                return {"number": 3, "message": "Email already exists.", "status": 409}
 
             if new_user.phone is not None and not valid_phone(new_user.phone, db):
-                return 4
+                return {"number": 4, "message": "Phone number already exists.", "status": 409}
 
             db.add(user_info)
 
@@ -348,16 +348,16 @@ class ControllerUsers:
             db.add(new_user_rol)
             db.commit()
 
-            return 0
+            return {"number": 0, "message": "User created successfully.", "status": 201}
 
         # If user role is active, return status
         if user_rol.is_active:
-            return 2
+            return {"number": 2, "message": "Active user with same username and role already exists.", "status": 409}
 
         user_rol.is_active = True
         db.commit()
         db.refresh(user_rol)
-        return 0
+        return {"number": 0, "message": "User activated successfully.", "status": 200}
 
     @classmethod
     def update_user(
@@ -366,7 +366,7 @@ class ControllerUsers:
         updated_info: schemas.users.UpdateUser,
         db: Session,
         admin: bool = False,
-    ) -> Literal[0, 1, 2, 3, 4, 5]:
+    ) -> schemas.users.Output:
         """
         Updates the complete information of any user within the system regardless of their current state (active or not).
 
@@ -377,13 +377,13 @@ class ControllerUsers:
             admin (bool): Validates if you want to update administrator information. Default is False.
 
         Returns:
-            Literal[0, 1, 2, 3, 4, 5]: Returns an integer symbolizing the response status. These are the possible response states:
-                - 0: Successful response
-                - 1: User does not exist
-                - 2: User is administrator, cannot be edited. Only appears when admin=False.
-                - 3: Username already exists (when updating username)
-                - 4: Email already exists
-                - 5: Phone number already exists
+            schemas.users.Output: Returns a dictionary symbolizing the response status. These are the possible response states:
+                - number 0: Successful response
+                - number 1: User does not exist
+                - number 2: User is administrator, cannot be edited. Only appears when admin=False.
+                - number 3: Username already exists (when updating username)
+                - number 4: Email already exists
+                - number 5: Phone number already exists
         """
         # Get the user with all roles to check if exists and if is admin
         user: schemas.users.AllUser = cls.get_user(
@@ -391,11 +391,11 @@ class ControllerUsers:
         )
 
         if user is None:
-            return 1
+            return {"number": 1, "message": "User does not exist.", "status": 404}
 
         # Check if user has admin role and admin updates are not allowed
         if not admin and any(role["rol"] == "admin" for role in user.roles):
-            return 2
+            return {"number": 2, "message": "Cannot edit administrator user.", "status": 403}
 
         # Get the user info and user role objects for updating
         user_info: models.user_info.UserInfo = (
@@ -415,15 +415,15 @@ class ControllerUsers:
                 update_data["username"], db, active=False
             )
             if existing_user is not None:
-                return 3
+                return {"number": 3, "message": "Username already exists.", "status": 409}
 
         if "email" in update_data and update_data["email"] != user_info.email:
             if not valid_email(update_data["email"], db):
-                return 4
+                return {"number": 4, "message": "Email already exists.", "status": 409}
 
         if "phone" in update_data and update_data["phone"] != user_info.phone:
             if not valid_phone(update_data["phone"], db):
-                return 5
+                return {"number": 5, "message": "Phone number already exists.", "status": 409}
 
         # Update user_info fields
         user_info_fields = {"username", "name", "surname", "sex", "phone", "email"}
@@ -454,9 +454,9 @@ class ControllerUsers:
             db.refresh(user_rol)
         except sqlalchemy.exc.IntegrityError:
             db.rollback()
-            return 3
+            return {"number": 3, "message": "Username already exists.", "status": 409}
 
-        return 0
+        return {"number": 0, "message": "User updated successfully.", "status": 200}
 
     @classmethod
     def delete_user(
@@ -464,7 +464,7 @@ class ControllerUsers:
         search_user: schemas.users.SearchUser,
         db: Session,
         admin: bool = False,
-    ) -> Literal[0, 1, 2]:
+    ) -> schemas.users.Output:
         """
         "Deletes" an active user within the system. In reality, what is done is to set the user as inactive.
 
@@ -475,18 +475,18 @@ class ControllerUsers:
                          By default, admin=False.
 
         Returns:
-            Literal[0, 1, 2]: Returns an integer symbolizing the response status. These are the possible response states:
-                - 0: Successful response
-                - 1: User does not exist
-                - 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
+            schemas.users.Output: Returns a dictionary symbolizing the response status. These are the possible response states:
+                - number 0: Successful response
+                - number 1: User does not exist
+                - number 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
         """
         if search_user.rol == "admin" and not admin:
-            return 2
+            return {"number": 2, "message": "Cannot delete administrator user.", "status": 403}
 
         user: models.user_roles.UserRoles | None = cls.get_user_rol(search_user, db)
 
         if user is None:
-            return 1
+            return {"number": 1, "message": "User does not exist.", "status": 404}
 
         user.is_active = False
         user.inactivity = datetime.date.today()
@@ -494,7 +494,7 @@ class ControllerUsers:
         db.commit()
         db.refresh(user)
 
-        return 0
+        return {"number": 0, "message": "User deleted successfully.", "status": 200}
 
     @classmethod
     def delete_completely_user(
@@ -502,7 +502,7 @@ class ControllerUsers:
         search_user: schemas.users.SearchUser,
         db: Session,
         admin: bool = False,
-    ) -> Literal[0, 1, 2, 3]:
+    ) -> schemas.users.Output:
         """
         Completely deletes a user from the system. This operation is exclusively reserved for system administrators,
         and, if wanting to delete an administrator, only the superuser could perform it.
@@ -514,24 +514,24 @@ class ControllerUsers:
                          By default, admin=False.
 
         Returns:
-            Literal[0, 1, 2]: Returns an integer symbolizing the response status. These are the possible response states:
-                - 0: Successful response
-                - 1: User does not exist
-                - 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
-                - 3: User is active, cannot be deleted completely.
+            schemas.users.Output: Returns a dictionary symbolizing the response status. These are the possible response states:
+                - number 0: Successful response
+                - number 1: User does not exist
+                - number 2: User is administrator, cannot be deleted. Only appears when admin=False and rol='admin'.
+                - number 3: User is active, cannot be deleted completely.
         """
         if search_user.rol == "admin" and not admin:
-            return 2
+            return {"number": 2, "message": "Cannot delete administrator user.", "status": 403}
 
         user: models.user_roles.UserRoles | None = cls.get_user_rol(search_user, db)
 
         if user is None:
-            return 1
+            return {"number": 1, "message": "User does not exist.", "status": 404}
 
         if user.is_active:
-            return 3
+            return {"number": 3, "message": "Cannot delete active user completely. Deactivate first.", "status": 400}
 
         db.delete(user)
         db.commit()
 
-        return 0
+        return {"number": 0, "message": "User deleted completely from system.", "status": 200}

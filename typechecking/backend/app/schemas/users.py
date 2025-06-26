@@ -52,3 +52,9 @@ class UpdateUser(BaseUser):
 
 class AllUser(BaseUser):
     roles: list[RolesInfo]
+
+
+class Output(TypedDict):
+    number: int
+    message: str
+    status: int
