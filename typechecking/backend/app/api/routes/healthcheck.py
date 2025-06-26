@@ -75,7 +75,7 @@ async def healthcheck(use_cache: bool = True) -> Dict[str, Any]:
         if overall_status == "degraded":
             raise HTTPException(status_code=503, detail=health_report)
 
-        redis_db.set("healthcheck", json.dumps(health_report), ex=60)
+        redis_db.set("healthcheck", json.dumps(health_report), ex_secs=60)
         return health_report
     except Exception as e:
         raise HTTPException(
@@ -98,5 +98,5 @@ async def simple_healthcheck() -> dict:
         return json.loads(cached_health)
 
     response = {"status": "ok", "message": "API is running"}
-    redis_db.set("healthcheck_simple", json.dumps(response), ex=60)
+    redis_db.set("healthcheck_simple", json.dumps(response), ex_secs=60)
     return response

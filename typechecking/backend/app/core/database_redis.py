@@ -67,18 +67,18 @@ class RedisConnection:
 
     # =================== General Purpose ===================
 
-    def set(self, key: str, value: Any, ex: int | None = None) -> None:
+    def set(self, key: str, value: str, ex_secs: int | None = None) -> None:
         """Set a key-value pair in Redis cache.
 
         Args:
-            key: The Redis key to set.
-            value: The value to store.
-            ex: Optional expiration time in seconds.
+            key (str): The Redis key to set.
+            value (str): The value to store.
+            ex_secs (int): Optional expiration time in seconds.
 
         Returns:
             None
         """
-        self.redis_client.set(key, value, ex=ex)
+        self.redis_client.set(key, value, ex=ex_secs)
 
     def get(self, key: str) -> Any | None:
         """Retrieve a value from the Redis cache by key.

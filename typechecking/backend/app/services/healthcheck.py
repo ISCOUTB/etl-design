@@ -72,7 +72,7 @@ async def check_redis_connection() -> Dict[str, str]:
 
             # Test basic operations
             test_key = "healthcheck:test"
-            redis_db.set(test_key, "test_value", ex=60)
+            redis_db.set(test_key, "test_value", ex_secs=60)
             result = redis_db.get(test_key)
             redis_db.delete(test_key)
             return result == "test_value"
