@@ -84,9 +84,7 @@ def main() -> None:
 
     threads = []
     for chunk in chunks:
-        thread = threading.Thread(
-            target=validate_data, args=(chunk.to_dicts(), schema)
-        )
+        thread = threading.Thread(target=validate_data, args=(chunk.to_dicts(), schema))
         threads.append(thread)
         thread.start()
 

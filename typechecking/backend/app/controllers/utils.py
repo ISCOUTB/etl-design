@@ -21,7 +21,9 @@ def valid_email(email: str, db: Session) -> bool:
         return False
 
     # Validar que el email no esté repetido
-    stmt = select(models.user_info.UserInfo.email).where(models.user_info.UserInfo.email == email)
+    stmt = select(models.user_info.UserInfo.email).where(
+        models.user_info.UserInfo.email == email
+    )
     query = db.execute(stmt).all()
     if query:
         return False
@@ -45,7 +47,9 @@ def valid_phone(phone: str, db: Session) -> bool:
         return False
 
     # Validar que el teléfono no esté repetido
-    stmt = select(models.user_info.UserInfo.phone).where(models.user_info.UserInfo.phone == phone)
+    stmt = select(models.user_info.UserInfo.phone).where(
+        models.user_info.UserInfo.phone == phone
+    )
     query = db.execute(stmt).all()
     if query:
         return False

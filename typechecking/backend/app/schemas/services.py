@@ -7,6 +7,7 @@ safety and structure for file-related operations throughout the application.
 The schemas are used primarily for file upload validation, content type
 detection, and file metadata processing in the service layer.
 """
+
 from typing import TypedDict, Optional
 
 
@@ -32,6 +33,7 @@ class FileInfo(TypedDict):
         ...     "is_supported": True
         ... }
     """
+
     filename: Optional[str]
     size: Optional[int]
     content_type: Optional[str]
