@@ -102,6 +102,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int = 0
     REDIS_PASSWORD: str
+    REDIS_EXPIRE_SECONDS: int = 60 * 5  # 5 minutes by default
 
     @computed_field
     @property
