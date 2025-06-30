@@ -3,7 +3,7 @@ import app.models as models
 import re
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 
 def valid_email_format(email: str) -> bool:
@@ -29,7 +29,7 @@ def valid_phone_format(phone: str) -> bool:
     Returns:
         bool: True if phone format is valid, False otherwise.
     """
-    return bool(re.match(r"^\+?[1-9]\d{1,14}$", phone))
+    return bool(re.match(r"^\d{3}[-\s]?\d{3}[-\s]?\d{4}$", phone))
 
 
 def validate_unique_fields(
@@ -105,23 +105,25 @@ def parse_integrity_error(error: Exception) -> Dict[str, str]:
 
     if "email" in error_str or "user_info_email_key" in error_str:
         return {"field": "email", "message": "Email already exists.", "number": 4}
-    elif "phone" in error_str or "user_info_phone_key" in error_str:
+
+    if "phone" in error_str or "user_info_phone_key" in error_str:
         return {
             "field": "phone",
             "message": "Phone number already exists.",
             "number": 5,
         }
-    elif "username" in error_str or "user_info_pkey" in error_str:
+
+    if "username" in error_str or "user_info_pkey" in error_str:
         return {"field": "username", "message": "Username already exists.", "number": 3}
-    elif "unique_user_rol" in error_str:
+
+    if "unique_user_rol" in error_str:
         return {
             "field": "user_role",
             "message": "User with this role already exists.",
             "number": 2,
         }
-    else:
-        return {
-            "field": "unknown",
-            "message": "Database constraint violation.",
-            "number": 409,
-        }
+    return {
+        "field": "unknown",
+        "message": "Database constraint violation.",
+        "number": 409,
+    }
