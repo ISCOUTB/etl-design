@@ -21,6 +21,7 @@ from dtypes import (
     NumberMapsOutput,
     BinaryExpressionMapsOutput,
     FunctionMapsOutput,
+    TextMapsOutput,
 )
 
 
@@ -31,6 +32,7 @@ MAPS: Dict[AstTypes, Callable] = {
     "cell": lambda ast, columns: cell_maps(ast, columns),
     "number": lambda ast, columns: number_maps(ast, columns),
     "logical": lambda ast, columns: logical_maps(ast, columns),
+    "text": lambda ast, columns: text_maps(ast, columns),
 }
 
 
@@ -269,9 +271,44 @@ def logical_maps(ast: AST, _) -> CellMapsOutput:
     if ast["type"] != "logical":
         raise ValueError("AST must be of type 'logical'")
 
-    value = str(ast["value"]).lower() == "true"  # Adjust depending on its received value
+    value = (
+        str(ast["value"]).lower() == "true"
+    )  # Adjust depending on its received value
     return {
         "type": "logical",
         "value": value,
         "sql": str(value).upper(),
+    }
+
+
+def text_maps(ast: AST, _) -> TextMapsOutput:
+    """
+    Process text literal AST nodes into SQL string values.
+
+    Converts string values from the AST into their SQL representation,
+    ensuring proper formatting and escaping of special characters.
+
+    Args:
+        ast (AST): AST node of type 'text' containing a string value.
+        _ : Unused columns parameter (kept for consistency with other map functions).
+
+    Returns:
+        TextMapsOutput: Processed text with SQL representation.
+
+    Raises:
+        ValueError: If the AST type is not 'text'.
+
+    Examples:
+        >>> ast = {"type": "text", "value": "Hello, World!"}
+        >>> result = text_maps(ast, {})
+        >>> result["sql"]
+        "'Hello, World!'"
+    """
+    if ast["type"] != "text":
+        raise ValueError("AST must be of type 'text'")
+
+    return {
+        "type": "text",
+        "value": ast["value"],
+        "sql": f"'{ast['value'].replace('"', "'")}'",  # From "" to ''
     }

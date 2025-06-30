@@ -23,6 +23,7 @@ AstTypes = Literal[
     "cell",  # e.g., "A1"
     "number",  # e.g., 42
     "logical",  # e.g., true
+    "text",  # e.g., "Hello, World!"
 ]
 
 RefTypes = Literal[
@@ -197,17 +198,34 @@ class FunctionMapsOutput(TypedDict):
     sql: str
 
 
+class TextMapsOutput(TypedDict):
+    """
+    Represents the output of text mapping.
+
+    Attributes:
+        type (Literal["text"]): The type of the mapping, always "text".
+        value (str): The text value represented by the AST node.
+        sql (str): The SQL representation of the text value, typically enclosed in quotes.
+    """
+
+    type: Literal["text"]
+    value: str
+    sql: str
+
+
 AllOutputs = Union[
     CellMapsOutput,
     CellRangeMapsOutput,
     NumberMapsOutput,
     BinaryExpressionMapsOutput,
     FunctionMapsOutput,
+    LogicalMapsOutput,
+    TextMapsOutput
 ]
 """Union type representing all possible output types from AST processing functions."""
 
-SingleOutput = Union[CellMapsOutput, NumberMapsOutput, LogicalMapsOutput]
-"""Union type for simple, single-value outputs (cells, numbers, logical values)."""
+SingleOutput = Union[CellMapsOutput, NumberMapsOutput, LogicalMapsOutput, TextMapsOutput]
+"""Union type for simple, single-value outputs (cells, numbers, logical values and text)."""
 
 ComplexOutput = Union[FunctionMapsOutput, BinaryExpressionMapsOutput]
 """Union type for complex outputs that contain nested structures (functions, expressions)."""
