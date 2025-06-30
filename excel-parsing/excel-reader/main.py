@@ -17,8 +17,10 @@ def main(filename: str, file_bytes: bytes) -> dtypes.SpreadsheetContent:
 
     if filename.endswith((".xlsx", ".xls")):
         workbook = open_file_from_bytes(file_bytes)
-    if filename.endswith(".csv"):
+    elif filename.endswith(".csv"):
         workbook = convert_csv_to_excel(file_bytes)
+    else:
+        raise NotImplementedError("Unsupported file format. Only .xlsx, .xls, and .csv are supported.")
 
     cells = extract_formulas(workbook)
     columns = {
