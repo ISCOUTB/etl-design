@@ -1,197 +1,373 @@
 # Application Core
 
-This directory contains the core application code for the Typechecking ETL System. The application follows a modular architecture with clear separation of concerns across different layers.
+This directory contains the core application code for the Typechecking ETL System. The application follows a modern, layered architecture with clear separation of concerns, type safety, and comprehensive documentation.
 
 ## Architecture Overview
 
-The application is structured using a layered architecture pattern:
+The application is structured using a layered architecture pattern with dependency injection and clear boundaries:
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        API Layer                            │
-│  (FastAPI routes, request/response handling)                │
+│     (FastAPI routes, request/response handling,             │
+│      OpenAPI documentation, middleware)                     │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
 │                    Controllers Layer                        │
-│  (Business logic, validation orchestration)                 │
+│     (Business logic, validation orchestration,              │
+│      schema management, user management)                    │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
 │                     Services Layer                          │
-│  (File processing, data transformation)                     │
+│     (File processing, data transformation,                  │
+│      health checks, utility functions)                      │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
 │                   Data Access Layer                         │
-│  (Database connections, caching, messaging)                 │
+│     (Database connections, caching, messaging,              │
+│      configuration management)                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Design Principles
+
+- **Single Responsibility**: Each module has a clear, focused purpose
+- **Dependency Injection**: Loose coupling through FastAPI's dependency system
+- **Type Safety**: Comprehensive typing with Pydantic and TypedDict
+- **Async First**: Non-blocking operations throughout the stack
+- **Error Handling**: Consistent error propagation and recovery
+- **Documentation**: Self-documenting code with comprehensive docstrings
+
 ## Directory Structure
+
+The application follows a domain-driven design approach with clear module boundaries:
 
 ```text
 app/
-├── api/                    # API layer - HTTP endpoints and routing
-│   ├── main.py            # Main API router configuration
-│   └── routes/            # API route definitions
-│       ├── validation.py  # File validation endpoints
-│       ├── schemas.py     # Schema management endpoints
-│       ├── healthcheck.py # Health check endpoints
-│       └── cache.py       # Cache management endpoints
-├── controllers/           # Business logic layer
-│   ├── validation.py      # Core validation logic
-│   └── schemas.py         # Schema management logic
-├── core/                  # Infrastructure and configuration
-│   ├── config.py          # Application configuration
-│   ├── database_mongo.py  # MongoDB connection and operations
-│   ├── database_redis.py  # Redis connection and caching
-│   └── database_sql.py    # SQL database operations (if used)
-├── messaging/             # Message queue system
-│   ├── connection.py      # RabbitMQ connection management
-│   ├── connection_factory.py # Connection factory pattern
-│   └── publishers.py      # Message publishers
-├── schemas/               # Data models and type definitions
-│   ├── api.py            # API request/response models
-│   ├── controllers.py    # Controller data models
-│   ├── messaging.py      # Message format definitions
-│   ├── services.py       # Service layer models
-│   └── workers.py        # Worker process models
-├── services/              # Service layer - core business services
-│   ├── file_processor.py # File reading and processing
-│   └── healthcheck.py    # System health checks
-├── workers/               # Background processing
-│   ├── validation_workers.py # File validation workers
+├── 🌐 api/                   # API layer - HTTP endpoints and routing
+│   ├── main.py               # Main API router configuration
+│   ├── deps.py               # Dependency injection container
+│   ├── utils.py              # API utility functions
+│   └── routes/               # API route definitions
+│       ├── validation.py     # File validation endpoints
+│       ├── schemas.py        # Schema management endpoints
+│       ├── users.py          # User management endpoints
+│       ├── login.py          # Authentication endpoints
+│       ├── healthcheck.py    # Health check endpoints
+│       └── cache.py          # Cache management endpoints
+├── 🎯 controllers/           # Business logic layer
+│   ├── __init__.py           # Controller exports
+│   ├── validation.py         # Core validation orchestration
+│   ├── schemas.py            # Schema management logic
+│   ├── users.py              # User management logic
+│   └── utils.py              # Controller utilities
+├── ⚙️ core/                  # Infrastructure and configuration
+│   ├── __init__.py           # Core module exports
+│   ├── config.py             # Application configuration
+│   ├── database_mongo.py     # MongoDB connection and operations
+│   ├── database_redis.py     # Redis connection and caching
+│   ├── database_sql.py       # PostgreSQL database operations
+│   ├── init_db.py            # Database initialization
+│   └── security.py           # Security utilities and JWT handling
+├── 📨 messaging/             # Message queue system
+│   ├── __init__.py           # Messaging exports
+│   ├── connection_factory.py # RabbitMQ connection management
+│   └── publishers.py         # Message publishers
+├── 📋 schemas/               # Data models and type definitions
+│   ├── __init__.py           # Schema exports
+│   ├── api.py                # API request/response models
+│   ├── controllers.py        # Controller data models
+│   ├── messaging.py          # Message format definitions
+│   ├── models.py             # Database model schemas
+│   ├── services.py           # Service layer models
+│   ├── token.py              # Authentication token models
+│   ├── users.py              # User-related schemas
+│   └── workers.py            # Worker process models
+├── 🔧 services/              # Service layer - core business services
+│   ├── __init__.py           # Service exports
+│   ├── file_processor.py     # File reading and processing (Polars-based)
+│   └── healthcheck.py        # System health checks
+├── 👷 workers/               # Background processing
+│   ├── __init__.py           # Worker exports
 │   ├── schema_workers.py     # Schema processing workers
-│   └── worker_manager.py     # Worker lifecycle management
-└── main.py               # Application entry point
+│   ├── validation_workers.py # File validation workers
+│   ├── worker_manager.py     # Worker lifecycle management
+│   └── utils.py              # Worker utilities
+├── 🗄️ models/                # Database entity models (SQLAlchemy)
+│   ├── __init__.py           # Model exports
+│   ├── user_info.py          # User information model
+│   └── user_roles.py         # User roles and permissions
+├── 🔧 alembic/               # Database migrations
+│   ├── env.py                # Alembic environment configuration
+│   ├── script.py.mako        # Migration script template
+│   └── versions/             # Migration versions
+├── 📊 tests/                 # Test suite (currently empty)
+├── initial_data.py           # Database initial data setup
+├── main.py                   # Application entry point and ASGI app
+└── postgres_prestart.py      # PostgreSQL pre-start checks
 ```
 
-## Core Components
+## 🔧 Core Components
 
-### API Layer (`api/`)
+### 🌐 API Layer (`api/`)
 
-The API layer handles HTTP requests and responses using FastAPI:
+The API layer provides a robust REST interface using FastAPI with automatic documentation:
 
-- **Routes**: RESTful endpoints for validation, schema management, and system monitoring
-- **Request/Response Models**: Pydantic models for data validation and serialization
-- **Middleware**: CORS, authentication, and request logging
-- **Error Handling**: Standardized error responses and exception handling
+**Key Features:**
 
-Key endpoints:
+- **OpenAPI Integration**: Automatic API documentation at `/docs` and `/redoc`
+- **Request Validation**: Pydantic-based input validation
+- **Response Serialization**: Type-safe response formatting
+- **Middleware Stack**: CORS, authentication, logging, and error handling
+- **Dependency Injection**: Clean dependency management through FastAPI's DI system
 
-- `/validation/upload/{import_name}` - File validation
-- `/schemas/upload/{import_name}` - Schema management
-- `/healthcheck` - System health checks
-- `/cache` - Cache statistics
+**Endpoints Overview:**
 
-### Controllers Layer (`controllers/`)
+```python
+# Validation endpoints
+POST   /api/v1/validation/upload/{import_name}    # File upload and validation
+GET    /api/v1/validation/status                  # Task status tracking
 
-Contains the business logic and orchestrates operations across services:
+# Schema management endpoints  
+POST   /api/v1/schemas/upload/{import_name}       # Schema upload with versioning
+GET    /api/v1/schemas/status                     # Schema operation status
+DELETE /api/v1/schemas/remove/{import_name}       # Schema removal with rollback
 
-- **Validation Controller**: Manages file validation workflows
-- **Schema Controller**: Handles schema CRUD operations and versioning
-- **Parallel Processing**: Implements multi-threaded validation logic
-- **Error Handling**: Business-level error processing and recovery
+# User management endpoints
+GET    /api/v1/users/info                         # Get current user info
+GET    /api/v1/users/search/{username}            # Search for users
+POST   /api/v1/users/create                       # Create new user
+PUT    /api/v1/users/update/{username}            # Update user information
+DELETE /api/v1/users/delete/{username}            # Delete user
 
-### Services Layer (`services/`)
+# Authentication endpoints
+POST   /api/v1/login/access-token                 # User authentication
+GET    /api/v1/login/test-token                   # Test token validity
 
-Provides reusable business services:
+# System monitoring
+GET    /api/v1/healthcheck                        # Comprehensive health check
+GET    /api/v1/healthcheck/simple                 # Basic availability check
+GET    /api/v1/cache                              # Cache statistics
+DELETE /api/v1/cache/clear                        # Cache management
+```
 
-- **File Processor**: Handles CSV, XLSX, and XLS file reading using Polars
-- **Health Check Service**: Monitors system component health
+### 🎯 Controllers Layer (`controllers/`)
 
-### Core Infrastructure (`core/`)
+The controllers orchestrate business logic and coordinate between services:
 
-Manages system configuration and database connections:
+**Validation Controller** (`validation.py`):
 
-- **Configuration**: Environment-based settings using Pydantic
-- **Database Connections**: MongoDB, Redis, and SQL database clients
-- **Connection Pooling**: Efficient database connection management
-- **Settings Validation**: Type-safe configuration management
+- **File Processing Orchestration**: Manages the complete validation workflow
+- **Parallel Processing**: Implements multi-threaded validation for performance
+- **Error Aggregation**: Collects and structures validation errors
+- **Progress Tracking**: Real-time status updates via Redis
 
-### Messaging System (`messaging/`)
+**Schema Controller** (`schemas.py`):
 
-Implements asynchronous message processing with RabbitMQ:
+- **Schema Lifecycle Management**: Upload, validation, versioning, and removal
+- **Comparison Logic**: Intelligent schema diffing to prevent duplicates
+- **Version Control**: Complete history with rollback capabilities
+- **Active Schema Management**: Handles schema activation and deactivation
 
-- **Connection Management**: Robust connection handling with reconnection logic
-- **Publishers**: Message publishing for validation and schema operations
-- **Message Serialization**: JSON-based message formatting
-- **Queue Management**: Dynamic queue creation and management
+**User Controller** (`users.py`):
 
-### Data Models (`schemas/`)
+- **User Authentication**: Handles login and token validation
+- **User Management**: CRUD operations for user accounts
+- **Role-based Access**: Manages user roles and permissions
+- **Cache Integration**: Redis-based caching for user data
 
-Type-safe data models using Pydantic:
+### 🔧 Services Layer (`services/`)
 
-- **API Models**: Request/response schemas for HTTP endpoints
-- **Domain Models**: Core business object definitions
-- **Message Models**: Queue message format specifications
-- **Validation Models**: Data validation result structures
+Reusable business services that encapsulate domain logic:
 
-### Workers (`workers/`)
+**File Processor Service** (`file_processor.py`):
+
+```python
+class FileProcessor:
+    """High-performance file processing service using Polars."""
+    
+    @staticmethod
+    async def process_file(upload_file: UploadFile) -> Tuple[bool, Any, Optional[str]]:
+        """
+        Process uploaded files with format detection and optimization.
+        
+        Supported formats:
+        - CSV: Fast parsing with automatic delimiter detection
+        - XLSX: Excel files with multiple sheet support
+        - XLS: Legacy Excel format support
+        
+        Returns:
+            (success, data_frame, error_message)
+        """
+```
+
+**Health Check Service** (`healthcheck.py`):
+
+- **Service Monitoring**: MongoDB, Redis, RabbitMQ, PostgreSQL connectivity checks
+- **Performance Metrics**: Response time and availability tracking
+- **Dependency Validation**: Ensures all required services are operational
+
+### ⚙️ Core Infrastructure (`core/`)
+
+Manages system configuration and provides infrastructure abstractions:
+
+**Configuration Management** (`config.py`):
+
+```python
+class Settings(BaseSettings):
+    """Type-safe configuration with environment variable support."""
+    
+    # API Configuration
+    API_V1_STR: str = "/api/v1"
+    CORS_ORIGINS: List[str] = ["*"]
+    
+    # Performance Settings
+    MAX_WORKERS: int = 8
+    WORKER_CONCURRENCY: int = 4
+    
+    # Database Configuration
+    MONGO_HOST: str = "localhost"
+    REDIS_HOST: str = "localhost"
+    RABBITMQ_HOST: str = "localhost"
+    POSTGRES_HOST: str = "localhost"
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+```
+
+**Database Connections**:
+
+- **MongoDB Client** (`database_mongo.py`): Schema storage with connection pooling
+- **Redis Client** (`database_redis.py`): Caching and task status management  
+- **PostgreSQL Client** (`database_sql.py`): User data and relational storage
+- **Connection Management**: Automatic reconnection and health monitoring
+
+### 📨 Messaging System (`messaging/`)
+
+Implements robust asynchronous message processing:
+
+**Connection Factory** (`connection_factory.py`):
+
+```python
+class ConnectionFactory:
+    """Thread-safe RabbitMQ connection management."""
+    
+    @classmethod
+    def get_connection(cls) -> pika.BlockingConnection:
+        """Get or create thread-local connection with automatic recovery."""
+        
+    @classmethod
+    def close_connections(cls) -> None:
+        """Gracefully close all connections."""
+```
+
+**Message Publishers** (`publishers.py`):
+
+- **Validation Publisher**: Publishes file validation requests with metadata
+- **Schema Publisher**: Handles schema update and removal messages
+- **Message Formatting**: Standardized JSON message structure with UUIDs
+- **Priority Queuing**: Message priority system for optimal processing order
+
+### 📋 Data Models (`schemas/`)
+
+Type-safe data models using Pydantic for validation and serialization:
+
+**Model Categories**:
+
+- **API Schemas** (`api.py`): Request/response models for HTTP endpoints
+- **Domain Models** (`models.py`): Core business object definitions  
+- **Message Schemas** (`messaging.py`): Queue message format specifications
+- **User Schemas** (`users.py`): User management and authentication models
+- **Token Schemas** (`token.py`): JWT token structure definitions
+
+**Type Safety Features**:
+
+```python
+# Strongly typed message contracts
+class ValidationMessage(TypedDict):
+    id: str                    # UUID task identifier
+    task: ValidationTasks      # Literal task type ("sample_validation")
+    timestamp: str             # ISO format timestamp
+    file_data: str            # Hex-encoded binary data
+    import_name: str          # Schema identifier
+    metadata: dict            # File metadata
+    priority: int             # Processing priority (1-10)
+    date: str                 # Date of message creation
+
+
+# Pydantic models for validation
+class FileUploadResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
+    import_name: str
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "task_id": "uuid-here",
+                "status": "processing", 
+                "message": "File validation started",
+                "import_name": "user_data"
+            }
+        }
+```
+
+### 👷 Workers (`workers/`)
 
 Background processing components with enhanced capabilities:
 
-#### Schema Workers (`workers/schema_workers.py`)
+**Worker Architecture**:
 
-Handles schema management operations:
+- **Schema Workers**: Handle schema upload, validation, and removal operations
+- **Validation Workers**: Process file validation requests asynchronously  
+- **Worker Manager**: Orchestrates worker lifecycle and scaling
+- **Message Acknowledgment**: Reliable message processing with proper ACK/NACK
 
-```python
-# Schema upload processing
-def _update_schema(message: SchemaMessage) -> SchemaUpdated:
-    """
-    Processes schema upload requests:
-    - Creates schemas from raw or processed format
-    - Performs schema validation using Draft7Validator
-    - Updates active schemas with versioning
-    - Handles rollback operations for schema removal
-    - Updates Redis task status throughout processing
-    """
-```
-
-**Key Features:**
-
-- **Schema Creation**: Support for both raw and processed schema formats
-- **Validation**: JSON Schema Draft 7 validation before storage
-- **Versioning**: Maintains schema history with rollback capabilities
-- **Status Updates**: Real-time progress updates via Redis
-- **Error Handling**: Comprehensive error catching with detailed logging
-- **Message ACK**: Proper message acknowledgment for reliable processing
-
-#### Validation Workers (`workers/validation_workers.py`)
-
-Processes file validation requests:
+**Schema Workers** (`schema_workers.py`):
 
 ```python
-# File validation processing
-async def _validate_file(message: ValidationMessage) -> DataValidated:
-    """
-    Processes file validation requests:
-    - Converts hex-encoded file data to binary format
-    - Creates UploadFile objects for processing
-    - Validates against specified schemas
-    - Returns detailed validation summaries
-    - Updates task progress in Redis
-    """
+class SchemaWorkers:
+    """Handles schema management operations."""
+    
+    async def process_schema_message(self, message: SchemaMessage) -> None:
+        """
+        Process schema operations:
+        - upload_schema: Create/update schemas with validation
+        - remove_schema: Remove schemas with version rollback
+        
+        Features:
+        - JSON Schema Draft 7 validation
+        - Version control with rollback
+        - Redis status tracking
+        - Error recovery and logging
+        """
 ```
 
-**Key Features:**
+**Validation Workers** (`validation_workers.py`):
 
-- **File Format Support**: CSV, XLSX, XLS file processing
-- **Data Conversion**: Hex-to-binary conversion for safe transmission
-- **Async Processing**: Non-blocking validation operations
-- **Progress Tracking**: Real-time validation progress updates
-- **Result Publishing**: Structured validation results with error details
-- **Resource Management**: Efficient memory usage for large files
-
-#### Worker Manager (`workers/worker_manager.py`)
-
-Manages worker lifecycle and scaling:
-
-- **Worker Pools**: Manages multiple worker instances
-- **Health Monitoring**: Tracks worker health and performance
-- **Auto Scaling**: Dynamic worker scaling based on queue depth
-- **Graceful Shutdown**: Proper worker termination handling
+```python
+class ValidationWorkers:
+    """Processes file validation requests."""
+    
+    async def process_validation_message(self, message: ValidationMessage) -> None:
+        """
+        Process file validation:
+        - Hex-to-binary conversion for safe data transmission
+        - Multi-format file support (CSV, XLSX, XLS)
+        - Parallel validation with progress tracking
+        - Structured result publishing
+        
+        Performance features:
+        - Async processing for non-blocking operations
+        - Memory-efficient chunked processing
+        - Real-time progress updates via Redis
+        """
+```
 
 ## Key Features
 
@@ -230,7 +406,7 @@ Dynamic schema validation and versioning:
 # Example: Schema operations
 from app.controllers.schemas import get_active_schema
 
-schema = await get_active_schema("user_data")
+schema = get_active_schema("user_data")  # Note: synchronous function
 ```
 
 ### Caching Strategy
@@ -348,10 +524,10 @@ logger.info("Processing validation request", extra={
 
 ### Testing
 
-- Unit tests for individual components
-- Integration tests for API endpoints
-- Performance benchmarks in `tests/`
-- Mock external dependencies
+- Unit tests for individual components (planned)
+- Integration tests for API endpoints (planned)  
+- Performance benchmarks available in `../tests/testing_typechecking.ipynb`
+- Mock external dependencies for testing
 
 ## Performance Considerations
 
@@ -651,3 +827,36 @@ channel.basic_publish(
 - **Connection Pooling**: Efficient resource utilization
 - **Automatic Reconnection**: Robust connection recovery
 - **Graceful Shutdown**: Proper connection cleanup
+
+---
+
+## Current Implementation Status
+
+This README reflects the actual current state of the application as of the latest updates:
+
+### Implemented Features
+
+- **Complete API Layer**: All endpoints implemented with FastAPI
+- **User Management**: Full authentication and user CRUD operations
+- **Schema Management**: Upload, versioning, and removal with rollback
+- **File Validation**: Multi-format support with async processing
+- **Message Queue System**: RabbitMQ integration with typed contracts
+- **Database Layer**: MongoDB, Redis, and PostgreSQL integration
+- **Worker System**: Background processing for validation and schema tasks
+
+### Areas for Development
+
+- **Unit Testing**: Test suite is planned but not yet implemented
+- **Performance Optimization**: Additional caching and optimization strategies
+- **Monitoring**: Enhanced metrics collection and observability
+- **Documentation**: API examples and integration guides
+
+### Architecture Notes
+
+- Uses **Polars** for high-performance data processing
+- Implements **SQLAlchemy** models for PostgreSQL operations
+- Follows **Domain-Driven Design** principles
+- Emphasizes **type safety** with Pydantic and TypedDict
+- Supports **horizontal scaling** through worker processes
+
+This documentation is maintained to accurately reflect the codebase and is updated with each major feature release.

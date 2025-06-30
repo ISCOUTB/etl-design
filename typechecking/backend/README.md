@@ -1,327 +1,406 @@
 # Typechecking ETL System
 
-A high-performance data validation system designed for ETL processes that validates spreadsheet files (CSV, XLSX, XLS) against JSON schemas using parallel processing and message queuing.
+A high-performance, enterprise-grade data validation system designed for ETL processes that validates spreadsheet files (CSV, XLSX, XLS) against JSON schemas using parallel processing, message queuing, and modern distributed architecture patterns.
 
-## Overview
+## 🚀 Overview
 
-This system provides a robust, scalable solution for validating large datasets in spreadsheet formats. It uses a microservices architecture with RabbitMQ for asynchronous processing, MongoDB for schema storage, Redis for caching, and FastAPI for the REST API interface.
+This system provides a robust, scalable solution for validating large datasets in spreadsheet formats. Built with modern Python technologies, it employs a microservices architecture with RabbitMQ for asynchronous processing, MongoDB for schema management, Redis for caching, PostgreSQL for user management, and FastAPI for a high-performance REST API interface. The system uses Polars for high-performance data processing and supports comprehensive user authentication and authorization.
 
-## Key Features
+## ✨ Key Features
 
-- **Multi-format Support**: Validates CSV, XLSX, and XLS files
-- **Parallel Processing**: Uses multi-threading for high-performance validation
-- **Asynchronous Processing**: RabbitMQ-based message queuing for scalable operations
-- **Schema Management**: Dynamic JSON schema validation and version control
-- **Caching**: Redis-based caching for improved performance
-- **RESTful API**: FastAPI-based endpoints for easy integration
-- **Docker Support**: Containerized deployment with Docker Compose
-- **Performance Testing**: Built-in benchmarking and performance analysis tools
+- **🔄 Multi-format Support**: Validates CSV, XLSX, and XLS files with intelligent parsing using Polars
+- **⚡ Parallel Processing**: Uses multi-threading and async operations for high-performance validation
+- **🔀 Asynchronous Processing**: RabbitMQ-based message queuing for scalable operations
+- **📋 Schema Management**: Dynamic JSON schema validation with versioning and rollback support
+- **� User Management**: Complete authentication system with JWT tokens and role-based access control
+- **�💾 Intelligent Caching**: Redis-based caching with TTL management for improved performance
+- **🌐 RESTful API**: FastAPI-based endpoints with automatic OpenAPI documentation
+- **🐳 Docker Support**: Containerized deployment with Docker Compose for easy setup
+- **📊 Performance Testing**: Built-in benchmarking and performance analysis tools with Jupyter notebooks
+- **🔒 Type Safety**: Comprehensive Pydantic models and TypedDict schemas
+- **📈 Real-time Monitoring**: Task progress tracking and system health monitoring
 
 ## Architecture
+
+The system follows a modern microservices architecture with clear separation of concerns:
 
 ```text
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   FastAPI       │────▶│   RabbitMQ      │────▶│   Workers       │
-│   Web Server    │     │   Message Queue │     │   (Validation)  │
+│   Web Server    │     │   Message Queue │     │   (Validation + │
+│   (REST API)    │     │   (Async Jobs)  │     │    Schema Mgmt) │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
          │                                                │
          ▼                                                ▼
 ┌─────────────────┐                              ┌─────────────────┐
 │   Redis         │                              │   MongoDB       │
-│   (Caching)     │                              │   (Schemas)     │
+│   (Caching +    │                              │   (JSON Schemas │
+│   Task Status)  │                              │   + Metadata)   │
 └─────────────────┘                              └─────────────────┘
+         │                                                
+         ▼                                                
+┌─────────────────┐                              
+│   PostgreSQL    │                              
+│   (User Mgmt +  │                              
+│   Application   │                              
+│   Data)         │                              
+└─────────────────┘                              
 ```
 
-## Prerequisites
+### Component Responsibilities
 
-- Python 3.12+
-- Docker and Docker Compose
-- MongoDB
-- Redis
-- RabbitMQ
+- **FastAPI Server**: HTTP API endpoints, request validation, response formatting, authentication
+- **RabbitMQ**: Message queuing, task distribution, async processing coordination
+- **Workers**: File validation, schema processing, parallel computation (ValidationWorker, SchemaWorker)
+- **Redis**: Result caching, task status tracking, session management
+- **MongoDB**: JSON schema storage, metadata persistence, version control
+- **PostgreSQL**: User management, authentication data, application configuration
 
-## Quick Start
+## 📋 Prerequisites
+
+- **Python**: 3.12+ (with `uv` package manager recommended)
+- **Docker**: Latest version with Docker Compose
+- **MongoDB**: 7.0+ (provided via Docker)
+- **Redis**: 7.4+ (provided via Docker)
+- **RabbitMQ**: 4.0+ with management plugin (provided via Docker)
+- **PostgreSQL**: 17+ (provided via Docker)
+
+## 🚀 Quick Start
 
 ### Using Docker Compose (Recommended)
 
-1. Clone the repository:
+- Clone the repository:
 
 ```bash
 git clone https://github.com/ISCOUTB/etl-design.git
-cd typechecking
+cd etl-design/typechecking
 ```
 
-2. Edit environment file.
+- Edit environment file:
 
 ```bash
 cp .env.example .env
+# Edit .env with your specific configuration
 ```
 
-3. Start the services:
+- Start the services:
 
 ```bash
-cd docker
-docker-compose up -d
+docker-compose up --build -d
 ```
 
 ### Manual Installation
 
-1. Install dependencies:
+- Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+uv sync
+
+# Activate Virtual Environment
+source .venv/bin/activate
 ```
 
-2. Start the API server:
+- Start workers:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-3. Start workers:
-
-```bash
+cd backend
 python -m app.workers.worker_manager
 ```
 
-## API Endpoints
-
-### Validation
-
-- `POST /api/v1/validation/upload/{import_name}` - Upload and validate a file
-- `GET /api/v1/validation/status/{task_id}` - Check validation status
-
-### Schema Management
-
-- `POST /api/v1/schemas/upload/{import_name}` - Upload a JSON schema
-- `GET /api/v1/schemas/status` - Get active schema
-
-### System Health
-
-- `GET /api/v1/healthcheck` - Health check of all connections
-- `GET /api/v1/healthcheck/simple` - Checks if api is running
-
-### Cache Monitoring
-
-- `GET /api/v1/cache` - Get all cache keys and values
-- `DELETE /api/v1/cache/clear` - Clear all cache
-
-## Usage Examples
-
-### Validate a CSV file
+- Start the API server:
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/validation/upload/users_data" \
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## 🔌 API Endpoints
+
+The system provides a comprehensive REST API with automatic OpenAPI documentation available at `/docs`.
+
+### 📄 File Validation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/validation/upload/{import_name}` | Upload and validate spreadsheet files |
+| `GET` | `/api/v1/validation/status` | Check validation task status and progress |
+
+### 🏷️ Schema Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/schemas/upload/{import_name}` | Upload JSON schema with versioning |
+| `GET` | `/api/v1/schemas/status` | Get schema upload status and metadata |
+| `DELETE` | `/api/v1/schemas/remove/{import_name}` | Remove schema with rollback support |
+
+### 👥 User Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/users/info` | Get current user information |
+| `GET` | `/api/v1/users/search/{username}` | Get specific user details |
+| `GET` | `/api/v1/users/search` | List all users (paginated) |
+| `POST` | `/api/v1/users/create` | Create new user |
+| `PATCH` | `/api/v1/users/update/{username}` | Update user information |
+| `DELETE` | `/api/v1/users/delete/{username}` | Delete user |
+
+### 🔐 Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/login/access-token` | Login and get JWT access token |
+| `GET` | `/api/v1/login/test-token` | Test token validity |
+
+### 🏥 System Health & Monitoring
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/healthcheck` | Comprehensive health check of all services |
+| `GET` | `/api/v1/healthcheck/simple` | Basic API availability check |
+
+### 💾 Cache Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/cache` | Get cache statistics and stored keys |
+| `DELETE` | `/api/v1/cache/clear` | Clear all cached data |
+
+## 💡 Usage Examples
+
+### Complete Workflow Example
+
+#### 1. Authenticate and Get Access Token
+
+```bash
+# Login to get access token
+curl -X POST "http://localhost:8000/api/v1/login/access-token" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=admin&password=admin&rol=admin"
+```
+
+#### 2. Upload a JSON Schema
+
+```bash
+# Create a user schema
+cat > user_schema.json << EOF
+{
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "email": {"type": "string", "format": "email"},
+    "age": {"type": "integer", "minimum": 0}
+  },
+  "required": ["name", "email"]
+}
+EOF
+
+# Upload the schema
+curl -X POST "http://localhost:8000/api/v1/schemas/upload/user_data" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <your_token>" \
+     -d @user_schema.json
+```
+
+#### 3. Validate a CSV File
+
+```bash
+# Create sample data
+cat > users.csv << EOF
+name,email,age
+John Doe,john@example.com,30
+Jane Smith,jane@example.com,25
+EOF
+
+# Validate the file
+curl -X POST "http://localhost:8000/api/v1/validation/upload/user_data" \
      -H "Content-Type: multipart/form-data" \
+     -H "Authorization: Bearer <your_token>" \
      -F "spreadsheet_file=@users.csv"
 ```
 
-### Upload a JSON schema
+#### 4. Check Validation Status
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/schemas/upload/users_data" \
-     -H "Content-Type: application/json" \
-     -d @schema.json
+# Get status by task ID
+curl -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/validation/status?task_id=<task_id>"
+
+# Or get status by import name
+curl -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/validation/status?import_name=user_data"
 ```
 
-## Configuration
+### Advanced Features
 
-The system uses environment variables for configuration. Key settings include:
+#### User Management
 
-- `API_V1_STR`: API version prefix
-- `MAX_WORKERS`: Number of parallel validation workers
-- `RABBITMQ_*`: RabbitMQ connection settings
-- `MONGO_*`: MongoDB connection settings
-- `REDIS_*`: Redis connection settings
-- `CORS_ORIGINS`: Allowed CORS origins
+```bash
+# Create a new user
+curl -X POST "http://localhost:8000/api/v1/users/create" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <admin_token>" \
+     -d '{
+       "username": "newuser",
+       "password": "password123",
+       "rol": "user",
+       "is_active": true
+     }'
 
-## Performance
+# Get user information
+curl -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/users/search/newuser"
+```
 
-The system is optimized for high-performance validation:
+#### Schema Versioning
 
-- **Parallel Processing**: Multi-threaded validation with configurable worker counts
-- **Chunked Processing**: Large files are processed in chunks for memory efficiency
-- **Asynchronous Architecture**: Non-blocking operations through message queuing
-- **Caching**: Redis caching reduces redundant operations
+```bash
+# Upload new version of schema
+curl -X POST "http://localhost:8000/api/v1/schemas/upload/user_data?new=true" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <your_token>" \
+     -d @updated_schema.json
 
-### Performance Benchmarks
+# Remove schema (with rollback)
+curl -X DELETE "http://localhost:8000/api/v1/schemas/remove/user_data" \
+     -H "Authorization: Bearer <your_token>"
+```
 
-Based on testing with various file sizes:
+#### Performance Monitoring
 
-- **Small files** (1K rows, 100 columns): ~4.5 seconds
-- **Medium files** (5K rows, 100 columns): ~23 seconds
-- **Large files** (10K rows, 100 columns): ~45 seconds
+```bash
+# Check system health
+curl -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/healthcheck"
 
-Performance scales linearly with data size and can be improved by increasing worker counts.
+# View cache statistics
+curl -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/cache"
 
-## Development
+# Clear cache
+curl -X DELETE -H "Authorization: Bearer <your_token>" \
+     "http://localhost:8000/api/v1/cache/clear"
+```
+
+## ⚙️ Configuration
+
+The system uses environment variables for configuration with sensible defaults. Create a `.env` file based on `.env.example`.
+
+### Core Settings
+
+```bash
+# API Configuration
+API_V1_STR="/api/v1"
+CORS_ORIGINS="*"
+
+# Performance Settings
+MAX_WORKERS=8
+WORKER_CONCURRENCY=4
+WORKER_PREFETCH_COUNT=1
+```
+
+### Database Configuration
+
+```bash
+# MongoDB Settings
+MONGO_HOST="localhost"
+MONGO_PORT="27017"
+MONGO_INITDB_ROOT_USERNAME="admin"
+MONGO_INITDB_ROOT_PASSWORD="admin"
+MONGO_DB="json_schemas"
+MONGO_COLLECTION="schemas"
+
+# Redis Settings
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+REDIS_PASSWORD="root"
+REDIS_EXPIRE_SECONDS=300
+
+# RabbitMQ Settings
+RABBITMQ_HOST="localhost"
+RABBITMQ_PORT="5672"
+RABBITMQ_VHOST="/"
+RABBITMQ_USER="guest"
+RABBITMQ_PASSWORD="guest"
+```
+
+## 🚀 Performance & Benchmarks
+
+The system is engineered for high-performance data validation with several optimization strategies.
+
+### Performance Features
+
+- **🔄 Parallel Processing**: Multi-threaded validation with configurable worker pools
+- **📦 Chunked Processing**: Memory-efficient handling of large files using Polars
+- **⚡ Asynchronous Architecture**: Non-blocking operations through aio-pika and message queuing
+- **💾 Intelligent Caching**: Redis-based caching with optimized data structures
+- **🔧 Connection Pooling**: Efficient database connection management
+- **📊 Real-time Monitoring**: Task progress tracking and performance metrics
+
+### Optimization Strategies
+
+#### Scaling Configuration
+
+```bash
+# Increase worker threads for CPU-intensive tasks
+MAX_WORKERS=16
+WORKER_CONCURRENCY=8
+```
+
+#### Performance Tuning
+
+- **CPU Optimization**: Adjust `MAX_WORKERS` based on available cores (default: 8)
+- **Memory Optimization**: Configure worker concurrency for large file processing (default: 4)
+- **Network Optimization**: Use connection pooling and persistent connections
+- **Cache Optimization**: Fine-tune Redis TTL and eviction policies (default: 300 seconds)
+- **File Processing**: Polars-based processing for optimal memory usage and speed
+
+### Monitoring Metrics
+
+The system provides comprehensive performance monitoring:
+
+- **Processing Time**: Track validation duration per file
+- **Memory Usage**: Monitor peak memory consumption
+- **Queue Depth**: RabbitMQ queue length monitoring
+- **Cache Hit Rate**: Redis cache effectiveness metrics
+- **Error Rates**: Track validation success/failure ratios
+
+## 🛠️ Development
 
 ### Project Structure
 
-```console
-typechecking/
-├── app/                    # Main application code
-├── docker/                 # Docker configuration
-├── scripts/                # Deployment scripts
-├── static/                 # Sample data files
-├── tests/                  # Test files and performance benchmarks
-├── requirements.txt        # Python dependencies
-└── README.md               # This file
+```text
+typechecking/backend/
+├── app/                     # Main application code
+│   ├── api/                # FastAPI routes and endpoints
+│   │   ├── main.py         # API router configuration
+│   │   ├── deps.py         # Dependency injection
+│   │   ├── utils.py        # API utilities
+│   │   └── routes/         # Route definitions
+│   │       ├── validation.py   # File validation endpoints
+│   │       ├── schemas.py      # Schema management endpoints
+│   │       ├── users.py        # User management endpoints
+│   │       ├── login.py        # Authentication endpoints
+│   │       ├── healthcheck.py  # Health check endpoints
+│   │       └── cache.py        # Cache management endpoints
+│   ├── controllers/        # Business logic layer
+│   ├── core/              # Configuration and database connections
+│   ├── messaging/         # RabbitMQ message handling
+│   ├── models/            # SQLAlchemy database models
+│   ├── schemas/           # Pydantic models and type definitions
+│   ├── services/          # Reusable business services
+│   │   ├── file_processor.py   # Polars-based file processing
+│   │   └── healthcheck.py      # System health checks
+│   └── workers/           # Background processing workers
+│       ├── validation_workers.py   # File validation workers
+│       ├── schema_workers.py       # Schema processing workers
+│       ├── worker_manager.py       # Worker lifecycle management
+│       └── utils.py               # Worker utilities
+├── tests/                 # Test files and performance benchmarks
+│   ├── testing_typechecking.ipynb # Performance testing notebook
+│   ├── testing_typechecking.py    # Performance test implementation
+│   ├── data/              # Test data files (CSV, Excel)
+│   └── figures/           # Performance visualization results
+├── static/               # Sample data files for testing
+├── docker-compose.yml    # Docker services configuration
+├── pyproject.toml        # Python project configuration
+└── README.md            # This documentation
 ```
-
-### Running Tests
-
-```bash
-# Run validation tests
-python tests/example_validation_usage.py
-
-# Run performance benchmarks
-jupyter notebook tests/testing_typechecking.ipynb
-```
-
-### Performance Testing
-
-The `tests/` directory contains comprehensive performance testing tools:
-
-```bash
-# Generate test data and run benchmarks
-python tests/testing_typechecking.py
-```
-
-## Deployment
-
-### Production Deployment
-
-1. Use the provided Docker Compose configuration
-2. Configure environment variables for production
-3. Set up monitoring and logging
-4. Configure load balancing if needed
-
-### Scaling
-
-- **Horizontal Scaling**: Add more worker instances
-- **Vertical Scaling**: Increase worker thread counts
-- **Database Scaling**: Use MongoDB replica sets
-- **Cache Scaling**: Use Redis clustering
-
-## Recent Updates
-
-### API Endpoints Enhancements
-
-#### Schema Management API (`api/v1/schemas`)
-
-- **New Upload Endpoint**: `POST /schemas/upload/{import_name}` - Upload and manage JSON schemas with versioning support
-  - Parameters: `raw` (boolean) for raw schema processing, `new` (boolean) to force new task creation
-  - Returns task ID for asynchronous processing
-  - Implements schema comparison to avoid duplicate uploads
-- **Status Tracking**: `GET /schemas/status` - Track schema upload tasks by task_id or import_name
-- **Schema Removal**: `DELETE /schemas/remove/{import_name}` - Remove schemas with rollback to previous versions
-- **Caching Integration**: Redis-based task caching with import_name indexing
-
-#### Validation API (`api/v1/validation`)
-
-- **File Upload Endpoint**: `POST /validation/upload/{import_name}` - Validate spreadsheet files against schemas
-  - Support for CSV, XLSX, and XLS file formats
-  - Asynchronous processing with task tracking
-  - File metadata extraction (filename, content_type, size)
-- **Status Monitoring**: `GET /validation/status` - Monitor validation progress by task_id or import_name
-- **Cache Optimization**: Improved response caching with import_name grouping
-
-### Worker System Improvements
-
-#### Schema Workers
-
-- **Enhanced Task Processing**: Improved schema creation and validation logic
-- **Better Error Handling**: Comprehensive error catching with detailed logging
-- **Redis Integration**: Real-time task status updates throughout processing pipeline
-- **Version Control**: Support for schema versioning with rollback capabilities
-- **Message Acknowledgment**: Reliable message processing with proper ACK/NACK handling
-
-#### Validation Workers
-
-- **File Processing Pipeline**: Enhanced file data conversion from hex to binary format
-- **Async Processing**: Improved asynchronous file validation with better resource management
-- **Progress Tracking**: Real-time validation progress updates via Redis
-- **Result Publishing**: Structured validation results with detailed summaries
-
-### Messaging System Updates
-
-#### Message Schemas
-
-- **Typed Message Contracts**: New TypedDict schemas for ValidationMessage and SchemaMessage
-- **Task Classification**: Defined ValidationTasks and SchemasTasks literal types
-- **Priority Support**: Message priority system for queue processing optimization
-- **Metadata Enhancement**: Rich metadata support for better processing context
-
-#### Publishers
-
-- **Validation Publisher**: Enhanced with detailed message documentation and error handling
-- **Schema Publisher**: Improved schema update publishing with task type support
-- **Message Formatting**: Standardized message structure with UUID generation and timestamps
-- **Routing Keys**: Optimized routing for better message distribution
-
-### Infrastructure Enhancements
-
-#### Redis Integration
-
-- **Task Management**: Comprehensive task ID tracking and status management
-- **Import Name Indexing**: Efficient task lookup by import_name
-- **Cache Operations**: Advanced caching with TTL and key pattern management
-- **Data Structures**: Optimized use of Redis hashes and sets for task relationships
-
-#### Database Operations
-
-- **Schema Storage**: Enhanced MongoDB operations for schema versioning
-- **Comparison Logic**: Improved schema comparison for duplicate detection
-- **Rollback Support**: Schema removal with automatic rollback to previous versions
-- **Result Tracking**: Better database result handling and status reporting
-
-## Summary of Recent Changes
-
-The Typechecking ETL System has undergone significant enhancements across all layers of the architecture. These improvements focus on robustness, scalability, and developer experience.
-
-### 🚀 Key Improvements
-
-**API Layer:**
-
-- Enhanced schema management with versioning and rollback capabilities
-- Improved file validation endpoints with multi-format support
-- Redis-based caching for task tracking and performance optimization
-- Comprehensive error handling with standardized response formats
-
-**Worker System:**
-
-- Strengthened message processing with proper ACK/NACK handling
-- Real-time progress tracking via Redis integration
-- Enhanced file processing pipeline with hex encoding for safe transmission
-- Improved connection management with thread-safe operations
-
-**Messaging Infrastructure:**
-
-- Strongly typed message contracts using TypedDict schemas
-- Priority-based message queuing for optimal processing order
-- Enhanced publishers with comprehensive documentation and error handling
-- Robust connection factory with automatic recovery mechanisms
-
-**Data Management:**
-
-- Advanced Redis operations for task management and caching
-- MongoDB schema versioning with comparison logic and rollback support
-- Optimized database operations with atomic updates and error handling
-- Enhanced query patterns for efficient data retrieval
-
-### 📊 Technical Metrics
-
-- **Endpoint Coverage**: 6 API endpoints with comprehensive functionality
-- **Message Types**: 2 strongly typed message schemas (Validation, Schema)
-- **Task Types**: 3 distinct task types (sample_validation, upload_schema, remove_schema, meanwhile)
-- **File Formats**: 3 supported formats (CSV, XLSX, XLS)
-- **Database Integration**: 3 storage systems (MongoDB, Redis, RabbitMQ)
-
-### 🔧 Developer Experience
-
-- **Type Safety**: TypedDict schemas for compile-time validation
-- **Documentation**: Comprehensive README files for each module
-- **Error Handling**: Detailed error messages with context
-- **Monitoring**: Real-time task tracking and progress updates
-- **Testing**: Enhanced error scenarios and edge case handling
