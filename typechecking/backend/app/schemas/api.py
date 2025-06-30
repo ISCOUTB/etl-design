@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any, TypedDict, TypeVar, Generic
+from typing import TypedDict, TypeVar, Generic
 
 # TypeVar for generic pagination
 T = TypeVar("T")
