@@ -67,6 +67,17 @@ class RedisConnection:
 
     # =================== General Purpose ===================
 
+    def keys(self, pattern: str) -> list[str]:
+        """Retrieve keys matching the given patterns from Redis.
+
+        Args:
+            pattern: Variable number of patterns to match keys.
+
+        Returns:
+            List of keys matching the specified patterns.
+        """
+        return self.redis_client.keys(pattern)
+
     def set(self, key: str, value: str, ex_secs: int | None = None) -> None:
         """Set a key-value pair in Redis cache.
 
