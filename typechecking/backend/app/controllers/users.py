@@ -1,4 +1,3 @@
-from typing import Literal
 import datetime
 
 import app.models as models
@@ -197,26 +196,18 @@ class ControllerUsers:
                 - has_next: Whether there's a next page
                 - has_prev: Whether there's a previous page
         """
-        # Calculate offset for pagination
         offset = (page - 1) * limit
-
-        # Base query
         stmt = cls.join_users(active)
 
         # Get total count
-        count_stmt = select(models.user_info.UserInfo.username).select_from(
-            models.user_info.UserInfo.join(
-                models.user_roles.UserRoles,
-                models.user_info.UserInfo.username
-                == models.user_roles.UserRoles.username,
-            )
+        count_stmt = select(models.user_info.UserInfo.username).join(
+            models.user_roles.UserRoles,
+            models.user_info.UserInfo.username == models.user_roles.UserRoles.username,
         )
         if active:
             count_stmt = count_stmt.where(models.user_roles.UserRoles.is_active)
 
         total = len(db.execute(count_stmt).all())
-
-        # Apply pagination
         stmt = stmt.limit(limit).offset(offset)
         query = db.execute(stmt).all()
 
@@ -319,98 +310,101 @@ class ControllerUsers:
         )
 
         try:
-            with db.begin():
-                # Create user information if not exists in the system
-                if user is None:
-                    # Validate format first
-                    if new_user.email is not None and not valid_email_format(
-                        new_user.email
-                    ):
-                        return {
-                            "number": 4,
-                            "message": "Invalid email format.",
-                            "status": 400,
-                        }
-
-                    if new_user.phone is not None and not valid_phone_format(
-                        new_user.phone
-                    ):
-                        return {
-                            "number": 5,
-                            "message": "Invalid phone format.",
-                            "status": 400,
-                        }
-
-                    # Validate uniqueness in a single query
-                    validation_result = validate_unique_fields(
-                        db, email=new_user.email, phone=new_user.phone
-                    )
-
-                    if not validation_result["email_valid"]:
-                        return {
-                            "number": 3,
-                            "message": "Email already exists.",
-                            "status": 409,
-                        }
-
-                    if not validation_result["phone_valid"]:
-                        return {
-                            "number": 4,
-                            "message": "Phone number already exists.",
-                            "status": 409,
-                        }
-
-                    user_info = models.user_info.UserInfo(
-                        username=new_user.username,
-                        name=new_user.name,
-                        surname=new_user.surname,
-                        sex=new_user.sex,
-                        phone=new_user.phone,
-                        email=new_user.email,
-                    )
-                    db.add(user_info)
-
-                user_rol: models.user_roles.UserRoles | None = cls.get_user_rol(
-                    schemas.users.SearchUser(
-                        username=new_user.username, rol=new_user.rol
-                    ),
-                    db,
-                    False,
-                )
-
-                # Create user role if not exists
-                if user_rol is None:
-                    new_user_rol = models.user_roles.UserRoles(
-                        username=new_user.username,
-                        rol=new_user.rol,
-                        password=get_password_hash(new_user.password),
-                        is_active=True,
-                    )
-                    db.add(new_user_rol)
+            # Create user information if not exists in the system
+            if user is None:
+                # Validate format first
+                if new_user.email is not None and not valid_email_format(
+                    new_user.email
+                ):
                     return {
-                        "number": 0,
-                        "message": "User created successfully.",
-                        "status": 201,
+                        "number": 4,
+                        "message": "Invalid email format.",
+                        "status": 400,
                     }
 
-                # If user role is active, return status
-                if user_rol.is_active:
+                if new_user.phone is not None and not valid_phone_format(
+                    new_user.phone
+                ):
                     return {
-                        "number": 2,
-                        "message": "Active user with same username and role already exists.",
+                        "number": 5,
+                        "message": "Invalid phone format.",
+                        "status": 400,
+                    }
+
+                # Validate uniqueness in a single query
+                validation_result = validate_unique_fields(
+                    db, email=new_user.email, phone=new_user.phone
+                )
+
+                if not validation_result["email_valid"]:
+                    return {
+                        "number": 3,
+                        "message": "Email already exists.",
                         "status": 409,
                     }
 
-                # Reactivate user
-                user_rol.is_active = True
+                if not validation_result["phone_valid"]:
+                    return {
+                        "number": 4,
+                        "message": "Phone number already exists.",
+                        "status": 409,
+                    }
+
+                user_info = models.user_info.UserInfo(
+                    username=new_user.username,
+                    name=new_user.name,
+                    surname=new_user.surname,
+                    sex=new_user.sex,
+                    phone=new_user.phone,
+                    email=new_user.email,
+                )
+                db.add(user_info)
+                db.commit()
+
+            user_rol: models.user_roles.UserRoles | None = cls.get_user_rol(
+                schemas.users.SearchUser(
+                    username=new_user.username, rol=new_user.rol
+                ),
+                db,
+                False,
+            )
+
+            # Create user role if not exists
+            if user_rol is None:
+                new_user_rol = models.user_roles.UserRoles(
+                    username=new_user.username,
+                    rol=new_user.rol,
+                    password=get_password_hash(new_user.password),
+                    is_active=True,
+                )
+                db.add(new_user_rol)
+                db.commit()
                 return {
                     "number": 0,
-                    "message": "User activated successfully.",
-                    "status": 200,
+                    "message": "User created successfully.",
+                    "status": 201,
                 }
+
+            # If user role is active, return status
+            if user_rol.is_active:
+                return {
+                    "number": 2,
+                    "message": "Active user with same username and role already exists.",
+                    "status": 409,
+                }
+
+            # Reactivate user
+            user_rol.is_active = True
+            db.commit()
+            return {
+                "number": 0,
+                "message": "User activated successfully.",
+                "status": 200,
+            }
 
         except sqlalchemy.exc.IntegrityError as e:
             # Parse the specific constraint that was violated
+            db.rollback()
             error_info = parse_integrity_error(e)
             return {
                 "number": error_info["number"],
@@ -418,6 +412,7 @@ class ControllerUsers:
                 "status": 409,
             }
         except Exception as e:
+            db.rollback()
             return {
                 "number": 500,
                 "message": f"Unexpected error: {repr(e)}",
@@ -467,130 +462,131 @@ class ControllerUsers:
             }
 
         try:
-            with db.begin():
-                # Get the user info and user role objects for updating
-                user_info: models.user_info.UserInfo = (
-                    db.query(models.user_info.UserInfo)
-                    .filter(models.user_info.UserInfo.username == search_user.username)
-                    .first()
+            # Get the user info and user role objects for updating
+            user_info: models.user_info.UserInfo = (
+                db.query(models.user_info.UserInfo)
+                .filter(models.user_info.UserInfo.username == search_user.username)
+                .first()
+            )
+
+            user_rol: models.user_roles.UserRoles = cls.get_user_rol(
+                search_user, db, False
+            )
+
+            # Get only the fields that are not None from updated_info
+            update_data = updated_info.model_dump(
+                exclude_unset=True, exclude_none=True
+            )
+
+            # Handle special validations for unique fields
+            if (
+                "username" in update_data
+                and update_data["username"] != user_info.username
+            ):
+                existing_user = cls.get_user_by_username(
+                    update_data["username"], db, active=False
+                )
+                if existing_user is not None:
+                    return {
+                        "number": 3,
+                        "message": "Username already exists.",
+                        "status": 409,
+                    }
+
+            # Validate format for email and phone
+            if "email" in update_data and not valid_email_format(
+                update_data["email"]
+            ):
+                return {
+                    "number": 4,
+                    "message": "Invalid email format.",
+                    "status": 400,
+                }
+
+            if "phone" in update_data and not valid_phone_format(
+                update_data["phone"]
+            ):
+                return {
+                    "number": 5,
+                    "message": "Invalid phone format.",
+                    "status": 400,
+                }
+
+            # Validate uniqueness for email and phone in a single query
+            fields_to_validate = {}
+            if "email" in update_data and update_data["email"] != user_info.email:
+                fields_to_validate["email"] = update_data["email"]
+            if "phone" in update_data and update_data["phone"] != user_info.phone:
+                fields_to_validate["phone"] = update_data["phone"]
+
+            if fields_to_validate:
+                validation_result = validate_unique_fields(
+                    db,
+                    email=fields_to_validate.get("email"),
+                    phone=fields_to_validate.get("phone"),
+                    exclude_username=search_user.username,
                 )
 
-                user_rol: models.user_roles.UserRoles = cls.get_user_rol(
-                    search_user, db, False
-                )
-
-                # Get only the fields that are not None from updated_info
-                update_data = updated_info.model_dump(
-                    exclude_unset=True, exclude_none=True
-                )
-
-                # Handle special validations for unique fields
                 if (
-                    "username" in update_data
-                    and update_data["username"] != user_info.username
-                ):
-                    existing_user = cls.get_user_by_username(
-                        update_data["username"], db, active=False
-                    )
-                    if existing_user is not None:
-                        return {
-                            "number": 3,
-                            "message": "Username already exists.",
-                            "status": 409,
-                        }
-
-                # Validate format for email and phone
-                if "email" in update_data and not valid_email_format(
-                    update_data["email"]
+                    "email" in fields_to_validate
+                    and not validation_result["email_valid"]
                 ):
                     return {
                         "number": 4,
-                        "message": "Invalid email format.",
-                        "status": 400,
+                        "message": f"Email already exists. {update_data['email']}",
+                        "status": 409,
                     }
 
-                if "phone" in update_data and not valid_phone_format(
-                    update_data["phone"]
+                if (
+                    "phone" in fields_to_validate
+                    and not validation_result["phone_valid"]
                 ):
                     return {
                         "number": 5,
-                        "message": "Invalid phone format.",
-                        "status": 400,
+                        "message": f"Phone number already exists. {update_data['phone']}",
+                        "status": 409,
                     }
 
-                # Validate uniqueness for email and phone in a single query
-                fields_to_validate = {}
-                if "email" in update_data and update_data["email"] != user_info.email:
-                    fields_to_validate["email"] = update_data["email"]
-                if "phone" in update_data and update_data["phone"] != user_info.phone:
-                    fields_to_validate["phone"] = update_data["phone"]
+            # Update user_info fields
+            user_info_fields = {
+                "username",
+                "name",
+                "surname",
+                "sex",
+                "phone",
+                "email",
+            }
+            for field, value in update_data.items():
+                if field not in user_info_fields:
+                    continue
 
-                if fields_to_validate:
-                    validation_result = validate_unique_fields(
-                        db,
-                        email=fields_to_validate.get("email"),
-                        phone=fields_to_validate.get("phone"),
-                        exclude_username=search_user.username,
-                    )
+                setattr(user_info, field, value)
 
-                    if (
-                        "email" in fields_to_validate
-                        and not validation_result["email_valid"]
-                    ):
-                        return {
-                            "number": 4,
-                            "message": "Email already exists.",
-                            "status": 409,
-                        }
+                # If username changes, also update it in user_rol
+                if field == "username":
+                    setattr(user_rol, field, value)
+                    # TODO: Make a call to update import_names too
 
-                    if (
-                        "phone" in fields_to_validate
-                        and not validation_result["phone_valid"]
-                    ):
-                        return {
-                            "number": 5,
-                            "message": "Phone number already exists.",
-                            "status": 409,
-                        }
-
-                # Update user_info fields
-                user_info_fields = {
-                    "username",
-                    "name",
-                    "surname",
-                    "sex",
-                    "phone",
-                    "email",
-                }
-                for field, value in update_data.items():
-                    if field not in user_info_fields:
+            # Update user_rol specific fields
+            user_rol_fields = {"password", "rol"}
+            for field, value in update_data.items():
+                if field in user_rol_fields:
+                    if field == "password":
+                        # Hash the password before storing
+                        setattr(user_rol, field, get_password_hash(value))
                         continue
+                    setattr(user_rol, field, value)
 
-                    setattr(user_info, field, value)
-
-                    # If username changes, also update it in user_rol
-                    if field == "username":
-                        setattr(user_rol, field, value)
-                        # TODO: Make a call to update import_names too
-
-                # Update user_rol specific fields
-                user_rol_fields = {"password", "rol"}
-                for field, value in update_data.items():
-                    if field in user_rol_fields:
-                        if field == "password":
-                            # Hash the password before storing
-                            setattr(user_rol, field, get_password_hash(value))
-                            continue
-                        setattr(user_rol, field, value)
-
-                return {
-                    "number": 0,
-                    "message": "User updated successfully.",
-                    "status": 200,
-                }
+            db.commit()
+            return {
+                "number": 0,
+                "message": "User updated successfully.",
+                "status": 200,
+            }
 
         except sqlalchemy.exc.IntegrityError as e:
             # Parse the specific constraint that was violated
+            db.rollback()
             error_info = parse_integrity_error(e)
             return {
                 "number": error_info["number"],
@@ -598,6 +594,7 @@ class ControllerUsers:
                 "status": 409,
             }
         except Exception as e:
+            db.rollback()
             return {
                 "number": 500,
                 "message": f"Unexpected error: {repr(e)}",
@@ -634,28 +631,36 @@ class ControllerUsers:
             }
 
         try:
-            with db.begin():
-                user: models.user_roles.UserRoles | None = cls.get_user_rol(
-                    search_user, db
-                )
+            user: models.user_roles.UserRoles | None = cls.get_user_rol(
+                search_user, db
+            )
 
-                if user is None:
-                    return {
-                        "number": 1,
-                        "message": "User does not exist.",
-                        "status": 404,
-                    }
-
-                user.is_active = False
-                user.inactivity = datetime.date.today()
-
+            if user is None:
                 return {
-                    "number": 0,
-                    "message": "User deleted successfully.",
-                    "status": 200,
+                    "number": 1,
+                    "message": "User does not exist.",
+                    "status": 404,
                 }
 
+            user.is_active = False
+            user.inactivity = datetime.date.today()
+            db.commit()
+
+            return {
+                "number": 0,
+                "message": "User deleted successfully.",
+                "status": 200,
+            }
+
+        except sqlalchemy.exc.IntegrityError as e:
+            db.rollback()
+            return {
+                "number": 409,
+                "message": f"Cannot delete user due to database constraints: {repr(e)}",
+                "status": 409,
+            }
         except Exception as e:
+            db.rollback()
             return {
                 "number": 500,
                 "message": f"Unexpected error: {repr(e)}",
@@ -694,40 +699,41 @@ class ControllerUsers:
             }
 
         try:
-            with db.begin():
-                user: models.user_roles.UserRoles | None = cls.get_user_rol(
-                    search_user, db
-                )
+            user: models.user_roles.UserRoles | None = cls.get_user_rol(
+                search_user, db, active=False
+            )
 
-                if user is None:
-                    return {
-                        "number": 1,
-                        "message": "User does not exist.",
-                        "status": 404,
-                    }
-
-                if user.is_active:
-                    return {
-                        "number": 3,
-                        "message": "Cannot delete active user completely. Deactivate first.",
-                        "status": 400,
-                    }
-
-                db.delete(user)
-                # Transaction will auto-commit here
+            if user is None:
                 return {
-                    "number": 0,
-                    "message": "User deleted completely from system.",
-                    "status": 200,
+                    "number": 1,
+                    "message": "User does not exist.",
+                    "status": 404,
                 }
 
+            if user.is_active:
+                return {
+                    "number": 3,
+                    "message": "Cannot delete active user completely. Deactivate first.",
+                    "status": 400,
+                }
+
+            db.delete(user)
+            db.commit()
+            return {
+                "number": 0,
+                "message": "User deleted completely from system.",
+                "status": 200,
+            }
+
         except sqlalchemy.exc.IntegrityError as e:
+            db.rollback()
             return {
                 "number": 409,
-                "message": "Cannot delete user due to foreign key constraints.",
+                "message": f"Cannot delete user due to foreign key constraints: {repr(e)}",
                 "status": 409,
             }
         except Exception as e:
+            db.rollback()
             return {
                 "number": 500,
                 "message": f"Unexpected error: {repr(e)}",
