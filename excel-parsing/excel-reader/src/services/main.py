@@ -1,5 +1,5 @@
 import dtypes
-from utils_excel import open_file_from_bytes, extract_formulas, convert_csv_to_excel
+from utils import open_file_from_bytes, extract_formulas, convert_csv_to_excel
 
 
 def main(filename: str, file_bytes: bytes) -> dtypes.SpreadsheetContent:
