@@ -17,5 +17,8 @@ function getServer() {
 
 if (require.main === module) {
     var routeServer = getServer();
-    routeServer.bindAsync('localhost:50052', grpc.ServerCredentials.createInsecure(), () => { });
+    const host = process.env.FORMULA_PARSER_HOST || 'localhost';
+    const port = process.env.FORMULA_PARSER_PORT || '50052';
+    console.log(`Starting Formula Parser Server on ${host}:${port}`);
+    routeServer.bindAsync(`${host}:${port}`, grpc.ServerCredentials.createInsecure(), () => { });
 }

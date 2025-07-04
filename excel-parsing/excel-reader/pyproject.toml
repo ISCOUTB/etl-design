@@ -8,4 +8,7 @@ dependencies = [
     "grpcio>=1.73.1",
     "grpcio-tools>=1.73.1",
     "openpyxl>=3.1.5",
+    "pydantic>=2.11.7",
+    "pydantic-core>=2.33.2",
+    "pydantic-settings>=2.10.1",
 ]
