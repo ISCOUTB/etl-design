@@ -1,5 +1,5 @@
-import { tokenize } from "excel-formula-tokenizer";
-import { buildTree } from "excel-formula-ast";
+const { tokenize } = require("excel-formula-tokenizer");
+const { buildTree } = require("excel-formula-ast");
 
 function parseFormula(formula) {
     let tokens = null, ast = null;
@@ -28,3 +28,5 @@ function parseFormula(formula) {
 
     return { formula, tokens, ast, error: "" };
 }
+
+module.exports.parseFormula = parseFormula;
