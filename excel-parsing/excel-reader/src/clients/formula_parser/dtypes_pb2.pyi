@@ -38,7 +38,7 @@ REF_ABSOLUTE: RefType
 REF_MIXED: RefType
 
 class AST(_message.Message):
-    __slots__ = ("type", "operator", "left", "right", "arguments", "name", "refType", "key", "value")
+    __slots__ = ("type", "operator", "left", "right", "arguments", "name", "refType", "key", "number_value", "text_value", "logical_value")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     OPERATOR_FIELD_NUMBER: _ClassVar[int]
     LEFT_FIELD_NUMBER: _ClassVar[int]
@@ -47,7 +47,9 @@ class AST(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     REFTYPE_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
-    VALUE_FIELD_NUMBER: _ClassVar[int]
+    NUMBER_VALUE_FIELD_NUMBER: _ClassVar[int]
+    TEXT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    LOGICAL_VALUE_FIELD_NUMBER: _ClassVar[int]
     type: AstType
     operator: str
     left: AST
@@ -56,8 +58,10 @@ class AST(_message.Message):
     name: str
     refType: RefType
     key: str
-    value: float
-    def __init__(self, type: _Optional[_Union[AstType, str]] = ..., operator: _Optional[str] = ..., left: _Optional[_Union[AST, _Mapping]] = ..., right: _Optional[_Union[AST, _Mapping]] = ..., arguments: _Optional[_Iterable[_Union[AST, _Mapping]]] = ..., name: _Optional[str] = ..., refType: _Optional[_Union[RefType, str]] = ..., key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
+    number_value: float
+    text_value: str
+    logical_value: bool
+    def __init__(self, type: _Optional[_Union[AstType, str]] = ..., operator: _Optional[str] = ..., left: _Optional[_Union[AST, _Mapping]] = ..., right: _Optional[_Union[AST, _Mapping]] = ..., arguments: _Optional[_Iterable[_Union[AST, _Mapping]]] = ..., name: _Optional[str] = ..., refType: _Optional[_Union[RefType, str]] = ..., key: _Optional[str] = ..., number_value: _Optional[float] = ..., text_value: _Optional[str] = ..., logical_value: bool = ...) -> None: ...
 
 class Tokens(_message.Message):
     __slots__ = ("tokens",)
