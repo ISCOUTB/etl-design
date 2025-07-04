@@ -1,8 +1,10 @@
-import dtypes
-from utils import open_file_from_bytes, extract_formulas, convert_csv_to_excel
+import services.dtypes as dtypes
+from services.utils import open_file_from_bytes, extract_formulas, convert_csv_to_excel
 
 
-def main(filename: str, file_bytes: bytes) -> dtypes.SpreadsheetContent:
+def get_data_from_spreadsheet(
+    filename: str, file_bytes: bytes
+) -> dtypes.SpreadsheetContent:
     """
     Main function to read an Excel file and extract formulas.
 
@@ -20,7 +22,9 @@ def main(filename: str, file_bytes: bytes) -> dtypes.SpreadsheetContent:
     elif filename.endswith(".csv"):
         workbook = convert_csv_to_excel(file_bytes)
     else:
-        raise NotImplementedError("Unsupported file format. Only .xlsx, .xls, and .csv are supported.")
+        raise NotImplementedError(
+            "Unsupported file format. Only .xlsx, .xls, and .csv are supported."
+        )
 
     cells = extract_formulas(workbook)
     columns = {
