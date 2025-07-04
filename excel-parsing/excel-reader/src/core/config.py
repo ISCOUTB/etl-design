@@ -1,3 +1,4 @@
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,11 @@ class Settings(BaseSettings):
 
     FORMULA_PARSER_HOST: str = "localhost"
     FORMULA_PARSER_PORT: str = "50052"
+
+    @computed_field
+    @property
+    def FORMULA_PARSER_CHANNEL(self) -> str:
+        return f"{self.FORMULA_PARSER_HOST}:{self.FORMULA_PARSER_PORT}"
 
 
 settings = Settings()
