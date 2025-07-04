@@ -1,3 +1,5 @@
+require('dotenv').config({ path: '../.env' });
+
 var grpc = require('@grpc/grpc-js');
 var services = require('./clients/formula_parser_grpc_pb');
 var { parseFormulaHandler } = require('./handlers/formulaParserHandler');
@@ -19,6 +21,11 @@ if (require.main === module) {
     var routeServer = getServer();
     const host = process.env.FORMULA_PARSER_HOST || 'localhost';
     const port = process.env.FORMULA_PARSER_PORT || '50052';
-    console.log(`Starting Formula Parser Server on ${host}:${port}`);
+    try {
+        process.env.DEBUG_FORMULA_PARSER = process.env.DEBUG_FORMULA_PARSER.toLowerCase() === 'true';
+    } catch (e) {
+        process.env.DEBUG_FORMULA_PARSER = false;
+    }
+    console.log(`Starting Formula Parser Server on ${host}:${port} -- DEBUG: ${process.env.DEBUG_FORMULA_PARSER}`);
     routeServer.bindAsync(`${host}:${port}`, grpc.ServerCredentials.createInsecure(), () => { });
 }

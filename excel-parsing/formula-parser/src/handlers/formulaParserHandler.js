@@ -1,5 +1,4 @@
-const { tokenize } = require('excel-formula-tokenizer');
-const { buildTree } = require('excel-formula-ast');
+require('dotenv').config({ path: '../.env' });
 
 var { parseFormula } = require('../services/formulaParser');
 var messages = require('../clients/formula_parser_pb');
@@ -9,10 +8,12 @@ function parseFormulaHandler(formula) {
     var response = new messages.FormulaParserResponse();
     const { tokens, ast, error } = parseFormula(formula);
 
-    console.log(`Parsing formula: ${formula}`);
-    console.log(`Tokens: ${JSON.stringify(tokens, null, 2)}`);
-    console.log(`AST: ${JSON.stringify(ast, null, 2)}`);
-    console.log(`Error: ${error}`);
+    if (process.env.DEBUG_FORMULA_PARSER) {
+        console.log(`Parsing formula: ${formula}`);
+        console.log(`Tokens: ${JSON.stringify(tokens, null, 2)}`);
+        console.log(`AST: ${JSON.stringify(ast, null, 2)}`);
+        console.log(`Error: ${error}`);
+    }
 
     response.setFormula(formula);
 
@@ -92,8 +93,14 @@ function convertAstToProto(ast) {
         astProto.setKey(ast.key);
     }
 
-    if (typeof ast.value === 'number') {
-        astProto.setValue(ast.value);
+    if (ast.value !== undefined && ast.value !== null) {
+        if (typeof ast.value === 'number') {
+            astProto.setNumberValue(ast.value);
+        } else if (typeof ast.value === 'string') {
+            astProto.setTextValue(ast.value);
+        } else {
+            astProto.setLogicalValue(ast.value === true);
+        }
     }
 
     return astProto;
