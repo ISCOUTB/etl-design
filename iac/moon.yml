@@ -43,6 +43,7 @@ tasks:
             - -y
         options:
             runFromWorkspaceRoot: false
+            cache: false
 
     # e.g. moon run iac:cleanup-cluster -- staging
     cleanup-cluster:
@@ -52,3 +53,4 @@ tasks:
             - -y
         options:
             runFromWorkspaceRoot: false
+            cache: false
