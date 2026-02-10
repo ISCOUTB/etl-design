@@ -1,3 +1,8 @@
+# TODO: use database directly, instead of publishing a message to the mq,
+# for this endpoint, since it's not a long running task, and we want to
+# return the response immediately, without waiting for the worker to process
+# the message.
+
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
