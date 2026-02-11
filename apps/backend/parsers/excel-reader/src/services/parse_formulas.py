@@ -14,9 +14,9 @@ from proto_utils.parsers import (
     SQLBuilderSerde,
 )
 
-from src.services import dtypes
+from src import schemas
 from src.services.get_data import get_data_from_spreadsheet
-from src.services.utils import monitor_performance
+from src.utils.monitor_performance import monitor_performance
 
 
 def parse_formula(
@@ -63,7 +63,7 @@ def generate_sql(
     ]
     sql_expression = ""
     for level in sorted(sql_expressions.keys()):
-        for content in sql_expressions[level]:
+        for content in sql_expressions[level]["sql_content"]:
             prefix = "" if level == 0 else "\n"
             sql_expression += f"{prefix}{content['sql']}"
 
@@ -71,8 +71,8 @@ def generate_sql(
 
 
 def generate_data(
-    data: dtypes.DataInfo,
-) -> Generator[Dict[str, str | dtypes.CellData], None, None]:
+    data: schemas.DataInfo,
+) -> Generator[Dict[str, str | schemas.CellData], None, None]:
     for sheet, cols in data.items():
         for col, cells in cols.items():
             for i, cell in enumerate(cells[:1]):
@@ -92,7 +92,7 @@ def parse_formulas(
     file_bytes: bytes,
     limit: int = 50,
     fill_spaces: str = "_",
-) -> dtypes.ParseFormulasResult:
+) -> schemas.ParseFormulasResult:
     content = get_data_from_spreadsheet(
         filename,
         file_bytes,
@@ -116,11 +116,16 @@ def parse_formulas(
         cell["ast"] = parse_formula(formula_parser_stub, str(cell["value"]))
         result[sheet][col].append(cell)
 
-    return dtypes.ParseFormulasResult(result=result, columns=content["columns"])
+    return schemas.ParseFormulasResult(
+        result=result, columns=content["columns"]
+    )
 
 
-@monitor_performance("main")
-def main(
+# After 6 months I did this, I just realize that I can reuse the parse_formulas function to generate the DDLs,
+# I just have to add the DDL generation in the loop where I generate the ASTs, this way I avoid having to
+# loop again through all the cells to generate the DDLs
+@monitor_performance("parse_formulas_with_ddl")
+def parse_formulas_with_ddl(
     *,
     formula_parser_stub: formula_parser_pb2_grpc.FormulaParserStub,
     ddl_generator_stub: ddl_generator_pb2_grpc.DDLGeneratorStub,
@@ -128,7 +133,7 @@ def main(
     file_bytes: bytes,
     limit: int = 50,
     fill_spaces: str = " ",
-) -> dtypes.ParseFormulasResult:
+) -> schemas.ParseFormulasResult:
     content = parse_formulas(
         filename=filename,
         file_bytes=file_bytes,
@@ -142,6 +147,7 @@ def main(
     for sheet, cols in result.items():
         for col, cells in cols.items():
             for i, cell in enumerate(cells):
+                assert isinstance(cell["ast"], dtypes_pb2.AST)
                 result[sheet][col][i]["sql"] = generate_ddl(
                     ddl_generator_stub,
                     cell["ast"],
@@ -152,4 +158,4 @@ def main(
                     cell["ast"]
                 )
 
-    return dtypes.ParseFormulasResult(result=result, columns=columns)
+    return schemas.ParseFormulasResult(result=result, columns=columns)

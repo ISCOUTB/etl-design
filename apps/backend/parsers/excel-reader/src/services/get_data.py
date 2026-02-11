@@ -1,12 +1,12 @@
 import logging
 
-import src.services.dtypes as dtypes
+from src import schemas
 from src.services.utils import (
     convert_csv_to_excel,
     extract_formulas,
-    monitor_performance,
     open_file_from_bytes,
 )
+from src.utils.monitor_performance import monitor_performance
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 @monitor_performance("get_data_from_spreadsheet")
 def get_data_from_spreadsheet(
     filename: str, file_bytes: bytes, limit: int = 50, fill_spaces: str = " "
-) -> dtypes.SpreadsheetContent:
+) -> schemas.SpreadsheetContent:
     """
     Main function to read an Excel file and extract formulas.
 
@@ -25,7 +25,7 @@ def get_data_from_spreadsheet(
         fill_spaces (str): The character to replace spaces in column names.
 
     Returns:
-        dtypes.SpreadsheetContent: A dictionary containing raw data, columns, and structured data
+        schemas.SpreadsheetContent: A dictionary containing raw data, columns, and structured data
         extracted from the spreadsheet file.
     """
 
@@ -49,7 +49,10 @@ def get_data_from_spreadsheet(
                 # to avoid issues with column names in SQL, but this validation maybe
                 # have to be done in the client side, not here, because of dtypes_str
                 # parameter received in the server, there could be a conflict with the column names
-                lambda x: (x[0], x[1][0]["value"].replace(" ", fill_spaces)),
+                lambda x: (
+                    x[0],
+                    str(x[1][0]["value"]).replace(" ", fill_spaces),
+                ),
                 sheet_data.items(),
             )
         )

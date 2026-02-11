@@ -11,14 +11,14 @@ from proto_utils.generated.parsers import (
 )
 
 from src.core.config import settings
-from src.main import generate_sql, main
-from src.services.utils import monitor_performance
+from src.services.parse_formulas import generate_sql, parse_formulas_with_ddl
 from src.utils import LOGGING_CONFIG, logger
 from src.utils.deps import (
     get_ddl_generator_stub,
     get_formula_parser_stub,
     get_sql_builder_stub,
 )
+from src.utils.monitor_performance import monitor_performance
 
 # ======== Dependency Injection ========
 
@@ -84,7 +84,7 @@ async def read_excel(
         table_name = ""
 
     logger.info(f"Processing file: {filename}")
-    content = main(
+    content = parse_formulas_with_ddl(
         formula_parser_stub=formula_parser_stub,
         ddl_generator_stub=ddl_generator_stub,
         filename=filename,
@@ -125,4 +125,6 @@ if __name__ == "__main__":
         port=settings.EXCEL_READER_PORT,
         reload=settings.EXCEL_READER_DEBUG,
         log_config=LOGGING_CONFIG,
+        reload_dirs=["src"],
+        reload_includes=["*.py"],
     )

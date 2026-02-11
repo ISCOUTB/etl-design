@@ -1,6 +1,6 @@
 from typing import Dict, Optional, TypedDict
 
-from proto_utils.generated.parsers import dtypes_pb2
+from proto_utils.generated.parsers import ddl_generator_pb2, dtypes_pb2
 from proto_utils.parsers.dtypes import AST
 
 
@@ -23,7 +23,7 @@ class CellData(TypedDict):
     data_type: str
     is_formula: bool
     ast: Optional[AST | dtypes_pb2.AST] = None
-    sql: Optional[str] = None
+    sql: Optional[str | ddl_generator_pb2.DDLResponse] = None
 
 
 ColumnsInfo = Dict[str, Dict[str, str]]
