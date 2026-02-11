@@ -16,9 +16,11 @@ Example:
     >>> worker.start_consuming()  # Blocks and processes messages
 """
 
+import asyncio
 import json
 import time
 
+import httpx
 import pika
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
@@ -129,7 +131,7 @@ class InsertionWorker:
                 self.channel.basic_qos(prefetch_count=settings.WORKER_PREFETCH_COUNT)
                 self.channel.basic_consume(
                     queue=mq_settings.RABBITMQ_QUEUE_INSERTION,
-                    on_message_callback=self.process_schema_update,
+                    on_message_callback=self.process_insertion_tasks,
                     auto_ack=False,
                 )
 
@@ -216,13 +218,8 @@ class InsertionWorker:
         except Exception as e:
             logger.error(f"SchemaWorker: Error closing connections: {e}")
 
-    def process_schema_update(self, ch, method, properties, body) -> None:
-        """Process incoming schema update messages.
-
-        Handles individual schema update messages by parsing the message body,
-        extracting the task information, updating the schema, and publishing
-        the result. Implements proper message acknowledgment on success and
-        negative acknowledgment on failure.
+    def process_insertion_tasks(self, ch, method, properties, body) -> None:
+        """Process incoming insertion task messages from RabbitMQ.
 
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
@@ -258,32 +255,85 @@ class InsertionWorker:
                         "update_date": get_datetime_now(),
                     },
                 )
-                result = self._insert_data(message, db_client=self.db_client)
+                result = asyncio.run(self._insert_data(message, db_client=self.db_client))
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 raise ValueError(f"Unknown task type: {task}")
 
             # Add more cases here if needed for other tasks
 
-            # Here could be implemented a callback to notify other services
-            # e.g. using webhooks or other messaging patterns.
-            # And, maybe, not use another queue of results for that.
-
-            # Meanwhile
             self._publish_result(task_id, result, db_client=self.db_client)
-
             ch.basic_ack(delivery_tag=method.delivery_tag)
-
             logger.info(f"Schema update completed for task: {task_id}")
         except Exception as e:
             logger.error(f"Error processing schema update: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
-    def _insert_data(
+    async def _insert_data(
         self, message: InsertionMessage, db_client: DatabaseClient
     ) -> InsertionResult:
-        # TODO: Implement the logic to insert data based on the message content.
-        return InsertionResult()
+        task_id = message["id"]
+        update_task_status(
+            database_client=db_client,
+            task_id=task_id,
+            field="status",
+            value="processing-file",
+            task=self.TASK,
+            data={"update_date": get_datetime_now()},
+        )
+
+        file_bytes = bytes.fromhex(message["file_data"])
+        filename = message["metadata"]["filename"]
+        table_name = message["import_name"]
+        overwrite = message["overwrite"]
+
+        update_task_status(
+            database_client=db_client,
+            task_id=task_id,
+            field="status",
+            value="requesting-insert-sql",
+            task=self.TASK,
+            data={"update_date": get_datetime_now()},
+        )
+
+        try:
+            # Maybe here we can use httpx.Timeout to be more specific
+            async with httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS) as client:
+                files = {"spreadsheet": (filename, file_bytes)}
+                response = await client.post(
+                    settings.EXCEL_READER_INSERT_URL,
+                    files=files,
+                    data={"table_name": table_name},
+                    params={"overwrite": overwrite},
+                )
+
+            response.raise_for_status()
+            data = response.json()
+
+            update_task_status(
+                database_client=db_client,
+                task_id=task_id,
+                field="status",
+                value="file-processed",
+                task=self.TASK,
+                data={"update_date": get_datetime_now()},
+            )
+
+            return InsertionResult(result=data, status="success")
+        except Exception as e:
+            logger.error(f"Error processing file for task {task_id}: {e}")
+            update_task_status(
+                database_client=db_client,
+                task_id=task_id,
+                field="status",
+                value="failed-processing-file",
+                task=self.TASK,
+                data={"error": str(e), "update_date": get_datetime_now()},
+            )
+            return InsertionResult(result={}, status="failed")
+        
+        # Ideally, here will be executed the resultant SQL, but we haven't defined how...
+        # so for now, we will just return the generated SQL as the result
 
     def _publish_result(
         self, task_id: str, result: InsertionResult, db_client: DatabaseClient
@@ -303,7 +353,7 @@ class InsertionWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        if result["status"] != "completed":
+        if result["status"] != "success":
             task_get_result = db_client.get_task_id(
                 dtypes.GetTaskIdRequest(
                     task_id=task_id,

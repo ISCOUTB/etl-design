@@ -9,7 +9,7 @@ The schemas ensure consistent result structure for downstream consumers
 and provide proper typing for worker result handling and storage.
 """
 
-from typing import TypedDict
+from typing import Dict, Literal, TypedDict
 
 from src.schemas.handlers import SummaryStatus, ValidationSummary
 
@@ -56,4 +56,5 @@ class DataValidated(TypedDict):
 
 
 class InsertionResult(TypedDict):
-    pass
+    result: Dict[str, str]
+    status: Literal["success", "failed"]

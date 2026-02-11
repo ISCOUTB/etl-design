@@ -27,6 +27,19 @@ class Settings(BaseSettings):
     MAX_WORKERS: int = 1
     WORKER_PREFETCH_COUNT: int = 1
 
+    # Excel-Reader configuration
+    EXCEL_READER_HOST: str
+    EXCEL_READER_PORT: int
+    EXCEL_READER_TIMEOUT_SECONDS: float = 60.0
+
+    @computed_field
+    @property
+    def EXCEL_READER_INSERT_URL(self) -> str:
+        return (
+            f"http://{self.EXCEL_READER_HOST}:"
+            f"{self.EXCEL_READER_PORT}/insert-sql"
+        )
+
     # Database connection configuration
     DATABASE_CONNECTION_HOST: str
     DATABASE_CONNECTION_PORT: int
@@ -40,4 +53,8 @@ class Settings(BaseSettings):
         return f"{self.DATABASE_CONNECTION_HOST}:{self.DATABASE_CONNECTION_PORT}"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore
+
+
+if __name__ == "__main__":
+    print(settings.model_dump_json(indent=4))
