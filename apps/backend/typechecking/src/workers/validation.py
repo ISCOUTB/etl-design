@@ -275,42 +275,39 @@ class ValidationWorker:
                 result = asyncio.run(
                     self._validate_data(message, db_client=self.db_client)
                 )
-
-                if result["status"] == "success" and message["insert"]:
-                    insert_append = message.get("insert_append", False)
-                    self.channel.basic_publish(
-                        exchange=mq_settings.RABBITMQ_EXCHANGE,
-                        routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
-                        body=json.dumps(
-                            InsertionMessage(
-                                id=task_id,
-                                task="sample_insertion",
-                                file_data=message["file_data"],
-                                import_name=message["import_name"],
-                                metadata=message["metadata"],
-                                date=get_datetime_now(),
-                                extra={"validation_task_id": task_id},
-                                append=(
-                                    insert_append
-                                    if insert_append is not None
-                                    else False
-                                ),
-                            )
-                        ),
-                    )
-
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 raise ValueError(f"Unknown task type: {task}")
 
             # Add more cases here if needed for other tasks
 
-            # Here could be implemented a callback to notify other services
-            # e.g. using webhooks or other messaging patterns.
-            # And, maybe, not use another queue of results for that.
-
-            # Meanwhile
+            # if validation succeeded, publish the result first of all
             self._publish_result(task_id, result, db_client=self.db_client)
+
+            # then, if requested, publish the insertion task
+            if (
+                task == "sample_validation"
+                and result["status"] == "success"
+                and message["insert"]
+            ):
+                insert_overwrite = message.get("insert_overwrite", None)
+                insert_overwrite = bool(insert_overwrite) if insert_overwrite is not None else False
+                self.channel.basic_publish(
+                    exchange=mq_settings.RABBITMQ_EXCHANGE,
+                    routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
+                    body=json.dumps(
+                        InsertionMessage(
+                            id=task_id,
+                            task="sample_insertion",
+                            file_data=message["file_data"],
+                            import_name=message["import_name"],
+                            metadata=message["metadata"],
+                            date=get_datetime_now(),
+                            extra={"validation_task_id": task_id},
+                            overwrite=insert_overwrite,
+                        )
+                    ),
+                )
 
             ch.basic_ack(delivery_tag=method.delivery_tag)
             logger.info(f"Validation completed for task: {task_id}")

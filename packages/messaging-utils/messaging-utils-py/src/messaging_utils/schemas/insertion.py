@@ -14,7 +14,7 @@ class InsertionMessage(TypedDict):
     metadata (Metadata): Metadata about the file, including filename, content type, and size.
     date (str): The date when the message was created, in ISO format.
     extra (Dict[str, str]): A dictionary of additional key-value pairs for extensibility.
-    append (bool): A flag indicating whether to append to existing data (True) or overwrite (False).
+    overwrite (bool): A flag indicating whether to overwrite to existing data (True) or append (False).
     """
 
     id: str
@@ -24,4 +24,4 @@ class InsertionMessage(TypedDict):
     metadata: Metadata
     date: str
     extra: Dict[str, str]
-    append: bool
+    overwrite: bool

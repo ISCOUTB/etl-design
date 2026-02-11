@@ -14,4 +14,4 @@ class ValidationMessage(TypedDict):
     date: str
     extra: Dict[str, str]
     insert: bool
-    insert_append: Optional[bool]
+    insert_overwrite: Optional[bool]
