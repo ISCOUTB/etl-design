@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from src import schemas
 from src.api.deps import CurrentUser, SessionDep
-from src.controllers.users import ControllerUsers
+from src.repositories.users import UserRepository
 from src.core.config import settings
 from src.core.security import create_access_token
 
@@ -23,7 +23,7 @@ async def login_access_token(
         username=form_data.username, password=form_data.password, rol=rol
     )
 
-    user = ControllerUsers.authenticate_user(user_login, db)
+    user = UserRepository.authenticate_user(user_login, db)
     if user is None:
         raise HTTPException(
             status_code=401,

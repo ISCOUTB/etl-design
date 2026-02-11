@@ -6,7 +6,7 @@ from proto_utils.database import DatabaseClient, dtypes
 import src.schemas as schemas
 from src.api.deps import Admin, CurrentUser, SessionDep, get_db_client
 from src.api.utils import invalidate_user_cache, is_superuser
-from src.controllers.users import ControllerUsers
+from src.repositories.users import UserRepository
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ def get_user_info(
     if cached_response["found"]:
         return schemas.users.BaseUser(**json.loads(cached_response["value"]))
 
-    user = ControllerUsers.get_user(current_user.username, db, active=True, rol=False)
+    user = UserRepository.get_user(current_user.username, db, active=True, rol=False)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -76,7 +76,7 @@ def get_user(
     if cached_response and use_cache:
         return model(**json.loads(cached_response))
 
-    user = ControllerUsers.get_user(username, db, active=active, rol=all)
+    user = UserRepository.get_user(username, db, active=active, rol=all)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -123,7 +123,7 @@ def get_all_users(
     if use_cache and cached_response:
         return json.loads(cached_response)
 
-    users = ControllerUsers.get_users(
+    users = UserRepository.get_users(
         db, active=active, rol=rol, limit=limit, page=page
     )
     response = [model.model_validate(user) for user in users["items"]]
@@ -155,7 +155,7 @@ def create_user(
         ApiResponse: Response indicating success or error.
     """
     admin_bool = is_superuser(admin)
-    response = ControllerUsers.create_user(new_user=user, db=db, admin=admin_bool)
+    response = UserRepository.create_user(new_user=user, db=db, admin=admin_bool)
 
     if response["number"] != 0:
         raise HTTPException(
@@ -195,7 +195,7 @@ def update_user(
         ApiResponse: Response indicating success or error.
     """
     search_user = schemas.users.SearchUser(username=username, rol=rol)
-    response = ControllerUsers.update_user(
+    response = UserRepository.update_user(
         search_user=search_user,
         updated_info=user,
         db=db,
@@ -241,11 +241,11 @@ def delete_user(
     """
     search_user = schemas.users.SearchUser(username=username, rol=rol)
     if complete:
-        response = ControllerUsers.delete_completely_user(
+        response = UserRepository.delete_completely_user(
             search_user=search_user, db=db, admin=is_superuser(admin)
         )
     else:
-        response = ControllerUsers.delete_user(
+        response = UserRepository.delete_user(
             search_user=search_user, db=db, admin=is_superuser(admin)
         )
 

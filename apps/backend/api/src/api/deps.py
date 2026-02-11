@@ -11,10 +11,10 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 import src.schemas as schemas
-from src.controllers.users import ControllerUsers
 from src.core import security
 from src.core.config import settings
 from src.core.database_sql import SessionLocal
+from src.repositories.users import UserRepository
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -85,7 +85,7 @@ def get_current_user(db: SessionDep, token: TokenDep) -> schemas.models.UserRole
         username=token_data.username, rol=token_data.rol
     )
 
-    user = ControllerUsers.get_user_rol(user_search, db)
+    user = UserRepository.get_user_rol(user_search, db)
     if user is None:
         raise HTTPException(
             status_code=403,

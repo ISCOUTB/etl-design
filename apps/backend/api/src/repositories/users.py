@@ -6,16 +6,16 @@ from sqlalchemy.orm import Session
 
 import src.models as models
 import src.schemas as schemas
-from src.controllers.utils import (
+from src.core.security import get_password_hash, verify_password
+from src.repositories.utils import (
     parse_integrity_error,
     valid_email_format,
     valid_phone_format,
     validate_unique_fields,
 )
-from src.core.security import get_password_hash, verify_password
 
 
-class ControllerUsers:
+class UserRepository:
     @staticmethod
     def get_user_rol(
         search_user: schemas.users.SearchUser, db: Session, active: bool = True
