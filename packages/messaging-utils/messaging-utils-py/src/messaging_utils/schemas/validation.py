@@ -1,12 +1,8 @@
-from typing import Dict, Literal, TypedDict
+from typing import Dict, Literal, Optional, TypedDict
+
+from messaging_utils.schemas.common import Metadata
 
 ValidationTasks = Literal["sample_validation", "unknown"]
-
-
-class Metadata(TypedDict):
-    filename: str
-    content_type: str
-    size: int
 
 
 class ValidationMessage(TypedDict):
@@ -17,3 +13,5 @@ class ValidationMessage(TypedDict):
     metadata: Metadata
     date: str
     extra: Dict[str, str]
+    insert: bool
+    insert_append: Optional[bool]

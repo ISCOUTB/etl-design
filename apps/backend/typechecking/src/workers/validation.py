@@ -28,7 +28,7 @@ from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
-from messaging_utils.schemas import ValidationMessage
+from messaging_utils.schemas import InsertionMessage, ValidationMessage
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
@@ -269,11 +269,39 @@ class ValidationWorker:
                     data={
                         "upload_date": message["date"],
                         "update_date": get_datetime_now(),
+                        "insert_task": str(message["insert"]),
                     },
                 )
                 result = asyncio.run(
                     self._validate_data(message, db_client=self.db_client)
                 )
+
+                if result["status"] == "success" and message["insert"]:
+                    insert_append = message.get("insert_append", False)
+                    self.channel.basic_publish(
+                        exchange=mq_settings.RABBITMQ_EXCHANGE,
+                        routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
+                        body=json.dumps(
+                            InsertionMessage(
+                                id=task_id,
+                                task="sample_insertion",
+                                file_data=message["file_data"],
+                                import_name=message["import_name"],
+                                metadata=message["metadata"],
+                                date=get_datetime_now(),
+                                extra={"validation_task_id": task_id},
+                                append=(
+                                    insert_append
+                                    if insert_append is not None
+                                    else False
+                                ),
+                            )
+                        ),
+                    )
+
+            else:
+                logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
+                raise ValueError(f"Unknown task type: {task}")
 
             # Add more cases here if needed for other tasks
 
@@ -348,13 +376,14 @@ class ValidationWorker:
         )
 
         results = await validate_file_against_schema(
-            file=upload_file, import_name=message["import_name"]
+            file=upload_file,
+            import_name=message["import_name"],
+            database_client=db_client,
         )
 
         logger.debug(f"Results: {json.dumps(results, indent=4)}")
 
         summary = get_validation_summary(results)
-
         update_task_status(
             database_client=db_client,
             task_id=task_id,
@@ -375,7 +404,7 @@ class ValidationWorker:
 
     def _publish_result(
         self, task_id: str, result: DataValidated, db_client: DatabaseClient
-    ) -> str:
+    ) -> None:
         """Publish the validation result back to the exchange.
 
         Sends the validation result to the 'typechecking.exchange' with
@@ -397,12 +426,17 @@ class ValidationWorker:
                 for proper error handling and message acknowledgment.
         """
         if result["status"] == "error":
-            upload_date = db_client.get_task_id(
+            task_get_result = db_client.get_task_id(
                 dtypes.GetTaskIdRequest(
                     task_id=task_id,
                     task=self.TASK,
                 )
-            )["value"]["data"].get("upload_date", get_datetime_now())
+            )
+            assert task_get_result["found"] and task_get_result["value"] is not None
+
+            upload_date = task_get_result["value"]["data"].get(
+                "upload_date", get_datetime_now()
+            )
             update_task_status(
                 database_client=db_client,
                 task_id=task_id,
@@ -422,7 +456,7 @@ class ValidationWorker:
 
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS_VALIDATIONS,
+            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
             body=json.dumps(result),
         )
         update_task_status(

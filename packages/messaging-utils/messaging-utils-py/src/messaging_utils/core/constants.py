@@ -1,0 +1,1 @@
+RABBITMQ_EXCHANGE_TYPE: str = "topic"

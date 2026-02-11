@@ -9,9 +9,7 @@ The schemas ensure consistent result structure for downstream consumers
 and provide proper typing for worker result handling and storage.
 """
 
-from typing import Any, Dict, TypedDict
-
-from proto_utils.database import dtypes
+from typing import TypedDict
 
 from src.schemas.handlers import SummaryStatus, ValidationSummary
 
@@ -57,45 +55,5 @@ class DataValidated(TypedDict):
     results: ValidationSummary
 
 
-class SchemaUpdated(TypedDict):
-    """Schema update result schema.
-
-    Represents the result of a schema creation or update operation
-    performed by schema workers. Contains the task identifier,
-    completion status, schema information, and database operation result.
-
-    Used by schema workers to report schema update results back to
-    the system and by result consumers to track schema changes.
-
-    Attributes:
-        task_id (str): Unique identifier linking back to the original schema update request.
-        status (str): Completion status - 'completed' for successful schema update,
-            'failed' for schema processing errors.
-        schema (Dict[str, Any]): The complete JSON schema definition that was processed,
-            including all validation rules, field types, and constraints.
-        import_name (str): Schema identifier used for storage and retrieval.
-        result (proto_utils.database.dtypes.MongoInsertOneSchemaResponse): MongoDB operation result from the database
-            update/insert, None if the database operation failed or was not performed.
-
-    Example:
-        >>> result: SchemaUpdated = {
-        ...     "task_id": "550e8400-e29b-41d4-a716-446655440001",
-        ...     "status": "completed",
-        ...     "schema": {
-        ...         "type": "object",
-        ...         "properties": {
-        ...             "name": {"type": "string"},
-        ...             "email": {"type": "string", "format": "email"}
-        ...         },
-        ...         "required": ["name", "email"]
-        ...     },
-        ...     "import_name": "user_profile_schema",
-        ...     "result": UpdateResult(...)  # MongoDB operation result
-        ... }
-    """
-
-    task_id: str
-    status: str
-    schema: Dict[str, Any]  # The updated JSON schema
-    import_name: str
-    result: dtypes.MongoInsertOneSchemaResponse
+class InsertionResult(TypedDict):
+    pass

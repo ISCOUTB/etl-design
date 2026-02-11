@@ -20,12 +20,11 @@ import json
 import time
 
 import pika
-from jsonschema import SchemaError
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
-from messaging_utils.schemas import SchemaMessage
+from messaging_utils.schemas import InsertionMessage
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
@@ -36,16 +35,15 @@ from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
-from src.handlers.schemas import create_schema, remove_schema, save_schema
-from src.schemas.workers import SchemaUpdated
+from src.schemas.workers import InsertionResult
 from src.utils import create_component_logger, get_datetime_now
 from src.workers.utils import update_task_status
 
-# Create logger with [schemas] prefix
-logger = create_component_logger("schemas")
+# Create logger with [insertion] prefix
+logger = create_component_logger("insertion")
 
 
-class SchemaWorker:
+class InsertionWorker:
     """RabbitMQ worker for processing schema update messages.
 
     This worker consumes messages from the 'typechecking.schema.queue',
@@ -65,7 +63,7 @@ class SchemaWorker:
         channel: RabbitMQ channel for message operations.
     """
 
-    TASK = "schemas"
+    TASK = "insertion"
 
     def __init__(
         self,
@@ -130,7 +128,7 @@ class SchemaWorker:
 
                 self.channel.basic_qos(prefetch_count=settings.WORKER_PREFETCH_COUNT)
                 self.channel.basic_consume(
-                    queue=mq_settings.RABBITMQ_QUEUE_SCHEMAS,
+                    queue=mq_settings.RABBITMQ_QUEUE_INSERTION,
                     on_message_callback=self.process_schema_update,
                     auto_ack=False,
                 )
@@ -243,13 +241,12 @@ class SchemaWorker:
             Error details are logged for debugging and monitoring.
         """
         try:
-            message = SchemaMessage(**json.loads(body.decode()))
+            message = InsertionMessage(**json.loads(body.decode()))
             task_id = message["id"]
-            task = message.get("task", "upload_schema")
+            task = message.get("task", "sample_insertion")
 
-            if task == "upload_schema":
-                # Update the task status to 'processing'
-                logger.info(f"Processing schema update: {task_id}")
+            if task == "sample_insertion":
+                logger.info(f"Processing sample insertion: {task_id}")
                 update_task_status(
                     database_client=self.db_client,
                     task_id=task_id,
@@ -261,22 +258,10 @@ class SchemaWorker:
                         "update_date": get_datetime_now(),
                     },
                 )
-                result = self._update_schema(message, db_client=self.db_client)
-
-            if task == "remove_schema":
-                logger.info(f"Removing schema: {task_id}")
-                update_task_status(
-                    database_client=self.db_client,
-                    task_id=task_id,
-                    field="status",
-                    value="received-removing-schema",
-                    task=self.TASK,
-                    data={
-                        "upload_date": message["date"],
-                        "update_date": get_datetime_now(),
-                    },
-                )
-                result = self._remove_schema(message, db_client=self.db_client)
+                result = self._insert_data(message, db_client=self.db_client)
+            else:
+                logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
+                raise ValueError(f"Unknown task type: {task}")
 
             # Add more cases here if needed for other tasks
 
@@ -294,196 +279,14 @@ class SchemaWorker:
             logger.error(f"Error processing schema update: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
-    def _update_schema(
-        self, message: SchemaMessage, db_client: DatabaseClient
-    ) -> SchemaUpdated:
-        """Update the schema based on the incoming message.
-
-        Processes a schema update request by creating a new schema from the
-        provided parameters and saving it with the specified import name.
-        Returns a structured result containing the operation status and details.
-
-        Args:
-            message (SchemaMessage): Dictionary containing schema update parameters including:
-                - task_id: Unique task identifier
-                - import_name: Schema import identifier
-                - schema: Parameters for schema creation
-                - raw: Boolean indicating if the schema is raw
-            db_client (DatabaseClient): Database client for task status updates.
-
-        Returns:
-            SchemaUpdated: Dictionary containing the update result with fields:
-                - task_id: Original task identifier
-                - status: 'completed' or 'failed' based on operation result
-                - import_name: Schema import name
-                - schema: Created schema object
-                - result: Boolean result from save operation
-
-        Note:
-            The function prints the result for debugging purposes and
-            determines status based on the save operation success.
-        """
-        task_id = message["id"]
-        import_name = message["import_name"]
-        raw = message.get("raw", False)
-
-        # Update the task status
-        update_task_status(
-            database_client=db_client,
-            task_id=task_id,
-            field="status",
-            value="creating-schema",
-            task=self.TASK,
-            message=f"Creating schema for import: {import_name}",
-            data={"update_date": get_datetime_now()},
-        )
-
-        # Create the schema from the provided parameters
-        try:
-            schema = create_schema(raw, message["schema"])
-            update_task_status(
-                database_client=db_client,
-                task_id=task_id,
-                field="status",
-                value="schema-created",
-                task=self.TASK,
-                message=f"Schema created for import: {import_name}",
-                data={"update_date": get_datetime_now()},
-            )
-        except SchemaError as e:
-            logger.error(f"Schema creation failed: {e}")
-            update_task_status(
-                database_client=db_client,
-                task_id=task_id,
-                field="status",
-                value="failed-creating-schema",
-                task=self.TASK,
-                message=repr(e),
-                data={"update_date": get_datetime_now()},
-            )
-
-            return SchemaUpdated(
-                task_id=task_id,
-                status="failed-creating-schema",
-                import_name=import_name,
-                schema=None,
-                result=False,
-            )
-
-        # Save the schema and return the result
-        update_task_status(
-            database_client=db_client,
-            task_id=task_id,
-            field="status",
-            value="saving-schema",
-            task=self.TASK,
-            data={"update_date": get_datetime_now()},
-        )
-        try:
-            result = save_schema(
-                schema.copy(),
-                import_name,
-                database_client=db_client,
-            )
-            status = "completed"
-        except Exception as e:
-            result = repr(e)
-            status = "failed-saving-schema"
-
-        update_task_status(
-            database_client=db_client,
-            task_id=task_id,
-            field="status",
-            value=status,
-            task=self.TASK,
-            message="Validation completed and uploaded to the database.",
-            data={
-                "results": (
-                    repr(result) if result else "Schema is the same, no update needed."
-                ),
-                "update_date": get_datetime_now(),
-            },
-        )
-
-        return SchemaUpdated(
-            task_id=task_id,
-            status=status,
-            import_name=import_name,
-            schema=schema,
-            result=result,
-        )
-
-    def _remove_schema(
-        self, message: SchemaMessage, db_client: DatabaseClient
-    ) -> SchemaUpdated:
-        """Remove the schema based on the incoming message.
-
-        Processes a schema removal request by deleting the schema associated
-        with the provided import name. Returns a structured result containing
-        the operation status and details.
-
-        Args:
-            message (SchemaMessage): Dictionary containing schema removal parameters including:
-                - task_id: Unique task identifier
-                - import_name: Schema import identifier
-            db_client (DatabaseClient): Database client instance for database operations.
-
-        Returns:
-            SchemaUpdated: Dictionary containing the removal result with fields:
-                - task_id: Original task identifier
-                - status: 'completed' or 'failed' based on operation result
-                - import_name: Schema import name
-                - result: Boolean result from removal operation
-
-        Note:
-            The function updates the task status and handles errors
-            during schema removal.
-        """
-        task_id = message["id"]
-        import_name = message["import_name"]
-
-        # Update the task status
-        update_task_status(
-            database_client=db_client,
-            task_id=task_id,
-            field="status",
-            value="removing-schema",
-            task=self.TASK,
-            message=f"Removing schema for import: {import_name}",
-            data={"update_date": get_datetime_now()},
-        )
-
-        # Remove the schema and return the result
-        try:
-            result = remove_schema(import_name, database_client=db_client)
-            status = "completed"
-        except Exception as e:
-            result = repr(e)
-            status = "failed-removing-schema"
-
-        update_task_status(
-            database_client=db_client,
-            task_id=task_id,
-            field="status",
-            value=status,
-            task=self.TASK,
-            message="Schema removal completed.",
-            data={
-                "results": result if result else "Active Schema not found.",
-                "update_date": get_datetime_now(),
-            },
-        )
-
-        return SchemaUpdated(
-            task_id=task_id,
-            status=status,
-            import_name=import_name,
-            schema=None,
-            result=result,
-        )
+    def _insert_data(
+        self, message: InsertionMessage, db_client: DatabaseClient
+    ) -> InsertionResult:
+        # TODO: Implement the logic to insert data based on the message content.
+        return InsertionResult()
 
     def _publish_result(
-        self, task_id: str, result: SchemaUpdated, db_client: DatabaseClient
+        self, task_id: str, result: InsertionResult, db_client: DatabaseClient
     ) -> None:
         """Publish the result of the schema update to the RabbitMQ exchange.
 
@@ -492,8 +295,7 @@ class SchemaWorker:
 
         Args:
             task_id (str): Unique identifier for the completed task, used for logging.
-            result (SchemaUpdated): Dictionary containing the schema update result to be published.
-                Should be JSON-serializable.
+            result (InsertionResult): Dictionary containing the schema update result to be published.
             db_client (DatabaseClient): Database client for task status updates.
 
         Raises:
@@ -502,12 +304,17 @@ class SchemaWorker:
                 for proper error handling and message acknowledgment.
         """
         if result["status"] != "completed":
-            upload_date = db_client.get_task_id(
+            task_get_result = db_client.get_task_id(
                 dtypes.GetTaskIdRequest(
                     task_id=task_id,
                     task=self.TASK,
                 )
-            )["value"]["data"].get("upload_date", get_datetime_now())
+            )
+            assert task_get_result["found"] and task_get_result["value"] is not None
+
+            upload_date = task_get_result["value"]["data"].get(
+                "upload_date", get_datetime_now()
+            )
             update_task_status(
                 database_client=db_client,
                 task_id=task_id,
@@ -527,7 +334,7 @@ class SchemaWorker:
 
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS_SCHEMAS,
+            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
             body=json.dumps(result),
         )
         update_task_status(

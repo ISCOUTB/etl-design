@@ -37,7 +37,7 @@ from messaging_utils.messaging.connection_factory import (
 
 from src.core.config import settings
 from src.utils import create_component_logger
-from src.workers.schemas import SchemaWorker
+from src.workers.insertion import InsertionWorker
 from src.workers.validation import ValidationWorker
 
 # Create logger with [main] prefix
@@ -74,7 +74,7 @@ class WorkerManager:
             settings.RABBITMQ_THRESHOLD_SECONDS,
         )
         self.validation_worker = ValidationWorker(*retry_options)
-        self.schema_worker = SchemaWorker(*retry_options)
+        self.schema_worker = InsertionWorker(*retry_options)
         self.workers_running = True
 
     async def start_workers(self):

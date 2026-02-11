@@ -86,7 +86,7 @@ class Settings(BaseSettings):
         Example:
             amqp://user:password@localhost:5672/vhost
         """
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="amqp",
             username=self.RABBITMQ_USER,
             password=self.RABBITMQ_PASSWORD,
@@ -96,31 +96,21 @@ class Settings(BaseSettings):
 
     # Messaging Exchanges and Queues
     RABBITMQ_EXCHANGE: str = "typechecking.exchange"
-    RABBITMQ_EXCHANGE_TYPE: str = "topic"
 
     # Queues for different message types
-    RABBITMQ_QUEUE_SCHEMAS: str = "typechecking.schemas.queue"
+    RABBITMQ_QUEUE_INSERTION: str = "typechecking.insertion.queue"
     RABBITMQ_QUEUE_VALIDATIONS: str = "typechecking.validations.queue"
-    RABBITMQ_QUEUE_RESULTS_SCHEMAS: str = "typechecking.schemas.results.queue"
-    RABBITMQ_QUEUE_RESULTS_VALIDATIONS: str = (
-        "typechecking.validation.results.queue"
-    )
+    RABBITMQ_QUEUE_RESULTS: str = "typechecking.results.queue"
 
     # Routing Keys (used for binding queues to the exchange)
-    RABBITMQ_ROUTING_KEY_SCHEMAS: str = "schemas.*"
+    RABBITMQ_ROUTING_KEY_INSERTION: str = "insertion.*"
     RABBITMQ_ROUTING_KEY_VALIDATIONS: str = "validation.*"
-    RABBITMQ_ROUTING_KEY_RESULTS_SCHEMAS: str = "schemas.results.*"
-    RABBITMQ_ROUTING_KEY_RESULTS_VALIDATIONS: str = "validation.results.*"
+    RABBITMQ_ROUTING_KEY_RESULTS: str = "results.*"
 
     # Routing Keys for Publishing (used by producers to send messages)
-    RABBITMQ_PUBLISHERS_ROUTING_KEY_SCHEMAS: str = "schemas.request"
+    RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION: str = "insertion.request"
     RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS: str = "validation.request"
-    RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS_SCHEMAS: str = (
-        "schemas.results.publish"
-    )
-    RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS_VALIDATIONS: str = (
-        "validation.results.publish"
-    )
+    RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS: str = "results.publish"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore

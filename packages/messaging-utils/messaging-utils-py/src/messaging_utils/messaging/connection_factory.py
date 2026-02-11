@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from typing import Dict, Generator, Optional
 
 import pika
+import pika.channel
 from pika.adapters.blocking_connection import BlockingChannel
 
 from messaging_utils.core.connection_params import messaging_params
@@ -44,8 +45,8 @@ class RabbitMQConnectionFactory:
     _connections: Dict[int, pika.BlockingConnection] = {}
     _channels: Dict[int, BlockingChannel] = {}
     _lock = threading.RLock()
-    _params: ConnectionParams = ConnectionParams()
-    _exchange_info: ExchangeInfo = ExchangeInfo()
+    _params: ConnectionParams
+    _exchange_info: ExchangeInfo
 
     @classmethod
     def configure(
@@ -175,7 +176,9 @@ class RabbitMQConnectionFactory:
             return cls._channels[thread_id]
 
     @classmethod
-    def setup_infrastructure(cls, channel: pika.channel.Channel) -> None:
+    def setup_infrastructure(
+        cls, channel: pika.channel.Channel | BlockingChannel
+    ) -> None:
         """Set up exchanges and queues for messaging.
 
         Declares the necessary messaging infrastructure including exchanges,

@@ -15,6 +15,7 @@ gRPC endpoint.
 """
 
 from messaging_utils.core.config import settings
+from messaging_utils.core.constants import RABBITMQ_EXCHANGE_TYPE
 from messaging_utils.schemas.connection import (
     AllConnectionParams,
     ExchangeInfo,
@@ -31,12 +32,12 @@ messaging_params = AllConnectionParams(
     exchange=ExchangeInfo(
         exchange=settings.RABBITMQ_EXCHANGE,
         durable=True,
-        type=settings.RABBITMQ_EXCHANGE_TYPE,
+        type=RABBITMQ_EXCHANGE_TYPE,
         queues=[
             # Schema message queue configuration
             QueueInfo(
-                queue=settings.RABBITMQ_QUEUE_SCHEMAS,
-                routing_key=settings.RABBITMQ_ROUTING_KEY_SCHEMAS,
+                queue=settings.RABBITMQ_QUEUE_INSERTION,
+                routing_key=settings.RABBITMQ_ROUTING_KEY_INSERTION,
                 durable=True,
             ),
             # Validation message queue configuration
@@ -45,16 +46,10 @@ messaging_params = AllConnectionParams(
                 routing_key=settings.RABBITMQ_ROUTING_KEY_VALIDATIONS,
                 durable=True,
             ),
-            # Schema results queue configuration
+            # Results queue configuration
             QueueInfo(
-                queue=settings.RABBITMQ_QUEUE_RESULTS_SCHEMAS,
-                routing_key=settings.RABBITMQ_ROUTING_KEY_RESULTS_SCHEMAS,
-                durable=True,
-            ),
-            # Validation results queue configuration
-            QueueInfo(
-                queue=settings.RABBITMQ_QUEUE_RESULTS_VALIDATIONS,
-                routing_key=settings.RABBITMQ_ROUTING_KEY_RESULTS_VALIDATIONS,
+                queue=settings.RABBITMQ_QUEUE_RESULTS,
+                routing_key=settings.RABBITMQ_ROUTING_KEY_RESULTS,
                 durable=True,
             ),
         ],

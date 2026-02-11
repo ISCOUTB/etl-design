@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple
 
 import jsonschema
 from fastapi import UploadFile
-from proto_utils.database import dtypes
+from proto_utils.database import DatabaseClient, dtypes
 
 from src.core.config import settings
 from src.handlers.schemas import get_active_schema
@@ -19,6 +19,7 @@ from src.services.file_processor import FileProcessor
 async def validate_file_against_schema(
     file: UploadFile,
     import_name: str,
+    database_client: DatabaseClient,
     n_workers: int = settings.MAX_WORKERS,
 ) -> ValidationResult:
     """
@@ -35,7 +36,7 @@ async def validate_file_against_schema(
     n_workers = min(n_workers, settings.MAX_WORKERS)
 
     # Get the active schema for the import
-    schema = get_active_schema(import_name)
+    schema = get_active_schema(import_name, database_client)
     if not schema:
         return {
             "success": False,

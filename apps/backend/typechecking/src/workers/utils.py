@@ -11,7 +11,7 @@ def update_task_status(
     field: str,
     value: Any,
     task: str,
-    database_client: Optional[DatabaseClient] = None,
+    database_client: DatabaseClient,
     message: str = "",
     data: Optional[Dict[str, str]] = None,
     reset_data: bool = False,
@@ -23,8 +23,7 @@ def update_task_status(
         field (str): The field to update (e.g., "status", "progress").
         value (Any): The new value for the specified field.
         task (str): The type of task (e.g., "schema_validation").
-        database_client (Optional[DatabaseClient]): The database client to use.
-            If None, a default client will be used.
+        database_client (DatabaseClient): The database client to use.
         message (str): An optional message to include with the update.
         data (Optional[Dict[str, str]]): Additional data to attach to the task.
         reset_data (bool): Whether to reset existing data for the task.
@@ -32,6 +31,9 @@ def update_task_status(
     Returns:
         None: This function does not return a value.
     """
+    if data is None:
+        data = {}
+
     database_client.update_task_id(
         dtypes.UpdateTaskIdRequest(
             task_id=task_id,

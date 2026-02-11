@@ -14,9 +14,10 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import pika
+from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
     AMQPConnectionError,
@@ -27,13 +28,12 @@ from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
-from messaging_utils.schemas.connection import (
+from messaging_utils.schemas import (
     AllConnectionParams,
     ConnectionParams,
     ExchangeInfo,
-)
-from messaging_utils.schemas.schemas import SchemaMessage, SchemasTasks
-from messaging_utils.schemas.validation import (
+    InsertionMessage,
+    InsertionTasks,
     Metadata,
     ValidationMessage,
     ValidationTasks,
@@ -99,14 +99,12 @@ class Publisher:
             or not RabbitMQConnectionFactory._params
         ):
             RabbitMQConnectionFactory.configure(
-                AllConnectionParams(**params, exchange=self.exchange_info)
+                AllConnectionParams(**params, exchange=self.exchange_info)  # type: ignore
             )
 
         self._channel = RabbitMQConnectionFactory.get_thread_channel()
 
-    def _get_healthy_channel(
-        self, force_new: bool = False
-    ) -> pika.channel.Channel:
+    def _get_healthy_channel(self, force_new: bool = False) -> BlockingChannel:
         """Get a healthy RabbitMQ channel.
 
         Ensures that the channel is open and the connection is healthy.
@@ -116,11 +114,27 @@ class Publisher:
             force_new (bool): Force retrieval of a new channel.
 
         Returns:
-            pika.channel.Channel: Healthy RabbitMQ channel.
+            BlockingChannel: Healthy RabbitMQ channel.
         """
         if force_new or not self._channel or not self._channel.is_open:
             self._channel = RabbitMQConnectionFactory.get_thread_channel()
         return self._channel
+
+    def is_healthy_channel(self) -> bool:
+        """Check if the current channel is healthy.
+
+        A channel is considered healthy if it is open and the underlying
+        connection is open.
+
+        Returns:
+            bool: True if the channel is healthy, False otherwise.
+        """
+        return (
+            self._channel
+            and self._channel.is_open
+            and self._channel.connection
+            and self._channel.connection.is_open
+        )
 
     def _execute_with_retry(
         self,
@@ -185,6 +199,11 @@ class Publisher:
                 current_delay *= self.backoff
 
         # Should never reach here, but just in case
+        if last_exception is None:
+            last_exception = Exception(
+                f"{operation_name} failed without exception."
+            )
+
         raise last_exception
 
     def publish_validation_request(
@@ -194,6 +213,8 @@ class Publisher:
         import_name: str,
         metadata: Metadata,
         task: ValidationTasks,
+        insert: bool = False,
+        insert_append: Optional[bool] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -210,6 +231,9 @@ class Publisher:
                 other processing parameters.
             task (Validation Tasks): Task type for the validation request (e.g.,
                 "sample_validation").
+            insert (bool): Whether this validation request is for an insertion operation.
+            insert_append (Optional[bool]): If True, indicates that the validation is for an append
+                operation.
             kwargs (str): Additional key-value pairs to include in the message.
 
         Returns:
@@ -239,6 +263,8 @@ class Publisher:
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
+                insert=insert,
+                insert_append=insert_append,
             )
 
             self._channel.basic_publish(
@@ -259,58 +285,46 @@ class Publisher:
             operation_name="publish_validation_request",
         )
 
-    def publish_schema_update(
+    def publish_insertion_request(
         self,
         routing_key: str,
-        schema: Dict[str, Any] = None,
-        import_name: str = None,
-        raw: bool = False,
-        task: SchemasTasks = None,
+        file_data: bytes,
+        import_name: str,
+        metadata: Metadata,
+        task: InsertionTasks,
+        append: bool = False,
         **kwargs: str,
     ) -> str:
-        """Publish a schema update message to the RabbitMQ exchange.
+        """Publish an insertion request message to the RabbitMQ exchange.
 
-        Creates and sends a schema update message containing schema definition
-        and metadata to be processed by schema workers. The schema is stored
-        and associated with the specified import name.
-
+        Creates and sends an insertion request message containing file data
+        and metadata to be processed by insertion workers. The file data is converted to
+        hexadecimal format for safe JSON transmission. The message includes an "append"
+        flag to indicate whether the insertion should append to existing data or overwrite it.
+        
         Args:
-            routing_key: The routing key to route the message to the appropriate queue.
-            schema: Dictionary containing the schema definition with validation
-                rules, field types, and constraints.
-            import_name: Unique identifier for the schema to be created or updated.
-            raw: Boolean flag indicating if the schema is in raw format
-                requiring processing or is already processed.
-            task: Task type for the schema operation (e.g., "upload_schema").
-            kwargs: Additional key-value pairs to include in the message.
-
-        Returns:
-            str: Unique task ID (UUID) for tracking the schema update request.
-
-        Message Format:
-            Creates a SchemaMessage with the following structure:
-            - id: Unique task identifier (UUID)
-            - timestamp: ISO format timestamp of message creation
-            - schema: Schema definition dictionary
-            - import_name: Schema identifier for storage
-            - raw: Flag indicating schema processing requirements
-
-        Raises:
-            Exception: If message publishing fails due to connection issues
-                or serialization problems.
+            routing_key (str): The routing key to route the message to the appropriate queue.
+            file_data (bytes): Raw binary data of the file to be inserted.
+            import_name (str): Schema identifier to insert the file against.
+            metadata (Metadata): Additional metadata including filename, priority, and
+                other processing parameters.
+            task (InsertionTasks): Task type for the insertion request (e.g.,
+                "sample_insertion").
+            append (bool): Whether the insertion should append to existing data (True) or overwrite it (False).
+            kwargs (str): Additional key-value pairs to include in the message.
         """
-
         def _publish() -> str:
             task_id = str(uuid.uuid4())
 
-            message = SchemaMessage(
+            message = InsertionMessage(
                 id=task_id,
-                schema=schema,
+                task=task,
+                file_data=file_data.hex(),
                 import_name=import_name,
-                raw=raw,
-                tasks=task,
+                metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
+                append=append,
             )
 
             self._channel.basic_publish(
@@ -328,7 +342,7 @@ class Publisher:
 
         return self._execute_with_retry(
             _publish,
-            operation_name="publish_schema_update",
+            operation_name="publish_validation_request",
         )
 
     def close(self) -> None:
