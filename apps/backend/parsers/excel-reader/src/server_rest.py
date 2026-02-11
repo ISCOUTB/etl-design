@@ -11,6 +11,7 @@ from proto_utils.generated.parsers import (
 )
 
 from src.core.config import settings
+from src.services.insert import create_sql_for_insertion
 from src.services.parse_formulas import generate_sql, parse_formulas_with_ddl
 from src.utils import LOGGING_CONFIG, logger
 from src.utils.deps import (
@@ -98,7 +99,7 @@ async def read_excel(
     ddls = {
         sheet: dict(
             map(
-                lambda x: (x[1], result[sheet][x[0]][0]["sql"]),
+                lambda x: (x[1]["name"], result[sheet][x[0]][0]["sql"]),
                 columns[sheet].items(),
             )
         )
@@ -116,6 +117,28 @@ async def read_excel(
     }
 
 
+@app.post("/insert-sql")
+@monitor_performance("insert_sql")
+async def insert_sql(
+    spreadsheet: UploadFile,
+    table_name: str = Form(...),
+) -> Dict[str, str]:
+    if settings.EXCEL_READER_DEBUG:
+        logger.debug(f"Received file for SQL insertion: {spreadsheet.filename}")
+
+    file_content = await spreadsheet.read()
+    if not file_content:
+        raise HTTPException(status_code=400, detail="File content is empty")
+
+    filename = spreadsheet.filename
+    if not filename:
+        raise HTTPException(status_code=400, detail="Filename is required")
+
+    logger.info(f"Processing SQL insertion for file: {filename}")
+    sql_statements = create_sql_for_insertion(table_name, file_content, filename)
+    return sql_statements
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -125,6 +148,6 @@ if __name__ == "__main__":
         port=settings.EXCEL_READER_PORT,
         reload=settings.EXCEL_READER_DEBUG,
         log_config=LOGGING_CONFIG,
-        reload_dirs=["src"],
-        reload_includes=["*.py"],
+        reload_dirs=["src"] if settings.EXCEL_READER_DEBUG else None,
+        reload_includes=["*.py"] if settings.EXCEL_READER_DEBUG else None,
     )

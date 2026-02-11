@@ -26,7 +26,22 @@ class CellData(TypedDict):
     sql: Optional[str | ddl_generator_pb2.DDLResponse] = None
 
 
-ColumnsInfo = Dict[str, Dict[str, str]]
+class ColumnMetadata(TypedDict):
+    """
+    TypedDict for representing metadata about a column in an Excel sheet.
+
+    Attributes:
+        name (str): The name of the column, typically derived from the first cell in the column.
+        is_formula (bool): Indicates whether the column contains any formulas. This can be used
+            to identify columns that require special handling when generating SQL or performing
+            data transformations.
+    """
+
+    name: str
+    is_formula: bool
+
+
+ColumnsInfo = Dict[str, Dict[str, ColumnMetadata]]
 DataInfo = Dict[str, Dict[str, list[CellData]]]
 
 

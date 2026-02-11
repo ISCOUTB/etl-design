@@ -1,6 +1,6 @@
 import csv
 from io import BytesIO
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import openpyxl
 
@@ -24,8 +24,8 @@ def open_file_from_bytes(file_bytes: bytes, **kwargs: Any) -> openpyxl.Workbook:
     return openpyxl.load_workbook(excel_file, data_only=False, **kwargs)
 
 
-def extract_formulas(
-    workbook: openpyxl.Workbook, limit: int = 50
+def extract_cell_data(
+    workbook: openpyxl.Workbook, limit: Optional[int] = None
 ) -> Dict[str, Dict[str, List[schemas.CellData]]]:
     """
     Extract formulas and cell data from an Excel workbook.
@@ -42,9 +42,10 @@ def extract_formulas(
 
     for sheet in workbook.worksheets:
         sheets[sheet.title] = {}
-        max_rows = (
-            sheet.max_column if limit <= 0 else min(limit, sheet.max_column)
-        )
+        if limit is None or limit <= 0:
+            limit = sheet.max_row
+
+        max_rows = sheet.max_row if limit <= 0 else min(limit, sheet.max_row)
         for column in sheet.columns:
             if column[0].value is None:
                 continue
@@ -62,6 +63,7 @@ def extract_formulas(
                 result.append(cell_data)
             sheets[sheet.title][column_letter] = result
 
+    # {sheet_name: {column_letter: [cell_data, ...], ...}, ...}
     return sheets
 
 

@@ -80,7 +80,7 @@ def generate_data(
                     "sheet": sheet,
                     "col": col,
                     "cell": cell,
-                    "index": i,
+                    "index": str(i),
                 }
 
 

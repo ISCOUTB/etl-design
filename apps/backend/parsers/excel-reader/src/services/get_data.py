@@ -1,9 +1,10 @@
 import logging
+from typing import Optional
 
 from src import schemas
 from src.services.utils import (
     convert_csv_to_excel,
-    extract_formulas,
+    extract_cell_data,
     open_file_from_bytes,
 )
 from src.utils.monitor_performance import monitor_performance
@@ -13,7 +14,10 @@ logging.basicConfig(level=logging.INFO)
 
 @monitor_performance("get_data_from_spreadsheet")
 def get_data_from_spreadsheet(
-    filename: str, file_bytes: bytes, limit: int = 50, fill_spaces: str = " "
+    filename: str,
+    file_bytes: bytes,
+    limit: Optional[int] = None,
+    fill_spaces: str = " ",
 ) -> schemas.SpreadsheetContent:
     """
     Main function to read an Excel file and extract formulas.
@@ -41,7 +45,7 @@ def get_data_from_spreadsheet(
     if not fill_spaces:
         fill_spaces = " "
 
-    cells = extract_formulas(workbook, limit)
+    cells = extract_cell_data(workbook, limit)
     columns = {
         sheet: dict(
             map(
@@ -51,7 +55,10 @@ def get_data_from_spreadsheet(
                 # parameter received in the server, there could be a conflict with the column names
                 lambda x: (
                     x[0],
-                    str(x[1][0]["value"]).replace(" ", fill_spaces),
+                    schemas.ColumnMetadata(
+                        name=str(x[1][0]["value"]).replace(" ", fill_spaces),
+                        is_formula=any(cell["is_formula"] for cell in x[1][1:]),
+                    ),
                 ),
                 sheet_data.items(),
             )
@@ -71,3 +78,19 @@ def get_data_from_spreadsheet(
             for sheet, sheet_data in cells.items()
         },
     }
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+
+    # Example usage
+    filename = (
+        "/home/juand/Documents/vscode/proyecto-ingenieria/etl-design/"
+        "tools/benchmarks/static/acme__users__sample1.xls"
+    )
+    with open(filename, "rb") as f:
+        file_bytes = f.read()
+
+    cell_data = get_data_from_spreadsheet(filename, file_bytes, limit=10)
+
+    pprint(cell_data)
