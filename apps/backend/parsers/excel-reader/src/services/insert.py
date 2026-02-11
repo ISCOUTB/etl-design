@@ -4,8 +4,13 @@ from src.services.get_data import get_data_from_spreadsheet
 
 
 def create_sql_for_insertion(
-    table_name: str, file_bytes: bytes, filename: str
+    table_name: str, file_bytes: bytes, filename: str, truncate: bool = False
 ) -> Dict[str, str]:
+    # The truncate parameter is dangerous and should be used with caution.
+    # In this case, we will use another way instead of using TRUNCATE TABLE directly,
+    # we will create a new table with the same structure and then rename it to the original table name,
+    # this way we can avoid the risk of truncating the original table by mistake.
+
     content = get_data_from_spreadsheet(
         file_bytes=file_bytes, filename=filename, limit=None
     )
@@ -23,6 +28,16 @@ def create_sql_for_insertion(
 
     sql_statements = {}
     for sheet, cols in non_formula_columns.items():
+        table_name_sheet = f"{table_name}_{sheet}"
+        table_name_sheet_tmp = f"{table_name_sheet}_temp"
+
+        prefix_sql = ""
+        if truncate:
+            # Create temporal table
+            prefix_sql += f"CREATE TABLE {table_name_sheet_tmp} (LIKE {table_name_sheet} INCLUDING ALL);\n"
+
+            # Insert data into temporal table
+
         column_names = [meta["name"] for meta in cols.values()]
         column_list = ", ".join(column_names)
         sheet_data = data[sheet]
@@ -46,8 +61,29 @@ def create_sql_for_insertion(
         values_list = ", ".join(
             f"({', '.join(map(str, row_values))})" for row_values in values
         )
-        sql_statements[sheet] = (
-            f"INSERT INTO {table_name}_{sheet} ({column_list}) VALUES {values_list};"
-        )
+
+        insert_sql = f"INSERT INTO {table_name_sheet} ({column_list}) VALUES {values_list};"
+
+        suffix_sql = ""
+        if truncate:
+            # Rename temporal table to original table name
+            # We will do it atomically
+
+            # Create a transaction to ensure atomicity
+            suffix_sql += "\nBEGIN;\n"
+
+            # Rename original table to backup, and the new table to original name
+            suffix_sql += f"ALTER TABLE {table_name_sheet} RENAME TO {table_name_sheet}_backup;\n"
+            suffix_sql += f"ALTER TABLE {table_name_sheet_tmp} RENAME TO {table_name_sheet};\n"
+
+            # I'll drop the backup table here, but maybe we will use something like TTLs
+            # (postgres don't support it natively but we can create a background job to drop backup
+            # tables older than X days) to keep some backups just in case
+            suffix_sql += f"DROP TABLE {table_name_sheet}_backup;\n"
+
+            # Commit the transaction
+            suffix_sql += "COMMIT;"
+
+        sql_statements[sheet] = f"{prefix_sql}{insert_sql}{suffix_sql}"
 
     return sql_statements

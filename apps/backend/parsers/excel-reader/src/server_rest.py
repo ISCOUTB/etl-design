@@ -1,6 +1,6 @@
 # TODO: Migrate this REST server to gRPC
 import json
-from typing import Annotated, Dict
+from typing import Annotated, Dict, Literal
 
 from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -122,6 +122,7 @@ async def read_excel(
 async def insert_sql(
     spreadsheet: UploadFile,
     table_name: str = Form(...),
+    overwrite: bool = False,
 ) -> Dict[str, str]:
     if settings.EXCEL_READER_DEBUG:
         logger.debug(f"Received file for SQL insertion: {spreadsheet.filename}")
@@ -135,7 +136,7 @@ async def insert_sql(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     logger.info(f"Processing SQL insertion for file: {filename}")
-    sql_statements = create_sql_for_insertion(table_name, file_content, filename)
+    sql_statements = create_sql_for_insertion(table_name, file_content, filename, truncate=overwrite)
     return sql_statements
 
 
