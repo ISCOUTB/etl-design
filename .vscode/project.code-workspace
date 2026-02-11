@@ -49,6 +49,10 @@
             "path": "../packages/proto-utils/proto-utils-py"
         },
         {
+            "name": "[ Package ] Messaging-Python",
+            "path": "../packages/messaging-utils/messaging-utils-py"
+        },
+        {
             "name": "[ Package ] [ IAC ] AutoScaler",
             "path": "../packages/autoscaler"
         },
