@@ -1,9 +1,10 @@
-from typing import Annotated, Any, Dict, Generator
+from typing import Annotated, Dict, Generator
 
 from fastapi import Depends, FastAPI
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
+from src.schemas.healthcheck import OverallHealthCheckResult
 from src.services.healthcheck import check_databases_connection
 from src.utils.logger import create_component_logger
 from src.utils.uvicorn_logger import LOGGING_CONFIG
@@ -35,16 +36,18 @@ async def root() -> Dict[str, str]:
 @app.get("/health")
 async def health_check(
     database_client: DatabaseClientDep,
-) -> Dict[str, Any]:
+) -> OverallHealthCheckResult:
     """Health check endpoint for service monitoring."""
     logger.debug("Health check endpoint accessed")
     health_status = await check_databases_connection(database_client)
 
     # Log health check results
-    if health_status["status"] == "healthy":
+    if health_status.status == "healthy":
         logger.debug("Health check passed: all systems healthy")
     else:
-        logger.warning(f"Health check failed: {health_status}")
+        logger.warning(
+            f"Health check failed: {health_status.model_dump_json(indent=2)}"
+        )
 
     return health_status
 
