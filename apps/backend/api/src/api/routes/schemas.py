@@ -1,147 +1,210 @@
-# TODO: use database directly, instead of publishing a message to the mq,
-# for this endpoint, since it's not a long running task, and we want to
-# return the response immediately, without waiting for the worker to process
-# the message.
+"""Schema Routes Module.
+
+This module provides RESTful API endpoints for schema management operations.
+Schemas are JSON Schema documents used for data validation and structure definition.
+
+All operations are synchronous and interact directly with the database service
+via gRPC, providing immediate responses without message queue overhead.
+"""
+
+# TODO: This can be improved by adding more detailed error handling, logging, better response
+# schemas, and a bunch of things, but I'll keep it simple for now to focus on core functionality
 
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
-from messaging_utils.core.config import settings as mq_settings
+from jsonschema import Draft7Validator, SchemaError
 from proto_utils.database import dtypes
 
-from src.api.deps import DatabaseClientDep, PublisherDep
+from src.api.deps import DatabaseClientDep
+from src.services.schemas import SchemaService
 
-TASK = "schemas"
 router = APIRouter()
 
 
-@router.post("/upload/{import_name}")
-async def upload_schema(
+@router.post("/{import_name}")
+async def create_or_update_schema(
     database_client: DatabaseClientDep,
-    publisher: PublisherDep,
     import_name: str,
     schema: Dict[str, Any],
-    raw: bool = False,
-    new: bool = False,
-) -> dtypes.ApiResponse | list[dtypes.ApiResponse]:
-    """
-    Upload a schema for validation.
-    This endpoint allows users to upload a JSON schema for validation purposes.
-    It checks if the schema is the same as the active schema in the database.
-    If it is the same, no update is made. If it is different, the schema is saved
-    as the active schema and added to the schemas_releases.
-    """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
-
-    if not new and (
-        cached_response := database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=TASK)
-        )
-    ):
-        return cached_response["tasks"]
-
-    try:
-        task_id = publisher.publish_schema_update(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_SCHEMAS,
-            schema=schema,
-            import_name=import_name,
-            raw=raw,
-            task="upload_schema",
-        )
-
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Schema upload request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
-        )
-    except Exception as e:
-        task_id = None
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to upload schema: {str(e)}",
-            data={"task_id": task_id, "import_name": import_name},
-        )
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response.copy(),
-            task=TASK,
-        )
-    )
-    return response
-
-
-@router.get("/status")
-async def get_schema_task(
-    database_client: DatabaseClientDep,
-    task_id: str = "",
-    import_name: str = "",
-) -> list[dtypes.ApiResponse] | dtypes.ApiResponse:
-    """
-    Get the status of a schema upload task.
-    This endpoint retrieves the status of a schema upload task by its ID.
-    """
-    if not task_id and not import_name:
-        raise HTTPException(400, "Either task_id or import_name must be provided.")
-
-    if import_name:
-        cached_response = database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=TASK)
-        )
-        return cached_response["tasks"]
-
-    cached_response = database_client.get_task_id(
-        dtypes.GetTaskIdRequest(task_id=task_id, task=TASK)
-    )
-    if not cached_response["found"]:
-        raise HTTPException(404, f"Task with ID {task_id} not found.")
-
-    return cached_response["value"]
-
-
-@router.delete("/remove/{import_name}")
-async def remove_schema(
-    import_name: str,
-    database_client: DatabaseClientDep,
-    publisher: PublisherDep,
 ) -> dtypes.ApiResponse:
     """
-    Remove a schema by its import name.
-    This endpoint allows users to remove a schema from the system by its import name.
-    It publishes a message to remove the schema and returns the task ID for tracking.
+    Create or update a schema.
+
+    This endpoint creates a new schema or updates an existing one for the specified
+    import name. The schema is validated and saved directly to the database.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        import_name: Unique identifier for the schema.
+        schema: JSON schema definition (as a dictionary).
+        raw: If True, treats schema as raw JSON Schema (validates with Draft7).
+             If False, creates a simple object schema from the provided properties.
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema created/updated successfully
+        - 400: Invalid schema format
+        - 500: Database operation failed
+
+    Raises:
+        HTTPException: If import_name is empty or schema validation fails.
+    """
+    if not import_name:
+        raise HTTPException(400, "import_name must be provided.")
+
+    if not schema:
+        raise HTTPException(400, "schema data must be provided.")
+
+    try:
+        # Create and validate the schema
+        Draft7Validator.check_schema(schema)  # This will raise SchemaError if invalid
+
+        # Save to database
+        db_response = SchemaService.save_schema(
+            schema=schema,
+            import_name=import_name,
+            database_client=database_client,
+        )
+
+        # Map database response to API response
+        response = SchemaService.map_db_response_to_api(
+            db_response=db_response,
+            operation="save",
+            import_name=import_name,
+        )
+
+        return response
+
+    except SchemaError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid JSON schema: {str(e)}",
+        )
+    except Exception as e:
+        return dtypes.ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to save schema: {str(e)}",
+            data={"import_name": import_name},
+        )
+
+
+@router.get("/{import_name}")
+async def get_schema(
+    database_client: DatabaseClientDep,
+    import_name: str,
+) -> dtypes.ApiResponse:
+    """
+    Retrieve the active schema for a given import name.
+
+    This endpoint fetches the currently active JSON schema associated with
+    the specified import name from the database.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        import_name: Unique identifier for the schema to retrieve.
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema found and returned in data.schema
+        - 404: Schema not found
+        - 500: Database operation failed
+
+    Raises:
+        HTTPException: If import_name is empty.
     """
     if not import_name:
         raise HTTPException(400, "import_name must be provided.")
 
     try:
-        task_id = publisher.publish_schema_update(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
-            import_name=import_name,
-            task="remove_schema",
+        # Retrieve schema from database
+        db_response = database_client.mongo_find_jsonschema(
+            dtypes.MongoFindJsonSchemaRequest(import_name=import_name)
         )
 
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Schema removal request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
+        # Map database response to API response
+        response = SchemaService.map_db_response_to_api(
+            db_response=db_response,
+            operation="get",
+            import_name=import_name,
         )
+
+        # Raise HTTPException for 404 to match FastAPI conventions
+        if response["code"] == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Schema '{import_name}' not found",
+            )
+
+        return response
+    except HTTPException:
+        raise
     except Exception as e:
-        response = dtypes.ApiResponse(
+        return dtypes.ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to retrieve schema: {str(e)}",
+            data={"import_name": import_name},
+        )
+
+
+@router.delete("/{import_name}")
+async def delete_schema(
+    import_name: str,
+    database_client: DatabaseClientDep,
+) -> dtypes.ApiResponse:
+    """
+    Delete or revert a schema.
+
+    This endpoint removes a schema from the system. If the schema has release
+    history, it reverts to the previous version. If no releases exist, the
+    schema is completely deleted.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        import_name: Unique identifier for the schema to remove.
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema deleted or reverted successfully
+        - 404: Schema not found
+        - 500: Database operation failed
+
+    Raises:
+        HTTPException: If import_name is empty or schema not found.
+    """
+    if not import_name:
+        raise HTTPException(400, "import_name must be provided.")
+
+    try:
+        # Remove schema from database
+        db_response = SchemaService.remove_schema(
+            import_name=import_name,
+            database_client=database_client,
+        )
+
+        # Map database response to API response
+        response = SchemaService.map_db_response_to_api(
+            db_response=db_response,
+            operation="remove",
+            import_name=import_name,
+        )
+
+        # Raise HTTPException for 404 to match FastAPI conventions
+        if response["code"] == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Schema '{import_name}' not found",
+            )
+
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to remove schema: {str(e)}",
+            data={"import_name": import_name},
         )
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response.copy(),
-            task=TASK,
-        )
-    )
-    return response
