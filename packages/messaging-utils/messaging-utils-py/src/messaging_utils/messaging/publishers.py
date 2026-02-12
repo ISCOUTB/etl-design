@@ -214,7 +214,7 @@ class Publisher:
         metadata: Metadata,
         task: ValidationTasks,
         insert: bool = False,
-        insert_append: Optional[bool] = None,
+        insert_overwrite: Optional[bool] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -232,7 +232,7 @@ class Publisher:
             task (Validation Tasks): Task type for the validation request (e.g.,
                 "sample_validation").
             insert (bool): Whether this validation request is for an insertion operation.
-            insert_append (Optional[bool]): If True, indicates that the validation is for an append
+            insert_overwrite (Optional[bool]): If True, indicates that the validation is for an overwrite
                 operation.
             kwargs (str): Additional key-value pairs to include in the message.
 
@@ -264,7 +264,7 @@ class Publisher:
                 date=datetime.now().isoformat(),
                 extra=kwargs,
                 insert=insert,
-                insert_append=insert_append,
+                insert_overwrite=insert_overwrite,
             )
 
             self._channel.basic_publish(
@@ -292,15 +292,15 @@ class Publisher:
         import_name: str,
         metadata: Metadata,
         task: InsertionTasks,
-        append: bool = False,
+        overwrite: bool = False,
         **kwargs: str,
     ) -> str:
         """Publish an insertion request message to the RabbitMQ exchange.
 
         Creates and sends an insertion request message containing file data
         and metadata to be processed by insertion workers. The file data is converted to
-        hexadecimal format for safe JSON transmission. The message includes an "append"
-        flag to indicate whether the insertion should append to existing data or overwrite it.
+        hexadecimal format for safe JSON transmission. The message includes an "overwrite"
+        flag to indicate whether the insertion should overwrite to existing data or overwrite it.
         
         Args:
             routing_key (str): The routing key to route the message to the appropriate queue.
@@ -310,7 +310,7 @@ class Publisher:
                 other processing parameters.
             task (InsertionTasks): Task type for the insertion request (e.g.,
                 "sample_insertion").
-            append (bool): Whether the insertion should append to existing data (True) or overwrite it (False).
+            overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
             kwargs (str): Additional key-value pairs to include in the message.
         """
         def _publish() -> str:
@@ -324,7 +324,7 @@ class Publisher:
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
-                append=append,
+                overwrite=overwrite,
             )
 
             self._channel.basic_publish(

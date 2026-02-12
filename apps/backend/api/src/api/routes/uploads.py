@@ -2,10 +2,14 @@
 # it, actually, is obtained from the user's table from the DB,
 # but for simplicity, we are requesting it here.
 
-from typing import Annotated, Literal
+# TODO: Ensure idempotency of the endpoints, especially the /validate endpoint,
+# since it can be called multiple times with the same file.
+
+from typing import Annotated
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from messaging_utils.core.config import settings as mq_settings
+from messaging_utils.schemas import Metadata
 from proto_utils.database import dtypes
 
 from src.api.deps import DatabaseClientDep, PublisherDep
@@ -42,15 +46,18 @@ async def validate(
         # Read the file content
         file_content = await spreadsheet_file.read()
 
+        assert file_content, "File content is empty."
+        assert spreadsheet_file.filename, "Filename is missing."
+        assert spreadsheet_file.content_type, "Content type is missing."
+
         # Metadata
-        metadata = {
-            "filename": spreadsheet_file.filename,
-            "content_type": spreadsheet_file.content_type,
-            "size": len(file_content),
-        }
+        metadata = Metadata(
+            filename=spreadsheet_file.filename,
+            content_type=spreadsheet_file.content_type,
+            size=len(file_content),
+        )
 
         # Publish in RabbitMQ
-        # file_content = UploadFile(file_content)
         task_id = publisher.publish_validation_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
@@ -71,6 +78,7 @@ async def validate(
             status="error",
             code=500,
             message=f"Failed to submit validation request: {str(e)}",
+            data={},
         )
         return response
 
@@ -90,52 +98,124 @@ async def insert(
     database_client: DatabaseClientDep,
     spreadsheet_file: UploadFile,
     import_name: Annotated[str, Form()],
-    mode: Annotated[Literal["append", "replace"], Form()],
+    overwrite: bool = False,
 ):
     """Insert data from a validated spreadsheet file into the database.
-    this is not intented to be used always, just in specific cases, where all the 
+    this is not intented to be used always, just in specific cases, where all the
     pipeline (validation + insert) cannot be used.
     """
-    # TODO: implement the function for inserting the data
-    pass
+    if not import_name:
+        raise HTTPException(400, "import_name must be provided.")
+
+    try:
+        # Read the file content
+        file_content = await spreadsheet_file.read()
+
+        assert file_content, "File content is empty."
+        assert spreadsheet_file.filename, "Filename is missing."
+        assert spreadsheet_file.content_type, "Content type is missing."
+
+        # Metadata
+        metadata = Metadata(
+            filename=spreadsheet_file.filename,
+            content_type=spreadsheet_file.content_type,
+            size=len(file_content),
+        )
+
+        # Publish in RabbitMQ
+        task_id = publisher.publish_insertion_request(
+            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
+            file_data=file_content,
+            import_name=import_name,
+            metadata=metadata,
+            task="sample_insertion",
+            overwrite=overwrite,
+        )
+
+        response = dtypes.ApiResponse(
+            status="accepted",
+            code=202,
+            message="Validation request submitted successfully",
+            data={"task_id": task_id, "import_name": import_name},
+        )
+
+    except Exception as e:
+        response = dtypes.ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to submit validation request: {str(e)}",
+            data={},
+        )
+        return response
+
+    database_client.set_task_id(
+        dtypes.SetTaskIdRequest(
+            task_id=task_id,
+            value=response,
+            task=VALIDATION_TASK,
+        )
+    )
+    return response
 
 
 @router.post("/process")
 async def process(
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
+    spreadsheet_file: Annotated[UploadFile, Form()],
     import_name: Annotated[str, Form()],
+    overwrite: bool = False,
 ):
     """Validates and inserts data from a spreadsheet file into the database.
     Actually, it just publish the task to the mq, the worker will do the rest.
     """
-    # TODO: implement the function for processing (validating + inserting) the data
-    pass
+    try:
+        # Read the file content
+        file_content = await spreadsheet_file.read()
 
+        assert file_content, "File content is empty."
+        assert spreadsheet_file.filename, "Filename is missing."
+        assert spreadsheet_file.content_type, "Content type is missing."
 
-@router.get("/status")
-async def get_validation_status(
-    database_client: DatabaseClientDep,
-    task: str,
-    task_id: str = "",
-    import_name: str = "",
-) -> dtypes.ApiResponse | list[dtypes.ApiResponse]:
-    """
-    Get the status of the file being validated.
-    """
-    if not task_id and not import_name:
-        raise HTTPException(400, "Either `task_id` or `import_name` must be provided.")
-
-    if import_name:
-        cached_response = database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=task)
+        # Metadata
+        metadata = Metadata(
+            filename=spreadsheet_file.filename,
+            content_type=spreadsheet_file.content_type,
+            size=len(file_content),
         )
-        return cached_response["tasks"]
 
-    cached_response = database_client.get_task_id(
-        dtypes.GetTaskIdRequest(task_id=task_id, task=task)
+        # Publish in RabbitMQ
+        task_id = publisher.publish_validation_request(
+            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
+            file_data=file_content,
+            import_name=import_name,
+            metadata=metadata,
+            task="sample_validation",
+            insert=True,
+            insert_overwrite=overwrite,
+        )
+
+        response = dtypes.ApiResponse(
+            status="accepted",
+            code=202,
+            message="Validation request submitted successfully",
+            data={"task_id": task_id, "import_name": import_name},
+        )
+
+    except Exception as e:
+        response = dtypes.ApiResponse(
+            status="error",
+            code=500,
+            message=f"Failed to submit validation request: {str(e)}",
+            data={},
+        )
+        return response
+
+    database_client.set_task_id(
+        dtypes.SetTaskIdRequest(
+            task_id=task_id,
+            value=response,
+            task=VALIDATION_TASK,
+        )
     )
-    if not cached_response["found"]:
-        HTTPException(404, f"Task with ID {task_id} not found.")
-
-    return cached_response["value"]
+    return response
