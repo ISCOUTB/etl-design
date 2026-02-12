@@ -106,4 +106,9 @@ export default defineNuxtConfig({
         payloadExtraction: false,
         appManifest: false,
     },
+    nitro: {
+        experimental: {
+            websocket: true,
+        },
+    },
 });
