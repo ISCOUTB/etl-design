@@ -26,3 +26,15 @@ tasks:
         local: true
         options:
             runFromWorkspaceRoot: false
+
+    docker-build:
+        command: docker
+        args:
+            - build
+            - -f
+            - apps/web/Dockerfile
+            - .
+        local: true
+        platform: system
+        options:
+            runFromWorkspaceRoot: true
