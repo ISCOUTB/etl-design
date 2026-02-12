@@ -27,6 +27,15 @@ tasks:
         options:
             runFromWorkspaceRoot: false
 
+    shadcn:
+        command: npx
+        args:
+            - shadcn-vue@latest
+        toolchain: node
+        local: true
+        options:
+            runFromWorkspaceRoot: false
+
     docker-build:
         command: docker
         args:
