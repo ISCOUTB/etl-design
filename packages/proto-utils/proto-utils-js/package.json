@@ -1,5 +1,5 @@
 {
-    "name": "@etl-design/packages-proto-utils-js",
+    "name": "@sloth/packages-proto-utils-js",
     "type": "module",
     "version": "1.0.0",
     "description": "Protobuf utilities for JavaScript",
@@ -21,8 +21,8 @@
         "protoc-gen-ts": "^0.8.7"
     },
     "devDependencies": {
-        "@etl-design/tools-eslint": "workspace:*",
-        "@etl-design/tools-tsconfig": "workspace:*",
+        "@sloth/tools-eslint": "workspace:*",
+        "@sloth/tools-tsconfig": "workspace:*",
         "@types/google-protobuf": "^3.15.12",
         "@types/node": "^25.2.1",
         "eslint": "^9.39.2",

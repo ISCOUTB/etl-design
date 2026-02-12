@@ -1,13 +1,13 @@
-import type { formula_parser } from "@etl-design/packages-proto-utils-js";
 import type { sendUnaryData, ServerUnaryCall } from "@grpc/grpc-js";
+import type { formula_parser } from "@sloth/packages-proto-utils-js";
 import process from "node:process";
+import { Server, ServerCredentials } from "@grpc/grpc-js";
 import {
     requestDeserialize,
     requestSerialize,
     responseDeserialize,
     responseSerialize,
-} from "@etl-design/packages-proto-utils-js";
-import { Server, ServerCredentials } from "@grpc/grpc-js";
+} from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { BindPortError, settings } from "@/core/";
 import { handler } from "@/handlers/handler";

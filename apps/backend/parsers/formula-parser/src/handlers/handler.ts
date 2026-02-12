@@ -1,4 +1,4 @@
-import { formula_parser } from "@etl-design/packages-proto-utils-js";
+import { formula_parser } from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { settings } from "@/core/";
 import { parseFormula } from "@/services/parse";

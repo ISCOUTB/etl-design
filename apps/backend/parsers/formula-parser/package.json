@@ -1,12 +1,12 @@
 {
     "name": "@etl-design/apps-formula-parser",
+    "type": "module",
     "version": "1.0.0",
     "license": "ISC",
-    "type": "module",
     "dependencies": {
-        "@etl-design/packages-proto-utils-js": "workspace:*",
         "@grpc/grpc-js": "^1.14.3",
         "@grpc/proto-loader": "^0.8.0",
+        "@sloth/packages-proto-utils-js": "workspace:*",
         "effect": "^3.19.16",
         "excel-formula-ast": "^1.1.1",
         "excel-formula-tokenizer": "^3.0.0",
@@ -16,8 +16,8 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@etl-design/tools-eslint": "workspace:*",
-        "@etl-design/tools-tsconfig": "workspace:*",
+        "@sloth/tools-eslint": "workspace:*",
+        "@sloth/tools-tsconfig": "workspace:*",
         "@types/lodash": "^4.17.23",
         "@types/node": "^25.2.1",
         "@vitest/coverage-v8": "^4.0.18",

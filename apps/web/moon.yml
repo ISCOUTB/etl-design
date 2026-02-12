@@ -1,0 +1,28 @@
+project:
+    name: web
+    description: web side application for end-users
+
+toolchain:
+    node:
+
+language: typescript
+
+tasks:
+    pnpm:
+        command: pnpm
+        args:
+            - --filter
+            - "@sloth/apps-web"
+        toolchain: node
+        options:
+            runFromWorkspaceRoot: true
+            cache: false
+
+    nuxt:
+        command: npx
+        args:
+            - nuxt@latest
+        toolchain: node
+        local: true
+        options:
+            runFromWorkspaceRoot: false
