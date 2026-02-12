@@ -7,13 +7,15 @@
 
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.schemas import Metadata
 from proto_utils.database import dtypes
 
 from src.api.deps import DatabaseClientDep, PublisherDep
-from src.core.constants import VALIDATION_TASK
+from src.core.config import settings
+from src.core.constants import INSERTION_TASK, VALIDATION_TASK
 
 router = APIRouter()
 
@@ -152,7 +154,7 @@ async def insert(
         dtypes.SetTaskIdRequest(
             task_id=task_id,
             value=response,
-            task=VALIDATION_TASK,
+            task=INSERTION_TASK,
         )
     )
     return response
@@ -219,3 +221,41 @@ async def process(
         )
     )
     return response
+
+
+@router.post("/table")
+async def create_table(
+    spreadsheet: UploadFile,
+    import_name: Annotated[str, Form()],
+    dtypes: Annotated[str, Form()],
+):
+    # Example of `dtypes`:
+    # {"Sheet1": {"name": {"type": "TEXT", "extra": "NOT NULL"},
+    # "age": {"type": "INTEGER", "extra": "NOT NULL"}, "is_adult": {"type": "TEXT"}}}
+    fill_spaces = "_"
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
+        ) as client:
+            response = await client.post(
+                f"{settings.EXCEL_READER_URL}/excel-parser",
+                files={
+                    "spreadsheet": (
+                        spreadsheet.filename,
+                        await spreadsheet.read(),
+                        spreadsheet.content_type,
+                    )
+                },
+                data={"import_name": import_name, "dtypes_str": dtypes},
+                params={"fill_spaces": fill_spaces, "limit": 5},
+            )
+
+        response.raise_for_status()
+        return response.json()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to communicate with Excel Reader service: {str(e)}",
+        )

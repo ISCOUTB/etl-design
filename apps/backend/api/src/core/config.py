@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def RABBITMQ_URI(self) -> AmqpDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="amqp",
             username=self.RABBITMQ_USER,
             password=self.RABBITMQ_PASSWORD,
@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def POSTGRES_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="postgresql+psycopg2",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
@@ -105,5 +105,15 @@ class Settings(BaseSettings):
     def DATABASE_CONNECTION_CHANNEL(self) -> str:
         return f"{self.DATABASE_CONNECTION_HOST}:{self.DATABASE_CONNECTION_PORT}"
 
+    # Excel-Reader configuration
+    EXCEL_READER_HOST: str = "localhost"
+    EXCEL_READER_PORT: int = 8001
+    EXCEL_READER_TIMEOUT_SECONDS: int = 30
 
-settings = Settings()
+    @computed_field
+    @property
+    def EXCEL_READER_URL(self) -> str:
+        return f"http://{self.EXCEL_READER_HOST}:{self.EXCEL_READER_PORT}"
+
+
+settings = Settings()  # type: ignore
