@@ -12,7 +12,9 @@ from proto_utils.parsers.dtypes import AllASTs
 
 FUNCTION_SQL_MAP = {
     "SUM": lambda args: " + ".join(args[0]["columns"]),
-    "IF": lambda args: f"CASE WHEN {args[0]['sql']} THEN {args[1]['sql']} ELSE {args[2]['sql']} END",
+    "IF": lambda args: (
+        f"CASE WHEN {args[0]['sql']} THEN {args[1]['sql']} ELSE {args[2]['sql']} END"
+    ),
     "AND": lambda args: " AND ".join(arg["sql"] for arg in args),
     # Add more functions here
 }

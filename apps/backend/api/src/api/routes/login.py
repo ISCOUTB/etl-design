@@ -6,9 +6,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from src import schemas
 from src.api.deps import CurrentUser, SessionDep
-from src.repositories.users import UserRepository
 from src.core.config import settings
 from src.core.security import create_access_token
+from src.repositories.users import UserRepository
 
 router = APIRouter()
 

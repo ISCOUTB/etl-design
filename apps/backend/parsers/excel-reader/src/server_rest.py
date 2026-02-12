@@ -1,6 +1,6 @@
 # TODO: Migrate this REST server to gRPC
 import json
-from typing import Annotated, Dict, Literal
+from typing import Annotated, Dict
 
 from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -136,7 +136,9 @@ async def insert_sql(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     logger.info(f"Processing SQL insertion for file: {filename}")
-    sql_statements = create_sql_for_insertion(table_name, file_content, filename, truncate=overwrite)
+    sql_statements = create_sql_for_insertion(
+        table_name, file_content, filename, truncate=overwrite
+    )
     return sql_statements
 
 

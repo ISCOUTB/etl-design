@@ -123,9 +123,7 @@ def get_all_users(
     if use_cache and cached_response:
         return json.loads(cached_response)
 
-    users = UserRepository.get_users(
-        db, active=active, rol=rol, limit=limit, page=page
-    )
+    users = UserRepository.get_users(db, active=active, rol=rol, limit=limit, page=page)
     response = [model.model_validate(user) for user in users["items"]]
     database_client.redis_set(
         dtypes.RedisSetRequest(

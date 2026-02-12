@@ -166,9 +166,10 @@ class TestMongoFailureRecovery:
 
                 request = dtypes.MongoCountAllDocumentsRequest()
                 response = handler._execute_with_retry(
-                    lambda req,
-                    mongo_schemas_connection: dtypes.MongoCountAllDocumentsResponse(
-                        amount=mongo_schemas_connection.count_documents()
+                    lambda req, mongo_schemas_connection: (
+                        dtypes.MongoCountAllDocumentsResponse(
+                            amount=mongo_schemas_connection.count_documents()
+                        )
                     ),
                     request,
                 )

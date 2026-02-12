@@ -35,10 +35,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def EXCEL_READER_INSERT_URL(self) -> str:
-        return (
-            f"http://{self.EXCEL_READER_HOST}:"
-            f"{self.EXCEL_READER_PORT}/insert-sql"
-        )
+        return f"http://{self.EXCEL_READER_HOST}:{self.EXCEL_READER_PORT}/insert-sql"
 
     # Database connection configuration
     DATABASE_CONNECTION_HOST: str

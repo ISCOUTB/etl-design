@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from jsonschema import SchemaError
-
 from src.workers.schemas import SchemaWorker
 
 # ============================================================================

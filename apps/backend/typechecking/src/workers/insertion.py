@@ -255,7 +255,9 @@ class InsertionWorker:
                         "update_date": get_datetime_now(),
                     },
                 )
-                result = asyncio.run(self._insert_data(message, db_client=self.db_client))
+                result = asyncio.run(
+                    self._insert_data(message, db_client=self.db_client)
+                )
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 raise ValueError(f"Unknown task type: {task}")
@@ -298,7 +300,9 @@ class InsertionWorker:
 
         try:
             # Maybe here we can use httpx.Timeout to be more specific
-            async with httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(
+                timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
+            ) as client:
                 files = {"spreadsheet": (filename, file_bytes)}
                 response = await client.post(
                     settings.EXCEL_READER_INSERT_URL,
@@ -331,7 +335,7 @@ class InsertionWorker:
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
             return InsertionResult(result={}, status="failed")
-        
+
         # Ideally, here will be executed the resultant SQL, but we haven't defined how...
         # so for now, we will just return the generated SQL as the result
 

@@ -291,7 +291,9 @@ class ValidationWorker:
                 and message["insert"]
             ):
                 insert_overwrite = message.get("insert_overwrite", None)
-                insert_overwrite = bool(insert_overwrite) if insert_overwrite is not None else False
+                insert_overwrite = (
+                    bool(insert_overwrite) if insert_overwrite is not None else False
+                )
                 self.channel.basic_publish(
                     exchange=mq_settings.RABBITMQ_EXCHANGE,
                     routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,

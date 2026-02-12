@@ -58,7 +58,9 @@ class SchemaService:
                 with status ('inserted', 'no_change', 'updated', or 'error').
         """
         # Extract and normalize the $schema field
-        schema_key_value = schema.pop("$schema", "http://json-schema.org/draft-07/schema#")
+        schema_key_value = schema.pop(
+            "$schema", "http://json-schema.org/draft-07/schema#"
+        )
         schema["schema"] = schema_key_value
 
         # Transform properties to storage format
@@ -167,7 +169,7 @@ class SchemaService:
         elif operation == "remove":
             # Type narrowing: we know this is a delete response for remove operation
             delete_response: dtypes.MongoDeleteOneJsonSchemaResponse = db_response  # type: ignore[assignment]
-            
+
             if delete_response["success"]:
                 status_map = {
                     "deleted": (200, "success", "Schema deleted successfully"),
