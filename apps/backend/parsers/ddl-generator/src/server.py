@@ -31,6 +31,7 @@ from proto_utils.generated.parsers import (
 from src.core.config import settings
 from src.handlers.ddl_generator import generate_ddl_handler
 from src.utils.logger import logger
+from src.utils.watch_files import main_debug
 
 
 class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
@@ -129,7 +130,7 @@ async def serve() -> None:
         logger.info("[SERVER] Server stopped")
 
 
-if __name__ == "__main__":
+def main() -> None:
     """Main entry point for the DDL generator server."""
     try:
         logger.info("[MAIN] Initializing DDL Generator Server...")
@@ -139,3 +140,10 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"[MAIN] Fatal error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main_debug(main, settings.DDL_GENERATOR_DEBUG))
+    except KeyboardInterrupt:
+        logger.info("[MAIN] Application terminated by user")

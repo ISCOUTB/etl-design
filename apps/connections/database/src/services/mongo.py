@@ -10,9 +10,10 @@ and retrieval with built-in schema comparison and version management
 through releases tracking.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 import pymongo
+import pymongo.results
 from proto_utils.database import dtypes
 
 from src.core.database_mongo import MongoConnection
@@ -100,7 +101,7 @@ class MongoSchemasService:
 
     @staticmethod
     def ping(
-        _: dtypes.MongoPingRequest = None,
+        _: Optional[dtypes.MongoPingRequest] = None,
         *,
         mongo_schemas_connection: MongoConnection,
     ) -> dtypes.MongoPingResponse:
@@ -220,7 +221,7 @@ class MongoSchemasService:
 
     @staticmethod
     def count_all_documents(
-        _: dtypes.MongoCountAllDocumentsRequest = None,
+        _: Optional[dtypes.MongoCountAllDocumentsRequest] = None,
         *,
         mongo_schemas_connection: MongoConnection,
     ) -> dtypes.MongoCountAllDocumentsResponse:

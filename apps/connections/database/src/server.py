@@ -36,6 +36,7 @@ from src.handlers.mongo_handler import MongoHandler
 from src.handlers.redis_handler import RedisHandler
 from src.handlers.tasks_handler import DatabaseTasksHandler
 from src.utils.logger import logger
+from src.utils.watch_files import main_debug
 
 
 class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
@@ -716,15 +717,17 @@ async def serve() -> None:
     except KeyboardInterrupt:
         logger.info("[SERVER] Shutdown signal received, stopping server...")
     finally:
+        logger.info("[SERVER] Stopping gRPC server...")
+        await server.stop(grace=5)
         logger.info("[SERVER] Database server stopped")
 
 
-if __name__ == "__main__":
+def main() -> None:
     """Main entry point for the database server.
-    
+
     When run as a script, this starts the gRPC server and runs it until
     terminated. The server will handle KeyboardInterrupt gracefully.
-    
+
     Example:
         $ python -m src.server
     """
@@ -737,3 +740,11 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"[MAIN] Fatal error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main_debug(main, settings.DATABASE_CONNECTION_DEBUG))
+    except KeyboardInterrupt:
+        logger.info("[MAIN] Application terminated by user")
+        get_connection_manager().close_all()

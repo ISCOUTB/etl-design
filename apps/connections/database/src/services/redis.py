@@ -10,8 +10,10 @@ for basic Redis operations like get, set, delete, and cache management.
 """
 
 import json
+from typing import Optional
 
 from proto_utils.database import dtypes
+from redis.exceptions import ConnectionError
 
 from src.core.database_redis import RedisConnection
 
@@ -104,7 +106,7 @@ class RedisService:
 
     @staticmethod
     def ping(
-        _: dtypes.RedisPingRequest = None,
+        _: Optional[dtypes.RedisPingRequest] = None,
         *,
         redis_db: RedisConnection,
     ) -> dtypes.RedisPingResponse:
@@ -116,12 +118,16 @@ class RedisService:
         Returns:
             dtypes.RedisPingResponse: Response indicating if Redis is alive.
         """
-        pong = redis_db.ping()
+        try:
+            pong = redis_db.ping()
+        except ConnectionError:
+            pong = False
+
         return dtypes.RedisPingResponse(pong=pong)
 
     @staticmethod
     def get_cache(
-        _: dtypes.RedisGetCacheRequest = None,
+        _: Optional[dtypes.RedisGetCacheRequest] = None,
         *,
         redis_db: RedisConnection,
     ) -> dtypes.RedisGetCacheResponse:
@@ -142,7 +148,7 @@ class RedisService:
 
     @staticmethod
     def clear_cache(
-        _: dtypes.RedisClearCacheRequest = None,
+        _: Optional[dtypes.RedisClearCacheRequest] = None,
         *,
         redis_db: RedisConnection,
     ) -> dtypes.RedisClearCacheResponse:

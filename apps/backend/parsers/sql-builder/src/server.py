@@ -8,6 +8,7 @@ from proto_utils.generated.parsers import sql_builder_pb2, sql_builder_pb2_grpc
 from src.core.config import settings
 from src.handlers.sql_builder import sql_builder_handler
 from src.utils.logger import logger
+from src.utils.watch_files import main_debug
 
 
 class SQLBuilderServicer(sql_builder_pb2_grpc.SQLBuilderServicer):
@@ -87,7 +88,7 @@ async def serve() -> None:
         logger.info("[SERVER] Server stopped")
 
 
-if __name__ == "__main__":
+def main() -> None:
     """Main entry point for the SQL builder server."""
     try:
         logger.info("[MAIN] Initializing SQL Builder Server...")
@@ -97,3 +98,10 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"[MAIN] Fatal error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main_debug(main, settings.SQL_BUILDER_DEBUG))
+    except KeyboardInterrupt:
+        logger.info("[MAIN] Application terminated by user")
