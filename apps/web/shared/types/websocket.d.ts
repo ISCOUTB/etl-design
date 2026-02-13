@@ -1,7 +1,8 @@
+import type { WebSocketMessageSchema } from "#shared/utils/websocket";
+import type { z } from "zod";
+
 declare global {
     namespace WebSocket {
-        interface Message {}
+        type Message = z.infer<typeof WebSocketMessageSchema>;
     }
 }
-
-export {};

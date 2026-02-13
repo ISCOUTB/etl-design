@@ -23,6 +23,14 @@ export default defineNuxtConfig({
         "@vite-pwa/nuxt",
         "@nuxtjs/i18n",
     ],
+    imports: {
+        dirs: [
+            "~/composables/**/!(*test|*.spec).{ts,js,mjs,mts}",
+            "~/utils/**/!(*test|*.spec).{ts,js,mjs,mts}",
+            "~~/shared/utils/**/!(*test|*.spec).{ts,js,mjs,mts}",
+        ],
+    },
+    ignore: ["**/*.test.ts", "**/*.spec.ts"],
 
     ///////////////////////////////////////////////////////
     // MODULES CONFIG

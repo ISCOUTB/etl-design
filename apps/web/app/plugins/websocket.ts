@@ -1,4 +1,4 @@
-import { useWebSocket } from "@vueuse/core";
+import { $makeWebSocketMessage } from "#shared/utils/websocket";
 
 export default defineNuxtPlugin({
     name: "websocket",
@@ -7,6 +7,12 @@ export default defineNuxtPlugin({
         const config = useAppConfig();
         const socket = useWebSocket<WebSocket.Message>(config.handlers.websocket.url, {
             autoReconnect: true,
+            heartbeat: {
+                message: $makeWebSocketMessage({ key: "ping" }).serialize(),
+                pongTimeout: config.handlers.websocket.pongTimeout,
+                scheduler: (callback) =>
+                    useIntervalFn(callback, config.handlers.websocket.pingInterval),
+            },
         });
 
         return {
