@@ -93,10 +93,10 @@ def build_sql(
         )
         sql_expression += (
             f"GENERATED ALWAYS AS ({cols[col]['sql']}) "
-            f"STORED {dtypes[col].get('extra', '')};"
+            f"STORED {dtypes[col].get('extra', '')}"
         )
         sql_expressions[level].append(
-            SQLResponseSQLContent(sql=sql_expression, columns=[col])
+            SQLResponseSQLContent(sql=f"{sql_expression.strip()};", columns=[col])
         )
 
     # Remove empty levels

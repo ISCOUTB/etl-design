@@ -144,6 +144,11 @@ def parse_formulas_with_ddl(
 
     result = content["result"]
     columns = content["columns"]
+    columns_ddl_format = {
+        sheet: {col: columns[sheet][col]["name"] for col in columns[sheet]}
+        for sheet in columns
+    }
+
     for sheet, cols in result.items():
         for col, cells in cols.items():
             for i, cell in enumerate(cells):
@@ -151,7 +156,7 @@ def parse_formulas_with_ddl(
                 result[sheet][col][i]["sql"] = generate_ddl(
                     ddl_generator_stub,
                     cell["ast"],
-                    columns[sheet],
+                    columns_ddl_format[sheet],
                     raw=True,
                 )
                 result[sheet][col][i]["ast"] = DTypesSerde.deserialize_ast(
