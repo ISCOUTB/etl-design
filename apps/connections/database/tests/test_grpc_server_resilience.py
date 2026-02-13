@@ -12,7 +12,12 @@ from unittest.mock import MagicMock, patch
 import pymongo.errors
 import pytest
 import redis.exceptions
+from proto_utils.database import dtypes
 from proto_utils.generated.database import database_pb2, mongo_pb2, redis_pb2, utils_pb2
+
+from src.handlers.mongo_handler import MongoHandler
+from src.handlers.redis_handler import RedisHandler
+from src.handlers.tasks_handler import DatabaseTasksHandler
 
 
 class TestGrpcServerOperations:
@@ -89,8 +94,6 @@ class TestRedisFailureRecovery:
 
     def test_redis_handler_has_retry_on_connection_failure(self):
         """Verify Redis handler will retry on connection failures."""
-        from src.handlers.redis_handler import RedisHandler
-
         handler = RedisHandler()
 
         # Verify retry configuration
@@ -115,8 +118,6 @@ class TestRedisFailureRecovery:
 
             # Mock time.sleep to avoid actual delays
             with patch("src.handlers.redis_handler.time.sleep"):
-                from proto_utils.database import dtypes
-
                 request = dtypes.RedisPingRequest()
                 response = handler._execute_with_retry(
                     lambda req, redis_db: dtypes.RedisPingResponse(
@@ -136,8 +137,6 @@ class TestMongoFailureRecovery:
 
     def test_mongo_handler_has_retry_on_connection_failure(self):
         """Verify MongoDB handler will retry on connection failures."""
-        from src.handlers.mongo_handler import MongoHandler
-
         handler = MongoHandler()
 
         # Verify retry configuration
@@ -162,8 +161,6 @@ class TestMongoFailureRecovery:
 
             # Mock time.sleep to avoid actual delays
             with patch("src.handlers.mongo_handler.time.sleep"):
-                from proto_utils.database import dtypes
-
                 request = dtypes.MongoCountAllDocumentsRequest()
                 response = handler._execute_with_retry(
                     lambda req, mongo_schemas_connection: (
@@ -185,8 +182,6 @@ class TestDatabaseTasksFailureRecovery:
 
     def test_tasks_handler_has_dual_retry_config(self):
         """Verify DatabaseTasks handler has retry config for both databases."""
-        from src.handlers.tasks_handler import DatabaseTasksHandler
-
         handler = DatabaseTasksHandler()
 
         # Verify Redis retry configuration
@@ -201,8 +196,6 @@ class TestDatabaseTasksFailureRecovery:
 
     def test_tasks_handler_recovers_from_redis_then_mongo(self):
         """Test that tasks handler can fall back to Mongo when Redis fails."""
-        from src.handlers.tasks_handler import DatabaseTasksHandler
-
         handler = DatabaseTasksHandler()
 
         # Mock Redis to fail, Mongo to succeed
@@ -234,8 +227,6 @@ class TestExponentialBackoff:
 
     def test_retry_delays_increase_exponentially(self):
         """Verify that retry delays increase exponentially."""
-        from src.handlers.redis_handler import RedisHandler
-
         handler = RedisHandler()
 
         initial_delay = handler.retry_delay_redis
@@ -251,8 +242,6 @@ class TestExponentialBackoff:
 
     def test_max_retries_exhausted_raises_error(self):
         """Verify that after max retries, the error is raised."""
-        from src.handlers.redis_handler import RedisHandler
-
         handler = RedisHandler()
 
         # Mock connection to always fail
@@ -267,8 +256,6 @@ class TestExponentialBackoff:
 
             # Mock time.sleep to avoid actual delays
             with patch("src.handlers.redis_handler.time.sleep"):
-                from proto_utils.database import dtypes
-
                 request = dtypes.RedisPingRequest()
 
                 # Should raise after max retries

@@ -10,6 +10,7 @@ and retrieval with built-in schema comparison and version management
 through releases tracking.
 """
 
+from datetime import UTC, datetime
 from typing import Dict, Optional
 
 import pymongo
@@ -164,7 +165,7 @@ class MongoSchemasService:
                 return dtypes.MongoInsertOneSchemaResponse(
                     status="inserted",
                     result={
-                        "acknowledged": result.acknowledged,
+                        "acknowledged": str(result.acknowledged),
                         "inserted_id": str(result.inserted_id),
                     },
                 )
@@ -178,7 +179,7 @@ class MongoSchemasService:
         # and if they are identical, return a no-change response.
         new_active_schema = request["active_schema"]
         if MongoSchemasService.compare_schemas(
-            schemas_releases["schema"]["active_schema"], new_active_schema
+            schemas_releases["schema"], new_active_schema
         ):
             return dtypes.MongoInsertOneSchemaResponse(
                 status="no_change",
@@ -196,10 +197,10 @@ class MongoSchemasService:
                     },
                     "$push": {
                         "schemas_releases": {
-                            "schema": (
-                                schemas_releases["schema"]["active_schema"]
-                            ).copy(),
-                            "created_at": schemas_releases["schema"]["created_at"],
+                            "schema": (schemas_releases["schema"]).copy(),
+                            "created_at": schemas_releases["extra"].get(
+                                "created_at", datetime.now(UTC)
+                            ),
                         }
                     },
                 },
@@ -256,6 +257,19 @@ class MongoSchemasService:
         Returns:
             dtypes.MongoFindJsonSchemaResponse: Response containing the found schema
                 or appropriate status (not_found, error).
+
+        schema_doc example:
+        {'_id': ObjectId('698e7c8dc3988e2a7bdb26e3'),
+        'active_schema': {'properties': {'age': {'minimum': 0, 'type': 'integer'},
+                                        'col1-updated': {'type': 'string'},
+                                        'is_adult': {'type': 'boolean'},
+                                        'name': {'type': 'string'}},
+                        'required': ['name', 'age', 'is_adult', 'col1-updated'],
+                        'schema': 'http://json-schema.org/draft-07/schema#',
+                        'type': 'object'},
+        'created_at': '2026-02-13T01:21:17.535568+00:00',
+        'import_name': 'ejemplo_joder_hostias',
+        'schemas_releases': []}
         """
         try:
             schema_doc = mongo_schemas_connection.find_one(
@@ -273,7 +287,9 @@ class MongoSchemasService:
             )
 
         return dtypes.MongoFindJsonSchemaResponse(
-            status="found", extra={}, schema=schema_doc
+            status="found",
+            extra={"created_at": schema_doc.get("created_at", datetime.now(UTC))},
+            schema=schema_doc["active_schema"],
         )
 
     @staticmethod
