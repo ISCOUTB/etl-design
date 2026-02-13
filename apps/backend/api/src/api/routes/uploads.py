@@ -247,7 +247,7 @@ async def create_table(
                         spreadsheet.content_type,
                     )
                 },
-                data={"import_name": import_name, "dtypes_str": dtypes},
+                data={"table_name": import_name, "dtypes_str": dtypes},
                 params={"fill_spaces": fill_spaces, "limit": 5},
             )
 

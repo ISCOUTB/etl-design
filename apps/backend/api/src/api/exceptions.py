@@ -9,6 +9,7 @@ from pika.exceptions import (
     AMQPChannelError,
     AMQPConnectionError,
     AMQPError,
+    ConnectionClosedByBroker,
     StreamLostError,
 )
 
@@ -50,6 +51,7 @@ async def rabbitmq_exception_handler(request: Request, exc: AMQPError) -> JSONRe
         AMQPConnectionError: status.HTTP_503_SERVICE_UNAVAILABLE,
         StreamLostError: status.HTTP_504_GATEWAY_TIMEOUT,
         AMQPChannelError: status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ConnectionClosedByBroker: status.HTTP_503_SERVICE_UNAVAILABLE,
     }
 
     http_status = status_code_mapping.get(
