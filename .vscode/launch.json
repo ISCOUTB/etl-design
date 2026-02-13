@@ -9,23 +9,26 @@
             "type": "debugpy",
             "request": "launch",
             "cwd": "${workspaceFolder}/apps/backend/parsers/sql-builder",
-            "program": "./src/server.py",
-            "console": "integratedTerminal"
+            "module": "src.server",
         },
         {
             "name": "Python Debugger: Excel Reader Server",
             "type": "debugpy",
             "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "src.server_rest:app",
+                "--reload"
+            ],
+            "jinja": true,
             "cwd": "${workspaceFolder}/apps/backend/parsers/excel-reader",
-            "program": "./src/server_rest.py",
-            "console": "integratedTerminal"
         },
         {
             "name": "Python Debugger: DDLGenerator Server",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/apps/backend/parsers/ddl-generator/src/server.py",
-            "console": "integratedTerminal"
+            "cwd": "${workspaceFolder}/apps/backend/parsers/ddl-generator",
+            "module": "src.server",
         },
         {
             "type": "node",
