@@ -1,5 +1,5 @@
 {
-    "extends": "@etl-design/tools-tsconfig/tsconfig.json",
+    "extends": "@sloth/tools-tsconfig/tsconfig.json",
     "compilerOptions": {
         "target": "es2022",
         "module": "esnext",
