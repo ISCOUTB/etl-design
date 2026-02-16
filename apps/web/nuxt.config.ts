@@ -22,6 +22,7 @@ export default defineNuxtConfig({
         "@nuxtjs/color-mode",
         "@vite-pwa/nuxt",
         "@nuxtjs/i18n",
+        "@sidebase/nuxt-auth",
     ],
     imports: {
         dirs: [
@@ -31,6 +32,13 @@ export default defineNuxtConfig({
         ],
     },
     ignore: ["**/*.test.ts", "**/*.spec.ts"],
+    runtimeConfig: {
+        auth: {
+            secret: process.env.AUTH_SECRET,
+            sign: process.env.AUTH_SIGN,
+            maxAge: 30 * 24 * 60 * 60,
+        },
+    },
 
     ///////////////////////////////////////////////////////
     // MODULES CONFIG
@@ -105,6 +113,17 @@ export default defineNuxtConfig({
                 },
             ],
         },
+    },
+    auth: {
+        baseURL: process.env.AUTH_ORIGIN,
+        provider: {
+            type: "authjs",
+        },
+        sessionRefresh: {
+            enablePeriodically: 5 * 60 * 1000,
+            enableOnWindowFocus: true,
+        },
+        globalAppMiddleware: true,
     },
 
     ///////////////////////////////////////////////////////

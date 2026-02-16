@@ -1,7 +1,13 @@
+<script setup lang="ts">
+    const auth = useAuth();
+</script>
+
 <template>
     <div>
-        Lorem ipsum dolor sit amet consectetur, adipisicing elit. Sed qui nesciunt, natus esse in
-        recusandae minus voluptatem eveniet saepe quisquam expedita nostrum, commodi deleniti
-        necessitatibus vitae velit, tempore itaque quo!
+        <Button @click="auth.signIn('credentials')"> SignIn </Button>
+        <Button v-if="auth.status.value === 'authenticated'" @click="auth.signOut()">
+            Sign out
+        </Button>
+        <pre>{{ auth.data.value }}</pre>
     </div>
 </template>
