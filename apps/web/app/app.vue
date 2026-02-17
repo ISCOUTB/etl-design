@@ -1,13 +1,24 @@
 <script setup lang="ts">
-    const auth = useAuth();
+    const { finalizePendingLocaleChange } = useI18n();
+
+    async function onBeforeEnter() {
+        await finalizePendingLocaleChange();
+    }
 </script>
 
 <template>
-    <div>
-        <Button @click="auth.signIn('credentials')"> SignIn </Button>
-        <Button v-if="auth.status.value === 'authenticated'" @click="auth.signOut()">
-            Sign out
-        </Button>
-        <pre>{{ auth.data.value }}</pre>
-    </div>
+    <NuxtLayout>
+        <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
+    </NuxtLayout>
 </template>
+
+<style>
+    .my-enter-active,
+    .my-leave-active {
+        transition: opacity 0.3s;
+    }
+    .my-enter,
+    .my-leave-active {
+        opacity: 0;
+    }
+</style>

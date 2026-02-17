@@ -52,20 +52,23 @@ export default defineNuxtConfig({
         classSuffix: "",
     },
     i18n: {
-        baseUrl: process.env.BASE_URL,
+        baseUrl: process.env.HOMEPAGE_URL,
         skipSettingLocaleOnNavigate: false,
         detectBrowserLanguage: {
             useCookie: true,
-            redirectOn: "no prefix",
-            fallbackLocale: "en-US",
+            redirectOn: "root",
+            fallbackLocale: "en",
+            alwaysRedirect: true,
         },
-        defaultLocale: "en-US",
+        customRoutes: "meta",
+        defaultLocale: "en",
         strategy: "prefix",
         locales: [
             {
-                code: "en-US",
-                language: "English",
-                file: "en-US.json",
+                code: "en",
+                language: "en-US",
+                file: "en.json",
+                name: "English",
             },
         ],
     },
@@ -132,6 +135,7 @@ export default defineNuxtConfig({
     experimental: {
         payloadExtraction: false,
         appManifest: false,
+        scanPageMeta: true,
     },
     nitro: {
         experimental: {

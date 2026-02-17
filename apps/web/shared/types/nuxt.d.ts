@@ -4,6 +4,10 @@ declare module "#app" {
     interface NuxtApp {
         $socket: UseWebSocketReturn<WebSocket.Message>;
     }
+
+    interface PageMeta {
+        title: string;
+    }
 }
 
 declare module "vue" {

@@ -11,6 +11,19 @@ export default NuxtAuthHandler({
             id: "credentials",
             credentials: {},
             authorize() {
+                /**
+                 * Any errors that may occur inside here should be thrown
+                 * using simple
+                 * ```typescript
+                 * throw new Error('error:code')
+                 * ```
+                 *
+                 * and will be parsed as followed
+                 * ```typescript
+                 * const response = await auth.signIn('credentials')
+                 * if (response.error) // do something...
+                 */
+
                 return {
                     id: "1",
                     name: "John Doe",
