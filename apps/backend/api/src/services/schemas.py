@@ -13,7 +13,7 @@ from typing import Any, Dict
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
 
-from src.utils.utc_now import utc_now
+from src.utils import utc_now_iso
 
 
 class SchemaService:
@@ -81,7 +81,7 @@ class SchemaService:
         return database_client.mongo_insert_one_schema(
             dtypes.MongoInsertOneSchemaRequest(
                 import_name=import_name,
-                created_at=utc_now(),
+                created_at=utc_now_iso(),
                 active_schema=schema,  # type: ignore[arg-type]
                 schemas_releases=[],
             )
