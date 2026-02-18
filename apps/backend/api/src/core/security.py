@@ -1,32 +1,6 @@
-from datetime import datetime, timedelta, timezone
-
-import jwt
 from passlib.context import CryptContext
 
-from src.core.config import settings
-from src.schemas.users import Roles
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ALGORITHM = "HS256"
-
-
-def create_access_token(username: str, rol: Roles, expires_delta: timedelta) -> str:
-    """
-    Generates an access token (JWT) for a user.
-
-    Args:
-        username (str): User's document number.
-        rol (str): User's role (e.g. administrator, doctor).
-        expires_delta (datetime.timedelta): Token duration before it expires.
-
-    Returns:
-        str: Generated JWT token.
-    """
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "username": username, "rol": rol}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-
-    return encoded_jwt
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
