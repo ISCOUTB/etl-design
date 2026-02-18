@@ -20,6 +20,14 @@ if config.config_file_name is not None:
 
 from src.core.config import settings  # noqa: E402
 from src.core.database_sql import BaseModel  # noqa: E402
+from src.models import (  # noqa: E402, F401
+    Project,
+    User,
+    UserProject,
+    user_project_type_enum,
+    user_role_enum,
+    user_status_enum,
+)
 
 target_metadata = BaseModel.metadata
 
