@@ -13,6 +13,8 @@ from pika.exceptions import (
     StreamLostError,
 )
 
+from src.exceptions import AppException
+
 
 async def grpc_exception_handler(request: Request, exc: grpc.RpcError) -> JSONResponse:
     """Handle gRPC errors with appropriate HTTP status codes."""
@@ -68,13 +70,6 @@ async def rabbitmq_exception_handler(request: Request, exc: AMQPError) -> JSONRe
     )
 
 
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all handler for unexpected errors."""
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": "Internal server error",
-            "message": str(exc),
-            "path": str(request.url.path),
-        },
-    )
+async def app_exception_handler(request: Request, exc: AppException):
+    """Catch-all handler for AppException errors."""
+    return JSONResponse(status_code=exc.status_code, content=exc._make_response_body())
