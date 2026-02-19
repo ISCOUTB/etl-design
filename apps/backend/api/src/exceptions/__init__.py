@@ -9,12 +9,16 @@ from src.exceptions.projects import (
     DatabaseConnectionException,
     InvalidProjectDataException,
     ProjectAlreadyExistsException,
+    ProjectHasActiveUsersException,
     ProjectNotFoundException,
 )
+from src.exceptions.user_project import UserProjectNotFoundException
 from src.exceptions.users import (
     EmailFormatException,
+    EmailInUseException,
     InvalidUserDataException,
     UserAlreadyExistsException,
+    UserHasActiveProjectsException,
     UserInactiveException,
     UserNotFoundException,
 )
@@ -30,12 +34,17 @@ __all__ = [
     "UserAlreadyExistsException",
     "InvalidUserDataException",
     "EmailFormatException",
+    "EmailInUseException",
     "UserInactiveException",
+    "UserHasActiveProjectsException",
     # Project exceptions
     "ProjectNotFoundException",
+    "ProjectHasActiveUsersException",
     "ProjectAlreadyExistsException",
     "InvalidProjectDataException",
     "DatabaseConnectionException",
+    # User-Project exceptions
+    "UserProjectNotFoundException",
     # Base exception
     "AppException",
 ]

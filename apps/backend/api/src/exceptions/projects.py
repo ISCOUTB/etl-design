@@ -13,6 +13,12 @@ class ProjectAlreadyExistsException(AppException):
     message = "Project with the given name already exists"
 
 
+class ProjectHasActiveUsersException(AppException):
+    status_code = 400
+    error_code = "error:project-has-active-users"
+    message = "Cannot delete project with active users"
+
+
 class InvalidProjectDataException(AppException):
     status_code = 400
     error_code = "error:invalid-project-data"

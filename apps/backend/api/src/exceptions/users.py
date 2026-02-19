@@ -13,6 +13,18 @@ class UserAlreadyExistsException(AppException):
     message = "User with the given email already exists"
 
 
+class EmailInUseException(AppException):
+    status_code = 409
+    error_code = "error:email-in-use"
+    message = "Email is already in use"
+
+
+class UserHasActiveProjectsException(AppException):
+    status_code = 400
+    error_code = "error:user-has-active-projects"
+    message = "Cannot delete user with active projects"
+
+
 class InvalidUserDataException(AppException):
     status_code = 400
     error_code = "error:invalid-user-data"
