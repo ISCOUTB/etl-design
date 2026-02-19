@@ -57,8 +57,8 @@ def upgrade() -> None:
     op.create_table(
         "user",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("name", sa.String(), nullable=True),
-        sa.Column("email", sa.String(), nullable=True),
+        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("email", sa.String(), nullable=False),
         sa.Column(
             "role",
             sa.Enum("SUDO", "USER", name="user_role_enum", schema="public"),

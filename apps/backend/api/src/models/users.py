@@ -39,8 +39,8 @@ class User(BaseModel):
         default=lambda: uuid.UUID(str(uuid7())),
         nullable=False,
     )
-    name = Column(String, default=None, nullable=True)
-    email = Column(String, default=None, nullable=True)
+    name = Column(String, default=None, nullable=False)
+    email = Column(String, default=None, nullable=False)
     role = Column(user_role_enum, default=UserRole.USER, nullable=False)
     status = Column(user_status_enum, default=UserStatus.ACTIVE, nullable=False)
 
