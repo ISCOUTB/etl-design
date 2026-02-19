@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src import models, schemas
+from src.core.security import get_password_hash
 from src.exceptions import (
     AppException,
     EmailFormatException,
@@ -26,17 +27,30 @@ class UserService:
 
         return ParserService.parse_user(user)
 
+    def get_user_by_email(self, email: str) -> schemas.ResponseUserSchema:
+        user = self.repository.get_by_email(email)
+        if user is None:
+            raise UserNotFoundException()
+
+        return ParserService.parse_user(user)
+
     def search_users(
         self,
         active_only: bool = True,
         *,
         name: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[models.UserRole] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[schemas.ResponseUserSchema]:
         users = self.repository.search_users(
-            active_only=active_only, name=name, email=email, skip=skip, limit=limit
+            active_only=active_only,
+            name=name,
+            email=email,
+            role=role,
+            skip=skip,
+            limit=limit,
         )
         return ParserService.parse_users(users)
 
@@ -46,9 +60,10 @@ class UserService:
         active_only: bool = True,
         name: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[models.UserRole] = None,
     ) -> int:
         return self.repository.count_users(
-            active_only=active_only, name=name, email=email
+            active_only=active_only, name=name, email=email, role=role
         )
 
     def create_user(
@@ -77,6 +92,9 @@ class UserService:
         db_user = self.repository.get_user_by_id(user_id)
         if db_user is None:
             raise UserNotFoundException()
+
+        if update_data.password is not None:
+            update_data.password = get_password_hash(update_data.password)
 
         user = self.repository.update_user(update_data, db_user=db_user)
         try:

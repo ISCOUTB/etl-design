@@ -21,8 +21,8 @@ class AuthService:
         self.user_repository = UserRepository(db=db)
 
     def authenticate_user(self, email: str, password: str):
-        user = self.user_repository.get_by_email(email)
-        if not user or not verify_password(password, user.hashed_password):
+        user = self.user_repository.get_by_email(email, True)
+        if not user or not verify_password(password, str(user.password)):
             raise InvalidCredentialsException()
 
         return user
@@ -54,7 +54,6 @@ class AuthService:
 
             payload = json.loads(j.payload.decode("utf-8"))
             payload_token = schemas.TokenPayload(**payload)
-
             if payload_token.exp < utc_now().timestamp():
                 raise TokenExpiredException()
         except (TokenExpiredException, UnauthenticatedException):

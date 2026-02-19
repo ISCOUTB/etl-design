@@ -14,8 +14,16 @@ class UserRepository(BaseRepository[models.User]):
     def get_user_by_id(self, user_id: str) -> Optional[models.User]:
         return self._get_by_id(models.User, obj_id=user_id)
 
-    def get_by_email(self, email: str) -> Optional[models.User]:
-        return self.db.query(models.User).filter(models.User.email == email).first()
+    def get_by_email(
+        self, email: str, active_only: bool = True
+    ) -> Optional[models.User]:
+        base_query = self.db.query(models.User).filter(models.User.email == email)
+        if active_only:
+            base_query = base_query.filter(
+                models.User.status == models.UserStatus.ACTIVE
+            )
+
+        return base_query.first()
 
     def search_users(
         self,
@@ -23,6 +31,7 @@ class UserRepository(BaseRepository[models.User]):
         *,
         name: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[models.UserRole] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[models.User]:
@@ -38,6 +47,9 @@ class UserRepository(BaseRepository[models.User]):
         if email:
             base_query = base_query.filter(models.User.email.ilike(f"{email}%"))
 
+        if role:
+            base_query = base_query.filter(models.User.role == role)
+
         if skip is not None:
             base_query = base_query.offset(skip)
 
@@ -52,6 +64,7 @@ class UserRepository(BaseRepository[models.User]):
         active_only: bool = True,
         name: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[models.UserRole] = None,
     ) -> int:
         base_query = self.db.query(models.User)
         if active_only:
@@ -65,6 +78,9 @@ class UserRepository(BaseRepository[models.User]):
         if email:
             base_query = base_query.filter(models.User.email.ilike(f"{email}%"))
 
+        if role:
+            base_query = base_query.filter(models.User.role == role)
+
         return base_query.count()
 
     def create_user(self, user_data: schemas.CreateUserSchema) -> models.User:
@@ -74,7 +90,7 @@ class UserRepository(BaseRepository[models.User]):
             name=user_data.name,
             email=user_data.email,
             role=user_data.role,
-            hashed_password=hashed_password,
+            password=hashed_password,
         )
         self.db.add(db_user)
         return db_user
