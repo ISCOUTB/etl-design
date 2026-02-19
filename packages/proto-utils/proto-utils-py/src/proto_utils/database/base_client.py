@@ -131,43 +131,53 @@ class DatabaseClient:
     # ============================ Redis Methods ============================
 
     def redis_get_keys(
-        self, request: dtypes.RedisGetKeysRequest
+        self, request: dtypes.RedisGetKeysRequest, retry_on_failure: bool = True
     ) -> dtypes.RedisGetKeysResponse:
         def _operation() -> dtypes.RedisGetKeysResponse:
             request_proto = RedisSerde.serialize_get_keys_request(request)
             response = self._stub.RedisGetKeys(request_proto)
             return RedisSerde.deserialize_get_keys_response(response)
 
-        return self._execute_with_retry(_operation, "RedisGetKeys")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisGetKeys")
+        return _operation()
 
-    def redis_set(self, request: dtypes.RedisSetRequest) -> dtypes.RedisSetResponse:
+    def redis_set(
+        self, request: dtypes.RedisSetRequest, retry_on_failure: bool = True
+    ) -> dtypes.RedisSetResponse:
         def _operation() -> dtypes.RedisSetResponse:
             request_proto = RedisSerde.serialize_set_request(request)
             response = self._stub.RedisSet(request_proto)
             return RedisSerde.deserialize_set_response(response)
 
-        return self._execute_with_retry(_operation, "RedisSet")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisSet")
+        return _operation()
 
-    def redis_get(self, request: dtypes.RedisGetRequest) -> dtypes.RedisGetResponse:
+    def redis_get(self, request: dtypes.RedisGetRequest, retry_on_failure: bool = True) -> dtypes.RedisGetResponse:
         def _operation() -> dtypes.RedisGetResponse:
             request_proto = RedisSerde.serialize_get_request(request)
             response = self._stub.RedisGet(request_proto)
             return RedisSerde.deserialize_get_response(response)
 
-        return self._execute_with_retry(_operation, "RedisGet")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisGet")
+        return _operation()
 
     def redis_delete(
-        self, request: dtypes.RedisDeleteRequest
+        self, request: dtypes.RedisDeleteRequest, retry_on_failure: bool = True
     ) -> dtypes.RedisDeleteResponse:
         def _operation() -> dtypes.RedisDeleteResponse:
             request_proto = RedisSerde.serialize_delete_request(request)
             response = self._stub.RedisDelete(request_proto)
             return RedisSerde.deserialize_delete_response(response)
 
-        return self._execute_with_retry(_operation, "RedisDelete")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisDelete")
+        return _operation()
 
     def redis_ping(
-        self, request: dtypes.RedisPingRequest = None
+        self, request: dtypes.RedisPingRequest = None, retry_on_failure: bool = True
     ) -> dtypes.RedisPingResponse:
         def _operation() -> dtypes.RedisPingResponse:
             local_request = request
@@ -177,10 +187,12 @@ class DatabaseClient:
             response = self._stub.RedisPing(request_proto)
             return RedisSerde.deserialize_ping_response(response)
 
-        return self._execute_with_retry(_operation, "RedisPing")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisPing")
+        return _operation()
 
     def redis_get_cache(
-        self, request: dtypes.RedisGetCacheRequest = None
+        self, request: dtypes.RedisGetCacheRequest = None, retry_on_failure: bool = True
     ) -> dtypes.RedisGetCacheResponse:
         def _operation() -> dtypes.RedisGetCacheResponse:
             local_request = request
@@ -190,10 +202,14 @@ class DatabaseClient:
             response = self._stub.RedisGetCache(request_proto)
             return RedisSerde.deserialize_get_cache_response(response)
 
-        return self._execute_with_retry(_operation, "RedisGetCache")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisGetCache")
+        return _operation()
 
     def clear_cache(
-        self, request: dtypes.RedisClearCacheRequest = None
+        self,
+        request: dtypes.RedisClearCacheRequest = None,
+        retry_on_failure: bool = True,
     ) -> dtypes.RedisClearCacheResponse:
         def _operation() -> dtypes.RedisClearCacheResponse:
             local_request = request
@@ -203,32 +219,40 @@ class DatabaseClient:
             response = self._stub.RedisClearCache(request_proto)
             return RedisSerde.deserialize_clear_cache_response(response)
 
-        return self._execute_with_retry(_operation, "RedisClearCache")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RedisClearCache")
+        return _operation()
 
     # ============================ Mongo Methods ============================
 
     def mongo_ping(
-        self, request: dtypes.MongoPingRequest = None
+        self, request: dtypes.MongoPingRequest = None, retry_on_failure: bool = True
     ) -> dtypes.MongoPingResponse:
         def _operation() -> dtypes.MongoPingResponse:
             request_proto = MongoSerde.serialize_ping_request(request)
             response = self._stub.MongoPing(request_proto)
             return MongoSerde.deserialize_ping_response(response)
 
-        return self._execute_with_retry(_operation, "MongoPing")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoPing")
+        return _operation()
 
     def mongo_insert_one_schema(
-        self, request: dtypes.MongoInsertOneSchemaRequest
+        self, request: dtypes.MongoInsertOneSchemaRequest, retry_on_failure: bool = True
     ) -> dtypes.MongoInsertOneSchemaResponse:
         def _operation() -> dtypes.MongoInsertOneSchemaResponse:
             request_proto = MongoSerde.serialize_insert_one_schema_request(request)
             response = self._stub.MongoInsertOneSchema(request_proto)
             return MongoSerde.deserialize_insert_one_schema_response(response)
 
-        return self._execute_with_retry(_operation, "MongoInsertOneSchema")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoInsertOneSchema")
+        return _operation()
 
     def mongo_count_all_documents(
-        self, request: dtypes.MongoCountAllDocumentsRequest = None
+        self,
+        request: dtypes.MongoCountAllDocumentsRequest = None,
+        retry_on_failure: bool = True,
     ) -> dtypes.MongoCountAllDocumentsResponse:
         def _operation() -> dtypes.MongoCountAllDocumentsResponse:
             local_request = request
@@ -240,70 +264,92 @@ class DatabaseClient:
             response = self._stub.MongoCountAllDocuments(request_proto)
             return MongoSerde.deserialize_count_all_documents_response(response)
 
-        return self._execute_with_retry(_operation, "MongoCountAllDocuments")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoCountAllDocuments")
+        return _operation()
 
     def mongo_find_jsonschema(
-        self, request: dtypes.MongoFindJsonSchemaRequest
+        self, request: dtypes.MongoFindJsonSchemaRequest, retry_on_failure: bool = True
     ) -> dtypes.MongoFindJsonSchemaResponse:
         def _operation() -> dtypes.MongoFindJsonSchemaResponse:
             request_proto = MongoSerde.serialize_find_jsonschema_request(request)
             response = self._stub.MongoFindJsonSchema(request_proto)
             return MongoSerde.deserialize_find_jsonschema_response(response)
 
-        return self._execute_with_retry(_operation, "MongoFindJsonSchema")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoFindJsonSchema")
+        return _operation()
 
     def mongo_update_one_jsonschema(
-        self, request: dtypes.MongoUpdateOneJsonSchemaRequest
+        self,
+        request: dtypes.MongoUpdateOneJsonSchemaRequest,
+        retry_on_failure: bool = True,
     ) -> dtypes.MongoUpdateOneJsonSchemaResponse:
         def _operation() -> dtypes.MongoUpdateOneJsonSchemaResponse:
             request_proto = MongoSerde.serialize_update_one_jsonschema_request(request)
             response = self._stub.MongoUpdateOneJsonSchema(request_proto)
             return MongoSerde.deserialize_update_one_jsonschema_response(response)
 
-        return self._execute_with_retry(_operation, "MongoUpdateOneJsonSchema")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoUpdateOneJsonSchema")
+        return _operation()
 
     def mongo_delete_one_jsonschema(
-        self, request: dtypes.MongoDeleteOneJsonSchemaRequest
+        self,
+        request: dtypes.MongoDeleteOneJsonSchemaRequest,
+        retry_on_failure: bool = True,
     ) -> dtypes.MongoDeleteOneJsonSchemaResponse:
         def _operation() -> dtypes.MongoDeleteOneJsonSchemaResponse:
             request_proto = MongoSerde.serialize_delete_one_jsonschema_request(request)
             response = self._stub.MongoDeleteOneJsonSchema(request_proto)
             return MongoSerde.deserialize_delete_one_jsonschema_response(response)
 
-        return self._execute_with_retry(_operation, "MongoDeleteOneJsonSchema")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoDeleteOneJsonSchema")
+        return _operation()
 
     def mongo_delete_import_name(
-        self, request: dtypes.MongoDeleteImportNameRequest
+        self,
+        request: dtypes.MongoDeleteImportNameRequest,
+        retry_on_failure: bool = True,
     ) -> dtypes.MongoDeleteImportNameResponse:
         def _operation() -> dtypes.MongoDeleteImportNameResponse:
             request_proto = MongoSerde.serialize_delete_import_name_request(request)
             response = self._stub.MongoDeleteImportName(request_proto)
             return MongoSerde.deserialize_delete_import_name_response(response)
 
-        return self._execute_with_retry(_operation, "MongoDeleteImportName")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoDeleteImportName")
+        return _operation()
 
     # ============================ Tasks Methods ============================
 
     def update_task_id(
-        self, request: dtypes.UpdateTaskIdRequest
+        self, request: dtypes.UpdateTaskIdRequest, retry_on_failure: bool = True
     ) -> dtypes.UpdateTaskIdResponse:
         def _operation() -> dtypes.UpdateTaskIdResponse:
             request_proto = DatabaseSerde.serialize_update_task_id_request(request)
             response = self._stub.UpdateTaskId(request_proto)
             return DatabaseSerde.deserialize_update_task_id_response(response)
 
-        return self._execute_with_retry(_operation, "UpdateTaskId")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "UpdateTaskId")
+        return _operation()
 
-    def get_task_id(self, request: dtypes.GetTaskIdRequest) -> dtypes.GetTaskIdResponse:
+    def get_task_id(
+        self, request: dtypes.GetTaskIdRequest, retry_on_failure: bool = True
+    ) -> dtypes.GetTaskIdResponse:
         def _operation() -> dtypes.GetTaskIdResponse:
             request_proto = DatabaseSerde.serialize_get_task_id_request(request)
             response = self._stub.GetTaskId(request_proto)
             return DatabaseSerde.deserialize_get_task_id_response(response)
 
-        return self._execute_with_retry(_operation, "GetTaskId")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "GetTaskId")
+        return _operation()
 
     def get_tasks_by_import_name(
-        self, request: dtypes.GetTasksByImportNameRequest
+        self, request: dtypes.GetTasksByImportNameRequest, retry_on_failure: bool = True
     ) -> dtypes.GetTasksByImportNameResponse:
         def _operation() -> dtypes.GetTasksByImportNameResponse:
             request_proto = DatabaseSerde.serialize_get_tasks_by_import_name_request(
@@ -312,12 +358,18 @@ class DatabaseClient:
             response = self._stub.GetTasksByImportName(request_proto)
             return DatabaseSerde.deserialize_get_tasks_by_import_name_response(response)
 
-        return self._execute_with_retry(_operation, "GetTasksByImportName")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "GetTasksByImportName")
+        return _operation()
 
-    def set_task_id(self, request: dtypes.SetTaskIdRequest) -> dtypes.SetTaskIdResponse:
+    def set_task_id(
+        self, request: dtypes.SetTaskIdRequest, retry_on_failure: bool = True
+    ) -> dtypes.SetTaskIdResponse:
         def _operation() -> dtypes.SetTaskIdResponse:
             request_proto = DatabaseSerde.serialize_set_task_id_request(request)
             response = self._stub.SetTaskId(request_proto)
             return DatabaseSerde.deserialize_set_task_id_response(response)
 
-        return self._execute_with_retry(_operation, "SetTaskId")
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "SetTaskId")
+        return _operation()
