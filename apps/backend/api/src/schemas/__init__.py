@@ -1,3 +1,5 @@
+from src.schemas.api import PaginatedResponse
+from src.schemas.auth import SignInSchema
 from src.schemas.generic import DeleteResult, T
 from src.schemas.projects import (
     BaseProjectSchema,
@@ -20,6 +22,10 @@ from src.schemas.users import (
 )
 
 __all__ = [
+    # API Schemas
+    "PaginatedResponse",
+    # Auth Schemas
+    "SignInSchema",
     # Generic Schemas
     "DeleteResult",
     "T",

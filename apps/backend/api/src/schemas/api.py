@@ -1,9 +1,11 @@
-from typing import Generic, TypedDict, TypeVar
+from typing import Generic, TypeVar
+
+from pydantic import BaseModel
 
 T = TypeVar("T")
 
 
-class Paginated(TypedDict, Generic[T]):
+class PaginatedResponse(BaseModel, Generic[T]):
     """
     Base model for paginated responses.
 

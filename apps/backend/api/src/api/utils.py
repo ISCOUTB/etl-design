@@ -1,22 +1,5 @@
 from proto_utils.database import DatabaseClient, dtypes
 
-import src.schemas as schemas
-from src.core.config import settings
-
-
-# TODO: Improve this function to use a more robust method of checking superuser status
-def is_superuser(username: schemas.models.UserRoles) -> bool:
-    """
-    Check if the user is a superuser.
-
-    Args:
-        username (schemas.models.UserRoles): User roles object containing username and role.
-
-    Returns:
-        bool: True if the user is a superuser, False otherwise.
-    """
-    return username.username == settings.FIRST_SUPERUSER
-
 
 def invalidate_user_cache(
     database_client: DatabaseClient,
@@ -42,7 +25,11 @@ def invalidate_user_cache(
         patterns_to_delete.append("all_users:*")
 
     for pattern in patterns_to_delete:
-        keys = database_client.redis_get_keys(
-            dtypes.RedisGetKeysRequest(pattern=pattern)
-        )["keys"]
-        database_client.redis_delete(dtypes.RedisDeleteRequest(keys=keys))
+        try:
+            keys = database_client.redis_get_keys(
+                dtypes.RedisGetKeysRequest(pattern=pattern), False
+            )["keys"]
+            database_client.redis_delete(dtypes.RedisDeleteRequest(keys=keys))
+        except Exception:
+            # TODO: log the error, but don't fail the request if cache invalidation fails
+            pass

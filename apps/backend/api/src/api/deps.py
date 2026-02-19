@@ -57,9 +57,24 @@ SessionDep = Annotated[Session, Depends(get_sql_db)]
 DatabaseClientDep = Annotated[DatabaseClient, Depends(get_db_client)]
 PublisherDep = Annotated[Publisher, Depends(get_publisher)]
 
+# Services dependencies
 
+
+def get_user_service(db: SessionDep) -> UserService:
+    return UserService(db=db)
+
+
+def get_auth_service(db: SessionDep) -> AuthService:
+    return AuthService(db=db)
+
+
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+# Decode token and get current user dependency
 def get_current_user(
-    db: SessionDep,
+    user_service: UserServiceDep,
     authorization: Optional[str | None] = Header(default=None, alias="Authorization"),
 ) -> schemas.ResponseUserSchema:
     if not authorization or not authorization.startswith("Bearer "):
@@ -69,7 +84,7 @@ def get_current_user(
     payload_token = AuthService.decode_access_token(token)
 
     try:
-        user = UserService(db=db).get_user_by_id(payload_token.sub)
+        user = user_service.get_user_by_id(payload_token.sub)
     except Exception as e:
         raise UnauthenticatedException() from e
 
