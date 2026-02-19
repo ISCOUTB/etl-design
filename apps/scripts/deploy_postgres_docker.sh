@@ -7,4 +7,4 @@ docker run -d --name typechecking-postgres \
   -e PGDATA=/var/lib/postgresql/data/pgdata \
   -e POSTGRES_DB=${POSTGRES_DB} \
   -v typechecking_postgres_data:/var/lib/postgresql/data/pgdata \
-  postgres:17
+  postgres:18
