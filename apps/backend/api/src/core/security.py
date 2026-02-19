@@ -1,9 +1,7 @@
 import hashlib
 import hmac
 
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -17,7 +15,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True if passwords match, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def get_password_hash(password: str) -> str:
@@ -30,7 +28,9 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: Encrypted hash of the password.
     """
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode(), salt=salt)
+    return hashed.decode()
 
 
 def derive_key(
