@@ -87,7 +87,7 @@ class SchemaService:
             )
         )
 
-    # TODO: This is deleting all schema versions if there are no releases,
+    # TODO: This is deleting all schema versions even if there are releases,
     # we should only delete the active one and keep the history
     # Change this
     @staticmethod
