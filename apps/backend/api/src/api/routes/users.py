@@ -5,17 +5,24 @@
 import json
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 from proto_utils.database import dtypes
 
 from src import models, schemas
-from src.api.deps import CurrentUser, DatabaseClientDep, UserServiceDep
-from src.api.utils import invalidate_user_cache
+from src.api.deps import (
+    CurrentUser,
+    DatabaseClientDep,
+    UserProjectServiceDep,
+    UserServiceDep,
+)
+from src.api.utils import invalidate_cache
 
 router = APIRouter()
 
 
-@router.get("/me", response_model=schemas.ResponseUserSchema)
+@router.get(
+    "/me", response_model=schemas.ResponseUserSchema, status_code=status.HTTP_200_OK
+)
 async def get_current_user(
     current_user: CurrentUser,
 ) -> schemas.ResponseUserSchema:
@@ -23,7 +30,9 @@ async def get_current_user(
 
 
 @router.get(
-    "/search", response_model=schemas.PaginatedResponse[schemas.ResponseUserSchema]
+    "/search",
+    response_model=schemas.PaginatedResponse[schemas.ResponseUserSchema],
+    status_code=status.HTTP_200_OK,
 )
 async def search_users(
     current_user: CurrentUser,
@@ -75,7 +84,11 @@ async def search_users(
     return response
 
 
-@router.get("/id/{user_id}", response_model=schemas.ResponseUserSchema)
+@router.get(
+    "/id/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def get_user_by_id(
     user_id: str,
     current_user: CurrentUser,
@@ -111,7 +124,11 @@ async def get_user_by_id(
     return response
 
 
-@router.get("/search/{email}", response_model=schemas.ResponseUserSchema)
+@router.get(
+    "/search/{email}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def get_user_by_email(
     email: str,
     current_user: CurrentUser,
@@ -146,7 +163,104 @@ async def get_user_by_email(
     return response
 
 
-@router.post("/", response_model=schemas.ResponseUserSchema)
+@router.get(
+    "/{user_id}/projects/{project_id}",
+    response_model=schemas.ResponseUserProjectSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_project(
+    user_id: str,
+    project_id: str,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+    db_client: DatabaseClientDep,
+) -> schemas.ResponseUserProjectSchema:
+    cache_key = f"{user_id}:user_info:{project_id}"
+    try:
+        cached_response = db_client.redis_get(
+            dtypes.RedisGetRequest(key=cache_key), False
+        )
+    except Exception:
+        cached_response = dtypes.RedisGetResponse(found=False, value=None)
+
+    if cached_response["found"] and cached_response["value"] is not None:
+        return schemas.ResponseUserProjectSchema(**json.loads(cached_response["value"]))
+
+    response = user_project_service.get_user_type_for_project(user_id, project_id)
+
+    try:
+        db_client.redis_set(
+            dtypes.RedisSetRequest(
+                key=cache_key,
+                value=json.dumps(response.model_dump(mode="json")),
+                expiration=None,
+            ),
+            False,
+        )
+    except Exception:
+        pass
+
+    return response
+
+
+@router.get(
+    "/{user_id}/projects",
+    response_model=schemas.PaginatedResponse[schemas.ResponseUserProjectSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_projects_for_user(
+    user_id: str,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+    db_client: DatabaseClientDep,
+    order_column: Optional[str] = None,
+    asc: Optional[bool] = None,
+) -> schemas.PaginatedResponse[schemas.ResponseUserProjectSchema]:
+    cache_key = f"{user_id}:user_info:projects:page=1"
+    try:
+        cached_response = db_client.redis_get(
+            dtypes.RedisGetRequest(key=cache_key), False
+        )
+    except Exception:
+        cached_response = dtypes.RedisGetResponse(found=False, value=None)
+
+    if cached_response["found"] and cached_response["value"] is not None:
+        return schemas.PaginatedResponse[schemas.ResponseUserProjectSchema](
+            **json.loads(cached_response["value"])
+        )
+
+    projects = user_project_service.get_projects_for_user(
+        user_id, order_column=order_column, asc=asc
+    )
+    total = len(projects)
+    response = schemas.PaginatedResponse(
+        items=projects,
+        total=total,
+        page=1,
+        limit=total,
+        total_pages=1,
+        has_next=False,
+        has_prev=False,
+    )
+
+    try:
+        db_client.redis_set(
+            dtypes.RedisSetRequest(
+                key=cache_key,
+                value=json.dumps(response.model_dump(mode="json")),
+                expiration=None,
+            ),
+            False,
+        )
+    except Exception:
+        pass
+
+    return response
+
+
+@router.post(
+    "/", response_model=schemas.ResponseUserSchema, status_code=status.HTTP_201_CREATED
+)
 async def create_user(
     user_data: schemas.CreateUserSchema,
     current_user: CurrentUser,
@@ -154,11 +268,15 @@ async def create_user(
     db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     new_user = user_service.create_user(user_data)
-    invalidate_user_cache(db_client, invalidate_lists=True)
+    invalidate_cache(db_client, invalidate_lists=True)
     return new_user
 
 
-@router.patch("/{user_id}", response_model=schemas.ResponseUserSchema)
+@router.patch(
+    "/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def update_user(
     user_id: str,
     update_data: schemas.UpdateUserSchema,
@@ -167,12 +285,16 @@ async def update_user(
     db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     updated_user = user_service.update_user(update_data=update_data, user_id=user_id)
-    invalidate_user_cache(db_client, invalidate_lists=True, username=updated_user.id)
-    invalidate_user_cache(db_client, username=updated_user.email)
+    invalidate_cache(db_client, invalidate_lists=True, name=updated_user.id)
+    invalidate_cache(db_client, name=updated_user.email)
     return updated_user
 
 
-@router.delete("/{user_id}")
+@router.delete(
+    "/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def delete_user(
     user_id: str,
     current_user: CurrentUser,
@@ -180,6 +302,6 @@ async def delete_user(
     db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     deleted_user = user_service.delete_user(user_id)
-    invalidate_user_cache(db_client, invalidate_lists=True, username=deleted_user.id)
-    invalidate_user_cache(db_client, username=deleted_user.email)
+    invalidate_cache(db_client, invalidate_lists=True, name=deleted_user.id)
+    invalidate_cache(db_client, name=deleted_user.email)
     return deleted_user

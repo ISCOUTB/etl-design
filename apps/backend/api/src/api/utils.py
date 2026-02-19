@@ -1,28 +1,34 @@
+from typing import Literal
+
 from proto_utils.database import DatabaseClient, dtypes
 
+CacheScope = Literal["user", "project", "user_project"]
 
-def invalidate_user_cache(
+
+def invalidate_cache(
     database_client: DatabaseClient,
     *,
-    username: str = "",
+    name: str = "",
     invalidate_lists: bool = False,
+    scope: CacheScope = "user",
 ) -> None:
     """
-    Invalidate user cache based on the username and whether to invalidate lists.
+    Invalidate user cache based on the name and whether to invalidate lists.
 
     Args:
-        username (str): The username of the user.
+        name (str): The name of the object.
         invalidate_lists (bool): Whether to invalidate all user lists.
+        scope (CacheScope): The scope of the cache to invalidate ("user", "project", or "user_project").
     """
     patterns_to_delete = []
 
-    if username:
-        patterns_to_delete.append(f"{username}:user_info")
-        patterns_to_delete.append(f"*:user_info:{username}:*")
-        patterns_to_delete.append(f"{username}:user_info:*")
+    if name:
+        patterns_to_delete.append(f"{name}:{scope}_info")
+        patterns_to_delete.append(f"*:{scope}_info:{name}:*")
+        patterns_to_delete.append(f"{name}:{scope}_info:*")
 
     if invalidate_lists:
-        patterns_to_delete.append("all_users:*")
+        patterns_to_delete.append(f"all_{scope}s:*")
 
     for pattern in patterns_to_delete:
         try:

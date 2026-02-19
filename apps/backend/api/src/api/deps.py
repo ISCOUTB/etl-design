@@ -11,7 +11,7 @@ from src import schemas
 from src.core.config import settings
 from src.core.database_sql import SessionLocal
 from src.exceptions import UnauthenticatedException
-from src.services import AuthService, UserService
+from src.services import AuthService, ProjectService, UserProjectService, UserService
 
 
 def get_db_client() -> Generator[DatabaseClient, None, None]:
@@ -68,8 +68,18 @@ def get_auth_service(db: SessionDep) -> AuthService:
     return AuthService(db=db)
 
 
+def get_project_service(db: SessionDep) -> ProjectService:
+    return ProjectService(db=db)
+
+
+def get_user_project_service(db: SessionDep) -> UserProjectService:
+    return UserProjectService(db=db)
+
+
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]
+UserProjectServiceDep = Annotated[UserProjectService, Depends(get_user_project_service)]
 
 
 # Decode token and get current user dependency
