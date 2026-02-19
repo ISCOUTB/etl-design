@@ -5,6 +5,7 @@ from src.schemas.projects import (
     ResponseProjectSchema,
     UpdateProjectSchema,
 )
+from src.schemas.token import TokenPayload
 from src.schemas.user_projects import (
     BaseUserProjectSchema,
     CreateUserProjectSchema,
@@ -37,4 +38,6 @@ __all__ = [
     "CreateUserProjectSchema",
     "ResponseUserProjectSchema",
     "UpdateUserProjectSchema",
+    # Token Schemas
+    "TokenPayload",
 ]

@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -28,3 +31,31 @@ def get_password_hash(password: str) -> str:
         str: Encrypted hash of the password.
     """
     return pwd_context.hash(password)
+
+
+def derive_key(
+    secret: str,
+    info: str,
+    length: int = 32,
+) -> bytes:
+    salt = b""
+    prk = hmac.new(
+        salt if salt else (b"\x00" * hashlib.sha256().digest_size),
+        secret.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+
+    info_bytes = info.encode("utf-8")
+
+    okm = b""
+    previous = b""
+
+    for i in range(
+        (length + hashlib.sha256().digest_size - 1) // hashlib.sha256().digest_size
+    ):
+        previous = hmac.new(
+            prk, previous + info_bytes + bytes([i + 1]), hashlib.sha256
+        ).digest()
+        okm += previous
+
+    return okm[:length]

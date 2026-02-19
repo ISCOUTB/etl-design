@@ -1,5 +1,6 @@
 from src.exceptions.auth import (
     ForbiddenException,
+    IncorrectModel,
     InvalidCredentialsException,
     TokenExpiredException,
     UnauthenticatedException,
@@ -27,6 +28,7 @@ __all__ = [
     # Auth exceptions
     "ForbiddenException",
     "UnauthenticatedException",
+    "IncorrectModel",
     "InvalidCredentialsException",
     "TokenExpiredException",
     # User exceptions

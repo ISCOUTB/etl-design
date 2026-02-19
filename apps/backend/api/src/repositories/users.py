@@ -14,6 +14,9 @@ class UserRepository(BaseRepository[models.User]):
     def get_user_by_id(self, user_id: str) -> Optional[models.User]:
         return self._get_by_id(models.User, obj_id=user_id)
 
+    def get_by_email(self, email: str) -> Optional[models.User]:
+        return self.db.query(models.User).filter(models.User.email == email).first()
+
     def search_users(
         self,
         active_only: bool = True,

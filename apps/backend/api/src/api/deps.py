@@ -1,24 +1,17 @@
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, Optional
 
-import jwt
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, Header
 from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.publishers import Publisher
 from proto_utils.database.base_client import DatabaseClient
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-import src.schemas as schemas
-from src.core import security
+from src import schemas
 from src.core.config import settings
 from src.core.database_sql import SessionLocal
-from src.repositories.users import UserRepository
-
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token"
-)
+from src.exceptions import UnauthenticatedException
+from src.services import AuthService, UserService
 
 
 def get_db_client() -> Generator[DatabaseClient, None, None]:
@@ -48,7 +41,7 @@ def get_publisher() -> Generator[Publisher, None, None]:
 
     publisher = Publisher(
         params=params,
-        exchange_info=exchange_info,
+        exchange_info=exchange_info,  # type: ignore
         max_tries=settings.RABBITMQ_MAX_RETRIES,
         retry_delay=settings.RABBITMQ_RETRY_DELAY_SECONDS,
         backoff=settings.RABBITMQ_BACKOFF_MULTIPLIER,
@@ -63,50 +56,24 @@ def get_publisher() -> Generator[Publisher, None, None]:
 SessionDep = Annotated[Session, Depends(get_sql_db)]
 DatabaseClientDep = Annotated[DatabaseClient, Depends(get_db_client)]
 PublisherDep = Annotated[Publisher, Depends(get_publisher)]
-TokenDep = Annotated[Session, Depends(reusable_oauth2)]
 
 
-def get_current_user(db: SessionDep, token: TokenDep) -> schemas.models.UserRoles:
+def get_current_user(
+    db: SessionDep,
+    authorization: Optional[str | None] = Header(default=None, alias="Authorization"),
+) -> schemas.ResponseUserSchema:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise UnauthenticatedException()
+
+    token = authorization.removeprefix("Bearer ").strip()
+    payload_token = AuthService.decode_access_token(token)
+
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
-        )
-        token_data = schemas.token.TokenPayload(
-            username=payload.get("username"), rol=payload.get("rol")
-        )
-    except ValidationError:
-        raise HTTPException(
-            status_code=403,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        user = UserService(db=db).get_user_by_id(payload_token.sub)
+    except Exception as e:
+        raise UnauthenticatedException() from e
 
-    user_search = schemas.users.SearchUser(
-        username=token_data.username, rol=token_data.rol
-    )
-
-    user = UserRepository.get_user_rol(user_search, db)
-    if user is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "bearer"},
-        )
-
-    return schemas.models.UserRoles.model_validate(user)
+    return user
 
 
-CurrentUser = Annotated[schemas.models.UserRoles, Depends(get_current_user)]
-
-
-def get_current_admin(current_user: CurrentUser) -> schemas.models.UserRoles | None:
-    if current_user.rol != "admin":
-        raise HTTPException(
-            status_code=401,
-            detail="Unauthorized access, admin role required.",
-        )
-
-    return current_user
-
-
-Admin = Annotated[schemas.models.UserRoles, Depends(get_current_admin)]
+CurrentUser = Annotated[schemas.ResponseUserSchema, Depends(get_current_user)]

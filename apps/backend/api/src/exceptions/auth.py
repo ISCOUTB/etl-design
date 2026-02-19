@@ -23,3 +23,9 @@ class TokenExpiredException(AppException):
     status_code = 401
     error_code = "error:token-expired"
     message = "Authentication token has expired"
+
+
+class IncorrectModel(AppException):
+    status_code = 500
+    error_code = "error:incorrect-model"
+    message = "Incorrect Model"

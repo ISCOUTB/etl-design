@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     SERVER_PORT: int
     SERVER_DEBUG: bool
 
+    AUTH_INFO: str
     SECRET_KEY: str = secrets.token_urlsafe(32)
 
     FIRST_SUPERUSER: str
