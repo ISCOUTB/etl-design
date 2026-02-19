@@ -138,5 +138,9 @@ class UserRepository(BaseRepository[models.User]):
                 return None
 
         db_user.status = models.UserStatus.INACTIVE  # type: ignore
-        self.db.flush()
+
+        # Maybe "inactive" preffix could be enough to avoid email conflicts,
+        # but to be safe we append the user ID too
+        db_user.email = f"inactive_{str(db_user.id)}{db_user.email}"  # type: ignore
+
         return db_user
