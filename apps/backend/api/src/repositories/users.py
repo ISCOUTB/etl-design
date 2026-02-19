@@ -16,13 +16,19 @@ class UserRepository(BaseRepository[models.User]):
 
     def search_users(
         self,
+        active_only: bool = True,
+        *,
         name: Optional[str] = None,
         email: Optional[str] = None,
-        *,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[models.User]:
         base_query = self.db.query(models.User)
+        if active_only:
+            base_query = base_query.filter(
+                models.User.status == models.UserStatus.ACTIVE
+            )
+
         if name:
             base_query = base_query.filter(models.User.name.ilike(f"{name}%"))
 
@@ -38,9 +44,18 @@ class UserRepository(BaseRepository[models.User]):
         return base_query.all()
 
     def count_users(
-        self, name: Optional[str] = None, email: Optional[str] = None
+        self,
+        *,
+        active_only: bool = True,
+        name: Optional[str] = None,
+        email: Optional[str] = None,
     ) -> int:
         base_query = self.db.query(models.User)
+        if active_only:
+            base_query = base_query.filter(
+                models.User.status == models.UserStatus.ACTIVE
+            )
+
         if name:
             base_query = base_query.filter(models.User.name.ilike(f"{name}%"))
 
@@ -76,20 +91,32 @@ class UserRepository(BaseRepository[models.User]):
             update_data=update_data,
         )
 
-    def delete_user(self, user_id: str) -> schemas.DeleteResult[models.User]:
+    def delete_user(
+        self, *, user_id: Optional[str] = None, db_user: Optional[models.User] = None
+    ) -> schemas.DeleteResult[models.User]:
         """Delete a user from the database, only if they have no associated projects."""
         return self._conditional_delete(
             models.User,
             obj_id=user_id,
+            db_obj=db_user,
             relationship_attrs=["projects"],
         )
 
-    def inactivate_user(self, user_id: str) -> Optional[models.User]:
+    def inactivate_user(
+        self,
+        *,
+        user_id: Optional[str] = None,
+        db_user: Optional[models.User] = None,
+    ) -> Optional[models.User]:
         """Inactivate a user by setting their status to INACTIVE.
         This is a soft delete that preserves the user's data and associations."""
-        db_user = self.get_user_by_id(user_id)
-        if not db_user:
-            return None
+        if db_user is None:
+            assert user_id is not None, (
+                "user_id must be provided if db_user is not given"
+            )
+            db_user = self.get_user_by_id(user_id)
+            if not db_user:
+                return None
 
         db_user.status = models.UserStatus.INACTIVE  # type: ignore
         self.db.flush()
