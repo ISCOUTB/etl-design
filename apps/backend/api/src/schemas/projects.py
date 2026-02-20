@@ -12,7 +12,7 @@ class BaseProjectSchema(BaseModel):
     description: str | None = None
     provider: str | None = None
     db_host: str | None = None
-    db_port: str | None = None
+    db_port: int | None = None
     db_user: str | None = None
     db_password: str | None = None
     db_name: str | None = None
@@ -37,7 +37,7 @@ class UpdateProjectSchema(BaseModel):
     description: str | None = None
     provider: str | None = None
     db_host: str | None = None
-    db_port: str | None = None
+    db_port: int | None = None
     db_user: str | None = None
     db_password: str | None = None
     db_name: str | None = None

@@ -8,6 +8,7 @@ from src.exceptions.auth import (
 from src.exceptions.base import AppException
 from src.exceptions.projects import (
     DatabaseConnectionException,
+    InvalidDBCredentialsException,
     InvalidProjectDataException,
     ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
@@ -50,6 +51,7 @@ __all__ = [
     "ProjectHasActiveUsersException",
     "ProjectAlreadyExistsException",
     "InvalidProjectDataException",
+    "InvalidDBCredentialsException",
     "DatabaseConnectionException",
     # Schema exceptions
     "InvalidJsonSchemaException",

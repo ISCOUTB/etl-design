@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session
 
 from src import models, schemas
 from src.exceptions import (
+    InvalidDBCredentialsException,
     ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
     ProjectNotFoundException,
 )
 from src.repositories import ProjectRepository
 from src.services.parser import ParserService
+from src.utils import create_postgres_uri
 
 
 class ProjectService:
@@ -23,6 +25,22 @@ class ProjectService:
             raise ProjectNotFoundException()
 
         return ParserService.parse_project(project)
+
+    def get_project_db_uri(self, project_id: str) -> str:
+        project = self.repository.get_project_by_id(project_id)
+        if project is None:
+            raise ProjectNotFoundException()
+
+        try:
+            return create_postgres_uri(
+                user=project.db_user,  # type: ignore
+                password=project.db_password,  # type: ignore
+                host=project.db_host,  # type: ignore
+                port=project.db_port,  # type: ignore
+                db_name=project.db_name,  # type: ignore
+            )
+        except Exception:
+            raise InvalidDBCredentialsException()
 
     def search_projects(
         self,
@@ -80,7 +98,7 @@ class ProjectService:
 
             if response.status == "has_dependencies":
                 raise ProjectHasActiveUsersException()
-            
+
         assert response.obj is not None, (
             "Deleted project object should be returned on successful deletion"
         )

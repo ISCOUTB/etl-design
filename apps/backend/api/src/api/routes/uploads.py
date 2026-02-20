@@ -7,12 +7,13 @@
 from typing import Annotated, List
 
 import httpx
+import psycopg2
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.schemas import Metadata
 from proto_utils.database import dtypes
 
-from src.api.deps import CurrentUser, DatabaseClientDep, PublisherDep
+from src.api.deps import CurrentUser, DatabaseClientDep, ProjectServiceDep, PublisherDep
 from src.core.config import settings
 from src.core.constants import INSERTION_TASK, VALIDATION_TASK
 from src.exceptions import ForbiddenException
@@ -98,6 +99,7 @@ async def insert(
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     spreadsheet_file: UploadFile,
     project_id: Annotated[str, Form()],
     overwrite: bool = False,
@@ -115,21 +117,23 @@ async def insert(
     if not has_permission:
         raise ForbiddenException()
 
+    # Read the file content
+    file_content = await spreadsheet_file.read()
+
+    assert file_content, "File content is empty."
+    assert spreadsheet_file.filename, "Filename is missing."
+    assert spreadsheet_file.content_type, "Content type is missing."
+
+    # Create Metadata object obtained from the uploaded file
+    metadata = Metadata(
+        filename=spreadsheet_file.filename,
+        content_type=spreadsheet_file.content_type,
+        size=len(file_content),
+    )
+
+    # Fetch db credentials of the project
+    db_uri = project_service.get_project_db_uri(project_id)
     try:
-        # Read the file content
-        file_content = await spreadsheet_file.read()
-
-        assert file_content, "File content is empty."
-        assert spreadsheet_file.filename, "Filename is missing."
-        assert spreadsheet_file.content_type, "Content type is missing."
-
-        # Metadata
-        metadata = Metadata(
-            filename=spreadsheet_file.filename,
-            content_type=spreadsheet_file.content_type,
-            size=len(file_content),
-        )
-
         # Publish in RabbitMQ
         task_id = publisher.publish_insertion_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
@@ -138,6 +142,7 @@ async def insert(
             metadata=metadata,
             task="sample_insertion",
             overwrite=overwrite,
+            db_uri=db_uri,
         )
 
         response = dtypes.ApiResponse(
@@ -171,6 +176,7 @@ async def process(
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
     import_name: Annotated[str, Form()],
     overwrite: bool = False,
@@ -187,22 +193,25 @@ async def process(
     if not has_permission:
         raise ForbiddenException()
 
+    # Read the file content
+    file_content = await spreadsheet_file.read()
+
+    assert file_content, "File content is empty."
+    assert spreadsheet_file.filename, "Filename is missing."
+    assert spreadsheet_file.content_type, "Content type is missing."
+
+    # Create Metadata object obtained from the uploaded file
+    metadata = Metadata(
+        filename=spreadsheet_file.filename,
+        content_type=spreadsheet_file.content_type,
+        size=len(file_content),
+    )
+
+    # Fetch db credentials of the project
+    db_uri = project_service.get_project_db_uri(import_name)
+
+    # Publish in RabbitMQ
     try:
-        # Read the file content
-        file_content = await spreadsheet_file.read()
-
-        assert file_content, "File content is empty."
-        assert spreadsheet_file.filename, "Filename is missing."
-        assert spreadsheet_file.content_type, "Content type is missing."
-
-        # Metadata
-        metadata = Metadata(
-            filename=spreadsheet_file.filename,
-            content_type=spreadsheet_file.content_type,
-            size=len(file_content),
-        )
-
-        # Publish in RabbitMQ
         task_id = publisher.publish_validation_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
@@ -211,6 +220,7 @@ async def process(
             task="sample_validation",
             insert=True,
             insert_overwrite=overwrite,
+            insert_db_uri=db_uri,
         )
 
         response = dtypes.ApiResponse(
@@ -242,15 +252,16 @@ async def process(
 @router.post("/table")
 async def create_table(
     current_user: CurrentUser,
+    project_service: ProjectServiceDep,
     spreadsheet: UploadFile,
-    import_name: Annotated[str, Form()],
+    project_id: Annotated[str, Form()],
     dtypes: Annotated[str, Form()],
 ):
     has_permission = PermissionService.has_permission(
         user=current_user,
         action=Action.table,
         model_key=ModelKeys.upload,
-        model=Project(id=import_name),
+        model=Project(id=project_id),
     )
     if not has_permission:
         raise ForbiddenException()
@@ -259,7 +270,6 @@ async def create_table(
     # {"Sheet1": {"name": {"type": "TEXT", "extra": "NOT NULL"},
     # "age": {"type": "INTEGER", "extra": "NOT NULL"}, "is_adult": {"type": "TEXT"}}}
     fill_spaces = "_"
-
     try:
         async with httpx.AsyncClient(
             timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
@@ -273,15 +283,22 @@ async def create_table(
                         spreadsheet.content_type,
                     )
                 },
-                data={"table_name": import_name, "dtypes_str": dtypes},
+                data={"table_name": project_id, "dtypes_str": dtypes},
                 params={"fill_spaces": fill_spaces, "limit": 5},
             )
 
         response.raise_for_status()
-        return response.json()
-
+        sql_per_sheet = response.json()
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to communicate with Excel Reader service: {str(e)}",
         )
+
+    with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
+        cur = conn.cursor()
+        for _, sql in sql_per_sheet.items():
+            cur.execute(sql.replace("-", "_"))
+        conn.commit()
+
+    return {"message": "Table created successfully", "sql_per_sheet": sql_per_sheet}

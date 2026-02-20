@@ -29,3 +29,9 @@ class DatabaseConnectionException(AppException):
     status_code = 503
     error_code = "error:database-connection"
     message = "Failed to connect to the database"
+
+
+class InvalidDBCredentialsException(AppException):
+    status_code = 400
+    error_code = "error:invalid-db-credentials"
+    message = "Invalid database credentials provided"
