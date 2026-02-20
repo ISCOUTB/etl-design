@@ -54,6 +54,12 @@
             "email_invalid": "Please type a valid email",
             "password_min": "Password must have at least {length} characters",
             "passwords_mismatch": "Passwords don't match"
+        },
+        "events": {
+            "user_created": {
+                "title": "User created succesfully",
+                "description": "Email: {email}"
+            }
         }
     }
 }

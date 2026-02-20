@@ -43,6 +43,10 @@ export default defineNuxtConfig({
             sign: process.env.AUTH_SIGN,
             maxAge: 30 * 24 * 60 * 60,
         },
+        public: {
+            apiBase: process.env.API_BASE_URL,
+            homePageURL: process.env.HOMEPAGE_URL,
+        },
     },
 
     ///////////////////////////////////////////////////////

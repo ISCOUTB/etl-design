@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    import { toast } from "vue-sonner";
+
     definePageMeta({
         title: "auth.sign_up.title",
         auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
@@ -15,8 +17,44 @@
         },
     });
 
+    const api = useApi();
+    const { $localeRoute } = useNuxtApp();
+    const router = useRouter();
+    const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
-        console.warn(values);
+        const formData = new FormData();
+        formData.append("username", values.name);
+        formData.append("email", values.email);
+        formData.append("password", values.password);
+
+        loading.value = true;
+        api("/auth/sign-up", {
+            method: "POST",
+            body: formData,
+        })
+            .then((response) => {
+                console.warn(response);
+                const parsedResponse = UserResponse.safeParse(response);
+
+                if (!parsedResponse.success) {
+                    throw createError({});
+                }
+
+                toast.success($t("auth.events.user_created.title"), {
+                    description: $t("auth.events.user_created.description", {
+                        email: parsedResponse.data.email,
+                    }),
+                });
+
+                router.push(
+                    $localeRoute({
+                        path: "/auth/sign-in",
+                        query: { email: parsedResponse.data.email },
+                    }),
+                );
+            })
+            .catch((error) => console.error(error))
+            .finally(() => (loading.value = false));
     });
 </script>
 
@@ -111,8 +149,8 @@
                             </VeeField>
 
                             <Field>
-                                <Button type="submit">
-                                    <!-- <Spinner v-if="loading" /> -->
+                                <Button :disabled="loading" type="submit">
+                                    <Spinner v-if="loading" />
                                     {{ $t("auth.sign_up.submit") }}
                                 </Button>
                             </Field>
@@ -120,7 +158,7 @@
                             <FieldDescription>
                                 {{ $t("auth.sign_up.has_account") }}
                                 <NuxtLink
-                                    to="/sign-in"
+                                    :to="$localePath({ path: '/auth/sign-in' })"
                                     class="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
                                 >
                                     {{ $t("auth.sign_up.sign_in_link") }}

@@ -10,6 +10,26 @@ toolchain:
     python:
 
 tasks:
+    uv:
+        command: uv
+        toolchain: python
+        options:
+            runFromWorkspaceRoot: false
+            cache: false
+
+    prestart:
+        command: uv
+        args:
+            - run
+            - -m
+            - alembic
+            - upgrade
+            - head
+        toolchain: python
+        options:
+            runFromWorkspaceRoot: false
+            cache: false
+
     run:
         deps:
             - prestart

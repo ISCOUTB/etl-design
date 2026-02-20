@@ -6,5 +6,9 @@
 </script>
 
 <template>
-    <div>SignIn</div>
+    <div>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Suscipit consequatur eaque ullam,
+        tempore vel id, repudiandae distinctio quae inventore expedita fuga officia. Quos
+        reprehenderit veritatis ipsa labore ducimus suscipit earum.
+    </div>
 </template>
