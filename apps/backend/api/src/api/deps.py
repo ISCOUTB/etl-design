@@ -86,7 +86,7 @@ UserProjectServiceDep = Annotated[UserProjectService, Depends(get_user_project_s
 def get_current_user(
     user_service: UserServiceDep,
     authorization: Optional[str | None] = Header(default=None, alias="Authorization"),
-) -> schemas.ResponseUserSchema:
+) -> schemas.TokenPayload:
     if not authorization or not authorization.startswith("Bearer "):
         raise UnauthenticatedException()
 
@@ -94,11 +94,11 @@ def get_current_user(
     payload_token = AuthService.decode_access_token(token)
 
     try:
-        user = user_service.get_user_by_id(payload_token.sub)
+        user_service.get_user_by_id(payload_token.sub)
     except Exception as e:
         raise UnauthenticatedException() from e
 
-    return user
+    return payload_token
 
 
-CurrentUser = Annotated[schemas.ResponseUserSchema, Depends(get_current_user)]
+CurrentUser = Annotated[schemas.TokenPayload, Depends(get_current_user)]
