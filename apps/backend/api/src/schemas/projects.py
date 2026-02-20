@@ -16,7 +16,6 @@ class BaseProjectSchema(BaseModel):
     db_user: str | None = None
     db_password: str | None = None
     db_name: str | None = None
-    db_netloc: str | None = None
     db_params: str | None = None
 
 
@@ -41,7 +40,6 @@ class UpdateProjectSchema(BaseModel):
     db_user: str | None = None
     db_password: str | None = None
     db_name: str | None = None
-    db_netloc: str | None = None
     db_params: str | None = None
 
     @field_validator("name")

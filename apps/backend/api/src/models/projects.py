@@ -42,7 +42,6 @@ class Project(BaseModel):
     db_user = Column(String, default=None, nullable=True)
     db_password = Column(String, default=None, nullable=True)
     db_name = Column(String, default=None, nullable=True)
-    db_netloc = Column(String, default=None, nullable=True)
     db_params = Column(String, default=None, nullable=True)
 
     # Datetimes

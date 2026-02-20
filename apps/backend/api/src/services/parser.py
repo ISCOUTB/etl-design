@@ -1,3 +1,5 @@
+# type: ignore
+
 from typing import List
 
 from src import models, schemas
@@ -25,6 +27,12 @@ class ParserService:
         return schemas.ResponseProjectSchema(
             id=str(project.id),
             name=str(project.name),
+            db_host=project.db_host,
+            db_port=project.db_port,
+            db_user=project.db_user,
+            db_password=project.db_password,
+            db_name=project.db_name,
+            db_params=project.db_params,
             description=project.description,
             created_at=project.created_at,
             updated_at=project.updated_at,

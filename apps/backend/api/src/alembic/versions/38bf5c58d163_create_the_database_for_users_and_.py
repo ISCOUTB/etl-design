@@ -33,7 +33,6 @@ def upgrade() -> None:
         sa.Column("db_user", sa.String(), nullable=True),
         sa.Column("db_password", sa.String(), nullable=True),
         sa.Column("db_name", sa.String(), nullable=True),
-        sa.Column("db_netloc", sa.String(), nullable=True),
         sa.Column("db_params", sa.String(), nullable=True),
         sa.Column(
             "created_at",
