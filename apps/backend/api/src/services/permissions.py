@@ -1,7 +1,8 @@
 from collections.abc import Callable
 from enum import StrEnum
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
+from src.core.database_sql import SessionLocal
 from src.exceptions import IncorrectModel
 from src.models import (
     AnyModelKey,
@@ -10,23 +11,34 @@ from src.models import (
     ModelKeys,
     UserProjectType,
     UserRole,
+    UserStatus,
 )
+from src.repositories import UserRepository
 from src.schemas.token import TokenPayload
+
+
+def _is_user_active(user: TokenPayload) -> bool:
+    with SessionLocal() as db:
+        user_record = UserRepository(db=db).get_user_by_id(user.id)
+
+    if user_record is None:
+        return False
+
+    return user_record.status == UserStatus.ACTIVE
 
 
 class Action(StrEnum):
     view = "view"
+    search = "search"
     create = "create"
     update = "update"
     delete = "delete"
 
-    # This is a special action that represents any operation
-    # that is not strictly view, create, update or delete,
-    # specially for stock units
-    operation = "operation"
+    # Special action for flushing access to a project, which is different from delete
+    flush = "flush"
 
 
-CheckPermission = bool | Callable[[TokenPayload, Any | None], bool]
+CheckPermission = bool | Callable[[TokenPayload, Model | None], bool]
 
 
 ROLE_HIERARCHY: Dict[UserRole, Tuple[UserRole, ...]] = {
@@ -46,12 +58,24 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
     # but they cannot delete any project or user record
     UserRole.USER: {
         ModelKeys.user: {
-            Action.view: lambda user, model: model is not None and model.id == user.id,
+            Action.view: lambda user, model: (
+                model is not None
+                and (
+                    (model.id == user.id if hasattr(model, "id") else False)
+                    or (
+                        model.user_id == user.id if hasattr(model, "user_id") else False
+                    )
+                )
+                and _is_user_active(user)
+            ),
+            Action.search: False,
             Action.create: False,
             Action.update: lambda user, model: (
-                model is not None and model.id == user.id
+                model is not None and model.id == user.id and _is_user_active(user)
             ),
-            Action.delete: False,
+            Action.delete: lambda user, model: (
+                model is not None and model.id == user.id and _is_user_active(user)
+            ),
         },
         ModelKeys.project: {
             Action.view: lambda user, model: (
@@ -61,6 +85,7 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                     for up in getattr(model, "users", [])
                 )
             ),
+            Action.search: False,
             Action.create: True,
             Action.update: lambda user, model: (
                 model is not None
@@ -68,14 +93,24 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                     up.project_id == model.id
                     and up.user_id == user.id
                     and up.role in (UserProjectType.OWNER, UserProjectType.SHARED)
-                    for up in getattr(model, "users", [])
+                    for up in getattr(model, "users", [])  # up: UserProject
                 )
             ),
             Action.delete: False,
+            Action.flush: lambda user, model: (
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role == UserProjectType.OWNER
+                    for up in getattr(model, "users", [])  # up: UserProject
+                )
+            ),
         },
         ModelKeys.user_project: {
-            Action.view: lambda user, model: model is not None
-            and model.user_id == user.id,
+            Action.view: lambda user, model: (
+                model is not None and model.user_id == user.id
+            ),
             Action.create: lambda user, model: (
                 model is not None
                 and model.user_id == user.id
@@ -94,19 +129,29 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.delete: lambda user, model: (
                 model is not None
                 and model.user_id == user.id
-                and model.role == UserProjectType.OWNER
+                and model.role in (UserProjectType.OWNER)
             ),
         },
     },
     UserRole.SUDO: {
         ModelKeys.user: {
             Action.view: True,
+            Action.search: True,
             Action.create: True,
             Action.update: True,
             Action.delete: True,
         },
         ModelKeys.project: {
             Action.view: True,
+            Action.search: True,
+            Action.create: True,
+            Action.update: True,
+            Action.delete: True,
+            Action.flush: True,
+        },
+        ModelKeys.user_project: {
+            Action.view: True,
+            Action.search: True,
             Action.create: True,
             Action.update: True,
             Action.delete: True,

@@ -12,8 +12,12 @@ from src.api.deps import (
     UserProjectServiceDep,
 )
 from src.api.utils import invalidate_cache
+from src.exceptions import ForbiddenException
+from src.services.permissions import Action, PermissionService
 
 router = APIRouter()
+
+# ============== Project routes ==============
 
 
 @router.get(
@@ -29,6 +33,12 @@ async def search_projects(
     skip: int = 0,
     limit: int = 10,
 ) -> schemas.PaginatedResponse[schemas.ResponseProjectSchema]:
+    has_permission = PermissionService.has_permission(
+        action=Action.search, user=current_user, model_key=models.ModelKeys.project
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     page = (skip // limit) + 1
     cache_key = f"all_projects:name={name}:limit={limit}:page={page}"
     try:
@@ -79,6 +89,15 @@ async def get_project_by_id(
     db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.view,
+        user=current_user,
+        model_key=models.ModelKeys.project,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     cache_key = f"{project_id}:project_info"
     try:
         cached_response = db_client.redis_get(
@@ -119,6 +138,12 @@ async def create_project(
     project_service: ProjectServiceDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.create, user=current_user, model_key=models.ModelKeys.project
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     response = project_service.create_project(project_data)
 
     # If a regular user creates a project, automatically add them as the owner of the project
@@ -147,6 +172,15 @@ async def update_project(
     db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.update,
+        user=current_user,
+        model_key=models.ModelKeys.project,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     response = project_service.update_project(
         project_data=project_data, project_id=project_id
     )
@@ -154,7 +188,6 @@ async def update_project(
     return response
 
 
-# Just for sudo users
 @router.delete(
     "/{project_id}",
     response_model=schemas.ResponseProjectSchema,
@@ -166,12 +199,23 @@ async def delete_project(
     db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.delete,
+        user=current_user,
+        model_key=models.ModelKeys.project,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     response = project_service.delete_project(project_id=project_id)
     invalidate_cache(db_client, name=project_id, invalidate_lists=True, scope="project")
     return response
 
 
-# For sudo users and users with OWNER access to the project
+# ============== User Project routes ==============
+
+
 @router.delete("/{project_id}/flush", status_code=status.HTTP_204_NO_CONTENT)
 async def flush_access_project(
     project_id: str,
@@ -179,9 +223,47 @@ async def flush_access_project(
     db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> None:
+    has_permission = PermissionService.has_permission(
+        action=Action.flush,
+        user=current_user,
+        model_key=models.ModelKeys.project,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     user_project_service.flush_access_project(project_id=project_id)
     invalidate_cache(
         db_client, name=project_id, invalidate_lists=True, scope="user_project"
+    )
+    return None
+
+
+@router.delete("/{project_id}/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_user_from_project(
+    project_id: str,
+    user_id: str,
+    current_user: CurrentUser,
+    db_client: DatabaseClientDep,
+    user_project_service: UserProjectServiceDep,
+) -> None:
+    has_permission = PermissionService.has_permission(
+        action=Action.delete,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(user_id=user_id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    user_project_service.remove_user_from_project(
+        project_id=project_id, user_id=user_id
+    )
+    invalidate_cache(
+        db_client, name=project_id, invalidate_lists=True, scope="user_project"
+    )
+    invalidate_cache(
+        db_client, name=user_id, invalidate_lists=True, scope="user_project"
     )
     return None
 
@@ -199,6 +281,12 @@ async def get_users_for_project(
     db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.PaginatedResponse[schemas.ResponseUserProjectSchema]:
+    has_permission = PermissionService.has_permission(
+        action=Action.view, user=current_user, model_key=models.ModelKeys.user_project
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     cache_key = f"{project_id}:user_project_info"
     try:
         cached_response = db_client.redis_get(
@@ -250,6 +338,15 @@ async def get_user_project(
     db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.ResponseUserProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.view,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(user_id=user_id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     cache_key = f"{user_id}:user_project_info:{project_id}"
     try:
         cached_response = db_client.redis_get(
