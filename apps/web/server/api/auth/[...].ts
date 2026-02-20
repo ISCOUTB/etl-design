@@ -1,5 +1,10 @@
+import type { User } from "next-auth";
 import { NuxtAuthHandler } from "#auth";
+import { ResponseCodesRecord } from "#shared/utils/response-codes";
+import { ApiErrorSchema } from "#shared/utils/schemas/api";
+import { UserResponse } from "#shared/utils/schemas/auth";
 import Credentials from "next-auth/providers/credentials";
+import { FetchError } from "ofetch";
 
 const runtimeConfig = useRuntimeConfig();
 
@@ -14,7 +19,7 @@ export default NuxtAuthHandler({
         Credentials.default({
             id: "credentials",
             credentials: {},
-            authorize() {
+            async authorize(credentials: Record<"email" | "password", string>) {
                 /**
                  * Any errors that may occur inside here should be thrown
                  * using simple
@@ -28,11 +33,41 @@ export default NuxtAuthHandler({
                  * if (response.error) // do something...
                  */
 
-                return {
-                    id: "1",
-                    name: "John Doe",
-                    email: "johndoe@example.com",
-                };
+                const formData = new FormData();
+                formData.append("email", credentials.email);
+                formData.append("password", credentials.password);
+
+                try {
+                    const response = await $fetch("/auth/sign-in", {
+                        baseURL: runtimeConfig.public.apiBase,
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    const parsedResponse = UserResponse.safeParse(response);
+
+                    if (!parsedResponse.success) {
+                        throw new Error(ResponseCodesRecord.Server.Auth.SignIn.BadPayload);
+                    }
+
+                    return {
+                        id: parsedResponse.data.id,
+                        name: parsedResponse.data.name,
+                        email: parsedResponse.data.email,
+                        role: parsedResponse.data.role,
+                    } satisfies User;
+                } catch (error) {
+                    if (error instanceof FetchError) {
+                        const parsedError = ApiErrorSchema.safeParse(error.data);
+                        if (!parsedError.success) {
+                            return null;
+                        }
+
+                        throw new Error(parsedError.data.error);
+                    }
+
+                    return null;
+                }
             },
         }),
     ],

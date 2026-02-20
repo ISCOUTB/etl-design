@@ -49,6 +49,13 @@
             "has_account": "Already have an account?",
             "sign_in_link": "Sign In"
         },
+        "sign_in": {
+            "title": "Sign In",
+            "subtitle": "Access to your account",
+            "submit": "Sign In",
+            "create_account": "Don't have an account?",
+            "sign_up_link": "Sign Up"
+        },
         "validation": {
             "name_min": "Name must have at least {length} characters",
             "email_invalid": "Please type a valid email",
@@ -59,6 +66,25 @@
             "user_created": {
                 "title": "User created succesfully",
                 "description": "Email: {email}"
+            },
+            "user_logged": {
+                "title": "User Logged!",
+                "description": "Email: {email}"
+            }
+        }
+    },
+    "errors": {
+        "unknown": {
+            "title": "An unknown error ocurred",
+            "description": "Please try again later"
+        },
+        "auth": {
+            "invalid_credentials": {
+                "title": "Invalid credentials"
+            },
+            "user_not_found": {
+                "title": "Account was not found",
+                "description": "Did you type it correctly?"
             }
         }
     }

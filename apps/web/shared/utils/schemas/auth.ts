@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-const UserRole = z.enum(["user", "sudo"]);
-const UserStatus = z.enum(["active", "inactive"]);
+export const UserRole = z.enum(["user", "sudo"]);
+export const UserStatus = z.enum(["active", "inactive"]);
 
 export const UserResponse = z.object({
     id: z.string(),

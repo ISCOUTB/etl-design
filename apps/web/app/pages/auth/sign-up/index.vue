@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    import { UserResponse } from "#shared/utils/schemas/auth";
     import { toast } from "vue-sonner";
 
     definePageMeta({

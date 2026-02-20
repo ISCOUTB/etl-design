@@ -26,7 +26,7 @@ class AuthService:
         if not user or not verify_password(password, str(user.password)):
             raise InvalidCredentialsException()
 
-        return user
+        return ParserService.parse_user(user)
 
     def register_user(
         self,

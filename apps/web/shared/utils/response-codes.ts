@@ -4,5 +4,12 @@ export const ResponseCodesRecord = {
     },
     Server: {
         UnAuthorized: "server:unauthorized",
+        Auth: {
+            SignIn: {
+                BadPayload: "server:auth:sign-in:bad-payload",
+                InvalidCredentials: "error:invalid-credentials",
+                UserNotFound: "",
+            },
+        },
     },
 } as const;
