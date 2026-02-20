@@ -15,3 +15,4 @@ class ValidationMessage(TypedDict):
     extra: Dict[str, str]
     insert: bool
     insert_overwrite: Optional[bool]
+    insert_db_uri: Optional[str]

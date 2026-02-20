@@ -15,6 +15,7 @@ class InsertionMessage(TypedDict):
     date (str): The date when the message was created, in ISO format.
     extra (Dict[str, str]): A dictionary of additional key-value pairs for extensibility.
     overwrite (bool): A flag indicating whether to overwrite to existing data (True) or append (False).
+    db_uri (str): The URI for connecting to the database where the data should be inserted.
     """
 
     id: str
@@ -25,3 +26,4 @@ class InsertionMessage(TypedDict):
     date: str
     extra: Dict[str, str]
     overwrite: bool
+    db_uri: str

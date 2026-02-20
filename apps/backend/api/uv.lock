@@ -1018,6 +1018,7 @@ version = "0.1.0"
 source = { editable = "../../../packages/messaging-utils/messaging-utils-py" }
 dependencies = [
     { name = "aio-pika" },
+    { name = "fastuuid7" },
     { name = "pika" },
     { name = "proto-utils" },
     { name = "pydantic-settings" },
@@ -1026,6 +1027,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aio-pika", specifier = ">=9.5.7" },
+    { name = "fastuuid7", specifier = ">=0.1.0" },
     { name = "pika", specifier = ">=1.3.2" },
     { name = "proto-utils", editable = "../../../packages/proto-utils/proto-utils-py" },
     { name = "pydantic-settings", specifier = ">=2.11.0" },

@@ -12,7 +12,6 @@ for reliable delivery and processing.
 import json
 import logging
 import time
-import uuid
 from datetime import datetime
 from typing import Any, Callable, Optional, TypeVar
 
@@ -23,6 +22,7 @@ from pika.exceptions import (
     AMQPConnectionError,
     StreamLostError,
 )
+from uuidv7 import uuid7
 
 from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.connection_factory import (
@@ -215,6 +215,7 @@ class Publisher:
         task: ValidationTasks,
         insert: bool = False,
         insert_overwrite: Optional[bool] = None,
+        insert_db_uri: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -234,6 +235,8 @@ class Publisher:
             insert (bool): Whether this validation request is for an insertion operation.
             insert_overwrite (Optional[bool]): If True, indicates that the validation is for an overwrite
                 operation.
+            insert_db_uri (Optional[str]): If provided, indicates that the validation is for an insertion
+                operation and specifies the database URI for the insertion.
             kwargs (str): Additional key-value pairs to include in the message.
 
         Returns:
@@ -252,9 +255,18 @@ class Publisher:
                 or serialization problems.
         """
 
-        def _publish() -> str:
-            task_id = str(uuid.uuid4())
+        if insert:
+            if insert_overwrite is None:
+                raise TypeError(
+                    "insert_overwrite must be provided when insert is True"
+                )
+            if insert_db_uri is None:
+                raise TypeError(
+                    "insert_db_uri must be provided when insert is True"
+                )
 
+        def _publish() -> str:
+            task_id = str(uuid7())  # actually, it is already str, but for type clarity
             message = ValidationMessage(
                 id=task_id,
                 task=task,
@@ -265,6 +277,7 @@ class Publisher:
                 extra=kwargs,
                 insert=insert,
                 insert_overwrite=insert_overwrite,
+                insert_db_uri=insert_db_uri,
             )
 
             self._channel.basic_publish(
@@ -292,6 +305,7 @@ class Publisher:
         import_name: str,
         metadata: Metadata,
         task: InsertionTasks,
+        db_uri: str,
         overwrite: bool = False,
         **kwargs: str,
     ) -> str:
@@ -301,7 +315,7 @@ class Publisher:
         and metadata to be processed by insertion workers. The file data is converted to
         hexadecimal format for safe JSON transmission. The message includes an "overwrite"
         flag to indicate whether the insertion should overwrite to existing data or overwrite it.
-        
+
         Args:
             routing_key (str): The routing key to route the message to the appropriate queue.
             file_data (bytes): Raw binary data of the file to be inserted.
@@ -311,11 +325,12 @@ class Publisher:
             task (InsertionTasks): Task type for the insertion request (e.g.,
                 "sample_insertion").
             overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
+            db_uri (str): The URI for connecting to the database where the data should be inserted.
             kwargs (str): Additional key-value pairs to include in the message.
         """
-        def _publish() -> str:
-            task_id = str(uuid.uuid4())
 
+        def _publish() -> str:
+            task_id = str(uuid7())  # actually, it is already str, but for type clarity
             message = InsertionMessage(
                 id=task_id,
                 task=task,
@@ -325,6 +340,7 @@ class Publisher:
                 date=datetime.now().isoformat(),
                 extra=kwargs,
                 overwrite=overwrite,
+                db_uri=db_uri,
             )
 
             self._channel.basic_publish(
