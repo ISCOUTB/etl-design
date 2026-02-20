@@ -1,11 +1,10 @@
-# TODO: Ideally, the import_name must not be requested here,
-# it, actually, is obtained from the user's table from the DB,
-# but for simplicity, we are requesting it here.
+# TODO: Find a way to make all these function atomic
+# in case the database or rabbit is down, we don't want to end up in a state
+# where the task is published but not saved in the database, or vice versa.
+# For that, we could use idempotency keys, or we could use a two-phase commit protocol,
+# but that might be an overkill for now.
 
-# TODO: Ensure idempotency of the endpoints, especially the /validate endpoint,
-# since it can be called multiple times with the same file.
-
-from typing import Annotated
+from typing import Annotated, List
 
 import httpx
 from fastapi import APIRouter, Form, HTTPException, UploadFile
@@ -13,32 +12,32 @@ from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.schemas import Metadata
 from proto_utils.database import dtypes
 
-from src.api.deps import DatabaseClientDep, PublisherDep
+from src.api.deps import CurrentUser, DatabaseClientDep, PublisherDep
 from src.core.config import settings
 from src.core.constants import INSERTION_TASK, VALIDATION_TASK
+from src.exceptions import ForbiddenException
+from src.models import Project
+from src.services.permissions import Action, ModelKeys, PermissionService
 
 router = APIRouter()
 
 
-# TODO: Fix return-type xddd
 @router.post("/validate")
 async def validate(
+    current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
-    import_name: Annotated[str, Form()],
-    new: bool = False,
-) -> dtypes.ApiResponse | list[dtypes.ApiResponse]:
+    project_id: Annotated[str, Form()],
+    force_new: bool = False,
+) -> List[dtypes.ApiResponse]:
     """
     Upload a spreadsheet file in order to be validated.
     """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
-
-    if not new and (
+    if not force_new and (
         cached_response := database_client.get_tasks_by_import_name(
             dtypes.GetTasksByImportNameRequest(
-                import_name=import_name, task=VALIDATION_TASK
+                import_name=project_id, task=VALIDATION_TASK
             )
         )
     ):
@@ -63,7 +62,7 @@ async def validate(
         task_id = publisher.publish_validation_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
-            import_name=import_name,
+            import_name=project_id,
             metadata=metadata,
             task="sample_validation",
         )
@@ -72,7 +71,7 @@ async def validate(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
+            data={"task_id": task_id, "import_name": project_id},
         )
 
     except Exception as e:
@@ -82,7 +81,7 @@ async def validate(
             message=f"Failed to submit validation request: {str(e)}",
             data={},
         )
-        return response
+        return [response]
 
     database_client.set_task_id(
         dtypes.SetTaskIdRequest(
@@ -91,23 +90,30 @@ async def validate(
             task=VALIDATION_TASK,
         )
     )
-    return response
+    return [response]
 
 
 @router.post("/insert")
 async def insert(
+    current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
     spreadsheet_file: UploadFile,
-    import_name: Annotated[str, Form()],
+    project_id: Annotated[str, Form()],
     overwrite: bool = False,
 ):
     """Insert data from a validated spreadsheet file into the database.
     this is not intented to be used always, just in specific cases, where all the
     pipeline (validation + insert) cannot be used.
     """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.insert,
+        model_key=ModelKeys.upload,
+        model=Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
 
     try:
         # Read the file content
@@ -128,7 +134,7 @@ async def insert(
         task_id = publisher.publish_insertion_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
             file_data=file_content,
-            import_name=import_name,
+            import_name=project_id,
             metadata=metadata,
             task="sample_insertion",
             overwrite=overwrite,
@@ -138,7 +144,7 @@ async def insert(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
+            data={"task_id": task_id, "import_name": project_id},
         )
 
     except Exception as e:
@@ -162,6 +168,7 @@ async def insert(
 
 @router.post("/process")
 async def process(
+    current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
@@ -171,6 +178,15 @@ async def process(
     """Validates and inserts data from a spreadsheet file into the database.
     Actually, it just publish the task to the mq, the worker will do the rest.
     """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.process,
+        model_key=ModelKeys.upload,
+        model=Project(id=import_name),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     try:
         # Read the file content
         file_content = await spreadsheet_file.read()
@@ -225,10 +241,20 @@ async def process(
 
 @router.post("/table")
 async def create_table(
+    current_user: CurrentUser,
     spreadsheet: UploadFile,
     import_name: Annotated[str, Form()],
     dtypes: Annotated[str, Form()],
 ):
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.table,
+        model_key=ModelKeys.upload,
+        model=Project(id=import_name),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     # Example of `dtypes`:
     # {"Sheet1": {"name": {"type": "TEXT", "extra": "NOT NULL"},
     # "age": {"type": "INTEGER", "extra": "NOT NULL"}, "is_adult": {"type": "TEXT"}}}

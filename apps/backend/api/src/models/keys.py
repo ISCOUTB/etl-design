@@ -33,3 +33,15 @@ class ModelKeys:
     # ============ Projects ============
     project: ModelKey[Project] = ModelKey("project", Project)
     user_project: ModelKey[UserProject] = ModelKey("user_project", UserProject)
+
+    # ============ Cache ============
+    cache: ModelKey[Any] = ModelKey("cache", AnyModelKey)  # type: ignore
+
+    # ============ Tasks ============
+    task: ModelKey[Any] = ModelKey("task", AnyModelKey)  # type: ignore
+
+    # =========== Schemas ============
+    schemas: ModelKey[Any] = ModelKey("schemas", AnyModelKey)  # type: ignore
+
+    # =========== Uploads ============
+    upload: ModelKey[Any] = ModelKey("upload", AnyModelKey)  # type: ignore

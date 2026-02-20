@@ -13,6 +13,12 @@ from src.exceptions.projects import (
     ProjectHasActiveUsersException,
     ProjectNotFoundException,
 )
+from src.exceptions.schemas import (
+    InvalidJsonSchemaException,
+    SchemaNotFoundException,
+    SchemaNotProvidedException,
+)
+from src.exceptions.tasks import TaskNotFoundException
 from src.exceptions.user_project import UserProjectNotFoundException
 from src.exceptions.users import (
     EmailFormatException,
@@ -45,6 +51,12 @@ __all__ = [
     "ProjectAlreadyExistsException",
     "InvalidProjectDataException",
     "DatabaseConnectionException",
+    # Schema exceptions
+    "InvalidJsonSchemaException",
+    "SchemaNotFoundException",
+    "SchemaNotProvidedException",
+    # Task exceptions
+    "TaskNotFoundException",
     # User-Project exceptions
     "UserProjectNotFoundException",
     # Base exception

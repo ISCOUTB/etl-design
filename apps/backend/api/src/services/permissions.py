@@ -9,11 +9,13 @@ from src.models import (
     Model,
     ModelKey,
     ModelKeys,
+    Project,
+    UserProject,
     UserProjectType,
     UserRole,
     UserStatus,
 )
-from src.repositories import UserRepository
+from src.repositories import ProjectRepository, UserProjectRepository, UserRepository
 from src.schemas.token import TokenPayload
 
 
@@ -27,6 +29,28 @@ def _is_user_active(user: TokenPayload) -> bool:
     return user_record.status == UserStatus.ACTIVE
 
 
+def _load_project_model(project_id: str) -> Project:
+    with SessionLocal() as db:
+        project = ProjectRepository(db=db).get_project_by_id(project_id)
+
+    if project is None:
+        return Project(id=project_id, users=[])
+
+    return project
+
+
+def _load_user_project_model(user_id: str, project_id: str) -> UserProject | None:
+    with SessionLocal() as db:
+        user_project = UserProjectRepository(db=db).get_user_type_for_project(
+            user_id, project_id
+        )
+
+    if user_project is None:
+        return None
+
+    return user_project
+
+
 class Action(StrEnum):
     view = "view"
     search = "search"
@@ -36,6 +60,12 @@ class Action(StrEnum):
 
     # Special action for flushing access to a project, which is different from delete
     flush = "flush"
+
+    # Special operations for uploads
+    validate = "validate"
+    process = "process"
+    insert = "insert"
+    table = "table"
 
 
 CheckPermission = bool | Callable[[TokenPayload, Model | None], bool]
@@ -82,7 +112,7 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                 model is not None
                 and any(
                     up.project_id == model.id and up.user_id == user.id
-                    for up in getattr(model, "users", [])
+                    for up in getattr(_load_project_model(model), "users", [])
                 )
             ),
             Action.search: False,
@@ -92,8 +122,8 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                 and any(
                     up.project_id == model.id
                     and up.user_id == user.id
-                    and up.role in (UserProjectType.OWNER, UserProjectType.SHARED)
-                    for up in getattr(model, "users", [])  # up: UserProject
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
                 )
             ),
             Action.delete: False,
@@ -102,24 +132,49 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                 and any(
                     up.project_id == model.id
                     and up.user_id == user.id
-                    and up.role == UserProjectType.OWNER
-                    for up in getattr(model, "users", [])  # up: UserProject
+                    and up.role in {UserProjectType.OWNER}
+                    for up in getattr(_load_project_model(model), "users", [])
                 )
             ),
         },
         ModelKeys.user_project: {
             Action.view: lambda user, model: (
-                model is not None and model.user_id == user.id
+                model is not None
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and str(repo_model.user_id) == user.id
             ),
             Action.create: lambda user, model: (
                 model is not None
-                and model.user_id == user.id
-                and model.role == UserProjectType.OWNER
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and str(repo_model.user_id) == user.id
+                and repo_model.role in {UserProjectType.OWNER}
             ),
             Action.update: lambda user, model: (
                 model is not None
-                and model.user_id == user.id
-                and model.role == UserProjectType.OWNER
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and str(repo_model.user_id) == user.id
+                and repo_model.role in {UserProjectType.OWNER}
             ),
             # The only way a user can delete a project record is if the owner of the project
             # deletes all users of the project effectively leaving the project without any users,
@@ -129,7 +184,121 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.delete: lambda user, model: (
                 model is not None
                 and model.user_id == user.id
-                and model.role in (UserProjectType.OWNER)
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and repo_model.role in {UserProjectType.OWNER}
+            ),
+        },
+        ModelKeys.cache: {
+            Action.view: False,
+            Action.search: False,
+            Action.create: False,
+            Action.update: False,
+            Action.delete: False,
+            Action.flush: False,
+        },
+        ModelKeys.schemas: {
+            Action.view: lambda user, model: (  # model: UserProject
+                model is not None
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and user.id == str(repo_model.user_id)
+            ),
+            Action.search: False,
+            Action.create: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
+            ),
+            Action.update: lambda user, model: (  # model: UserProject
+                model is not None
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and user.id == str(repo_model.user_id)
+                and repo_model.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+            ),
+            Action.delete: lambda user, model: (  # model: UserProject
+                model is not None
+                and (
+                    (
+                        repo_model := _load_user_project_model(
+                            str(model.user_id), str(model.project_id)
+                        )
+                    )
+                    is not None
+                )
+                and user.id == str(repo_model.user_id)
+                and repo_model.role in {UserProjectType.OWNER}
+            ),
+        },
+        ModelKeys.task: {
+            Action.view: False,
+            Action.search: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id and up.user_id == user.id
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
+            ),
+        },
+        ModelKeys.upload: {
+            Action.validate: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
+            ),
+            Action.process: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
+            ),
+            Action.insert: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
+            ),
+            Action.table: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    up.project_id == model.id
+                    and up.user_id == user.id
+                    and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
+                    for up in getattr(_load_project_model(model), "users", [])
+                )
             ),
         },
     },
@@ -155,6 +324,31 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.create: True,
             Action.update: True,
             Action.delete: True,
+        },
+        ModelKeys.cache: {
+            Action.view: True,
+            Action.search: True,
+            Action.create: True,
+            Action.update: True,
+            Action.delete: True,
+            Action.flush: True,
+        },
+        ModelKeys.schemas: {
+            Action.view: True,
+            Action.search: True,
+            Action.create: True,
+            Action.update: True,
+            Action.delete: True,
+        },
+        ModelKeys.task: {
+            Action.view: True,
+            Action.search: True,
+        },
+        ModelKeys.upload: {
+            Action.validate: True,
+            Action.process: True,
+            Action.insert: True,
+            Action.table: True,
         },
     },
 }

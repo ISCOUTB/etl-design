@@ -12,20 +12,28 @@ via gRPC, providing immediate responses without message queue overhead.
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from jsonschema import Draft7Validator, SchemaError
 from proto_utils.database import dtypes
 
-from src.api.deps import DatabaseClientDep
-from src.services.schemas import SchemaService
+from src import models
+from src.api.deps import CurrentUser, DatabaseClientDep
+from src.exceptions import (
+    ForbiddenException,
+    InvalidJsonSchemaException,
+    SchemaNotFoundException,
+    SchemaNotProvidedException,
+)
+from src.services import Action, ModelKeys, PermissionService, SchemaService
 
 router = APIRouter()
 
 
-@router.post("/{import_name}")
+@router.post("/{project_id}")
 async def create_or_update_schema(
+    current_user: CurrentUser,
     database_client: DatabaseClientDep,
-    import_name: str,
+    project_id: str,
     schema: Dict[str, Any],
 ) -> dtypes.ApiResponse:
     """
@@ -48,22 +56,29 @@ async def create_or_update_schema(
         - 500: Database operation failed
 
     Raises:
-        HTTPException: If import_name is empty or schema validation fails.
+        AppException: If import_name is empty or schema validation fails.
     """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.create,
+        model_key=ModelKeys.schemas,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
 
     if not schema:
-        raise HTTPException(400, "schema data must be provided.")
+        raise SchemaNotProvidedException()
 
     try:
         # Create and validate the schema
-        Draft7Validator.check_schema(schema)  # This will raise SchemaError if invalid
+        # This will raise SchemaError if invalid
+        Draft7Validator.check_schema(schema)
 
         # Save to database
         db_response = SchemaService.save_schema(
             schema=schema,
-            import_name=import_name,
+            import_name=project_id,
             database_client=database_client,
         )
 
@@ -71,29 +86,27 @@ async def create_or_update_schema(
         response = SchemaService.map_db_response_to_api(
             db_response=db_response,
             operation="save",
-            import_name=import_name,
+            import_name=project_id,
         )
 
         return response
 
-    except SchemaError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid JSON schema: {str(e)}",
-        )
+    except SchemaError:
+        raise InvalidJsonSchemaException()
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to save schema: {str(e)}",
-            data={"import_name": import_name},
+            data={"import_name": project_id},
         )
 
 
-@router.get("/{import_name}")
+@router.get("/{project_id}", response_model=dtypes.ApiResponse)
 async def get_schema(
+    current_user: CurrentUser,
     database_client: DatabaseClientDep,
-    import_name: str,
+    project_id: str,
 ) -> dtypes.ApiResponse:
     """
     Retrieve the active schema for a given import name.
@@ -103,7 +116,7 @@ async def get_schema(
 
     Args:
         database_client: Database client dependency for MongoDB operations.
-        import_name: Unique identifier for the schema to retrieve.
+        project_id: Unique identifier for the schema to retrieve.
 
     Returns:
         ApiResponse with:
@@ -112,46 +125,48 @@ async def get_schema(
         - 500: Database operation failed
 
     Raises:
-        HTTPException: If import_name is empty.
+        AppException: If project_id is empty.
     """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
 
     try:
         # Retrieve schema from database
         db_response = database_client.mongo_find_jsonschema(
-            dtypes.MongoFindJsonSchemaRequest(import_name=import_name)
+            dtypes.MongoFindJsonSchemaRequest(import_name=project_id)
         )
 
         # Map database response to API response
         response = SchemaService.map_db_response_to_api(
             db_response=db_response,
             operation="get",
-            import_name=import_name,
+            import_name=project_id,
         )
-
-        # Raise HTTPException for 404 to match FastAPI conventions
-        if response["code"] == 404:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Schema '{import_name}' not found",
-            )
-
-        return response
-    except HTTPException:
-        raise
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to retrieve schema: {str(e)}",
-            data={"import_name": import_name},
+            data={"import_name": project_id},
         )
 
+    # Raise AppException for 404 to match FastAPI conventions
+    if response["code"] == 404:
+        raise SchemaNotFoundException()
 
-@router.delete("/{import_name}")
+    return response
+
+
+@router.delete("/{project_id}")
 async def delete_schema(
-    import_name: str,
+    project_id: str,
+    current_user: CurrentUser,
     database_client: DatabaseClientDep,
 ) -> dtypes.ApiResponse:
     """
@@ -172,15 +187,21 @@ async def delete_schema(
         - 500: Database operation failed
 
     Raises:
-        HTTPException: If import_name is empty or schema not found.
+        AppException: If import_name is empty or schema not found.
     """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.delete,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
 
     try:
         # Remove schema from database
         db_response = SchemaService.remove_schema(
-            import_name=import_name,
+            import_name=project_id,
             database_client=database_client,
         )
 
@@ -188,23 +209,18 @@ async def delete_schema(
         response = SchemaService.map_db_response_to_api(
             db_response=db_response,
             operation="remove",
-            import_name=import_name,
+            import_name=project_id,
         )
-
-        # Raise HTTPException for 404 to match FastAPI conventions
-        if response["code"] == 404:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Schema '{import_name}' not found",
-            )
-
-        return response
-    except HTTPException:
-        raise
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to remove schema: {str(e)}",
-            data={"import_name": import_name},
+            data={"import_name": project_id},
         )
+
+    # Raise AppException for 404 to match FastAPI conventions
+    if response["code"] == 404:
+        raise SchemaNotFoundException()
+
+    return response
