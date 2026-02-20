@@ -25,7 +25,7 @@ async def login(
 
 
 @router.post(
-    "sign-up",
+    "/sign-up",
     response_model=schemas.ResponseUserSchema,
     status_code=status.HTTP_201_CREATED,
 )
