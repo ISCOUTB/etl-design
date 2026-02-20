@@ -6,4 +6,10 @@ export default defineAppConfig({
             pongTimeout: 1000,
         },
     },
+    auth: {
+        validation: {
+            minPasswordLength: 8,
+            maxPasswordLength: 50,
+        },
+    },
 });

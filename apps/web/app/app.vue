@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    import "vue-sonner/style.css";
+
     const { finalizePendingLocaleChange } = useI18n();
 
     async function onBeforeEnter() {
@@ -9,6 +11,7 @@
 <template>
     <NuxtLayout>
         <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
+        <Toaster />
     </NuxtLayout>
 </template>
 

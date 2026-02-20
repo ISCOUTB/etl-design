@@ -5,6 +5,10 @@ const runtimeConfig = useRuntimeConfig();
 
 export default NuxtAuthHandler({
     secret: runtimeConfig.auth.secret,
+    pages: {
+        newUser: "/auth/sign-up",
+        signIn: "/auth/sign-in",
+    },
     providers: [
         // @ts-expect-error https://auth.sidebase.io/guide/authjs/quick-start#configuration
         Credentials.default({

@@ -1,5 +1,59 @@
 {
     "layouts": {
         "title": "S.L.O.T.H"
+    },
+    "common": {
+        "validation": {
+            "required": "Field is required",
+            "min_length": "Must have at least {min} characters",
+            "max_length": "Must have a maximum length of {max} characters",
+            "password_mismatch": "Las contraseñas no coinciden"
+        }
+    },
+    "settings": {
+        "label": "Settings",
+        "color_mode": {
+            "label": "Color mode",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        },
+        "locale": {
+            "description": "Change Locale",
+            "changed_to": "Locale changed to {locale}"
+        }
+    },
+    "auth": {
+        "fields": {
+            "username": {
+                "label": "Username",
+                "placeholder": "Enter your username"
+            },
+            "email": {
+                "label": "Email",
+                "placeholder": "Enter your email"
+            },
+            "password": {
+                "label": "Password",
+                "placeholder": "Enter your password"
+            },
+            "confirm_password": {
+                "label": "Confirm Password",
+                "placeholder": "Re-enter your password"
+            }
+        },
+        "sign_up": {
+            "title": "Create Account",
+            "subtitle": "Enter your details to get started.",
+            "submit": "Create Account",
+            "has_account": "Already have an account?",
+            "sign_in_link": "Sign In"
+        },
+        "validation": {
+            "name_min": "Name must have at least {length} characters",
+            "email_invalid": "Please type a valid email",
+            "password_min": "Password must have at least {length} characters",
+            "passwords_mismatch": "Passwords don't match"
+        }
     }
 }

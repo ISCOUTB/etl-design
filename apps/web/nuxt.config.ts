@@ -23,6 +23,7 @@ export default defineNuxtConfig({
         "@vite-pwa/nuxt",
         "@nuxtjs/i18n",
         "@sidebase/nuxt-auth",
+        "@vee-validate/nuxt",
     ],
     imports: {
         dirs: [
@@ -31,6 +32,10 @@ export default defineNuxtConfig({
             "~~/shared/utils/**/!(*test|*.spec).{ts,js,mjs,mts}",
         ],
     },
+    components: [
+        { path: "~/components/", extensions: [".vue"] },
+        { path: "~/components/common", pathPrefix: false, extensions: [".vue"] },
+    ],
     ignore: ["**/*.test.ts", "**/*.spec.ts"],
     runtimeConfig: {
         auth: {
@@ -128,6 +133,15 @@ export default defineNuxtConfig({
         },
         globalAppMiddleware: true,
     },
+    veeValidate: {
+        autoImports: true,
+        componentNames: {
+            Field: "VeeField",
+            FieldArray: "VeeFieldArray",
+            Form: "VeeForm",
+            ErrorMessage: "VeeErrorMessage",
+        },
+    },
 
     ///////////////////////////////////////////////////////
     // FLAGS
@@ -140,6 +154,9 @@ export default defineNuxtConfig({
     nitro: {
         experimental: {
             websocket: true,
+        },
+        devProxy: {
+            "/sw.js": { target: "/sw.js" },
         },
     },
 });
