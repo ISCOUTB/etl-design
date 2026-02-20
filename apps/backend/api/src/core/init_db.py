@@ -1,25 +1,23 @@
 from sqlalchemy.orm import Session
 
-import src.schemas as schemas
-from src.controllers.users import ControllerUsers
+from src import models, schemas
 from src.core.config import settings
 from src.core.database_sql import SessionLocal
+from src.repositories import UserRepository
 
 
 def init_db(db: Session) -> None:
-    superuser_search = schemas.users.SearchUser(
-        username=settings.FIRST_SUPERUSER, rol="admin"
-    )
-    user_db = ControllerUsers.get_user_rol(superuser_search, db)
-
+    repo = UserRepository(db=db)
+    user_db = repo.get_by_email(settings.FIRST_SUPERUSER_EMAIL)
     if user_db is None:
-        create_super_user = schemas.users.CreateUser(
-            username=settings.FIRST_SUPERUSER,
-            rol="admin",
+        super_user_schema = schemas.CreateUserSchema(
+            name=settings.FIRST_SUPERUSER_NAME,
+            email=settings.FIRST_SUPERUSER_EMAIL,
             password=settings.FIRST_SUPERUSER_PASSWORD,
+            role=models.UserRole.SUDO,
         )
-
-        ControllerUsers.create_user(create_super_user, db, True)
+        repo.create_user(super_user_schema)
+        db.commit()
 
 
 if __name__ == "__main__":

@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     AUTH_INFO: str
     SECRET_KEY: str = secrets.token_urlsafe(32)
 
-    FIRST_SUPERUSER: str
+    FIRST_SUPERUSER_NAME: str
+    FIRST_SUPERUSER_EMAIL: str
     FIRST_SUPERUSER_PASSWORD: str
 
     # RabbitMQ Configuration

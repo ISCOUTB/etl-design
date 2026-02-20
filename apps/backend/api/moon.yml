@@ -11,6 +11,8 @@ toolchain:
 
 tasks:
     run:
+        deps:
+            - prestart
         command: uv
         args:
             - run
@@ -34,6 +36,15 @@ tasks:
 
     test:
         command: echo "No tests defined"
+
+    prestart:
+        command: bash
+        args:
+            - scripts/prestart.sh
+        local: true
+        options:
+            runFromWorkspaceRoot: false
+            cache: false
 
     docker-build:
         command: docker
