@@ -210,7 +210,7 @@ class Publisher:
         self,
         routing_key: str,
         file_data: bytes,
-        import_name: str,
+        project_id: str,
         metadata: Metadata,
         task: ValidationTasks,
         insert: bool = False,
@@ -227,7 +227,7 @@ class Publisher:
         Args:
             routing_key (str): The routing key to route the message to the appropriate queue.
             file_data (bytes): Raw binary data of the file to be validated.
-            import_name (str): Schema identifier to validate the file against.
+            project_id (str): Schema identifier to validate the file against.
             metadata (Metadata): Additional metadata including filename, priority, and
                 other processing parameters.
             task (Validation Tasks): Task type for the validation request (e.g.,
@@ -247,7 +247,7 @@ class Publisher:
             - id: Unique task identifier (UUID)
             - task: Task type (e.g., "sample_validation", "add_data")
             - file_data: Hexadecimal-encoded file content
-            - import_name: Schema identifier for validation
+            - project_id: Schema identifier for validation
             - metadata: Additional processing metadata
 
         Raises:
@@ -271,7 +271,7 @@ class Publisher:
                 id=task_id,
                 task=task,
                 file_data=file_data.hex(),
-                import_name=import_name,
+                project_id=project_id,
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
@@ -302,7 +302,7 @@ class Publisher:
         self,
         routing_key: str,
         file_data: bytes,
-        import_name: str,
+        project_id: str,
         metadata: Metadata,
         task: InsertionTasks,
         db_uri: str,
@@ -319,7 +319,7 @@ class Publisher:
         Args:
             routing_key (str): The routing key to route the message to the appropriate queue.
             file_data (bytes): Raw binary data of the file to be inserted.
-            import_name (str): Schema identifier to insert the file against.
+            project_id (str): Schema identifier to insert the file against.
             metadata (Metadata): Additional metadata including filename, priority, and
                 other processing parameters.
             task (InsertionTasks): Task type for the insertion request (e.g.,
@@ -335,7 +335,7 @@ class Publisher:
                 id=task_id,
                 task=task,
                 file_data=file_data.hex(),
-                import_name=import_name,
+                project_id=project_id,
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,

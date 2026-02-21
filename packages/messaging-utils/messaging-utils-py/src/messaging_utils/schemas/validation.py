@@ -9,7 +9,7 @@ class ValidationMessage(TypedDict):
     id: str
     task: ValidationTasks
     file_data: str
-    import_name: str
+    project_id: str
     metadata: Metadata
     date: str
     extra: Dict[str, str]

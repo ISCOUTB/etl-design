@@ -35,6 +35,15 @@ async def validate(
     """
     Upload a spreadsheet file in order to be validated.
     """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.validate,
+        model_key=ModelKeys.upload,
+        model=Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     if not force_new and (
         cached_response := database_client.get_tasks_by_import_name(
             dtypes.GetTasksByImportNameRequest(
@@ -63,7 +72,7 @@ async def validate(
         task_id = publisher.publish_validation_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
-            import_name=project_id,
+            project_id=project_id,
             metadata=metadata,
             task="sample_validation",
         )
@@ -72,7 +81,7 @@ async def validate(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id, "import_name": project_id},
+            data={"task_id": task_id, "project_id": project_id},
         )
 
     except Exception as e:
@@ -138,7 +147,7 @@ async def insert(
         task_id = publisher.publish_insertion_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
             file_data=file_content,
-            import_name=project_id,
+            project_id=project_id,
             metadata=metadata,
             task="sample_insertion",
             overwrite=overwrite,
@@ -149,7 +158,7 @@ async def insert(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id, "import_name": project_id},
+            data={"task_id": task_id, "project_id": project_id},
         )
 
     except Exception as e:
@@ -178,7 +187,7 @@ async def process(
     database_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
-    import_name: Annotated[str, Form()],
+    project_id: Annotated[str, Form()],
     overwrite: bool = False,
 ):
     """Validates and inserts data from a spreadsheet file into the database.
@@ -188,7 +197,7 @@ async def process(
         user=current_user,
         action=Action.process,
         model_key=ModelKeys.upload,
-        model=Project(id=import_name),
+        model=Project(id=project_id),
     )
     if not has_permission:
         raise ForbiddenException()
@@ -208,14 +217,14 @@ async def process(
     )
 
     # Fetch db credentials of the project
-    db_uri = project_service.get_project_db_uri(import_name)
+    db_uri = project_service.get_project_db_uri(project_id)
 
     # Publish in RabbitMQ
     try:
         task_id = publisher.publish_validation_request(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
-            import_name=import_name,
+            project_id=project_id,
             metadata=metadata,
             task="sample_validation",
             insert=True,
@@ -227,7 +236,7 @@ async def process(
             status="accepted",
             code=202,
             message="Validation request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
+            data={"task_id": task_id, "project_id": project_id},
         )
 
     except Exception as e:
