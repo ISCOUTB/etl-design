@@ -12,10 +12,9 @@ from pika.exceptions import (
     AMQPConnectionError,
     ChannelClosedByBroker,
 )
-from proto_utils.database import dtypes
 
 from src.core.config import settings
-from src.core.database_client import DatabaseClient, get_database_client
+from src.core.database_client import get_database_client
 from src.schemas.workers import ResultsMessage
 from src.utils import create_component_logger, get_datetime_now
 from src.workers.utils import update_task_status
