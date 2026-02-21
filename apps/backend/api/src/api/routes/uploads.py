@@ -283,7 +283,10 @@ async def create_table(
                         spreadsheet.content_type,
                     )
                 },
-                data={"table_name": project_id, "dtypes_str": dtypes},
+                data={
+                    "table_name": f"project_{project_id.replace('-', '_')}",
+                    "dtypes_str": dtypes,
+                },
                 params={"fill_spaces": fill_spaces, "limit": 5},
             )
 
@@ -298,7 +301,7 @@ async def create_table(
     with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
         cur = conn.cursor()
         for _, sql in sql_per_sheet.items():
-            cur.execute(sql.replace("-", "_"))
+            cur.execute(sql)
         conn.commit()
 
     return {"message": "Table created successfully", "sql_per_sheet": sql_per_sheet}
