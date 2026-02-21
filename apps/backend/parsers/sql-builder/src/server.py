@@ -101,7 +101,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main_debug(main, settings.SQL_BUILDER_DEBUG))
-    except KeyboardInterrupt:
-        logger.info("[MAIN] Application terminated by user")
+    if settings.SQL_BUILDER_DEBUG:
+        try:
+            asyncio.run(main_debug(main))
+        except KeyboardInterrupt:
+            logger.info("[MAIN] Application terminated by user")
+    else:
+        main()

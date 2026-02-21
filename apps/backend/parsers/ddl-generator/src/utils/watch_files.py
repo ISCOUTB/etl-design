@@ -9,15 +9,10 @@ async def callback(changes):
     print("changes detected:", changes)
 
 
-async def main_debug(
-    main_function: Callable[[], None], debug_mode: bool = False
-) -> None:
-    if debug_mode:
-        await arun_process(
-            "./src",
-            target=main_function,
-            callback=callback,
-            watch_filter=PythonFilter(),
-        )
-    else:
-        main_function()
+async def main_debug(main_function: Callable[[], None]) -> None:
+    await arun_process(
+        "./src",
+        target=main_function,
+        callback=callback,
+        watch_filter=PythonFilter(),
+    )

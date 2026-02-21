@@ -743,8 +743,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main_debug(main, settings.DATABASE_CONNECTION_DEBUG))
-    except KeyboardInterrupt:
-        logger.info("[MAIN] Application terminated by user")
-        get_connection_manager().close_all()
+    if settings.DATABASE_CONNECTION_DEBUG:
+        try:
+            asyncio.run(main_debug(main))
+        except KeyboardInterrupt:
+            logger.info("[MAIN] Application terminated by user")
+    else:
+        main()

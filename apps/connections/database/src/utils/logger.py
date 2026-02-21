@@ -52,7 +52,8 @@ def setup_logger() -> logging.Logger:
 
     # Create main logger instance
     logger = logging.getLogger("Messaging Server")
-    logger.setLevel(logging.ERROR)
+    # Default to INFO so startup logs appear when not in debug mode
+    logger.setLevel(logging.INFO)
 
     # Adjust log level based on debug configuration
     if settings.DATABASE_CONNECTION_DEBUG:

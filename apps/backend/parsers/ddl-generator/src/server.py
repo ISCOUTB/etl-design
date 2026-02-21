@@ -143,7 +143,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main_debug(main, settings.DDL_GENERATOR_DEBUG))
-    except KeyboardInterrupt:
-        logger.info("[MAIN] Application terminated by user")
+    if settings.DDL_GENERATOR_DEBUG:
+        try:
+            asyncio.run(main_debug(main))
+        except KeyboardInterrupt:
+            logger.info("[MAIN] Application terminated by user")
+    else:
+        main()
