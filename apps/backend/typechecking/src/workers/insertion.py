@@ -22,6 +22,7 @@ import time
 
 import httpx
 import pika
+import psycopg2
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
@@ -286,7 +287,7 @@ class InsertionWorker:
 
         file_bytes = bytes.fromhex(message["file_data"])
         filename = message["metadata"]["filename"]
-        table_name = message["import_name"]
+        table_name = message["project_id"]
         overwrite = message["overwrite"]
 
         update_task_status(
@@ -312,7 +313,7 @@ class InsertionWorker:
                 )
 
             response.raise_for_status()
-            data = response.json()
+            sql_per_sheet = response.json()
 
             update_task_status(
                 database_client=db_client,
@@ -323,7 +324,6 @@ class InsertionWorker:
                 data={"update_date": get_datetime_now()},
             )
 
-            return InsertionResult(result=data, status="success")
         except Exception as e:
             logger.error(f"Error processing file for task {task_id}: {e}")
             update_task_status(
@@ -336,8 +336,13 @@ class InsertionWorker:
             )
             return InsertionResult(result={}, status="failed")
 
-        # Ideally, here will be executed the resultant SQL, but we haven't defined how...
-        # so for now, we will just return the generated SQL as the result
+        with psycopg2.connect(message["db_uri"]) as conn:
+            cur = conn.cursor()
+            for _, sql in sql_per_sheet.items():
+                cur.execute(sql)
+            conn.commit()
+
+        return InsertionResult(result=sql_per_sheet, status="success")
 
     def _publish_result(
         self, task_id: str, result: InsertionResult, db_client: DatabaseClient
