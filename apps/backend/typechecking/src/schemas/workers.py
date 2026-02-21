@@ -56,5 +56,12 @@ class DataValidated(TypedDict):
 
 
 class InsertionResult(TypedDict):
-    result: Dict[str, str]
+    task_id: str
+    results: Dict[str, str]
     status: Literal["success", "failed"]
+
+
+class ResultsMessage(TypedDict):
+    task_id: str
+    results: Dict[str, str]
+    status: str

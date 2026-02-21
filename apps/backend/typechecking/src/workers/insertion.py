@@ -334,7 +334,7 @@ class InsertionWorker:
                 task=self.TASK,
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
-            return InsertionResult(result={}, status="failed")
+            return InsertionResult(task_id=task_id, results={}, status="failed")
 
         with psycopg2.connect(message["db_uri"]) as conn:
             cur = conn.cursor()
@@ -342,7 +342,7 @@ class InsertionWorker:
                 cur.execute(sql)
             conn.commit()
 
-        return InsertionResult(result=sql_per_sheet, status="success")
+        return InsertionResult(task_id=task_id, results=sql_per_sheet, status="success")
 
     def _publish_result(
         self, task_id: str, result: InsertionResult, db_client: DatabaseClient
