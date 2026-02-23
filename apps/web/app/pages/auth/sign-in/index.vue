@@ -51,8 +51,10 @@
                 }
 
                 if (response.ok) {
-                    toast.success($t("auth.success.sign_in.title"), {
-                        description: $t("auth.success.sign_in.description"),
+                    toast.success($t("auth.events.user_logged.title"), {
+                        description: $t("auth.events.user_logged.description", {
+                            email: values.email,
+                        }),
                     });
 
                     router.push(callbackUrl.value);
@@ -93,6 +95,7 @@
                                         id="email"
                                         v-bind="field"
                                         v-model="email"
+                                        type="email"
                                         :placeholder="$t('auth.fields.email.placeholder')"
                                         autocomplete="email"
                                         :aria-invalid="!!errors.length"

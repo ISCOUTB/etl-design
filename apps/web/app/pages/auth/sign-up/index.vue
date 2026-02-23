@@ -34,7 +34,6 @@
             body: formData,
         })
             .then((response) => {
-                console.warn(response);
                 const parsedResponse = UserResponse.safeParse(response);
 
                 if (!parsedResponse.success) {
@@ -104,6 +103,7 @@
                                     </FieldLabel>
                                     <Input
                                         id="email"
+                                        type="email"
                                         v-bind="field"
                                         :placeholder="$t('auth.fields.email.placeholder')"
                                         autocomplete="email"
