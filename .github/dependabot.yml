@@ -1,6 +1,7 @@
 version: 2
 updates:
     - package-ecosystem: npm
+      target-branch: development
       schedule:
           interval: weekly
       directory: /
@@ -12,6 +13,7 @@ updates:
                   - "*"
 
     - package-ecosystem: uv
+      target-branch: development
       schedule:
           interval: weekly
       directories:
