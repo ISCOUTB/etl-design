@@ -1,6 +1,6 @@
 {
     "devDependencies": {
         "@sloth/tools-eslint": "workspace:*",
-        "eslint": "^9.39.2"
+        "eslint": "^10.0.1"
     }
 }
