@@ -5,6 +5,11 @@
     definePageMeta({
         title: "auth.sign_up.title",
         auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
+        i18n: {
+            paths: {
+                en: "/auth/sign-up",
+            },
+        },
     });
 
     const { SignUpSchema } = useSignUpSchema();

@@ -13,7 +13,7 @@ export default function () {
                         {
                             label: "projects.create.title",
                             icon: PlusSquare,
-                            to: () => "/",
+                            to: () => "/projects/create",
                         },
                         {
                             label: "projects.view.title",

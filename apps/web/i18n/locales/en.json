@@ -97,7 +97,34 @@
     "projects": {
         "title": "Projects",
         "create": {
-            "title": "Create"
+            "title": "Create",
+            "header": {
+                "title": "Create Project",
+                "description": "Set up a new project and configure the database connection."
+            },
+            "sections": {
+                "general": {
+                    "title": "General Information"
+                },
+                "database": {
+                    "title": "Database Information"
+                }
+            },
+            "fields": {
+                "name": {
+                    "label": "Project Name",
+                    "placeholder": "My Awesome Project",
+                    "description": "This is the display name for your project."
+                },
+                "description": {
+                    "label": "Description",
+                    "description": "A brief description of your project."
+                },
+                "db_host": {
+                    "label": "Provider",
+                    "description": "Your database provider"
+                }
+            }
         },
         "view": {
             "title": "My Projects"

@@ -4,6 +4,11 @@
     definePageMeta({
         title: "auth.sign_in.title",
         auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
+        i18n: {
+            paths: {
+                en: "/auth/sign-in",
+            },
+        },
     });
 
     const { SignInSchema } = useSignInSchema();
@@ -72,7 +77,7 @@
                     <CardTitle
                         class="text-center font-mono text-3xl font-bold tracking-[0.2em] text-foreground sm:text-4xl"
                     >
-                        S.L.O.T.H
+                        {{ $t("layouts.title") }}
                     </CardTitle>
                     <CardDescription class="w-full pt-3 text-center">
                         <h2 class="text-xl font-semibold uppercase tracking-wide text-foreground">
