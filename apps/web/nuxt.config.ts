@@ -17,13 +17,14 @@ export default defineNuxtConfig({
     },
     modules: [
         "@nuxt/eslint",
-        "shadcn-nuxt",
-        "@vueuse/nuxt",
-        "@nuxtjs/color-mode",
         "@vite-pwa/nuxt",
         "@nuxtjs/i18n",
+        "@nuxt/image",
+        "@nuxtjs/color-mode",
+        "@vueuse/nuxt",
         "@sidebase/nuxt-auth",
         "@vee-validate/nuxt",
+        "shadcn-nuxt",
     ],
     imports: {
         dirs: [

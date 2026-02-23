@@ -12,4 +12,9 @@ export default defineAppConfig({
             maxPasswordLength: 50,
         },
     },
+    composables: {
+        useModal: {
+            maxStorageLength: 3,
+        },
+    },
 });
