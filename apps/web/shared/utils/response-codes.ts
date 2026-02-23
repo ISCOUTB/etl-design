@@ -4,12 +4,22 @@ export const ResponseCodesRecord = {
     },
     Server: {
         UnAuthorized: "server:unauthorized",
+        UnknownError: "server:unknown-error",
         Auth: {
             SignIn: {
                 BadPayload: "server:auth:sign-in:bad-payload",
                 InvalidCredentials: "error:invalid-credentials",
-                UserNotFound: "",
+                UserNotFound: "error:user-not-found",
             },
+            SignUp: {
+                EmailAlreadyInUse: "error:user-already-exists",
+            },
+            Validation: {
+                InvalidUserData: "error:invalid-user-data",
+                InvalidEmailFormat: "error:invalid-email-format",
+            },
+            TokenExpired: "error:token-expired",
+            UnAuthenticated: "error:unauthenticated",
         },
     },
 } as const;

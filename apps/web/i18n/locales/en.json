@@ -8,6 +8,9 @@
             "min_length": "Must have at least {min} characters",
             "max_length": "Must have a maximum length of {max} characters",
             "password_mismatch": "Passwords do not match"
+        },
+        "actions": {
+            "cancel": "Cancel"
         }
     },
     "settings": {
@@ -108,22 +111,50 @@
                 },
                 "database": {
                     "title": "Database Information"
+                },
+                "missing_args": {
+                    "text": "Keep in mind that the database parameters are all optional. In case you wan't to apply the changes directly, you must update your project first with the appropiate credentials."
                 }
             },
             "fields": {
                 "name": {
                     "label": "Project Name",
                     "placeholder": "My Awesome Project",
-                    "description": "This is the display name for your project."
+                    "description": "This is the display name for your project"
                 },
                 "description": {
                     "label": "Description",
-                    "description": "A brief description of your project."
+                    "placeholder": "My Business Project",
+                    "description": "A brief description of your project"
+                },
+                "provider": {
+                    "label": "Provider",
+                    "placeholder": "AWS",
+                    "description": "Your database provider"
                 },
                 "db_host": {
-                    "label": "Provider",
-                    "description": "Your database provider"
+                    "label": "Host"
+                },
+                "db_port": {
+                    "label": "Port"
+                },
+                "db_user": {
+                    "label": "Username"
+                },
+                "db_password": {
+                    "label": "Password"
+                },
+                "db_name": {
+                    "label": "Database Name",
+                    "placeholder": "MyDatabaseName"
+                },
+                "db_params": {
+                    "label": "Extra Parameters",
+                    "description": "Extra parameters required to connect to your database"
                 }
+            },
+            "validation": {
+                "name_empty": "Project Name cannot be empty"
             }
         },
         "view": {

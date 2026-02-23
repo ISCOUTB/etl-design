@@ -1,6 +1,8 @@
 import { Boxes, FolderOpen, PlusSquare } from "lucide-vue-next";
 
 export default function () {
+    const { $localeRoute } = useNuxtApp();
+
     const SIDEBAR_CONFIG: Components.Sidebar.Group[] = [
         {
             items: [
@@ -13,12 +15,12 @@ export default function () {
                         {
                             label: "projects.create.title",
                             icon: PlusSquare,
-                            to: () => "/projects/create",
+                            to: () => $localeRoute({ path: "/projects/create" }),
                         },
                         {
                             label: "projects.view.title",
                             icon: Boxes,
-                            to: () => "/",
+                            to: () => $localeRoute({ path: "/" }),
                         },
                     ],
                 },

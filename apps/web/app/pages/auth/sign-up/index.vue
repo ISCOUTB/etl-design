@@ -1,5 +1,8 @@
 <script setup lang="ts">
+    import { ResponseCodesRecord } from "#shared/utils/response-codes";
+    import { ApiErrorSchema } from "#shared/utils/schemas/api";
     import { UserResponse } from "#shared/utils/schemas/auth";
+    import { FetchError } from "ofetch";
     import { toast } from "vue-sonner";
 
     definePageMeta({
@@ -23,6 +26,7 @@
         },
     });
 
+    const errorToast = useServerErrorToast();
     const api = useApi();
     const { $localeRoute } = useNuxtApp();
     const router = useRouter();
@@ -58,7 +62,20 @@
                     }),
                 );
             })
-            .catch((error) => console.error(error))
+            .catch((error) => {
+                if (error instanceof FetchError) {
+                    const parsedError = ApiErrorSchema.safeParse(error.data);
+                    if (!parsedError.success) {
+                        errorToast.handle(ResponseCodesRecord.Server.UnknownError);
+
+                        return;
+                    }
+
+                    // TODO: ensure this works properly
+                    console.warn(parsedError);
+                    errorToast.handle(parsedError.data.error);
+                }
+            })
             .finally(() => (loading.value = false));
     });
 </script>
