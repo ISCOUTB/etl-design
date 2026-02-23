@@ -9,10 +9,12 @@
 </script>
 
 <template>
-    <NuxtLayout>
-        <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
-        <Toaster />
-    </NuxtLayout>
+    <div>
+        <NuxtLayout>
+            <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
+            <Toaster />
+        </NuxtLayout>
+    </div>
 </template>
 
 <style>

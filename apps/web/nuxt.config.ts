@@ -94,7 +94,18 @@ export default defineNuxtConfig({
             display_override: ["window-controls-overlay"],
             start_url: "/",
             scope: "/",
-            icons: [],
+            icons: [
+                {
+                    src: "/icon-512x512.jpeg",
+                    sizes: "512x512",
+                    type: "image/jpeg",
+                },
+                {
+                    src: "/icon-192x192.jpeg",
+                    sizes: "192x192",
+                    type: "image/jpeg",
+                },
+            ],
             screenshots: [],
         },
         workbox: {

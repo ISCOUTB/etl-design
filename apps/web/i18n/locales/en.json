@@ -7,7 +7,7 @@
             "required": "Field is required",
             "min_length": "Must have at least {min} characters",
             "max_length": "Must have a maximum length of {max} characters",
-            "password_mismatch": "Las contraseñas no coinciden"
+            "password_mismatch": "Passwords do not match"
         }
     },
     "settings": {
@@ -56,6 +56,9 @@
             "create_account": "Don't have an account?",
             "sign_up_link": "Sign Up"
         },
+        "sign_out": {
+            "title": "Sign out"
+        },
         "validation": {
             "name_min": "Name must have at least {length} characters",
             "email_invalid": "Please type a valid email",
@@ -70,6 +73,9 @@
             "user_logged": {
                 "title": "User Logged!",
                 "description": "Email: {email}"
+            },
+            "user_signout": {
+                "title": "Session closed"
             }
         }
     },
@@ -86,6 +92,15 @@
                 "title": "Account was not found",
                 "description": "Did you type it correctly?"
             }
+        }
+    },
+    "projects": {
+        "title": "Projects",
+        "create": {
+            "title": "Create"
+        },
+        "view": {
+            "title": "My Projects"
         }
     }
 }

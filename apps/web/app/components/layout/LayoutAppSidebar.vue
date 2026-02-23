@@ -1,7 +1,7 @@
 <script setup lang="ts">
     import type { DropdownMenuContentProps } from "reka-ui";
     import type { SidebarProps } from "@/components/ui/sidebar";
-    import { Box, MoreHorizontal } from "lucide-vue-next";
+    import { MoreHorizontal } from "lucide-vue-next";
     import { useSidebar } from "@/components/ui/sidebar";
 
     const props = withDefaults(defineProps<SidebarProps>(), {
@@ -33,33 +33,7 @@
         }));
     }
 
-    const sidebarContent = computed<Components.Sidebar.Group[]>(() => [
-        {
-            items: [
-                {
-                    kind: "collapsible",
-                    label: "common.app_title",
-                    icon: Box,
-                    defaultActive: true,
-                    collapsibleItems: [
-                        {
-                            label: "clr.consumables",
-                            action: () => {},
-                        },
-                        {
-                            label: "clr.spare_parts",
-                            action: () => {},
-                        },
-                        {
-                            label: "clr.lubricants",
-                            action: () => {},
-                        },
-                    ],
-                },
-            ],
-        },
-    ]);
-
+    const { sidebarContent } = useSidebarConfig();
     const filteredGroups = computed(() => filterSidebarGroups(sidebarContent.value));
 </script>
 
@@ -73,13 +47,11 @@
                             <div
                                 class="aspect-square size-8 p-1 rounded-lg bg-muted dark:bg-gray-300"
                             >
-                                <NuxtImg src="/pwa-512x512.png" />
+                                <NuxtImg src="/icon.jpeg" />
                             </div>
                             <div class="grid flex-1 text-left text-sm leading-tight">
-                                <span class="truncate font-medium">{{
-                                    $t("common.app_title")
-                                }}</span>
-                                <span class="truncate text-xs">Cotecmar</span>
+                                <span class="truncate font-medium">{{ $t("layouts.title") }}</span>
+                                <span class="truncate text-xs">Framework</span>
                             </div>
                         </NuxtLink>
                     </SidebarMenuButton>

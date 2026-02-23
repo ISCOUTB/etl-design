@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { DropdownMenuContentProps } from "reka-ui";
     import { ChevronsUpDown } from "lucide-vue-next";
+    import { toast } from "vue-sonner";
     import { useSidebar } from "@/components/ui/sidebar";
 
     const { $localePath } = useNuxtApp();
@@ -31,14 +32,17 @@
     const items: Components.GenericDropdown.Item[][] = [
         [
             {
-                label: "auth.sign_out.label",
-                action: () =>
+                label: "auth.sign_out.title",
+                action: () => {
                     auth.signOut({
                         callbackUrl: $localePath({
                             path: "/auth/sign-in",
                             query: { email: auth.data.value?.user.email },
                         }),
-                    }),
+                    });
+
+                    toast.success($t("auth.events.user_signout.title"));
+                },
             },
         ],
     ];
