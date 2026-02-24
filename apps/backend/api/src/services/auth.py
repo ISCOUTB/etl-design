@@ -8,6 +8,7 @@ from src import models, schemas
 from src.core.config import settings
 from src.core.security import derive_key, verify_password
 from src.exceptions import (
+    EmailInUseException,
     InvalidCredentialsException,
     TokenExpiredException,
     UnauthenticatedException,
@@ -37,7 +38,7 @@ class AuthService:
     ) -> schemas.ResponseUserSchema:
         existing_user = self.user_repository.get_by_email(email)
         if existing_user:
-            raise InvalidCredentialsException("Email already registered")
+            raise EmailInUseException()
 
         try:
             user = self.user_repository.create_user(
