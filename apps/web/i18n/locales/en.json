@@ -150,11 +150,18 @@
                 },
                 "db_params": {
                     "label": "Extra Parameters",
+                    "placeholder": "sslmode=require&connect_timeout=10",
                     "description": "Extra parameters required to connect to your database"
                 }
             },
             "validation": {
                 "name_empty": "Project Name cannot be empty"
+            },
+            "events": {
+                "project_created": {
+                    "title": "New Project created",
+                    "description": "Name: {projectName}"
+                }
             }
         },
         "view": {

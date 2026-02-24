@@ -57,7 +57,7 @@
 
                 router.push(
                     $localeRoute({
-                        path: "/auth/sign-in",
+                        name: "auth-sign-in",
                         query: { email: parsedResponse.data.email },
                     }),
                 );
@@ -71,8 +71,6 @@
                         return;
                     }
 
-                    // TODO: ensure this works properly
-                    console.warn(parsedError);
                     errorToast.handle(parsedError.data.error);
                 }
             })
@@ -181,7 +179,7 @@
                             <FieldDescription>
                                 {{ $t("auth.sign_up.has_account") }}
                                 <NuxtLink
-                                    :to="$localePath({ path: '/auth/sign-in' })"
+                                    :to="$localeRoute({ name: 'auth-sign-in' })"
                                     class="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
                                 >
                                     {{ $t("auth.sign_up.sign_in_link") }}

@@ -15,12 +15,12 @@ export default function () {
                         {
                             label: "projects.create.title",
                             icon: PlusSquare,
-                            to: () => $localeRoute({ path: "/projects/create" }),
+                            to: () => $localeRoute({ name: "projects-create" }),
                         },
                         {
                             label: "projects.view.title",
                             icon: Boxes,
-                            to: () => $localeRoute({ path: "/" }),
+                            to: () => $localeRoute({ name: "index" }),
                         },
                     ],
                 },

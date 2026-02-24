@@ -21,5 +21,6 @@ declare module "next-auth/jwt" {
         id?: string;
         email?: string;
         name?: string;
+        role?: z.infer<typeof UserRole>;
     }
 }

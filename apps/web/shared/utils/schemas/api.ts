@@ -4,3 +4,15 @@ export const ApiErrorSchema = z.looseObject({
     error: z.string(),
     message: z.string(),
 });
+
+export const BaseProjectSchema = z.object({
+    name: z.string().min(1),
+    description: z.string().nullable().default(null),
+    provider: z.string().nullable().default(null),
+    db_host: z.string().nullable().default(null),
+    db_port: z.number().int().nullable().default(null),
+    db_user: z.string().nullable().default(null),
+    db_password: z.string().nullable().default(null),
+    db_name: z.string().nullable().default(null),
+    db_params: z.string().nullable().default(null),
+});

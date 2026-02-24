@@ -43,7 +43,7 @@
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <NuxtLink :to="$localeRoute({ path: '/' })">
+                        <NuxtLink :to="$localeRoute({ name: 'index' })">
                             <div
                                 class="aspect-square size-8 p-1 rounded-lg bg-muted dark:bg-gray-300"
                             >

@@ -1,5 +1,19 @@
 <script setup lang="ts">
-    import { AlignLeft, Cloud, Database, Info, Lock, User } from "lucide-vue-next";
+    import { ResponseCodesRecord } from "#shared/utils/response-codes";
+    import { ApiErrorSchema, BaseProjectSchema } from "#shared/utils/schemas/api";
+    import {
+        AlignLeft,
+        CirclePlus,
+        Cloud,
+        Database,
+        Info,
+        Lock,
+        Plug,
+        Server,
+        User,
+    } from "lucide-vue-next";
+    import { FetchError } from "ofetch";
+    import { toast } from "vue-sonner";
 
     definePageMeta({
         title: "Create Project",
@@ -27,40 +41,51 @@
         },
     });
 
+    const { $localeRoute } = useNuxtApp();
+    const errorToast = useServerErrorToast();
     const api = useApi();
     const [loading] = useToggle(false);
+    const router = useRouter();
     const onSubmit = handleSubmit((values) => {
-        const formData = new FormData();
-
-        formData.set("name", values.name);
-
-        /**
-         * TODO: Some issues here with the typing
-         * Basically, .set(key, value)
-         * value cannot be of type undefined, that's why
-         * it yells at me
-         */
-        // formData.set("description", values.description);
-        // formData.set("provider", values.provider);
-        // formData.set("db_host", values.dbHost);
-        // formData.set("db_port", values.dbPort);
-        // formData.set("db_user", values.dbUser);
-        // formData.set("db_password", values.dbPassword);
-        // formData.set("db_name", values.dbName);
-        // formData.set("db_params", values.dbParams);
-
         api("/projects/", {
             method: "POST",
-            body: formData,
-            onRequest({ options }) {
-                console.warn(Array.from(options.headers.entries()).length);
-                options.headers.forEach((value, key) =>
-                    console.warn(`Header. key=${key} value=${value}`),
-                );
+            body: {
+                name: values.name,
+                description: values.description,
+                provider: values.provider,
+                db_host: values.dbHost,
+                db_port: values.dbPort,
+                db_user: values.dbUser,
+                db_password: values.dbPassword,
+                db_name: values.dbName,
+                db_params: values.dbParams,
             },
         })
             .then((response) => {
-                console.warn(response);
+                const parsedResponse = BaseProjectSchema.safeParse(response);
+                if (!parsedResponse.success) {
+                    throw new Error(ResponseCodesRecord.Server.UnknownError);
+                }
+
+                toast.success($t("projects.create.events.project_created.title"), {
+                    description: $t("projects.create.events.project_created.description", {
+                        projectName: parsedResponse.data.name,
+                    }),
+                });
+
+                router.push($localeRoute({ name: "index" }));
+            })
+            .catch((error) => {
+                if (error instanceof FetchError) {
+                    const parsedError = ApiErrorSchema.safeParse(error);
+                    if (!parsedError.success) {
+                        errorToast.handle(ResponseCodesRecord.Server.UnknownError);
+
+                        return;
+                    }
+
+                    errorToast.handle(parsedError.data.error);
+                }
             })
             .finally(() => (loading.value = false));
     });
@@ -68,7 +93,6 @@
 
 <template>
     <form class="mx-auto w-full max-w-2xl" @submit="onSubmit">
-        <!-- HEADER -->
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground">
                 {{ $t("projects.create.header.title") }}
@@ -78,7 +102,6 @@
             </p>
         </div>
 
-        <!-- BASIC INFORMATION -->
         <section>
             <div class="mb-4 flex items-center gap-2">
                 <div
@@ -143,7 +166,6 @@
 
         <Separator class="my-8" />
 
-        <!-- DATABASE INFORMATION -->
         <section>
             <div class="mb-4 flex items-center gap-2">
                 <div
@@ -190,13 +212,18 @@
                                 <FieldLabel for="dbHost">
                                     {{ $t("projects.create.fields.db_host.label") }}
                                 </FieldLabel>
-                                <Input
-                                    id="dbHost"
-                                    v-bind="field"
-                                    placeholder="localhost"
-                                    autocomplete="off"
-                                    :aria-invalid="!!errors.length"
-                                />
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="dbHost"
+                                        v-bind="field"
+                                        placeholder="localhost"
+                                        autocomplete="off"
+                                        :aria-invalid="!!errors.length"
+                                    />
+                                    <InputGroupAddon align="inline-start">
+                                        <Server class="size-4" stroke-width="2" />
+                                    </InputGroupAddon>
+                                </InputGroup>
                                 <FieldError v-if="errors.length" :errors="errors" />
                             </Field>
                         </VeeField>
@@ -207,13 +234,18 @@
                                 <FieldLabel for="dbPort">
                                     {{ $t("projects.create.fields.db_port.label") }}
                                 </FieldLabel>
-                                <Input
-                                    id="dbPort"
-                                    v-bind="field"
-                                    placeholder="5432"
-                                    autocomplete="off"
-                                    :aria-invalid="!!errors.length"
-                                />
+                                <InputGroup>
+                                    <InputGroupInput
+                                        id="dbPort"
+                                        v-bind="field"
+                                        placeholder="5432"
+                                        autocomplete="off"
+                                        :aria-invalid="!!errors.length"
+                                    />
+                                    <InputGroupAddon align="inline-start">
+                                        <Plug class="size-4" stroke-width="2" />
+                                    </InputGroupAddon>
+                                </InputGroup>
                                 <FieldError v-if="errors.length" :errors="errors" />
                             </Field>
                         </VeeField>
@@ -273,13 +305,18 @@
                         <FieldLabel for="dbName">
                             {{ $t("projects.create.fields.db_name.label") }}
                         </FieldLabel>
-                        <Input
-                            id="dbName"
-                            v-bind="field"
-                            :placeholder="$t('projects.create.fields.db_name.placeholder')"
-                            autocomplete="off"
-                            :aria-invalid="!!errors.length"
-                        />
+                        <InputGroup>
+                            <InputGroupInput
+                                id="dbName"
+                                v-bind="field"
+                                :placeholder="$t('projects.create.fields.db_name.placeholder')"
+                                autocomplete="off"
+                                :aria-invalid="!!errors.length"
+                            />
+                            <InputGroupAddon align="inline-start">
+                                <AlignLeft class="size-4" stroke-width="2" />
+                            </InputGroupAddon>
+                        </InputGroup>
                         <FieldError v-if="errors.length" :errors="errors" />
                     </Field>
                 </VeeField>
@@ -289,12 +326,18 @@
                         <FieldLabel for="dbParams">
                             {{ $t("projects.create.fields.db_params.label") }}
                         </FieldLabel>
-                        <Input
-                            id="dbParams"
-                            v-bind="field"
-                            autocomplete="off"
-                            :aria-invalid="!!errors.length"
-                        />
+                        <InputGroup>
+                            <InputGroupInput
+                                id="dbParams"
+                                v-bind="field"
+                                autocomplete="off"
+                                :placeholder="$t('projects.create.fields.db_params.placeholder')"
+                                :aria-invalid="!!errors.length"
+                            />
+                            <InputGroupAddon>
+                                <CirclePlus class="size-4" stroke-width="2" />
+                            </InputGroupAddon>
+                        </InputGroup>
                         <FieldDescription>
                             {{ $t("projects.create.fields.db_params.description") }}
                         </FieldDescription>

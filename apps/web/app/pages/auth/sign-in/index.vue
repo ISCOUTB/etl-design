@@ -36,7 +36,7 @@
                     return value;
                 }
 
-                return $localeRoute({ path: "/" });
+                return $localeRoute({ name: "index" });
             }
         },
     });
@@ -136,7 +136,7 @@
                             <FieldDescription>
                                 {{ $t("auth.sign_in.create_account") }}
                                 <NuxtLink
-                                    :to="$localePath({ path: '/auth/sign-up' })"
+                                    :to="$localeRoute({ name: 'auth-sign-up' })"
                                     class="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
                                 >
                                     {{ $t("auth.sign_in.sign_up_link") }}

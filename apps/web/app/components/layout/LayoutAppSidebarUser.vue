@@ -36,7 +36,7 @@
                 action: () => {
                     auth.signOut({
                         callbackUrl: $localePath({
-                            path: "/auth/sign-in",
+                            name: "auth-sign-in",
                             query: { email: auth.data.value?.user.email },
                         }),
                     });

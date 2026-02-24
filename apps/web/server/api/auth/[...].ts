@@ -91,6 +91,7 @@ export default NuxtAuthHandler({
                 token.id = user.id;
                 token.email = user.email;
                 token.name = user.name;
+                token.role = user.role;
             }
 
             return token;
@@ -108,6 +109,10 @@ export default NuxtAuthHandler({
 
                 if (token.name) {
                     session.user.name = token.name;
+                }
+
+                if (token.role) {
+                    session.user.role = token.role;
                 }
             }
 

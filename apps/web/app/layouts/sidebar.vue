@@ -8,7 +8,9 @@
             <LayoutAppSidebar collapsible="icon" />
 
             <SidebarInset>
-                <header class="flex h-16 shrink-0 items-center">
+                <header
+                    class="sticky top-0 z-10 flex h-16 shrink-0 items-center backdrop-blur-sm bg-background/80 border-b border-border/10 rounded-t-xl"
+                >
                     <div class="flex justify-between grow px-4">
                         <div class="flex space-x-2 items-center">
                             <SidebarTrigger class="-ml-1" />

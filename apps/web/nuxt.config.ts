@@ -81,6 +81,9 @@ export default defineNuxtConfig({
                 name: "English",
             },
         ],
+        experimental: {
+            typedPages: true,
+        },
     },
     pwa: {
         registerType: "autoUpdate",
