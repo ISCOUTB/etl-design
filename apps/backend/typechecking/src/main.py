@@ -38,6 +38,7 @@ from messaging_utils.messaging.connection_factory import (
 from src.core.config import settings
 from src.utils import create_component_logger
 from src.workers.insertion import InsertionWorker
+from src.workers.results import ResultWorker
 from src.workers.validation import ValidationWorker
 
 # Create logger with [main] prefix
@@ -75,6 +76,7 @@ class WorkerManager:
         )
         self.validation_worker = ValidationWorker(*retry_options)
         self.schema_worker = InsertionWorker(*retry_options)
+        self.result_worker = ResultWorker(*retry_options)
         self.workers_running = True
 
     async def start_workers(self):
@@ -111,6 +113,12 @@ class WorkerManager:
                 target=self._run_schema_worker, name="SchemaWorker", daemon=True
             )
             schema_thread.start()
+
+            # Start result worker in a separate thread
+            result_thread = threading.Thread(
+                target=self._run_result_worker, name="ResultWorker", daemon=True
+            )
+            result_thread.start()
 
             logger.info("All workers started successfully")
 
@@ -153,6 +161,22 @@ class WorkerManager:
             self.schema_worker.start_consuming()
         except Exception as e:
             logger.error(f"Schema worker error: {e}")
+
+    def _run_result_worker(self):
+        """Run result worker.
+
+        Internal method that starts the result worker's message consumption.
+        This method is executed in a separate thread and handles any exceptions
+        that occur during worker execution.
+
+        Exceptions are logged but do not stop other workers, allowing the
+        system to continue operating with reduced functionality if one
+        worker fails.
+        """
+        try:
+            self.result_worker.start_consuming()
+        except Exception as e:
+            logger.error(f"Result worker error: {e}")
 
     def stop_workers(self):
         """Stop all workers gracefully.

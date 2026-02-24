@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     MAX_WORKERS: int = 1
     WORKER_PREFETCH_COUNT: int = 1
 
+    # Main API configuration
+    API_REQUEST_URL: str
+    API_TIMEOUT_SECONDS: float = 30.0
+
     # Excel-Reader configuration
     EXCEL_READER_HOST: str
     EXCEL_READER_PORT: int
