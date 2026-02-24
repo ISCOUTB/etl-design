@@ -12,8 +12,8 @@
 
 <template>
     <div>
-        Lorem ipsum dolor sit amet consectetur adipisicing elit. Magni illum debitis facilis ducimus
-        laudantium neque iure placeat sed maxime cumque officiis modi suscipit a expedita animi, at
-        excepturi odit autem.
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Et quo ullam illo accusamus ducimus
+        sequi nulla tenetur vel? Voluptatum distinctio dicta minima ipsa eos perferendis mollitia
+        vero velit recusandae iste.
     </div>
 </template>
