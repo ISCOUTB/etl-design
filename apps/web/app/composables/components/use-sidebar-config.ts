@@ -20,7 +20,7 @@ export default function () {
                         {
                             label: "projects.view.title",
                             icon: Boxes,
-                            to: () => $localeRoute({ name: "index" }),
+                            to: () => $localeRoute({ name: "projects" }),
                         },
                     ],
                 },

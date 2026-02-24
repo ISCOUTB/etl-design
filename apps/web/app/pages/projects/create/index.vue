@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import { ResponseCodesRecord } from "#shared/utils/response-codes";
-    import { ApiErrorSchema, BaseProjectSchema } from "#shared/utils/schemas/api";
+    import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import {
         AlignLeft,
         CirclePlus,
@@ -62,7 +62,7 @@
             },
         })
             .then((response) => {
-                const parsedResponse = BaseProjectSchema.safeParse(response);
+                const parsedResponse = ResponseProjectSchema.safeParse(response);
                 if (!parsedResponse.success) {
                     throw new Error(ResponseCodesRecord.Server.UnknownError);
                 }

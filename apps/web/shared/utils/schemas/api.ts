@@ -16,3 +16,11 @@ export const BaseProjectSchema = z.object({
     db_name: z.string().nullable().default(null),
     db_params: z.string().nullable().default(null),
 });
+
+export const ResponseProjectSchema = z
+    .object({
+        id: z.string(),
+        created_at: z.iso.datetime({ offset: true }),
+        updated_at: z.iso.datetime({ offset: true }),
+    })
+    .extend(BaseProjectSchema.shape);
