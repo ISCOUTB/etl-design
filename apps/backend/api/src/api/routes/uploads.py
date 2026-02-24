@@ -30,6 +30,7 @@ async def validate(
     database_client: DatabaseClientDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
     project_id: Annotated[str, Form()],
+    table_name: Annotated[str, Form()],
     force_new: bool = False,
 ) -> List[dtypes.ApiResponse]:
     """
@@ -73,6 +74,7 @@ async def validate(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
             project_id=project_id,
+            table_name=table_name,
             metadata=metadata,
             task="sample_validation",
         )
@@ -111,6 +113,7 @@ async def insert(
     project_service: ProjectServiceDep,
     spreadsheet_file: UploadFile,
     project_id: Annotated[str, Form()],
+    table_name: Annotated[str, Form()],
     overwrite: bool = False,
 ):
     """Insert data from a validated spreadsheet file into the database.
@@ -148,6 +151,7 @@ async def insert(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
             file_data=file_content,
             project_id=project_id,
+            table_name=table_name,
             metadata=metadata,
             task="sample_insertion",
             overwrite=overwrite,
@@ -188,6 +192,7 @@ async def process(
     project_service: ProjectServiceDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
     project_id: Annotated[str, Form()],
+    table_name: Annotated[str, Form()],
     overwrite: bool = False,
 ):
     """Validates and inserts data from a spreadsheet file into the database.
@@ -225,6 +230,7 @@ async def process(
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
             file_data=file_content,
             project_id=project_id,
+            table_name=table_name,
             metadata=metadata,
             task="sample_validation",
             insert=True,

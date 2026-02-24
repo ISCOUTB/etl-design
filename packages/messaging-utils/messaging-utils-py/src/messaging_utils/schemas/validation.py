@@ -10,6 +10,7 @@ class ValidationMessage(TypedDict):
     task: ValidationTasks
     file_data: str
     project_id: str
+    table_name: str
     metadata: Metadata
     date: str
     extra: Dict[str, str]

@@ -294,7 +294,10 @@ class ValidationWorker:
                 insert_overwrite = insert_overwrite or False
 
                 db_uri = message.get("insert_db_uri", None)
-                assert db_uri is not None, "insert_db_uri must be provided when insert is True"
+                assert db_uri is not None, (
+                    "insert_db_uri must be provided when insert is True"
+                )
+
                 self.channel.basic_publish(
                     exchange=mq_settings.RABBITMQ_EXCHANGE,
                     routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
@@ -309,6 +312,7 @@ class ValidationWorker:
                             extra={"validation_task_id": task_id},
                             overwrite=insert_overwrite,
                             db_uri=db_uri,
+                            table_name=message["table_name"],
                         )
                     ),
                 )
@@ -378,7 +382,7 @@ class ValidationWorker:
 
         results = await validate_file_against_schema(
             file=upload_file,
-            import_name=message["project_id"],
+            import_name=f"{message['project_id']}__{message['table_name']}",
             database_client=db_client,
         )
 

@@ -287,7 +287,7 @@ class InsertionWorker:
 
         file_bytes = bytes.fromhex(message["file_data"])
         filename = message["metadata"]["filename"]
-        table_name = message["project_id"]
+        table_name = message["table_name"]
         overwrite = message["overwrite"]
 
         update_task_status(
@@ -300,6 +300,7 @@ class InsertionWorker:
         )
 
         try:
+            # TODO: Make this http client global and reuse it across messages for better performance
             # Maybe here we can use httpx.Timeout to be more specific
             async with httpx.AsyncClient(
                 timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
@@ -335,12 +336,24 @@ class InsertionWorker:
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
             return InsertionResult(task_id=task_id, results={}, status="failed")
-
-        with psycopg2.connect(message["db_uri"]) as conn:
-            cur = conn.cursor()
-            for _, sql in sql_per_sheet.items():
-                cur.execute(sql)
-            conn.commit()
+        
+        try:
+            with psycopg2.connect(message["db_uri"]) as conn:
+                cur = conn.cursor()
+                for _, sql in sql_per_sheet.items():
+                    cur.execute(sql)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Error inserting data for task {task_id}: {e}")
+            update_task_status(
+                database_client=db_client,
+                task_id=task_id,
+                field="status",
+                value="failed-inserting-data",
+                task=self.TASK,
+                data={"error": str(e), "update_date": get_datetime_now()},
+            )
+            return InsertionResult(task_id=task_id, results=sql_per_sheet, status="failed")
 
         return InsertionResult(task_id=task_id, results=sql_per_sheet, status="success")
 
@@ -362,35 +375,6 @@ class InsertionWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        if result["status"] != "success":
-            task_get_result = db_client.get_task_id(
-                dtypes.GetTaskIdRequest(
-                    task_id=task_id,
-                    task=self.TASK,
-                )
-            )
-            assert task_get_result["found"] and task_get_result["value"] is not None
-
-            upload_date = task_get_result["value"]["data"].get(
-                "upload_date", get_datetime_now()
-            )
-            update_task_status(
-                database_client=db_client,
-                task_id=task_id,
-                field="status",
-                value="failed-publishing-result",
-                task=self.TASK,
-                message="Failed to publish validation result",
-                data={
-                    "error": "Failed to publish validation result",
-                    "update_date": get_datetime_now(),
-                    "upload_date": upload_date,
-                },
-                reset_data=True,
-            )
-            logger.error(f"Failed to publish result for task: {task_id}")
-            return None
-
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,

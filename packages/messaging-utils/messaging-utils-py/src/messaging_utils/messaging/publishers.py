@@ -211,6 +211,7 @@ class Publisher:
         routing_key: str,
         file_data: bytes,
         project_id: str,
+        table_name: str,
         metadata: Metadata,
         task: ValidationTasks,
         insert: bool = False,
@@ -233,6 +234,8 @@ class Publisher:
             task (Validation Tasks): Task type for the validation request (e.g.,
                 "sample_validation").
             insert (bool): Whether this validation request is for an insertion operation.
+            insert_table_name (Optional[str]): If provided, indicates that the validation is for an insertion
+                operation and specifies the target table name for the insertion.
             insert_overwrite (Optional[bool]): If True, indicates that the validation is for an overwrite
                 operation.
             insert_db_uri (Optional[str]): If provided, indicates that the validation is for an insertion
@@ -272,6 +275,7 @@ class Publisher:
                 task=task,
                 file_data=file_data.hex(),
                 project_id=project_id,
+                table_name=table_name,
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
@@ -306,6 +310,7 @@ class Publisher:
         metadata: Metadata,
         task: InsertionTasks,
         db_uri: str,
+        table_name: str,
         overwrite: bool = False,
         **kwargs: str,
     ) -> str:
@@ -324,6 +329,7 @@ class Publisher:
                 other processing parameters.
             task (InsertionTasks): Task type for the insertion request (e.g.,
                 "sample_insertion").
+            table_name (Optional[str]): Optional name of the target table for the insertion.
             overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
             db_uri (str): The URI for connecting to the database where the data should be inserted.
             kwargs (str): Additional key-value pairs to include in the message.
@@ -336,6 +342,7 @@ class Publisher:
                 task=task,
                 file_data=file_data.hex(),
                 project_id=project_id,
+                table_name=table_name,
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,

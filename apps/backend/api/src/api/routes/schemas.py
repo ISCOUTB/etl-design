@@ -34,6 +34,7 @@ async def create_or_update_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
     project_id: str,
+    table_name: str,
     schema: Dict[str, Any],
 ) -> dtypes.ApiResponse:
     """
@@ -46,8 +47,8 @@ async def create_or_update_schema(
         database_client: Database client dependency for MongoDB operations.
         import_name: Unique identifier for the schema.
         schema: JSON schema definition (as a dictionary).
-        raw: If True, treats schema as raw JSON Schema (validates with Draft7).
-             If False, creates a simple object schema from the provided properties.
+        table_name: The name of the table associated with the schema
+            (used for validation context).
 
     Returns:
         ApiResponse with:
@@ -70,6 +71,7 @@ async def create_or_update_schema(
     if not schema:
         raise SchemaNotProvidedException()
 
+    import_name = f"{project_id}__{table_name}"
     try:
         # Create and validate the schema
         # This will raise SchemaError if invalid
@@ -78,7 +80,7 @@ async def create_or_update_schema(
         # Save to database
         db_response = SchemaService.save_schema(
             schema=schema,
-            import_name=project_id,
+            import_name=import_name,
             database_client=database_client,
         )
 
@@ -86,7 +88,7 @@ async def create_or_update_schema(
         response = SchemaService.map_db_response_to_api(
             db_response=db_response,
             operation="save",
-            import_name=project_id,
+            import_name=import_name,
         )
 
         return response
@@ -98,7 +100,7 @@ async def create_or_update_schema(
             status="error",
             code=500,
             message=f"Failed to save schema: {str(e)}",
-            data={"import_name": project_id},
+            data={"import_name": import_name},
         )
 
 
@@ -107,6 +109,7 @@ async def get_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
     project_id: str,
+    table_name: str,
 ) -> dtypes.ApiResponse:
     """
     Retrieve the active schema for a given import name.
@@ -117,6 +120,8 @@ async def get_schema(
     Args:
         database_client: Database client dependency for MongoDB operations.
         project_id: Unique identifier for the schema to retrieve.
+        table_name: The name of the table associated with the schema
+            (used to construct import_name).
 
     Returns:
         ApiResponse with:
@@ -136,31 +141,34 @@ async def get_schema(
     if not has_permission:
         raise ForbiddenException()
 
+    import_name = f"{project_id}__{table_name}"
     try:
         # Retrieve schema from database
-        db_response = database_client.mongo_find_jsonschema(
-            dtypes.MongoFindJsonSchemaRequest(import_name=project_id)
-        )
-
-        # Map database response to API response
-        response = SchemaService.map_db_response_to_api(
-            db_response=db_response,
-            operation="get",
-            import_name=project_id,
+        active_schema = SchemaService.get_active_schema(
+            import_name=import_name,
+            database_client=database_client,
         )
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to retrieve schema: {str(e)}",
-            data={"import_name": project_id},
+            data={"import_name": import_name},
         )
 
     # Raise AppException for 404 to match FastAPI conventions
-    if response["code"] == 404:
+    if active_schema is None:
         raise SchemaNotFoundException()
 
-    return response
+    return dtypes.ApiResponse(
+        status="success",
+        code=200,
+        message=f"Schema '{import_name}' retrieved successfully",
+        data={
+            "import_name": import_name,
+            "schema": str(active_schema),
+        },
+    )
 
 
 @router.delete("/{project_id}")
@@ -168,6 +176,7 @@ async def delete_schema(
     project_id: str,
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    table_name: str,
 ) -> dtypes.ApiResponse:
     """
     Delete or revert a schema.
@@ -179,6 +188,8 @@ async def delete_schema(
     Args:
         database_client: Database client dependency for MongoDB operations.
         import_name: Unique identifier for the schema to remove.
+        table_name (str): The name of the table associated with the schema
+            (used to construct import_name).
 
     Returns:
         ApiResponse with:
@@ -198,10 +209,11 @@ async def delete_schema(
     if not has_permission:
         raise ForbiddenException()
 
+    import_name = f"{project_id}__{table_name}"
     try:
         # Remove schema from database
         db_response = SchemaService.remove_schema(
-            import_name=project_id,
+            import_name=import_name,
             database_client=database_client,
         )
 
@@ -209,14 +221,14 @@ async def delete_schema(
         response = SchemaService.map_db_response_to_api(
             db_response=db_response,
             operation="remove",
-            import_name=project_id,
+            import_name=import_name,
         )
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",
             code=500,
             message=f"Failed to remove schema: {str(e)}",
-            data={"import_name": project_id},
+            data={"import_name": import_name},
         )
 
     # Raise AppException for 404 to match FastAPI conventions
