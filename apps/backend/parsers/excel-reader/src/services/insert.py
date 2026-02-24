@@ -26,9 +26,10 @@ def create_sql_for_insertion(
         for sheet, letter_info in columns.items()
     }
 
+    n_sheets = len(non_formula_columns)
     sql_statements = {}
     for sheet, cols in non_formula_columns.items():
-        table_name_sheet = f"{table_name}_{sheet}"
+        table_name_sheet = f"{table_name}_{sheet}" if n_sheets > 1 else table_name
         table_name_sheet_tmp = f"{table_name_sheet}_temp"
 
         prefix_sql = ""

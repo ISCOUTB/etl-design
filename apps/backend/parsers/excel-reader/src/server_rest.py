@@ -106,12 +106,23 @@ async def read_excel(
         for sheet in columns.keys()
     }
 
+    ddl_keys = set(ddls.keys())
+    dtype_keys = set(dtypes.keys())
+    if not ddl_keys.issubset(dtype_keys):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Mismatch between sheets in DDLs and dtypes. "
+                "DDL keys is not subset of dtypes keys."
+            ),
+        )
+
     sql_statements = {
         sheet: generate_sql(
             sql_builder_stub,
-            ddls[sheet],
+            ddls[sheet],  # type: ignore
             dtypes[sheet],
-            f"{table_name}_{sheet}",
+            (f"{table_name}_{sheet}" if len(ddls) > 1 else table_name),
         )
         for sheet in ddls.keys()
     }
@@ -145,6 +156,11 @@ async def insert_sql(
     sql_statements = create_sql_for_insertion(
         table_name, file_content, filename, truncate=overwrite
     )
+
+    keys = list(sql_statements.keys())
+    if len(keys) == 1:
+        sql_statements = {table_name: sql_statements[keys[0]]}
+
     return sql_statements
 
 
