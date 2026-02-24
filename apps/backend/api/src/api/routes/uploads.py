@@ -22,6 +22,8 @@ from src.services.permissions import Action, ModelKeys, PermissionService
 
 router = APIRouter()
 
+HTTPX_CLIENT = httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS)
+
 
 @router.post("/validate")
 async def validate(
@@ -270,6 +272,7 @@ async def create_table(
     project_service: ProjectServiceDep,
     spreadsheet: UploadFile,
     project_id: Annotated[str, Form()],
+    table_name: Annotated[str, Form()],
     dtypes: Annotated[str, Form()],
 ):
     has_permission = PermissionService.has_permission(
@@ -286,24 +289,21 @@ async def create_table(
     # "age": {"type": "INTEGER", "extra": "NOT NULL"}, "is_adult": {"type": "TEXT"}}}
     fill_spaces = "_"
     try:
-        async with httpx.AsyncClient(
-            timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
-        ) as client:
-            response = await client.post(
-                f"{settings.EXCEL_READER_URL}/excel-parser",
-                files={
-                    "spreadsheet": (
-                        spreadsheet.filename,
-                        await spreadsheet.read(),
-                        spreadsheet.content_type,
-                    )
-                },
-                data={
-                    "table_name": f"project_{project_id.replace('-', '_')}",
-                    "dtypes_str": dtypes,
-                },
-                params={"fill_spaces": fill_spaces, "limit": 5},
-            )
+        response = await HTTPX_CLIENT.post(
+            f"{settings.EXCEL_READER_URL}/excel-parser",
+            files={
+                "spreadsheet": (
+                    spreadsheet.filename,
+                    await spreadsheet.read(),
+                    spreadsheet.content_type,
+                )
+            },
+            data={
+                "table_name": table_name,
+                "dtypes_str": dtypes,
+            },
+            params={"fill_spaces": fill_spaces, "limit": 5},
+        )
 
         response.raise_for_status()
         sql_per_sheet = response.json()
@@ -313,10 +313,16 @@ async def create_table(
             detail=f"Failed to communicate with Excel Reader service: {str(e)}",
         )
 
-    with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
-        cur = conn.cursor()
-        for _, sql in sql_per_sheet.items():
-            cur.execute(sql)
-        conn.commit()
+    try:
+        with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
+            cur = conn.cursor()
+            for _, sql in sql_per_sheet.items():
+                cur.execute(sql)
+            conn.commit()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create table in the database: {str(e)}",
+        )
 
     return {"message": "Table created successfully", "sql_per_sheet": sql_per_sheet}
