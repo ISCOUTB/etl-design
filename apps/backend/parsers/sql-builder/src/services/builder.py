@@ -89,7 +89,7 @@ def build_sql(
 
     for col, level in other_levels:
         sql_expression = (
-            f"ALTER TABLE {table_name} ADD COLUMN {col} {dtypes[col]['type']} "
+            f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col} {dtypes[col]['type']} "
         )
         sql_expression += (
             f"GENERATED ALWAYS AS ({cols[col]['sql']}) "
