@@ -106,7 +106,7 @@ async def read_excel(
         for sheet in columns.keys()
     }
 
-    return {
+    sql_statements = {
         sheet: generate_sql(
             sql_builder_stub,
             ddls[sheet],
@@ -115,6 +115,12 @@ async def read_excel(
         )
         for sheet in ddls.keys()
     }
+
+    keys = list(sql_statements.keys())
+    if len(keys) == 1:
+        sql_statements = {table_name: sql_statements[keys[0]]}
+
+    return sql_statements
 
 
 @app.post("/insert-sql")
