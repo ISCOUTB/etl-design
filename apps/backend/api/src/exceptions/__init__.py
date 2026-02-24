@@ -25,7 +25,6 @@ from src.exceptions.users import (
     EmailFormatException,
     EmailInUseException,
     InvalidUserDataException,
-    UserAlreadyExistsException,
     UserHasActiveProjectsException,
     UserInactiveException,
     UserNotFoundException,
@@ -40,7 +39,6 @@ __all__ = [
     "TokenExpiredException",
     # User exceptions
     "UserNotFoundException",
-    "UserAlreadyExistsException",
     "InvalidUserDataException",
     "EmailFormatException",
     "EmailInUseException",

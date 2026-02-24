@@ -7,12 +7,6 @@ class UserNotFoundException(AppException):
     message = "User not found"
 
 
-class UserAlreadyExistsException(AppException):
-    status_code = 409
-    error_code = "error:user-already-exists"
-    message = "User with the given email already exists"
-
-
 class EmailInUseException(AppException):
     status_code = 409
     error_code = "error:email-in-use"
