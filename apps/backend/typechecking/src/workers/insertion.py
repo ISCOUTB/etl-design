@@ -22,7 +22,7 @@ import time
 
 import httpx
 import pika
-import psycopg2
+import psycopg
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
@@ -34,7 +34,6 @@ from pika.exceptions import (
     AMQPConnectionError,
     ChannelClosedByBroker,
 )
-from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
@@ -300,8 +299,6 @@ class InsertionWorker:
         )
 
         try:
-            # TODO: Make this http client global and reuse it across messages for better performance
-            # Maybe here we can use httpx.Timeout to be more specific
             async with httpx.AsyncClient(
                 timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
             ) as client:
@@ -336,9 +333,9 @@ class InsertionWorker:
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
             return InsertionResult(task_id=task_id, results={}, status="failed")
-        
+
         try:
-            with psycopg2.connect(message["db_uri"]) as conn:
+            with psycopg.connect(message["db_uri"]) as conn:
                 cur = conn.cursor()
                 for _, sql in sql_per_sheet.items():
                     cur.execute(sql)
@@ -353,7 +350,9 @@ class InsertionWorker:
                 task=self.TASK,
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
-            return InsertionResult(task_id=task_id, results=sql_per_sheet, status="failed")
+            return InsertionResult(
+                task_id=task_id, results=sql_per_sheet, status="failed"
+            )
 
         return InsertionResult(task_id=task_id, results=sql_per_sheet, status="success")
 

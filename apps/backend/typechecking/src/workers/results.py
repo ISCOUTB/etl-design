@@ -1,6 +1,9 @@
+import asyncio
 import json
 import time
+from typing import Any, Dict, Optional
 
+import httpx
 import pika
 from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
@@ -186,14 +189,28 @@ class ResultWorker:
         logger.info(f"Processing results for task_id: {task_id}")
 
         # Do magic here...!
-        self._notify_task_completion(task_id, message)
+        asyncio.run(self._notify_task_completion(task_id, message, json.loads(body)))
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
         logger.info(f"Results for task_id {task_id} processed and acknowledged.")
 
-    def _notify_task_completion(self, task_id: str, message: ResultsMessage) -> None:
-        # TODO: notify orchestrator about task completion
+    async def _notify_task_completion(
+        self, task_id: str, message: ResultsMessage, raw_data: Optional[Dict[str, Any]] = None
+    ) -> None:
         try:
+            async with httpx.AsyncClient(timeout=settings.API_TIMEOUT_SECONDS) as client:
+                response = await client.post(
+                    settings.API_REQUEST_URL,
+                    json={
+                        "task_id": task_id,
+                        "status": message["status"],
+                        "message": "Task completed with results",
+                        "results": message["results"],
+                        "raw_data": raw_data or {},  # Include raw_data if provided
+                    },
+                )
+            response.raise_for_status()
+
             update_task_status(
                 database_client=self.db_client,
                 task_id=task_id,

@@ -430,35 +430,6 @@ class ValidationWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
-        if result["status"] == "error":
-            task_get_result = db_client.get_task_id(
-                dtypes.GetTaskIdRequest(
-                    task_id=task_id,
-                    task=self.TASK,
-                )
-            )
-            assert task_get_result["found"] and task_get_result["value"] is not None
-
-            upload_date = task_get_result["value"]["data"].get(
-                "upload_date", get_datetime_now()
-            )
-            update_task_status(
-                database_client=db_client,
-                task_id=task_id,
-                field="status",
-                value="failed-publishing-result",
-                task=self.TASK,
-                message="Failed to publish validation result",
-                data={
-                    "error": "Failed to publish validation result",
-                    "update_date": get_datetime_now(),
-                    "upload_date": upload_date,
-                },
-                reset_data=True,
-            )
-            logger.error(f"Failed to publish result for task: {task_id}")
-            return None
-
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
