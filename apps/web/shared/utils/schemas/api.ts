@@ -5,6 +5,19 @@ export const ApiErrorSchema = z.looseObject({
     message: z.string(),
 });
 
+const PaginatedResponseObject = z.object({
+    total: z.coerce.number().int(),
+    page: z.coerce.number().int(),
+    limit: z.coerce.number().int(),
+    total_pages: z.coerce.number().int(),
+    has_prev: z.boolean(),
+    has_next: z.boolean(),
+});
+
+export function PaginatedResponse(object: z.ZodObject) {
+    return PaginatedResponseObject.extend({ items: z.array(object) });
+}
+
 export const BaseProjectSchema = z.object({
     name: z.string().min(1),
     description: z.string().nullable().default(null),

@@ -80,7 +80,7 @@
                                 </template>
 
                                 <template v-if="groupItem.kind === 'action-button'">
-                                    <DropdownMenuRoot
+                                    <DropdownSidebarMenuRoot
                                         :items="groupItem.dropdownItems"
                                         :content-props="{
                                             side: dropdownSide,
@@ -100,7 +100,7 @@
                                                 <MoreHorizontal class="ml-auto" />
                                             </SidebarMenuButton>
                                         </template>
-                                    </DropdownMenuRoot>
+                                    </DropdownSidebarMenuRoot>
                                 </template>
 
                                 <template v-if="groupItem.kind === 'item'">

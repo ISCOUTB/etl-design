@@ -39,18 +39,20 @@
 
 <template>
     <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-            <slot name="trigger" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-            :class="cn('w-56', props.contentProps?.class as ClassValue)"
-            v-bind="contentProps"
-        >
-            <slot name="dropdown-header" />
-            <template v-for="(group, index) in dropdownItems" :key="group.length.toString(32)">
-                <DropdownMenuGroupItem :group="group" />
-                <DropdownMenuSeparator v-if="index < dropdownItems.length - 1" />
-            </template>
-        </DropdownMenuContent>
+        <SidebarMenuItem>
+            <DropdownMenuTrigger as-child>
+                <slot name="trigger" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                :class="cn('w-56', props.contentProps?.class as ClassValue)"
+                v-bind="contentProps"
+            >
+                <slot name="dropdown-header" />
+                <template v-for="(group, index) in dropdownItems" :key="group.length.toString(32)">
+                    <DropdownMenuGroupItem :group="group" />
+                    <DropdownMenuSeparator v-if="index < dropdownItems.length - 1" />
+                </template>
+            </DropdownMenuContent>
+        </SidebarMenuItem>
     </DropdownMenu>
 </template>

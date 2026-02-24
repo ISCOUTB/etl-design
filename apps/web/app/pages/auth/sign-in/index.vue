@@ -11,11 +11,12 @@
         },
     });
 
+    const email = useRouteQuery<string>("email", "");
     const { SignInSchema } = useSignInSchema();
     const { handleSubmit } = useForm({
         validationSchema: toTypedSchema(SignInSchema.value),
         initialValues: {
-            email: "",
+            email: email.value,
             password: "",
         },
     });
@@ -25,7 +26,6 @@
     const auth = useAuth();
     const runtimeConfig = useRuntimeConfig();
     const { $localeRoute } = useNuxtApp();
-    const email = useRouteQuery<string>("email", "");
     const callbackUrl = useRouteQuery("callbackUrl", runtimeConfig.public.homePageURL, {
         transform: (value) => {
             try {

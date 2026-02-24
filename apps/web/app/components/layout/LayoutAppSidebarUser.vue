@@ -51,7 +51,7 @@
 <template>
     <SidebarMenu>
         <SidebarMenuItem>
-            <DropdownMenuRoot
+            <DropdownSidebarMenuRoot
                 :items="items"
                 :content-props="{
                     class: 'w-[--reka-dropdown-menu-trigger-width] min-w-56 rounded-lg',
@@ -100,7 +100,7 @@
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                 </template>
-            </DropdownMenuRoot>
+            </DropdownSidebarMenuRoot>
         </SidebarMenuItem>
     </SidebarMenu>
 </template>

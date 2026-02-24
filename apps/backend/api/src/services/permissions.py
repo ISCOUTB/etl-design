@@ -115,7 +115,7 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                     for up in getattr(_load_project_model(model), "users", [])
                 )
             ),
-            Action.search: False,
+            Action.search: True,
             Action.create: True,
             Action.update: lambda user, model: (
                 model is not None

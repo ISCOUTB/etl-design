@@ -165,7 +165,31 @@
             }
         },
         "view": {
-            "title": "My Projects"
+            "title": "My Projects",
+            "header": {
+                "title": "Projects",
+                "description": "Manage your database connections and projects."
+            },
+            "dropdown": {
+                "view": {
+                    "label": "View"
+                },
+                "edit": {
+                    "label": "Edit"
+                },
+                "delete": {
+                    "label": "Delete"
+                }
+            },
+            "table": {
+                "actions": {
+                    "label": "Actions"
+                },
+                "pagination": {
+                    "previous": "Previous",
+                    "next": "Next"
+                }
+            }
         }
     }
 }

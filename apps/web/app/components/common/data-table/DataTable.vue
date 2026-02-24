@@ -87,6 +87,7 @@
 </script>
 
 <template>
+    <!-- Maybe we could expose table object in a better way :S -->
     <div class="space-y-4">
         <slot name="default" :table="table">
             <slot name="search-input" />
