@@ -8,7 +8,7 @@ The handlers manage JSON schema validation, creation, storage, and retrieval
 using the DatabaseClient to communicate with the MongoDB service via gRPC.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
@@ -124,7 +124,7 @@ class SchemaService:
             | dtypes.MongoDeleteOneJsonSchemaResponse
             | dtypes.MongoFindJsonSchemaResponse
         ),
-        operation: str,
+        operation: Literal["save", "remove", "get"],
         import_name: str,
     ) -> dtypes.ApiResponse:
         """
