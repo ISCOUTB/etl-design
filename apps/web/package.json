@@ -39,6 +39,7 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
+        "@faker-js/faker": "^10.3.0",
         "@sloth/tools-eslint": "workspace:*",
         "@tailwindcss/vite": "^4.1.18",
         "eslint": "^9.39.2",

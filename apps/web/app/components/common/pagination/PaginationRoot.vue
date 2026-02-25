@@ -116,7 +116,9 @@
                     :disabled="!hasPrevious || props.loading"
                     @click="changePage(page - 1)"
                 >
-                    <slot name="controls-previous" />
+                    <slot name="controls-previous">
+                        {{ $t("common.pagination.previous") }}
+                    </slot>
                 </PaginationPrevious>
 
                 <template
@@ -138,7 +140,9 @@
                 </template>
 
                 <PaginationNext :disabled="!hasNext || props.loading" @click="changePage(page + 1)">
-                    <slot name="controls-next" />
+                    <slot name="controls-next">
+                        {{ $t("common.pagination.next") }}
+                    </slot>
                 </PaginationNext>
             </PaginationContent>
         </Pagination>

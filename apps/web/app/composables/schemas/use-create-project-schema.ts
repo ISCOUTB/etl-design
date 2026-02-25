@@ -8,26 +8,26 @@ export default function () {
             name: z.string().min(1, {
                 error: t("projects.create.validation.name_empty"),
             }),
-            description: z.string().optional(),
-            provider: z.string().optional(),
-            dbHost: z.string().optional(),
+            description: z.string().nullable(),
+            provider: z.string().nullable(),
+            dbHost: z.string().nullable(),
             dbPort: z
                 .string()
-                .optional()
+                .nullable()
                 .transform((value) => {
-                    if (value?.trim() === "") {
-                        return undefined;
+                    if (value === null || value?.trim() === "") {
+                        return null;
                     }
 
                     return value;
                 })
-                .refine((value) => value === undefined || /^\d+$/.test(value), {
+                .refine((value) => value === null || /^\d+$/.test(value), {
                     error: t("projects.create.validation.port_number"),
                 }),
-            dbUser: z.string().optional(),
-            dbPassword: z.string().optional(),
-            dbName: z.string().optional(),
-            dbParams: z.string().optional(),
+            dbUser: z.string().nullable(),
+            dbPassword: z.string().nullable(),
+            dbName: z.string().nullable(),
+            dbParams: z.string().nullable(),
         }),
     );
 

@@ -47,19 +47,21 @@
     const [loading] = useToggle(false);
     const router = useRouter();
     const onSubmit = handleSubmit((values) => {
+        const body = {
+            name: values.name,
+            description: values.description || null,
+            provider: values.provider || null,
+            db_host: values.dbHost || null,
+            db_port: values.dbPort || null,
+            db_user: values.dbUser || null,
+            db_password: values.dbPassword || null,
+            db_name: values.dbName || null,
+            db_params: values.dbParams || null,
+        };
+
         api("/projects/", {
             method: "POST",
-            body: {
-                name: values.name,
-                description: values.description || null,
-                provider: values.provider || null,
-                db_host: values.dbHost || null,
-                db_port: values.dbPort || null,
-                db_user: values.dbUser || null,
-                db_password: values.dbPassword || null,
-                db_name: values.dbName || null,
-                db_params: values.dbParams || null,
-            },
+            body,
         })
             .then((response) => {
                 const parsedResponse = ResponseProjectSchema.safeParse(response);

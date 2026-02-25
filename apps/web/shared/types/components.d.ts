@@ -13,21 +13,16 @@ declare global {
         };
 
         namespace GenericDropdown {
-            type Item = Prettify<
-                {
-                    label: string;
-                    shortcut?: string[];
-                    icon?: Components.LucideIconComponent;
-                    disabled?: boolean | (() => boolean);
-                    hidden?: boolean | (() => boolean);
-                } & OneOf<
-                    [
-                        { to: () => RouteLocationRaw },
-                        { action: () => void },
-                        { sub: Components.GenericDropdown.Item[][] },
-                    ]
-                >
-            >;
+            interface Item<TContext = unknown> {
+                label: string;
+                shortcut?: string[];
+                icon?: Components.LucideIconComponent;
+                disabled?: boolean | (() => boolean);
+                hidden?: boolean | (() => boolean);
+                to?: (ctx?: TContext) => RouteLocationRaw;
+                action?: (ctx?: TContext) => void;
+                sub?: Components.GenericDropdown.Item<TContext>[][];
+            }
         }
 
         namespace Modal {

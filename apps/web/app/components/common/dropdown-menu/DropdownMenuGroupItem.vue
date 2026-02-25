@@ -1,9 +1,17 @@
-<script setup lang="ts">
-    interface Props {
-        group: Components.GenericDropdown.Item[];
+<script setup lang="ts" generic="TContext">
+    interface Props<T> {
+        group: Components.GenericDropdown.Item<T>[];
+        context?: MaybeRefOrGetter<T>;
     }
 
-    defineProps<Props>();
+    const props = defineProps<Props<TContext>>();
+    const context = computed(() => toValue(props.context));
+
+    function handleAction(item: Components.GenericDropdown.Item<TContext>) {
+        if (item.action) {
+            item.action(context.value);
+        }
+    }
 </script>
 
 <template>
@@ -12,7 +20,7 @@
             <template v-if="item.sub">
                 <DropdownMenuSub>
                     <DropdownMenuSubTrigger :disabled="toValue(item.disabled)">
-                        <DropdownMenuItemContent :item="item" />
+                        <DropdownMenuItemContent :context="context" :item="item" />
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                         <DropdownMenuSubContent class="w-48">
@@ -28,9 +36,9 @@
                 <DropdownMenuItem
                     :disabled="toValue(item.disabled)"
                     :as-child="!!item.to"
-                    @click="item.action"
+                    @click="handleAction(item)"
                 >
-                    <DropdownMenuItemContent :item="item" />
+                    <DropdownMenuItemContent :context="context" :item="item" />
                 </DropdownMenuItem>
             </template>
         </template>

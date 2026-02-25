@@ -17,6 +17,10 @@
                 "title": "Invalid Server Response",
                 "description": "The data received from the server was malformed and could not be processed. Please try again later."
             }
+        },
+        "pagination": {
+            "previous": "Previous Page",
+            "next": "Next Page"
         }
     },
     "settings": {
@@ -188,14 +192,16 @@
                     "label": "Delete"
                 }
             },
-            "table": {
-                "actions": {
-                    "label": "Actions"
-                },
-                "pagination": {
-                    "previous": "Previous",
-                    "next": "Next"
-                }
+            "search_input": {
+                "placeholder": "Search projects..."
+            },
+            "content": {
+                "no_description": "This Project has no description",
+                "no_db_host": "No Host",
+                "no_db_port": "No Port",
+                "no_db_name": "No Database",
+                "no_provider": "No Provider",
+                "no_field": "This project has no ({field}) configured.\nPlease review your config."
             }
         }
     }

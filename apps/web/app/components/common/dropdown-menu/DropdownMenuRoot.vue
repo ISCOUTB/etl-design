@@ -1,21 +1,22 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="TContext">
     import type { ClassValue } from "class-variance-authority/types";
     import type { DropdownMenuContentProps } from "reka-ui";
     import type { HTMLAttributes } from "vue";
     import { cn } from "@/lib/utils";
 
-    interface Props {
-        items: MaybeRefOrGetter<Components.GenericDropdown.Item[][]>;
+    interface Props<T> {
+        items: MaybeRefOrGetter<Components.GenericDropdown.Item<T>[][]>;
         contentProps?: DropdownMenuContentProps & { class?: HTMLAttributes["class"] };
+        context?: MaybeRefOrGetter<T>;
     }
 
-    const props = withDefaults(defineProps<Props>(), {
+    const props = withDefaults(defineProps<Props<TContext>>(), {
         contentProps: undefined,
     });
 
     function filterDropdownItems(
-        items: Components.GenericDropdown.Item[][],
-    ): Components.GenericDropdown.Item[][] {
+        items: Components.GenericDropdown.Item<TContext>[][],
+    ): Components.GenericDropdown.Item<TContext>[][] {
         return items
             .map((group) =>
                 group.filter((item) => {
@@ -48,7 +49,7 @@
         >
             <slot name="dropdown-header" />
             <template v-for="(group, index) in dropdownItems" :key="group.length.toString(32)">
-                <DropdownMenuGroupItem :group="group" />
+                <DropdownMenuGroupItem :context="context" :group="group" />
                 <DropdownMenuSeparator v-if="index < dropdownItems.length - 1" />
             </template>
         </DropdownMenuContent>
