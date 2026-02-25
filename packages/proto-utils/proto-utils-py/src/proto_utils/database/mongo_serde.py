@@ -410,11 +410,12 @@ class MongoSerde:
         Returns:
             The serialized Protocol Buffer MongoDeleteOneJsonSchemaResponse message.
         """
+        extra = response.get("extra", {})
         return mongo_pb2.MongoDeleteOneJsonSchemaResponse(
             success=response["success"],
             message=response["message"],
             status=response["status"],
-            extra=response["extra"],
+            extra={str(k): str(v) for k, v in extra.items()},
         )
 
     @staticmethod
@@ -480,11 +481,12 @@ class MongoSerde:
         Returns:
             The serialized Protocol Buffer MongoDeleteImportNameResponse message.
         """
+        extra = response.get("extra") or {}
         return mongo_pb2.MongoDeleteImportNameResponse(
             success=response["success"],
             message=response["message"],
             status=response["status"],
-            extra=response["extra"],
+            extra={str(k): str(v) for k, v in extra.items()},
         )
 
     @staticmethod

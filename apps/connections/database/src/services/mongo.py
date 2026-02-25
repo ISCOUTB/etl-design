@@ -328,11 +328,10 @@ class MongoSchemasService:
             )
 
         current_schema_doc = existing_schema["schema"]
-        current_active_schema = current_schema_doc["active_schema"]
 
         # Compare the new schema with the current active schema
         if MongoSchemasService.compare_schemas(
-            current_active_schema, request["schema"]
+            current_schema_doc, request["schema"]
         ):
             return dtypes.MongoUpdateOneJsonSchemaResponse(
                 status="no_change",
@@ -350,7 +349,7 @@ class MongoSchemasService:
                         "active_schema": request["schema"],
                         "created_at": request["created_at"],
                     },
-                    "$push": {"schemas_releases": current_active_schema},
+                    "$push": {"schemas_releases": current_schema_doc.copy()},
                 },
             )
 
@@ -399,20 +398,18 @@ class MongoSchemasService:
             dtypes.MongoDeleteOneJsonSchemaResponse: Response indicating the operation
                 result (deleted, reverted, or error).
         """
-        schema_doc = MongoSchemasService.find_one_jsonschema(
-            dtypes.MongoFindJsonSchemaRequest(import_name=request["import_name"]),
-            mongo_schemas_connection=mongo_schemas_connection,
+        full_doc = mongo_schemas_connection.find_one(
+            {"import_name": request["import_name"]}
         )
 
-        if schema_doc["status"] != "found" or schema_doc["schema"] is None:
+        if not full_doc or "active_schema" not in full_doc:
             return dtypes.MongoDeleteOneJsonSchemaResponse(
                 success=False,
                 message=f"Schema with import_name '{request['import_name']}' not found",
                 status="error",
                 extra={},
             )
-
-        releases = schema_doc["schema"].get("schemas_releases", [])
+        releases = full_doc.get("schemas_releases", [])
 
         if not releases:
             result: pymongo.results.DeleteResult = mongo_schemas_connection.delete_one(
@@ -431,7 +428,7 @@ class MongoSchemasService:
                 "$set": {
                     "active_schema": releases[-1]["schema"].copy(),
                     "created_at": releases[-1].get(
-                        "created_at", schema_doc["schema"]["created_at"]
+                        "created_at", full_doc.get("created_at", datetime.now(UTC))
                     ),
                 },
                 "$pop": {"schemas_releases": 1},
