@@ -101,7 +101,11 @@ class RedisService:
         Returns:
             dtypes.RedisDeleteResponse: Response containing the count of deleted keys.
         """
-        deleted_count = redis_db.delete(*request["keys"])
+        keys = request["keys"]
+        if len(keys) > 0:
+            deleted_count = redis_db.delete(*keys)
+        else:
+            deleted_count = 0
         return dtypes.RedisDeleteResponse(count=deleted_count)
 
     @staticmethod
