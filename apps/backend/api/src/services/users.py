@@ -76,9 +76,10 @@ class UserService:
             self.repository.db.rollback()
             if "uq_user_email" in str(e.orig):
                 raise EmailInUseException()
-
-            if "ck_user_email_format" in str(e.orig):
+            elif "ck_user_email_format" in str(e.orig):
                 raise EmailFormatException()
+            else:
+                raise AppException() from e
 
         except Exception as e:
             self.repository.db.rollback()
@@ -103,9 +104,10 @@ class UserService:
             self.repository.db.rollback()
             if "uq_user_email" in str(e.orig):
                 raise EmailInUseException()
-
-            if "ck_user_email_format" in str(e.orig):
+            elif "ck_user_email_format" in str(e.orig):
                 raise EmailFormatException()
+            else:
+                raise AppException() from e
         except Exception as e:
             self.repository.db.rollback()
             raise AppException() from e
