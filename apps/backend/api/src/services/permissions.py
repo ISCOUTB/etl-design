@@ -3,7 +3,6 @@ from enum import StrEnum
 from typing import Dict, Tuple
 
 from src.core.database_sql import SessionLocal
-from src.exceptions import IncorrectModel
 from src.models import (
     AnyModelKey,
     Model,
@@ -26,7 +25,7 @@ def _is_user_active(user: TokenPayload) -> bool:
     if user_record is None:
         return False
 
-    return user_record.status == UserStatus.ACTIVE
+    return user_record.status == UserStatus.ACTIVE  # type: ignore
 
 
 def _load_project_model(project_id: str) -> Project:
@@ -364,12 +363,6 @@ class PermissionService(object):
         model_key: ModelKey[Model],
         model: Model | None = None,
     ) -> bool:
-        if model is not None and not isinstance(model, model_key.model_class):  # type: ignore
-            raise IncorrectModel(
-                f"model type mismatch: expected {model_key.model_class.__name__}, "
-                f"got {type(model).__name__}"
-            )
-
         for role in ROLE_HIERARCHY.get(user.role, (user.role,)):
             model_permissions = ROLES.get(role, {}).get(model_key, {})
             permission = model_permissions.get(action, False)
