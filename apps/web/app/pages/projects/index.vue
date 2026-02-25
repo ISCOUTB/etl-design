@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import type { z } from "zod";
+    import { ResponseCodesRecord } from "#shared/utils/response-codes";
     import { PaginatedResponse, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import { Plus } from "lucide-vue-next";
 
@@ -13,23 +13,25 @@
         },
     });
 
+    const errorToast = useServerErrorToast();
     const Response = PaginatedResponse(ResponseProjectSchema);
-    const { data } = useApiFetch<z.infer<typeof Response>>("/projects/search", {
-        onResponse({ response }) {
-            const parsedResponse = Response.safeParse(response.body);
-            if (!parsedResponse.success) {
-                return;
-            }
 
-            response._data = parsedResponse.data;
-        },
+    const currentPage = useRouteQuery("page", 1, {
+        transform: Number,
+        mode: "replace",
     });
+    const { data: _data } = useApiFetch("/projects/search", {
+        query: { currentPage },
+    });
+    const data = computed(() => {
+        const parsed = Response.safeParse(_data.value);
+        if (!parsed.success) {
+            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
+            return;
+        }
 
-    /**
-     * data.value.items is of type Record<string, unknown>
-     * Typescript does not infers that it is in fact a ResponseProjectSchema[]
-     */
-    const { columns } = useProjectsTableColumns();
+        return parsed.data;
+    });
 </script>
 
 <template>
@@ -51,15 +53,10 @@
             </NuxtLink>
         </div>
 
-        <template v-if="data">
-            <DataTable state-key="projects" :columns="columns" :data="data.items">
-                <template #control-previous>
-                    {{ $t("projects.view.table.pagination.previous") }}
-                </template>
-                <template #control-next>
-                    {{ $t("projects.view.table.pagination.next") }}
-                </template>
-            </DataTable>
-        </template>
+        <div>
+            <pre>
+                {{ data }}
+            </pre>
+        </div>
     </div>
 </template>

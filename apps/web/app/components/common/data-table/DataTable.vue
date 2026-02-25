@@ -2,6 +2,7 @@
     import type {
         ColumnDef,
         ColumnFiltersState,
+        PaginationState,
         SortingState,
         VisibilityState,
     } from "@tanstack/vue-table";
@@ -9,7 +10,6 @@
         FlexRender,
         getCoreRowModel,
         getFilteredRowModel,
-        getPaginationRowModel,
         getSortedRowModel,
         useVueTable,
     } from "@tanstack/vue-table";
@@ -18,9 +18,20 @@
         stateKey: string;
         columns: MaybeRefOrGetter<ColumnDef<Data, Value>[]>;
         data: MaybeRefOrGetter<Data[]>;
+        pageCount?: number;
+        initialPageIndex?: number;
+        initialPageSize?: number;
     }
 
-    const props = defineProps<Props<TData, TValue>>();
+    interface Emits {
+        "update:pagination": [pagination: PaginationState];
+    }
+
+    const props = withDefaults(defineProps<Props<TData, TValue>>(), {
+        initialPageIndex: 0,
+        initialPageSize: 10,
+    });
+    const emit = defineEmits<Emits>();
 
     const data = computed(() => toValue(props.data));
     const columns = computed(() => toValue(props.columns));
@@ -34,6 +45,10 @@
         `${props.stateKey}-column-visibility`,
         () => ({}),
     );
+    const pagination = useState<PaginationState>(`${props.stateKey}-pagination-state`, () => ({
+        pageIndex: props.initialPageIndex,
+        pageSize: props.initialPageSize,
+    }));
 
     const table = useVueTable({
         get data() {
@@ -41,6 +56,9 @@
         },
         get columns() {
             return columns.value;
+        },
+        get pageCount() {
+            return props.pageCount;
         },
         state: {
             get sorting() {
@@ -78,12 +96,16 @@
             columnVisibility.value = updaterOrValue;
         },
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        manualPagination: true,
     });
 
     defineExpose({ table });
+
+    onMounted(() => {
+        watch(pagination, () => emit("update:pagination", pagination.value), { immediate: true });
+    });
 </script>
 
 <template>

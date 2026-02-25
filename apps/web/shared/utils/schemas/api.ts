@@ -14,7 +14,7 @@ const PaginatedResponseObject = z.object({
     has_next: z.boolean(),
 });
 
-export function PaginatedResponse(object: z.ZodObject) {
+export function PaginatedResponse<T extends z.ZodType>(object: T) {
     return PaginatedResponseObject.extend({ items: z.array(object) });
 }
 

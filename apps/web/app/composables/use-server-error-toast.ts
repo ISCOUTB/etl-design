@@ -37,6 +37,13 @@ export default function () {
                 };
             }
 
+            case ResponseCodesRecord.Server.BadPayload: {
+                return {
+                    title: t("common.errors.bad_payload.title"),
+                    description: t("common.errors.bad_payload.description"),
+                };
+            }
+
             default: {
                 return {
                     title: t("errors.unknown.title"),

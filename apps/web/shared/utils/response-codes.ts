@@ -3,6 +3,7 @@ export const ResponseCodesRecord = {
         BadPayload: "socket:bad-payload",
     },
     Server: {
+        BadPayload: "server:bad-payload",
         UnAuthorized: "server:unauthorized",
         UnknownError: "server:unknown-error",
         Auth: {

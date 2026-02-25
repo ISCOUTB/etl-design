@@ -11,6 +11,12 @@
         },
         "actions": {
             "cancel": "Cancel"
+        },
+        "errors": {
+            "bad_payload": {
+                "title": "Invalid Server Response",
+                "description": "The data received from the server was malformed and could not be processed. Please try again later."
+            }
         }
     },
     "settings": {

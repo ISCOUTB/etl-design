@@ -5,13 +5,15 @@ import HeaderSorted from "@/components/common/data-table/DataTableHeaderSorted.v
 import ActionsDropdown from "@/components/projects/ProjectsActionsDropdown.vue";
 
 export default function () {
+    const { t } = useI18n();
+
     const columns = computed<ColumnDef<z.infer<typeof ResponseProjectSchema>>[]>(() => [
         {
             accessorKey: "name",
             header: ({ column }) =>
                 h(HeaderSorted<z.infer<typeof ResponseProjectSchema>, unknown>, {
                     column,
-                    title: $t("projects.create.fields.name.label"),
+                    title: t("projects.create.fields.name.label"),
                 }),
         },
         {
@@ -19,7 +21,7 @@ export default function () {
             header: ({ column }) =>
                 h(HeaderSorted<z.infer<typeof ResponseProjectSchema>, unknown>, {
                     column,
-                    title: $t("projects.create.fields.provider.label"),
+                    title: t("projects.create.fields.provider.label"),
                 }),
             cell: ({ row }) => {
                 const value = row.getValue("provider");
@@ -35,7 +37,7 @@ export default function () {
             header: ({ column }) =>
                 h(HeaderSorted<z.infer<typeof ResponseProjectSchema>, unknown>, {
                     column,
-                    title: $t("projects.create.fields.db_host.label"),
+                    title: t("projects.create.fields.db_host.label"),
                 }),
             cell: ({ row }) => {
                 const value = row.getValue("provider");
@@ -51,7 +53,7 @@ export default function () {
             header: ({ column }) =>
                 h(HeaderSorted<z.infer<typeof ResponseProjectSchema>, unknown>, {
                     column,
-                    title: $t("projects.create.fields.db_name.label"),
+                    title: t("projects.create.fields.db_name.label"),
                 }),
             cell: ({ row }) => {
                 const value = row.getValue("provider");
@@ -63,7 +65,7 @@ export default function () {
             },
         },
         {
-            id: $t("projects.view.table.actions.label"),
+            id: t("projects.view.table.actions.label"),
             cell: ({ row }) => h(ActionsDropdown, { project: row.original }),
         },
     ]);
