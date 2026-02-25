@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 
@@ -81,13 +82,20 @@ class AuthService:
             j.deserialize(token)
             j.decrypt(key)
 
+            # Apparently, the json.loads is not converting the payload to a dict,
+            # but to a string, so we need to use ast.literal_eval to convert it
+            # to a dict before creating the TokenPayload object.
             payload = json.loads(j.payload.decode("utf-8"))
+            if isinstance(payload, str):
+                payload = ast.literal_eval(payload)
+
             payload_token = schemas.TokenPayload(**payload)
             if payload_token.exp < utc_now().timestamp():
                 raise TokenExpiredException()
         except (TokenExpiredException, UnauthenticatedException):
             raise
         except Exception as e:
+            print(repr(e))
             raise UnauthenticatedException() from e
 
         return payload_token
@@ -107,8 +115,8 @@ class AuthService:
         )
 
         j = jwe.JWE(
-            plaintext=json.dumps(payload.model_dump()).encode("utf-8"),
+            plaintext=json.dumps(payload.model_dump_json()).encode("utf-8"),
             protected='{"alg": "dir", "enc": "A256GCM"}',
         )
         j.add_recipient(key)
-        return j.serialize()
+        return j.serialize(compact=True)

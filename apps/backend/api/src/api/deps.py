@@ -94,7 +94,7 @@ def get_current_user(
     payload_token = AuthService.decode_access_token(token)
 
     try:
-        user_service.get_user_by_id(payload_token.sub)
+        user_service.get_user_by_id(payload_token.id)
     except Exception as e:
         raise UnauthenticatedException() from e
 
