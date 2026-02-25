@@ -89,7 +89,6 @@ class BaseRepository(Generic[T]):
         for field, value in update_data_dict.items():
             setattr(db_obj, field, value)
 
-        self.db.add(db_obj)
         return db_obj
 
     def _conditional_delete(

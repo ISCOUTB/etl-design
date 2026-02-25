@@ -2,6 +2,7 @@ import hashlib
 import hmac
 
 import bcrypt
+from pyaegis import Aegis256
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -59,3 +60,52 @@ def derive_key(
         okm += previous
 
     return okm[:length]
+
+
+def encrypt_aegis256(
+    plaintext: str,
+    secret_key: str,
+    secret_sign: str,
+    *,
+    project_id: str,
+    field_name: str,
+) -> str:
+    nbytes = 32
+
+    cipher = Aegis256(nbytes)
+    key = derive_key(secret_key, secret_sign, nbytes)
+    nonce = cipher.random_nonce()
+
+    ciphertext = cipher.encrypt(
+        key=key,
+        nonce=nonce,
+        plaintext=plaintext.encode("utf-8"),
+        associated_data=f"{project_id}:{field_name}".encode("utf-8"),
+    )
+    return (nonce + ciphertext).hex()
+
+
+def decrypt_aegis256(
+    ciphertext_hex: str,
+    secret_key: str,
+    secret_sign: str,
+    *,
+    project_id: str,
+    field_name: str,
+) -> str:
+    nbytes = 32
+
+    cipher = Aegis256(nbytes)
+    key = derive_key(secret_key, secret_sign, nbytes)
+
+    ciphertext_bytes = bytes.fromhex(ciphertext_hex)
+    nonce = ciphertext_bytes[:nbytes]
+    ciphertext = ciphertext_bytes[nbytes:]
+
+    plaintext_bytes = cipher.decrypt(
+        key=key,
+        nonce=nonce,
+        ciphertext=ciphertext,
+        associated_data=f"{project_id}:{field_name}".encode("utf-8"),
+    )
+    return plaintext_bytes.decode("utf-8")

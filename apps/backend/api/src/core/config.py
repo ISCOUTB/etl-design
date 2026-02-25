@@ -1,4 +1,3 @@
-import secrets
 from typing import Annotated, Any
 
 from dotenv import load_dotenv
@@ -48,7 +47,11 @@ class Settings(BaseSettings):
     SERVER_DEBUG: bool
 
     AUTH_INFO: str
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str
+
+    # Encryption configuration for database credentials in projects
+    CREDENTIALS_SECRET_KEY: str
+    CREDENTIALS_SIGN: str
 
     FIRST_SUPERUSER_NAME: str
     FIRST_SUPERUSER_EMAIL: str

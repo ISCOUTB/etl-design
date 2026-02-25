@@ -98,6 +98,7 @@ dependencies = [
     { name = "proto-utils" },
     { name = "psycopg" },
     { name = "psycopg2-binary" },
+    { name = "pyaegis" },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
     { name = "tenacity" },
@@ -129,6 +130,7 @@ requires-dist = [
     { name = "proto-utils", editable = "../../../packages/proto-utils/proto-utils-py" },
     { name = "psycopg", specifier = ">=3.2.9" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
+    { name = "pyaegis", specifier = ">=0.2.0" },
     { name = "pydantic-settings", specifier = ">=2.10.0" },
     { name = "sqlalchemy", specifier = ">=2.0.45" },
     { name = "tenacity", specifier = ">=9.1.2" },
@@ -1365,6 +1367,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/67/69/f36abe5f118c1dca6d3726ceae164b9356985805480731ac6712a63f24f0/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:c3cb3a676873d7506825221045bd70e0427c905b9c8ee8d6acd70cfcbd6e576d", size = 3347643, upload-time = "2025-10-10T11:13:53.499Z" },
     { url = "https://files.pythonhosted.org/packages/e1/36/9c0c326fe3a4227953dfb29f5d0c8ae3b8eb8c1cd2967aa569f50cb3c61f/psycopg2_binary-2.9.11-cp314-cp314-win_amd64.whl", hash = "sha256:4012c9c954dfaccd28f94e84ab9f94e12df76b4afb22331b1f0d3154893a6316", size = 2803913, upload-time = "2025-10-10T11:13:57.058Z" },
 ]
+
+[[package]]
+name = "pyaegis"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cffi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/c7/86e17b6eb1e16af7b8510082afd95af72ee79e314e1adafd0d4831095152/pyaegis-0.2.0.tar.gz", hash = "sha256:24e3bcd112f64b094dc7667349e32e69a23801ac802967c797e9e815e0046e74", size = 76034, upload-time = "2025-11-05T16:13:32.978Z" }
 
 [[package]]
 name = "pycparser"

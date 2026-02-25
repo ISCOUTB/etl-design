@@ -45,7 +45,6 @@ class ProjectRepository(BaseRepository[models.Project]):
         """Create a new project in the database."""
         db_project = models.Project(**project_data.model_dump(exclude_unset=True))
         self.db.add(db_project)
-        self.db.flush()
         return db_project
 
     def update_project(

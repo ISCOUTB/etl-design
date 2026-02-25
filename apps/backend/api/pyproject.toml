@@ -23,6 +23,7 @@ dependencies = [
     "fastuuid7>=0.1.0",
     "jwcrypto>=1.5.6",
     "bcrypt>=5.0.0",
+    "pyaegis>=0.2.0",
 ]
 
 [tool.uv.sources]
