@@ -7,6 +7,7 @@ from src import models, schemas
 from src.core.config import settings
 from src.core.security import decrypt_aegis256, encrypt_aegis256
 from src.exceptions import (
+    AppException,
     InvalidDBCredentialsException,
     ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
@@ -21,7 +22,11 @@ class ProjectService:
     def __init__(self, *, db: Session):
         self.repository = ProjectRepository(db=db)
 
-    def __encrypt_db_credentials(self, project: models.Project) -> models.Project:
+    def __encrypt_db_credentials(
+        self,
+        project: models.Project,
+        schema: schemas.CreateProjectSchema | schemas.UpdateProjectSchema,
+    ) -> models.Project:
         fields = [
             "provider",
             "db_host",
@@ -32,8 +37,8 @@ class ProjectService:
             "db_params",
         ]
         for field in fields:
-            value = getattr(project, field)
-            if value:
+            value = getattr(schema, field)
+            if value is not None:
                 encrypted_value = encrypt_aegis256(
                     plaintext=str(value),
                     secret_key=settings.CREDENTIALS_SECRET_KEY,
@@ -57,7 +62,7 @@ class ProjectService:
         ]
         for field in fields:
             value = getattr(project, field)
-            if value:
+            if value is not None:
                 decrypted_value = decrypt_aegis256(
                     ciphertext_hex=str(value),
                     secret_key=settings.CREDENTIALS_SECRET_KEY,
@@ -74,6 +79,7 @@ class ProjectService:
         if project is None:
             raise ProjectNotFoundException()
 
+        project = self.__decrypt_db_credentials(project)
         return ParserService.parse_project(project)
 
     def get_project_db_uri(self, project_id: str) -> str:
@@ -114,12 +120,15 @@ class ProjectService:
     ) -> schemas.ResponseProjectSchema:
         project = self.repository.create_project(project_data)
         try:
-            project = self.__encrypt_db_credentials(project)
+            self.repository.db.flush()  # Ensure project ID is generated before encryption
+            project = self.__encrypt_db_credentials(project, project_data)
             self.repository.db.commit()
         except IntegrityError as e:
             # Handle unique constraint violation for project name
             if "uq_project_name" in str(e.orig):
                 raise ProjectAlreadyExistsException()
+        except Exception as e:
+            raise AppException() from e
 
         project = self.__decrypt_db_credentials(project)
         return ParserService.parse_project(project)
@@ -128,22 +137,28 @@ class ProjectService:
         self,
         project_data: schemas.UpdateProjectSchema,
         *,
-        project_id: Optional[str] = None,
-        db_project: Optional[models.Project] = None,
+        project_id: str,
     ) -> schemas.ResponseProjectSchema:
-        updated_project = self.repository.update_project(
-            project_data=project_data, project_id=project_id, db_project=db_project
-        )
-        if updated_project is None:
+        db_project = self.repository.get_project_by_id(project_id)
+        if db_project is None:
             raise ProjectNotFoundException()
 
+        updated_project = self.repository.update_project(
+            project_data=project_data, db_project=db_project
+        )
+
         try:
-            updated_project = self.__encrypt_db_credentials(updated_project)
+            updated_project = self.__encrypt_db_credentials(
+                updated_project, schema=project_data
+            )
+
             self.repository.db.commit()
         except IntegrityError as e:
             # Handle unique constraint violation for project name
             if "uq_project_name" in str(e.orig):
                 raise ProjectAlreadyExistsException()
+        except Exception as e:
+            raise AppException() from e
 
         updated_project = self.__decrypt_db_credentials(updated_project)
         return ParserService.parse_project(updated_project)
