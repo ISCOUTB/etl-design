@@ -98,7 +98,15 @@ def decrypt_aegis256(
     cipher = Aegis256(nbytes)
     key = derive_key(secret_key, secret_sign, nbytes)
 
-    ciphertext_bytes = bytes.fromhex(ciphertext_hex)
+    # @dosquisd
+    try:
+        ciphertext_bytes = bytes.fromhex(ciphertext_hex)
+    except ValueError:
+        return ciphertext_hex
+
+    if len(ciphertext_bytes) < nbytes:
+        return ciphertext_hex
+
     nonce = ciphertext_bytes[:nbytes]
     ciphertext = ciphertext_bytes[nbytes:]
 

@@ -51,14 +51,14 @@
             method: "POST",
             body: {
                 name: values.name,
-                description: values.description,
-                provider: values.provider,
-                db_host: values.dbHost,
-                db_port: values.dbPort,
-                db_user: values.dbUser,
-                db_password: values.dbPassword,
-                db_name: values.dbName,
-                db_params: values.dbParams,
+                description: values.description || null,
+                provider: values.provider || null,
+                db_host: values.dbHost || null,
+                db_port: values.dbPort || null,
+                db_user: values.dbUser || null,
+                db_password: values.dbPassword || null,
+                db_name: values.dbName || null,
+                db_params: values.dbParams || null,
             },
         })
             .then((response) => {

@@ -11,10 +11,19 @@ export default function () {
             description: z.string().optional(),
             provider: z.string().optional(),
             dbHost: z.string().optional(),
-            dbPort: z.coerce
-                .number()
-                .transform((value) => value.toString())
-                .optional(),
+            dbPort: z
+                .string()
+                .optional()
+                .transform((value) => {
+                    if (value?.trim() === "") {
+                        return undefined;
+                    }
+
+                    return value;
+                })
+                .refine((value) => value === undefined || /^\d+$/.test(value), {
+                    error: t("projects.create.validation.port_number"),
+                }),
             dbUser: z.string().optional(),
             dbPassword: z.string().optional(),
             dbName: z.string().optional(),

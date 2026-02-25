@@ -81,6 +81,7 @@ export default defineNuxtConfig({
                 name: "English",
             },
         ],
+        autoDeclare: true,
         experimental: {
             typedPages: true,
         },

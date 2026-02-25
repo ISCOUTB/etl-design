@@ -17,4 +17,7 @@ export default defineAppConfig({
             maxStorageLength: 3,
         },
     },
+    pagination: {
+        defaultPageSize: 10,
+    },
 });

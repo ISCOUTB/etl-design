@@ -37,8 +37,11 @@ class ProjectService:
             "db_params",
         ]
         for field in fields:
-            value = getattr(schema, field)
-            if value is not None:
+            value = getattr(schema, field, None)
+
+            str_value = str(value).strip() if value is not None else ""
+
+            if str_value is not None and str_value not in ("", "None", "null", "0"):  # type: ignore
                 encrypted_value = encrypt_aegis256(
                     plaintext=str(value),
                     secret_key=settings.CREDENTIALS_SECRET_KEY,
@@ -47,6 +50,8 @@ class ProjectService:
                     field_name=field,
                 )
                 setattr(project, field, encrypted_value)
+            else:
+                setattr(project, field, None)
 
         return project
 
@@ -62,15 +67,18 @@ class ProjectService:
         ]
         for field in fields:
             value = getattr(project, field)
-            if value is not None:
-                decrypted_value = decrypt_aegis256(
-                    ciphertext_hex=str(value),
-                    secret_key=settings.CREDENTIALS_SECRET_KEY,
-                    secret_sign=settings.CREDENTIALS_SIGN,
-                    project_id=str(project.id),
-                    field_name=field,
-                )
-                setattr(project, field, decrypted_value)
+            if value and len(str(value)) > 32:
+                try:
+                    decrypted_value = decrypt_aegis256(
+                        ciphertext_hex=str(value),
+                        secret_key=settings.CREDENTIALS_SECRET_KEY,
+                        secret_sign=settings.CREDENTIALS_SIGN,
+                        project_id=str(project.id),
+                        field_name=field,
+                    )
+                    setattr(project, field, decrypted_value)
+                except ValueError:
+                    continue
 
         return project
 

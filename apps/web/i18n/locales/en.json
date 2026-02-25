@@ -161,7 +161,8 @@
                 }
             },
             "validation": {
-                "name_empty": "Project Name cannot be empty"
+                "name_empty": "Project Name cannot be empty",
+                "port_number": "Must be a valid port number"
             },
             "events": {
                 "project_created": {

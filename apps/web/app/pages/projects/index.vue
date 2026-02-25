@@ -13,6 +13,7 @@
         },
     });
 
+    const config = useAppConfig();
     const errorToast = useServerErrorToast();
     const Response = PaginatedResponse(ResponseProjectSchema);
 
@@ -21,10 +22,14 @@
         mode: "replace",
     });
     const { data: _data } = useApiFetch("/projects/search", {
-        query: { currentPage },
+        query: {
+            skip: (currentPage.value - 1) * config.pagination.defaultPageSize,
+            limit: config.pagination.defaultPageSize,
+        },
     });
     const data = computed(() => {
         const parsed = Response.safeParse(_data.value);
+        console.warn(parsed.data);
         if (!parsed.success) {
             errorToast.handle(ResponseCodesRecord.Server.BadPayload);
             return;
@@ -32,6 +37,8 @@
 
         return parsed.data;
     });
+
+    const auth = useAuth();
 </script>
 
 <template>
@@ -53,10 +60,23 @@
             </NuxtLink>
         </div>
 
-        <div>
-            <pre>
-                {{ data }}
-            </pre>
-        </div>
+        <PaginationRoot
+            :items="data?.items"
+            index="id"
+            :page="currentPage"
+            :page-size="data?.limit ?? config.pagination.defaultPageSize"
+            :total-pages="data?.total_pages ?? 1"
+        >
+            <div>
+                Lorem ipsum dolor sit amet consectetur adipisicing elit. Ea, fuga a iusto
+                necessitatibus voluptas, repellat architecto, amet consequatur delectus dicta
+                dignissimos doloribus optio aperiam voluptate? Repellat cumque voluptatum doloremque
+                ipsa!
+            </div>
+        </PaginationRoot>
+
+        <pre>
+            {{ auth.data.value?.accessToken }}
+        </pre>
     </div>
 </template>
