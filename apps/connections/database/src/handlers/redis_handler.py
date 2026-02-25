@@ -19,11 +19,13 @@ class RedisHandler(BaseHandler):
         self,
         operation: Callable[[Request, RedisConnection], T],
         request: Request,
+        retry_on_failure: bool = False,
     ) -> T:
         current_delay = self.retry_delay_redis
         last_exception = None
+        retries = self.max_retries_redis if retry_on_failure else 1
 
-        for attempt in range(1, self.max_retries_redis + 1):
+        for attempt in range(1, retries + 1):
             try:
                 redis_db = self.manager.get_redis_connection(attempt > 1)
                 return operation(request, redis_db=redis_db)
@@ -33,23 +35,23 @@ class RedisHandler(BaseHandler):
                 redis.exceptions.ResponseError,
             ) as e:
                 last_exception = e
-                if attempt == self.max_retries_redis:
+                if attempt == retries:
                     logger.error(
                         f"Redis operation '{operation.__name__}' failed after "
-                        f"{self.max_retries_redis} attempts: {e}"
+                        f"{retries} attempts: {e}"
                     )
                     raise
 
                 logger.warning(
                     f"Redis operation '{operation.__name__}' failed "
-                    f"(attempt {attempt}/{self.max_retries_redis}): {e}. "
+                    f"(attempt {attempt}/{retries}): {e}. "
                     f"Retrying in {current_delay}s..."
                 )
                 time.sleep(current_delay)
                 current_delay *= self.backoff_redis
 
         # just in case
-        raise last_exception
+        raise last_exception if last_exception else Exception("Unknown error during Redis operation")
 
     def get_keys(
         self,

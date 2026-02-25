@@ -18,11 +18,13 @@ class MongoHandler(BaseHandler):
         self,
         operation: Callable[[Request, MongoConnection], T],
         request: Request,
+        retry_on_failure: bool = False,
     ) -> T:
         current_delay = self.retry_delay_mongo
         last_exception = None
+        retries = self.max_retries_mongo if retry_on_failure else 1
 
-        for attempt in range(1, self.max_retries_mongo + 1):
+        for attempt in range(1, retries + 1):
             try:
                 mongo_db = self.manager.get_mongo_schemas_connection(attempt > 1)
                 return operation(request, mongo_schemas_connection=mongo_db)
@@ -31,14 +33,14 @@ class MongoHandler(BaseHandler):
                 pymongo.errors.ServerSelectionTimeoutError,
             ) as e:
                 last_exception = e
-                if attempt == self.max_retries_mongo:
+                if attempt == retries:
                     raise
 
                 time.sleep(current_delay)
                 current_delay *= self.backoff_mongo
 
         # just in case
-        raise last_exception
+        raise last_exception if last_exception else Exception("Unknown error during MongoDB operation")
 
     def ping(self, request: mongo_pb2.MongoPingRequest) -> mongo_pb2.MongoPingResponse:
         deserialized_request = MongoSerde.deserialize_ping_request(request)
