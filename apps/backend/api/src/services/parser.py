@@ -27,7 +27,7 @@ class ParserService:
         return schemas.ResponseProjectSchema(
             id=str(project.id),
             name=str(project.name),
-            provider=str(project.provider),
+            provider=project.provider,
             db_host=project.db_host,
             db_port=project.db_port,
             db_user=project.db_user,
