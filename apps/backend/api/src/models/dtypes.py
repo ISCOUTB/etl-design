@@ -48,3 +48,23 @@ user_project_type_enum = Enum(
     create_type=True,
     schema="public",
 )
+
+
+# ========== Uploads ===========
+
+
+class TaskStatus(enum.Enum):
+    PENDING = "pending"
+    PUBLISHED = "published"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+task_status_enum = Enum(
+    TaskStatus,
+    name="task_status_enum",
+    native_enum=True,
+    create_type=True,
+    schema="public",
+)

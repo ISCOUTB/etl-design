@@ -217,6 +217,8 @@ class Publisher:
         insert: bool = False,
         insert_overwrite: Optional[bool] = None,
         insert_db_uri: Optional[str] = None,
+        task_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -240,6 +242,8 @@ class Publisher:
                 operation.
             insert_db_uri (Optional[str]): If provided, indicates that the validation is for an insertion
                 operation and specifies the database URI for the insertion.
+            task_id (Optional[str]): Optional unique task ID (UUID) for tracking the validation request. If not provided, a new UUID will be generated.
+            idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the validation request.
             kwargs (str): Additional key-value pairs to include in the message.
 
         Returns:
@@ -269,7 +273,11 @@ class Publisher:
                 )
 
         def _publish() -> str:
-            task_id = str(uuid7())  # actually, it is already str, but for type clarity
+            nonlocal task_id
+            if task_id is None:
+                # actually, it is already str, but for type clarity
+                task_id = str(uuid7())
+
             message = ValidationMessage(
                 id=task_id,
                 task=task,
@@ -282,6 +290,7 @@ class Publisher:
                 insert=insert,
                 insert_overwrite=insert_overwrite,
                 insert_db_uri=insert_db_uri,
+                idempotency_key=idempotency_key,
             )
 
             self._channel.basic_publish(
@@ -312,6 +321,8 @@ class Publisher:
         db_uri: str,
         table_name: str,
         overwrite: bool = False,
+        task_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish an insertion request message to the RabbitMQ exchange.
@@ -332,11 +343,17 @@ class Publisher:
             table_name (Optional[str]): Optional name of the target table for the insertion.
             overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
             db_uri (str): The URI for connecting to the database where the data should be inserted.
+            task_id (Optional[str]): Optional unique task ID (UUID) for tracking the insertion request. If not provided, a new UUID will be generated.
+            idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the insertion request.
             kwargs (str): Additional key-value pairs to include in the message.
         """
 
         def _publish() -> str:
-            task_id = str(uuid7())  # actually, it is already str, but for type clarity
+            nonlocal task_id
+            if task_id is None:
+                # actually, it is already str, but for type clarity
+                task_id = str(uuid7())
+
             message = InsertionMessage(
                 id=task_id,
                 task=task,
@@ -348,6 +365,7 @@ class Publisher:
                 extra=kwargs,
                 overwrite=overwrite,
                 db_uri=db_uri,
+                idempotency_key=idempotency_key,
             )
 
             self._channel.basic_publish(

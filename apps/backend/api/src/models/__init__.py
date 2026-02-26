@@ -1,13 +1,16 @@
 from src.models.dtypes import (
+    TaskStatus,
     UserProjectType,
     UserRole,
     UserStatus,
+    task_status_enum,
     user_project_type_enum,
     user_role_enum,
     user_status_enum,
 )
 from src.models.keys import AnyModelKey, Model, ModelKey, ModelKeys
 from src.models.projects import Project, UserProject
+from src.models.uploads import UploadTask
 from src.models.users import User
 
 __all__ = [
@@ -27,4 +30,8 @@ __all__ = [
     "ModelKey",
     "AnyModelKey",
     "ModelKeys",
+    # === Uploads ===
+    "TaskStatus",
+    "task_status_enum",
+    "UploadTask",
 ]

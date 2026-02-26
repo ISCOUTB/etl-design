@@ -62,3 +62,19 @@ class ParserService:
         user_projects: List[models.UserProject],
     ) -> List[schemas.ResponseUserProjectSchema]:
         return list(map(ParserService.parse_user_project, user_projects))
+
+    @staticmethod
+    def parse_upload_task(
+        upload_task: models.UploadTask,
+    ) -> schemas.UploadTaskResponseSchema:
+        return schemas.UploadTaskResponseSchema(
+            task_id=str(upload_task.task_id),
+            idempotency_key=str(upload_task.idempotency_key),
+            status=upload_task.status,
+            user_id=str(upload_task.user_id),
+            project_id=str(upload_task.project_id),
+            file_hash=upload_task.file_hash,
+            task_metadata=upload_task.task_metadata,
+            created_at=upload_task.created_at,
+            updated_at=upload_task.updated_at,
+        )

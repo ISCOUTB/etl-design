@@ -15,6 +15,7 @@ router = APIRouter()
 @router.post("/task-completed")
 async def task_completed(
     task_id: Annotated[str, Body()],
+    idempotency_key: Annotated[Optional[str], Body()],
     status: Annotated[str, Body()],
     message: Annotated[str, Body()],
     raw_data: Annotated[Optional[Dict[str, Any]], Body()] = None,
@@ -24,7 +25,8 @@ async def task_completed(
 
     print(
         f"Received task completion notification: task_id={task_id}, "
-        f"status={status}, message={message}"
+        f"status={status}, message={message}, idempotency_key={idempotency_key}, "
+        f"raw_data={raw_data}"
     )
 
     return dtypes.ApiResponse(

@@ -1,4 +1,4 @@
-from typing import Dict, Literal, TypedDict
+from typing import Dict, Literal, Optional, TypedDict
 
 from messaging_utils.schemas.common import Metadata
 
@@ -17,6 +17,7 @@ class InsertionMessage(TypedDict):
     extra (Dict[str, str]): A dictionary of additional key-value pairs for extensibility.
     overwrite (bool): A flag indicating whether to overwrite to existing data (True) or append (False).
     db_uri (str): The URI for connecting to the database where the data should be inserted.
+    idempotency_key (Optional[str]): A unique key for ensuring idempotent processing of the insertion request.
     """
 
     id: str
@@ -29,3 +30,4 @@ class InsertionMessage(TypedDict):
     extra: Dict[str, str]
     overwrite: bool
     db_uri: str
+    idempotency_key: Optional[str]

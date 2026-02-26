@@ -8,6 +8,12 @@ from src.schemas.projects import (
     UpdateProjectSchema,
 )
 from src.schemas.token import TokenPayload
+from src.schemas.uploads import (
+    UploadTaskBaseSchema,
+    UploadTaskCreateSchema,
+    UploadTaskResponseSchema,
+    UploadTaskUpdateSchema,
+)
 from src.schemas.user_projects import (
     BaseUserProjectSchema,
     CreateUserProjectSchema,
@@ -47,4 +53,9 @@ __all__ = [
     "UpdateUserProjectSchema",
     # Token Schemas
     "TokenPayload",
+    # Upload Schemas
+    "UploadTaskBaseSchema",
+    "UploadTaskCreateSchema",
+    "UploadTaskResponseSchema",
+    "UploadTaskUpdateSchema",
 ]

@@ -61,3 +61,6 @@ class User(BaseModel):
 
     # Relationships
     projects = relationship("UserProject", back_populates="user", uselist=True)
+
+    # Uploaded tasks
+    upload_tasks = relationship("UploadTask", back_populates="user", uselist=True)

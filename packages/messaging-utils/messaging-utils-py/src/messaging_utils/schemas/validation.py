@@ -17,3 +17,4 @@ class ValidationMessage(TypedDict):
     insert: bool
     insert_overwrite: Optional[bool]
     insert_db_uri: Optional[str]
+    idempotency_key: Optional[str]

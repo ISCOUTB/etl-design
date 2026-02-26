@@ -61,6 +61,7 @@ class Project(BaseModel):
 
     # Relationships
     users = relationship("UserProject", back_populates="project", uselist=True)
+    upload_tasks = relationship("UploadTask", back_populates="project", uselist=True)
 
 
 class UserProject(BaseModel):
