@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from enum import StrEnum
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
+from uuid import UUID
 
 from src.core.database_sql import SessionLocal
 from src.models import (
@@ -8,13 +9,12 @@ from src.models import (
     Model,
     ModelKey,
     ModelKeys,
-    Project,
     UserProject,
     UserProjectType,
     UserRole,
     UserStatus,
 )
-from src.repositories import ProjectRepository, UserProjectRepository, UserRepository
+from src.repositories import UserProjectRepository, UserRepository
 from src.schemas.token import TokenPayload
 
 
@@ -28,14 +28,18 @@ def _is_user_active(user: TokenPayload) -> bool:
     return user_record.status == UserStatus.ACTIVE  # type: ignore
 
 
-def _load_project_model(project_id: str) -> Project:
+def _load_user_projects_for_project(project_id: str) -> List[UserProject]:
+    try:
+        project_uuid = UUID(project_id)
+    except ValueError:
+        return []
+    
     with SessionLocal() as db:
-        project = ProjectRepository(db=db).get_project_by_id(project_id)
-
-    if project is None:
-        return Project(id=project_id, users=[])
-
-    return project
+        user_projects = db.query(UserProject).filter(
+            UserProject.project_id == project_uuid
+        ).all()
+    
+    return user_projects if user_projects else []
 
 
 def _load_user_project_model(user_id: str, project_id: str) -> UserProject | None:
@@ -110,8 +114,8 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.view: lambda user, model: (
                 model is not None
                 and any(
-                    up.project_id == model.id and up.user_id == user.id
-                    for up in getattr(_load_project_model(model), "users", [])
+                    str(up.project_id) == model.id and str(up.user_id) == user.id
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.search: True,
@@ -119,20 +123,20 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.update: lambda user, model: (
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.delete: False,
             Action.flush: lambda user, model: (
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
         },
@@ -219,10 +223,10 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.create: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.update: lambda user, model: (  # model: UserProject
@@ -257,8 +261,8 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.search: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id and up.user_id == user.id
-                    for up in getattr(_load_project_model(model), "users", [])
+                    str(up.project_id) == model.id and str(up.user_id) == user.id
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
         },
@@ -266,37 +270,37 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.validate: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.process: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.insert: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
             Action.table: lambda user, model: (  # model: Project
                 model is not None
                 and any(
-                    up.project_id == model.id
-                    and up.user_id == user.id
+                    str(up.project_id) == model.id
+                    and str(up.user_id) == user.id
                     and up.role in {UserProjectType.OWNER, UserProjectType.SHARED}
-                    for up in getattr(_load_project_model(model), "users", [])
+                    for up in _load_user_projects_for_project(model.id)
                 )
             ),
         },
