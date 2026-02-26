@@ -39,8 +39,22 @@ export default function () {
 
             case ResponseCodesRecord.Server.BadPayload: {
                 return {
-                    title: t("common.errors.bad_payload.title"),
-                    description: t("common.errors.bad_payload.description"),
+                    title: t("errors.bad_payload.title"),
+                    description: t("errors.bad_payload.description"),
+                };
+            }
+
+            case ResponseCodesRecord.Server.UnAuthorized: {
+                return {
+                    title: t("errors.auth.unauthorized.title"),
+                    description: t("errors.auth.unauthorized.description"),
+                };
+            }
+
+            case ResponseCodesRecord.Server.UnAutenticated: {
+                return {
+                    title: t("errors.auth.unauthenticated.title"),
+                    description: t("errors.auth.unauthenticated.description"),
                 };
             }
 

@@ -45,6 +45,7 @@ declare module "vue" {
 
 declare module "vue-router" {
     interface RouteMeta {
+        title: string;
         auth?: AuthMiddlewareMeta;
     }
 }

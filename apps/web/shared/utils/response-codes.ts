@@ -4,7 +4,8 @@ export const ResponseCodesRecord = {
     },
     Server: {
         BadPayload: "server:bad-payload",
-        UnAuthorized: "server:unauthorized",
+        UnAuthorized: "error:unauthorized",
+        UnAutenticated: "error:unauthenticated",
         UnknownError: "server:unknown-error",
         Auth: {
             SignIn: {

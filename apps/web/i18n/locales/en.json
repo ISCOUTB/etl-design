@@ -12,12 +12,6 @@
         "actions": {
             "cancel": "Cancel"
         },
-        "errors": {
-            "bad_payload": {
-                "title": "Invalid Server Response",
-                "description": "The data received from the server was malformed and could not be processed. Please try again later."
-            }
-        },
         "pagination": {
             "previous": "Previous Page",
             "next": "Next Page"
@@ -106,6 +100,10 @@
             "title": "An unknown error ocurred",
             "description": "Please try again later"
         },
+        "bad_payload": {
+            "title": "Invalid Server Response",
+            "description": "The data received from the server was malformed and could not be processed. Please try again later."
+        },
         "auth": {
             "invalid_credentials": {
                 "title": "Invalid credentials"
@@ -113,6 +111,14 @@
             "user_not_found": {
                 "title": "Account was not found",
                 "description": "Did you type it correctly?"
+            },
+            "unauthorized": {
+                "title": "Unauthorized!",
+                "description": "You don't have enought permissions to view the resource"
+            },
+            "unauthenticated": {
+                "title": "Unauthenticated",
+                "description": "Please login to view the resource"
             }
         }
     },
@@ -214,6 +220,18 @@
                 "no_db_name": "No Database",
                 "no_provider": "No Provider",
                 "no_field": "This project has no ({field}) configured.\nPlease review your config."
+            }
+        },
+        "id": {
+            "fallback_title": "My Project",
+            "title": "{username}'s Project - {projectName}",
+            "sections": {
+                "general_information": {
+                    "tab": "General"
+                },
+                "settings": {
+                    "tab": "settings"
+                }
             }
         }
     }

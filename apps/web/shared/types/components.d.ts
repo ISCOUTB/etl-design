@@ -41,6 +41,27 @@ declare global {
             }
         }
 
+        namespace TabsManager {
+            interface TabMeta {
+                label: string;
+                value: string;
+                icon?: Components.LucideIconComponent;
+                atomic?: boolean;
+            }
+
+            interface TabDefinition<C extends Component> {
+                meta: Components.TabsManager.TabMeta;
+                component: Components.Modal.ComponentLoader<C>;
+                props?: Components.Modal.ComponentProps<C>;
+            }
+
+            interface LoadedComponent<C extends Component> {
+                meta: Components.TabsManager.TabMeta;
+                component: C;
+                props?: Components.Modal.ComponentProps<C>;
+            }
+        }
+
         namespace Sidebar {
             interface Group {
                 title?: string;
