@@ -38,20 +38,17 @@ class ProjectService:
         ]
         for field in fields:
             value = getattr(schema, field, None)
-
             str_value = str(value).strip() if value is not None else ""
 
             if str_value is not None and str_value not in ("", "None", "null", "0"):  # type: ignore
                 encrypted_value = encrypt_aegis256(
-                    plaintext=str(value),
+                    plaintext=str_value,
                     secret_key=settings.CREDENTIALS_SECRET_KEY,
                     secret_sign=settings.CREDENTIALS_SIGN,
                     project_id=str(project.id),
                     field_name=field,
                 )
                 setattr(project, field, encrypted_value)
-            else:
-                setattr(project, field, None)
 
         return project
 
@@ -96,13 +93,14 @@ class ProjectService:
             raise ProjectNotFoundException()
 
         project = self.__decrypt_db_credentials(encrypted_project)
+        print(project.name, project.db_user, project.db_password)
         try:
             return create_postgres_uri(
-                user=str(project.db_user),
-                password=str(project.db_password),
-                host=str(project.db_host),
-                port=str(project.db_port),
-                db_name=str(project.db_name),
+                user=project.db_user,
+                password=project.db_password,
+                host=project.db_host,
+                port=project.db_port,
+                db_name=project.db_name,
             )
         except Exception:
             raise InvalidDBCredentialsException()
