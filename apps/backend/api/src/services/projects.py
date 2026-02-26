@@ -38,17 +38,20 @@ class ProjectService:
         ]
         for field in fields:
             value = getattr(schema, field, None)
-            str_value = str(value).strip() if value is not None else ""
-
-            if str_value is not None and str_value not in ("", "None", "null", "0"):  # type: ignore
+            if value is not None:
                 encrypted_value = encrypt_aegis256(
-                    plaintext=str_value,
+                    plaintext=str(value),
                     secret_key=settings.CREDENTIALS_SECRET_KEY,
                     secret_sign=settings.CREDENTIALS_SIGN,
                     project_id=str(project.id),
                     field_name=field,
                 )
                 setattr(project, field, encrypted_value)
+            elif isinstance(schema, schemas.CreateProjectSchema):  # Value is None
+                setattr(project, field, None)
+            else:
+                # Do nothing
+                pass
 
         return project
 
@@ -85,6 +88,7 @@ class ProjectService:
             raise ProjectNotFoundException()
 
         project = self.__decrypt_db_credentials(project)
+        self.repository.db.expunge(project)
         return ParserService.parse_project(project)
 
     def get_project_db_uri(self, project_id: str) -> str:
@@ -93,6 +97,7 @@ class ProjectService:
             raise ProjectNotFoundException()
 
         project = self.__decrypt_db_credentials(encrypted_project)
+        self.repository.db.expunge(project)
         print(project.name, project.db_user, project.db_password)
         try:
             return create_postgres_uri(
@@ -116,6 +121,8 @@ class ProjectService:
             name=name, skip=skip, limit=limit
         )
         projects = list(map(self.__decrypt_db_credentials, encrypted_projects))
+        for project in projects:
+            self.repository.db.expunge(project)
         return ParserService.parse_projects(projects)
 
     def count_projects(self, name: Optional[str] = None) -> int:
@@ -125,9 +132,11 @@ class ProjectService:
         self, project_data: schemas.CreateProjectSchema
     ) -> schemas.ResponseProjectSchema:
         project = self.repository.create_project(project_data)
+        print(project.id, project.name, project.db_user, project.db_password)
         try:
             self.repository.db.flush()  # Ensure project ID is generated before encryption
             project = self.__encrypt_db_credentials(project, project_data)
+            print(project.id, project.name, project.db_user, project.db_password)
             self.repository.db.commit()
         except IntegrityError as e:
             self.repository.db.rollback()
@@ -140,7 +149,14 @@ class ProjectService:
             self.repository.db.rollback()
             raise AppException() from e
 
+        print(project.id, project.name, project.db_user, project.db_password)
         project = self.__decrypt_db_credentials(project)
+        
+        # Desasociar el objeto de la sesión para evitar que autoflush guarde
+        # valores plaintext si hay operaciones de DB subsecuentes
+        self.repository.db.expunge(project)
+
+        print(project.id, project.name, project.db_user, project.db_password)
         return ParserService.parse_project(project)
 
     def update_project(
@@ -175,6 +191,7 @@ class ProjectService:
             raise AppException() from e
 
         updated_project = self.__decrypt_db_credentials(updated_project)
+        self.repository.db.expunge(updated_project)
         return ParserService.parse_project(updated_project)
 
     def delete_project(self, project_id: str) -> schemas.ResponseProjectSchema:
@@ -189,4 +206,5 @@ class ProjectService:
         assert response.obj is not None, (
             "Deleted project object should be returned on successful deletion"
         )
+        self.repository.db.expunge(response.obj)
         return ParserService.parse_project(response.obj)
