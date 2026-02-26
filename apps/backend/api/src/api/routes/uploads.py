@@ -1,21 +1,23 @@
-# TODO: Find a way to make all these function atomic
-# in case the database or rabbit is down, we don't want to end up in a state
-# where the task is published but not saved in the database, or vice versa.
-# For that, we could use idempotency keys, or we could use a two-phase commit protocol,
-# but that might be an overkill for now.
+# Idempotency is now handled by IdempotencyService which ensures atomicity
+# across database, Redis cache, and RabbitMQ operations.
+# All upload operations (validate, insert, process) use idempotency keys
+# to prevent duplicate requests within a configurable time window.
 
-from typing import Annotated, List
+from typing import Annotated
 
 import httpx
 import psycopg2
 from fastapi import APIRouter, Form, HTTPException, UploadFile
-from messaging_utils.core.config import settings as mq_settings
-from messaging_utils.schemas import Metadata
 from proto_utils.database import dtypes
 
-from src.api.deps import CurrentUser, DatabaseClientDep, ProjectServiceDep, PublisherDep
+from src.api.deps import (
+    CurrentUser,
+    DatabaseClientDep,
+    IdempotencyServiceDep,
+    ProjectServiceDep,
+    PublisherDep,
+)
 from src.core.config import settings
-from src.core.constants import INSERTION_TASK, VALIDATION_TASK
 from src.exceptions import ForbiddenException
 from src.models import Project
 from src.services.permissions import Action, ModelKeys, PermissionService
@@ -30,11 +32,11 @@ async def validate(
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
+    idempotency_service: IdempotencyServiceDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
     project_id: Annotated[str, Form()],
     table_name: Annotated[str, Form()],
-    force_new: bool = False,
-) -> List[dtypes.ApiResponse]:
+) -> dtypes.ApiResponse:
     """
     Upload a spreadsheet file in order to be validated.
     """
@@ -47,64 +49,19 @@ async def validate(
     if not has_permission:
         raise ForbiddenException()
 
-    if not force_new and (
-        cached_response := database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(
-                import_name=project_id, task=VALIDATION_TASK
-            )
-        )
-    ):
-        return cached_response["tasks"]
-
     try:
-        # Read the file content
-        file_content = await spreadsheet_file.read()
-
-        assert file_content, "File content is empty."
-        assert spreadsheet_file.filename, "Filename is missing."
-        assert spreadsheet_file.content_type, "Content type is missing."
-
-        # Metadata
-        metadata = Metadata(
-            filename=spreadsheet_file.filename,
-            content_type=spreadsheet_file.content_type,
-            size=len(file_content),
-        )
-
-        # Publish in RabbitMQ
-        task_id = publisher.publish_validation_request(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
-            file_data=file_content,
+        response = await idempotency_service.validate_task(
+            db_client=database_client,
+            publisher=publisher,
+            spreadsheet_file=spreadsheet_file,
+            user_id=current_user.id,
             project_id=project_id,
             table_name=table_name,
-            metadata=metadata,
-            task="sample_validation",
         )
-
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Validation request submitted successfully",
-            data={"task_id": task_id, "project_id": project_id},
-        )
-
-    except Exception as e:
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to submit validation request: {str(e)}",
-            data={},
-        )
-        return [response]
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response,
-            task=VALIDATION_TASK,
-        )
-    )
-    return [response]
+        return response
+    except Exception:
+        # Exception handlers will manage this
+        raise
 
 
 @router.post("/insert")
@@ -113,7 +70,8 @@ async def insert(
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
-    spreadsheet_file: UploadFile,
+    idempotency_service: IdempotencyServiceDep,
+    spreadsheet_file: Annotated[UploadFile, Form()],
     project_id: Annotated[str, Form()],
     table_name: Annotated[str, Form()],
     overwrite: bool = False,
@@ -131,59 +89,24 @@ async def insert(
     if not has_permission:
         raise ForbiddenException()
 
-    # Read the file content
-    file_content = await spreadsheet_file.read()
-
-    assert file_content, "File content is empty."
-    assert spreadsheet_file.filename, "Filename is missing."
-    assert spreadsheet_file.content_type, "Content type is missing."
-
-    # Create Metadata object obtained from the uploaded file
-    metadata = Metadata(
-        filename=spreadsheet_file.filename,
-        content_type=spreadsheet_file.content_type,
-        size=len(file_content),
-    )
-
     # Fetch db credentials of the project
     db_uri = project_service.get_project_db_uri(project_id)
+
     try:
-        # Publish in RabbitMQ
-        task_id = publisher.publish_insertion_request(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
-            file_data=file_content,
+        response = await idempotency_service.insert_task(
+            db_client=database_client,
+            publisher=publisher,
+            spreadsheet_file=spreadsheet_file,
+            user_id=current_user.id,
             project_id=project_id,
             table_name=table_name,
-            metadata=metadata,
-            task="sample_insertion",
-            overwrite=overwrite,
             db_uri=db_uri,
-        )
-
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Validation request submitted successfully",
-            data={"task_id": task_id, "project_id": project_id},
-        )
-
-    except Exception as e:
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to submit validation request: {str(e)}",
-            data={},
+            overwrite=overwrite,
         )
         return response
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response,
-            task=INSERTION_TASK,
-        )
-    )
-    return response
+    except Exception:
+        # Exception handlers will manage this
+        raise
 
 
 @router.post("/process")
@@ -192,6 +115,7 @@ async def process(
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
+    idempotency_service: IdempotencyServiceDep,
     spreadsheet_file: Annotated[UploadFile, Form()],
     project_id: Annotated[str, Form()],
     table_name: Annotated[str, Form()],
@@ -209,61 +133,24 @@ async def process(
     if not has_permission:
         raise ForbiddenException()
 
-    # Read the file content
-    file_content = await spreadsheet_file.read()
-
-    assert file_content, "File content is empty."
-    assert spreadsheet_file.filename, "Filename is missing."
-    assert spreadsheet_file.content_type, "Content type is missing."
-
-    # Create Metadata object obtained from the uploaded file
-    metadata = Metadata(
-        filename=spreadsheet_file.filename,
-        content_type=spreadsheet_file.content_type,
-        size=len(file_content),
-    )
-
     # Fetch db credentials of the project
     db_uri = project_service.get_project_db_uri(project_id)
 
-    # Publish in RabbitMQ
     try:
-        task_id = publisher.publish_validation_request(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
-            file_data=file_content,
+        response = await idempotency_service.process_task(
+            db_client=database_client,
+            publisher=publisher,
+            spreadsheet_file=spreadsheet_file,
+            user_id=current_user.id,
             project_id=project_id,
             table_name=table_name,
-            metadata=metadata,
-            task="sample_validation",
-            insert=True,
-            insert_overwrite=overwrite,
-            insert_db_uri=db_uri,
-        )
-
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Validation request submitted successfully",
-            data={"task_id": task_id, "project_id": project_id},
-        )
-
-    except Exception as e:
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to submit validation request: {str(e)}",
-            data={},
+            db_uri=db_uri,
+            overwrite=overwrite,
         )
         return response
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response,
-            task=VALIDATION_TASK,
-        )
-    )
-    return response
+    except Exception:
+        # Exception handlers will manage this
+        raise
 
 
 @router.post("/table")

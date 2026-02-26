@@ -11,7 +11,14 @@ from src import schemas
 from src.core.config import settings
 from src.core.database_sql import SessionLocal
 from src.exceptions import UnauthenticatedException
-from src.services import AuthService, ProjectService, UserProjectService, UserService
+from src.services import (
+    AuthService,
+    IdempotencyService,
+    ProjectService,
+    UploadService,
+    UserProjectService,
+    UserService,
+)
 
 
 def get_db_client() -> Generator[DatabaseClient, None, None]:
@@ -76,9 +83,19 @@ def get_user_project_service(db: SessionDep) -> UserProjectService:
     return UserProjectService(db=db)
 
 
+def get_upload_service(db: SessionDep) -> UploadService:
+    return UploadService(db=db)
+
+
+def get_idempotency_service(db: SessionDep) -> IdempotencyService:
+    return IdempotencyService(db=db)
+
+
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]
+UploadServiceDep = Annotated[UploadService, Depends(get_upload_service)]
+IdempotencyServiceDep = Annotated[IdempotencyService, Depends(get_idempotency_service)]
 UserProjectServiceDep = Annotated[UserProjectService, Depends(get_user_project_service)]
 
 

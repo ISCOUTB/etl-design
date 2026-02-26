@@ -1,3 +1,8 @@
+from src.exceptions.api import (
+    ContentTypeEmptyException,
+    FileContentEmptyException,
+    FilenameEmptyException,
+)
 from src.exceptions.auth import (
     ForbiddenException,
     IncorrectModel,
@@ -20,6 +25,9 @@ from src.exceptions.schemas import (
     SchemaNotProvidedException,
 )
 from src.exceptions.tasks import TaskNotFoundException
+from src.exceptions.uploads import (
+    UploadTaskNotFoundException,
+)
 from src.exceptions.user_project import UserProjectNotFoundException
 from src.exceptions.users import (
     EmailFormatException,
@@ -31,6 +39,10 @@ from src.exceptions.users import (
 )
 
 __all__ = [
+    # API exceptions
+    "ContentTypeEmptyException",
+    "FileContentEmptyException",
+    "FilenameEmptyException",
     # Auth exceptions
     "ForbiddenException",
     "UnauthenticatedException",
@@ -61,4 +73,6 @@ __all__ = [
     "UserProjectNotFoundException",
     # Base exception
     "AppException",
+    # Upload exceptions
+    "UploadTaskNotFoundException",
 ]
