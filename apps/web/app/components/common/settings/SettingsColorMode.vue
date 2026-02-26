@@ -72,7 +72,7 @@
     const { getKbdKey } = useKbd();
     defineShortcuts(
         {
-            alt_k: {
+            meta_k: {
                 handler: () => updateColorMode(),
             },
         },
@@ -94,7 +94,7 @@
                     <p class="line-clamp-2 flex items-center gap-2">
                         {{ $t(currentMode.label) }}
                         <KbdGroup>
-                            <Kbd>{{ getKbdKey("alt") }}</Kbd>
+                            <Kbd>{{ getKbdKey("meta") }}</Kbd>
                             <span>+</span>
                             <Kbd>{{ getKbdKey("k") }}</Kbd>
                         </KbdGroup>

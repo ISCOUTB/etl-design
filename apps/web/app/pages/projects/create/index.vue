@@ -16,7 +16,7 @@
     import { toast } from "vue-sonner";
 
     definePageMeta({
-        title: "Create Project",
+        title: "projects.create.header.title",
         layout: "sidebar",
         i18n: {
             paths: {
@@ -75,7 +75,9 @@
                     }),
                 });
 
-                router.push($localeRoute({ name: "index" }));
+                router.push(
+                    $localeRoute({ name: "projects-id", params: { id: parsedResponse.data.id } }),
+                );
             })
             .catch((error) => {
                 if (error instanceof FetchError) {
@@ -352,8 +354,9 @@
         <Separator class="my-6" />
 
         <div class="space-y-4">
-            <div class="text-muted-foreground text-sm">
-                {{ $t("projects.create.sections.missing_args.text") }}
+            <div class="text-muted-foreground text-sm space-y-2">
+                <p>{{ $t("projects.create.sections.missing_args.text") }}</p>
+                <p>{{ $t("projects.create.sections.encryption_notice.text") }}</p>
             </div>
 
             <div class="flex justify-end space-x-4">

@@ -47,7 +47,7 @@
     const { getKbdKey } = useKbd();
     defineShortcuts(
         {
-            alt_l: {
+            meta_shift_l: {
                 handler: () => {
                     const currentIdx = locales.value.findIndex((l) => l.code === locale.value);
                     const nextIdx = (currentIdx + 1) % locales.value.length;
@@ -82,7 +82,9 @@
             <SelectSeparator />
             <div class="flex items-center justify-center select-none pointer-events-none">
                 <KbdGroup>
-                    <Kbd>{{ getKbdKey("alt") }}</Kbd>
+                    <Kbd>{{ getKbdKey("meta") }}</Kbd>
+                    <span>+</span>
+                    <Kbd>{{ getKbdKey("shift") }}</Kbd>
                     <span>+</span>
                     <Kbd>{{ getKbdKey("l") }}</Kbd>
                 </KbdGroup>

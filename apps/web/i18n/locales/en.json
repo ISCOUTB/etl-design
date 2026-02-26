@@ -21,6 +21,15 @@
         "pagination": {
             "previous": "Previous Page",
             "next": "Next Page"
+        },
+        "visibility": {
+            "show": "Show",
+            "hide": "Hide",
+            "toggle": "Click to toggle visibility"
+        },
+        "clipboard": {
+            "copy": "Copy",
+            "copied": "Copied"
         }
     },
     "settings": {
@@ -124,6 +133,9 @@
                 },
                 "missing_args": {
                     "text": "Keep in mind that the database parameters are all optional. In case you wan't to apply the changes directly, you must update your project first with the appropiate credentials."
+                },
+                "encryption_notice": {
+                    "text": "All database credentials are encrypted using AEGIS-256 before being stored. Your data is protected."
                 }
             },
             "fields": {

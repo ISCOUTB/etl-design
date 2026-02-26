@@ -3,6 +3,7 @@
     import { PaginatedResponse, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import {
         AlignLeft,
+        Check,
         Database,
         Edit,
         ExternalLink,
@@ -13,6 +14,7 @@
         Server,
         Trash,
     } from "lucide-vue-next";
+    import { cn } from "@/lib/utils";
 
     definePageMeta({
         title: "projects.view.title",
@@ -26,7 +28,8 @@
 
     interface ProjectInformation {
         label: string;
-        value: string | null;
+        value: string | undefined | null;
+        fallbackValue: string;
         icon?: Components.LucideIconComponent;
         warning?: boolean;
         tooltip?: string;
@@ -96,7 +99,8 @@
         return [
             {
                 label: $t("projects.create.fields.db_host.label"),
-                value: project.db_host || $t("projects.create.fields.db_host.label"),
+                value: project.db_host,
+                fallbackValue: $t("projects.create.fields.db_host.label"),
                 icon: Server,
                 warning: !project.db_host,
                 tooltip: $t("projects.view.content.no_field", {
@@ -105,7 +109,8 @@
             },
             {
                 label: $t("projects.create.fields.db_port.label"),
-                value: project.db_port?.toString() || $t("projects.create.fields.db_port.label"),
+                value: project.db_port?.toString(),
+                fallbackValue: $t("projects.create.fields.db_port.label"),
                 icon: Plug,
                 warning: !project.db_port,
                 tooltip: $t("projects.view.content.no_field", {
@@ -114,7 +119,8 @@
             },
             {
                 label: $t("projects.create.fields.db_name.label"),
-                value: project.db_name || $t("projects.create.fields.db_name.label"),
+                value: project.db_name,
+                fallbackValue: $t("projects.create.fields.db_name.label"),
                 icon: AlignLeft,
                 warning: !project.db_name,
                 tooltip: $t("projects.view.content.no_field", {
@@ -176,7 +182,15 @@
                                     <CardTitle>
                                         {{ $item.name }}
                                     </CardTitle>
-                                    <CardDescription class="text-muted-foreground">
+                                    <CardDescription
+                                        :class="
+                                            cn(
+                                                'line-clamp-2',
+                                                !$item.description
+                                                    && 'text-yellow-500 dark:text-yellow-400/70 italic font-medium',
+                                            )
+                                        "
+                                    >
                                         {{
                                             ifEmpty(
                                                 $item.description,
@@ -204,49 +218,75 @@
                                 <div
                                     v-for="info in makeInfo($item)"
                                     :key="info.label"
-                                    class="flex justify-between items-center bg-card px-3 py-2.5"
+                                    class="flex justify-between items-center bg-card px-3 py-2.5 h-14"
                                 >
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[10px] uppercase tracking-wider text-muted-foreground"
-                                        >
-                                            {{ info.label }}
-                                        </span>
-                                        <span
-                                            class="mt-0.5 truncate font-mono text-xs text-foreground"
-                                        >
-                                            {{ info.value }}
-                                        </span>
-                                    </div>
-
-                                    <template v-if="info.tooltip && info.tooltip.length > 0">
-                                        <Tooltip :delay-duration="800">
-                                            <TooltipTrigger as-child>
-                                                <component
-                                                    :is="info.icon"
-                                                    v-if="info.warning"
-                                                    class="size-4 text-yellow-500 dark:text-orange-500"
-                                                />
-                                            </TooltipTrigger>
-                                            <TooltipContent align="end" side="bottom">
-                                                <span
-                                                    v-html="info.tooltip.replace(/\n/g, '<br />')"
-                                                />
-                                            </TooltipContent>
-                                        </Tooltip>
+                                    <template v-if="!info.value?.toString().length">
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="text-[10px] uppercase tracking-wider text-muted-foreground"
+                                            >
+                                                {{ info.label }}
+                                            </span>
+                                            <span
+                                                class="mt-0.5 truncate font-mono text-xs text-foreground"
+                                            >
+                                                {{ info.fallbackValue }}
+                                            </span>
+                                        </div>
+                                        <template v-if="info.tooltip && info.tooltip.length > 0">
+                                            <Tooltip :delay-duration="800">
+                                                <TooltipTrigger as-child>
+                                                    <component
+                                                        :is="info.icon"
+                                                        v-if="info.warning"
+                                                        class="size-4 text-yellow-500 dark:text-orange-500"
+                                                    />
+                                                </TooltipTrigger>
+                                                <TooltipContent align="end" side="bottom">
+                                                    <span
+                                                        v-html="
+                                                            info.tooltip.replace(/\n/g, '<br />')
+                                                        "
+                                                    />
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </template>
+                                        <template v-else>
+                                            <component
+                                                :is="info.icon"
+                                                v-if="info.warning"
+                                                class="size-4 text-yellow-500"
+                                            />
+                                        </template>
                                     </template>
                                     <template v-else>
-                                        <component
-                                            :is="info.icon"
-                                            v-if="info.warning"
-                                            class="size-4 text-yellow-500"
-                                        />
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="text-[10px] uppercase tracking-wider text-muted-foreground"
+                                            >
+                                                {{ info.label }}
+                                            </span>
+                                            <span
+                                                class="mt-0.5 truncate font-mono text-xs text-foreground"
+                                            >
+                                                <SensitiveInfoInline :value="info.value" />
+                                            </span>
+                                        </div>
+
+                                        <Check class="text-green-500 size-4" />
                                     </template>
                                 </div>
                             </div>
 
                             <div class="mt-3.5 flex items-center justify-between">
-                                <Badge variant="secondary" class="text-xs font-normal">
+                                <Badge
+                                    :class="
+                                        cn(
+                                            'text-xs bg-yellow-500 text-gray-100 font-bold',
+                                            $item.provider?.length && 'bg-green-500',
+                                        )
+                                    "
+                                >
                                     {{
                                         ifEmpty(
                                             $item.provider,
