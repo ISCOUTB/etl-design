@@ -21,7 +21,7 @@
         },
     });
 
-    const errorToast = useServerErrorToast();
+    const errorToast = useErrorToast();
     const router = useRouter();
     const auth = useAuth();
     const runtimeConfig = useRuntimeConfig();

@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { ResponseProjectSchema } from "#shared/utils/schemas/api";
     import type { z } from "zod";
+    import { buildPgConnectionString } from "#shared/utils/pg-connection-string";
     import {
         Calendar,
         Cloud,
@@ -23,20 +24,21 @@
     const project = computed(() => toValue(props.project));
 
     const validConnectionString = computed(
-        () =>
-            project.value &&
-            project.value.db_user &&
-            project.value.db_password &&
-            project.value.db_host &&
-            project.value.db_port &&
-            project.value.db_name,
+        () => project.value && project.value.db_host && project.value.db_port,
     );
     const connectionString = computed(() => {
-        if (!project.value) {
-            return;
+        if (!project.value || !validConnectionString.value) {
+            return $t("projects.id.sections.general_information.connection_string.invalid");
         }
 
-        return `postgresql://${project.value.db_user}:${project.value.db_password}@${project.value.db_host}:${project.value.db_port}/${project.value.db_name}?${project.value.db_params}`;
+        return buildPgConnectionString({
+            user: project.value.db_user,
+            password: project.value.db_password,
+            host: project.value.db_host!,
+            port: project.value.db_port!,
+            database: project.value.db_name,
+            params: project.value.db_params,
+        });
     });
 
     const clipboard = useClipboard();
@@ -92,7 +94,10 @@
                         >
                             {{ project.provider }}
                         </Badge>
-                        <TriangleAlert class="size-6 text-yellow-500/50 dark:text-orange-500/60" />
+                        <TriangleAlert
+                            v-else
+                            class="size-6 text-yellow-500/50 dark:text-orange-500/60"
+                        />
                     </div>
 
                     <ProjectGeneralInformationRow
@@ -148,6 +153,7 @@
                     />
 
                     <ProjectGeneralInformationRow
+                        no-warning
                         :icon="Globe"
                         label="projects.create.fields.db_params.label"
                         :value="project.db_params"
@@ -170,14 +176,14 @@
                     :class="
                         cn(
                             'flex-1 truncate font-mono text-sm text-foreground',
-                            !validConnectionString && 'line-through text-muted-foreground italic',
+                            !validConnectionString && 'text-muted-foreground italic',
                         )
                     "
                 >
                     {{ connectionString }}
                 </code>
                 <Button
-                    v-if="connectionString"
+                    v-if="validConnectionString"
                     variant="outline"
                     size="sm"
                     class="shrink-0"

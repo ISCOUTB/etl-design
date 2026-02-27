@@ -3,9 +3,15 @@
     import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import { Info, Settings } from "lucide-vue-next";
 
+    enum Section {
+        General = "section:general-information",
+        Settings = "section:settings",
+    }
+
     definePageMeta({
         title: "projects.id.fallback_title",
         layout: "sidebar",
+        middleware: ["project-validation"],
         i18n: {
             paths: {
                 en: "/projects/[id]",
@@ -24,7 +30,9 @@
         }),
     });
 
-    const errorToast = useServerErrorToast();
+    const tab = useRouteQuery("tab", Section.General);
+
+    const errorToast = useErrorToast();
     const { data: _data } = useApiFetch(`/projects/id/${projectId.value}`, {
         method: "GET",
         onResponseError({ response }) {
@@ -60,25 +68,25 @@
             <p class="mt-1.5 text-sm text-muted-foreground">{{ data?.description }}</p>
         </div>
 
-        <Tabs default-value="section:general-information">
+        <Tabs v-model="tab" :default-value="Section.General">
             <TabsList>
-                <TabsTrigger value="section:general-information" class="flex items-center">
+                <TabsTrigger :value="Section.General" class="flex items-center">
                     <Info />
                     <span>
                         {{ $t("projects.id.sections.general_information.tab") }}
                     </span>
                 </TabsTrigger>
-                <TabsTrigger value="section:settings" class="flex items-center">
+                <TabsTrigger :value="Section.Settings" class="flex items-center">
                     <Settings />
                     <span>
                         {{ $t("projects.id.sections.settings.tab") }}
                     </span>
                 </TabsTrigger>
             </TabsList>
-            <TabsContent value="section:general-information" class="mt-6">
+            <TabsContent :value="Section.General" class="mt-6">
                 <ProjectGeneralInformation :project="data" />
             </TabsContent>
-            <TabsContent value="section:settings" class="mt-6">
+            <TabsContent :value="Section.Settings" class="mt-6">
                 <ProjectSettings :project="data" />
             </TabsContent>
         </Tabs>

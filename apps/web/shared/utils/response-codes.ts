@@ -23,5 +23,8 @@ export const ResponseCodesRecord = {
             TokenExpired: "error:token-expired",
             UnAuthenticated: "error:unauthenticated",
         },
+        Project: {
+            NotFound: "error:project-not-found",
+        },
     },
 } as const;

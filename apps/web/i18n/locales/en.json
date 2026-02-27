@@ -120,6 +120,12 @@
                 "title": "Unauthenticated",
                 "description": "Please login to view the resource"
             }
+        },
+        "project": {
+            "not_found": {
+                "title": "The Project requested does not exists",
+                "description": "Review your projects and try again"
+            }
         }
     },
     "projects": {
@@ -238,7 +244,8 @@
                     },
                     "connection_string": {
                         "title": "Connection String",
-                        "description": "Use this URI to connect from your application."
+                        "description": "Use this URI to connect from your application.",
+                        "invalid": "Could not generate a valid connection string with the given parameters"
                     },
                     "fields": {
                         "id": "Project ID",

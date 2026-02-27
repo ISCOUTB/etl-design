@@ -36,7 +36,7 @@
     }
 
     const { $localeRoute } = useNuxtApp();
-    const errorToast = useServerErrorToast();
+    const errorToast = useErrorToast();
     const config = useAppConfig();
     const Response = PaginatedResponse(ResponseProjectSchema);
 
@@ -187,7 +187,7 @@
                                             cn(
                                                 'line-clamp-2',
                                                 !$item.description
-                                                    && 'text-yellow-500 dark:text-yellow-400/70 italic font-medium',
+                                                    && 'text-yellow-700 dark:text-yellow-400/70 italic font-medium',
                                             )
                                         "
                                     >
@@ -239,7 +239,7 @@
                                                     <component
                                                         :is="info.icon"
                                                         v-if="info.warning"
-                                                        class="size-4 text-yellow-500 dark:text-orange-500"
+                                                        class="size-4 text-yellow-700 dark:text-orange-500"
                                                     />
                                                 </TooltipTrigger>
                                                 <TooltipContent align="end" side="bottom">

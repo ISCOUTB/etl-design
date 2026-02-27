@@ -9,6 +9,7 @@
         value: MaybeRefOrGetter<string | undefined | null>;
         class?: HTMLAttributes["class"];
         copyable?: boolean;
+        noWarning?: boolean;
     }
 
     const props = withDefaults(defineProps<Props>(), {
@@ -30,7 +31,7 @@
             <span v-if="value?.length" :class="cn('text-sm text-foreground', props.class)">
                 {{ value }}
             </span>
-            <TriangleAlert v-else class="size-6 text-yellow-500/50 dark:text-orange-500/60" />
+            <TriangleAlert v-else-if="!noWarning" class="size-6 text-yellow-500/50 dark:text-orange-500/60" />
 
             <Button
                 v-if="copyable && value && value.length > 0"

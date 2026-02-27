@@ -58,6 +58,13 @@ export default function () {
                 };
             }
 
+            case ResponseCodesRecord.Server.Project.NotFound: {
+                return {
+                    title: $t("errors.project.not_found.title"),
+                    description: $t("errors.project.not_found.description"),
+                };
+            }
+
             default: {
                 return {
                     title: t("errors.unknown.title"),

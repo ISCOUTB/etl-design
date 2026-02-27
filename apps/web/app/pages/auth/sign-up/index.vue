@@ -26,7 +26,7 @@
         },
     });
 
-    const errorToast = useServerErrorToast();
+    const errorToast = useErrorToast();
     const api = useApi();
     const { $localeRoute } = useNuxtApp();
     const router = useRouter();

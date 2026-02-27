@@ -41,7 +41,7 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-:root {
+/* :root {
     --radius: 0.625rem;
     --background: oklch(1 0 0);
     --foreground: oklch(0.13 0.028 261.692);
@@ -74,6 +74,49 @@
     --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
     --sidebar-border: oklch(0.928 0.006 264.531);
     --sidebar-ring: oklch(0.707 0.022 261.325);
+} */
+
+:root {
+    --radius: 0.625rem;
+    /* Fondo ligeramente gris (Zinc/Slate suave) */
+    --background: oklch(0.98 0.005 264.54);
+    --foreground: oklch(0.18 0.02 261.69);
+
+    /* Cards y Popovers con un blanco puro para que "resalten" sobre el fondo gris */
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 0.02 261.69);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 0.02 261.69);
+
+    /* Primario: Lo mantenemos pero ajustamos el contraste */
+    --primary: oklch(0.25 0.03 264.66);
+    --primary-foreground: oklch(0.98 0.005 264.54);
+
+    /* Elementos Muted y Secondary: Grises más definidos */
+    --secondary: oklch(0.94 0.01 264.54);
+    --secondary-foreground: oklch(0.25 0.03 264.66);
+    --muted: oklch(0.94 0.01 264.54);
+    --muted-foreground: oklch(0.5 0.02 264.36);
+
+    --accent: oklch(0.94 0.01 264.54);
+    --accent-foreground: oklch(0.25 0.03 264.66);
+
+    --destructive: oklch(0.577 0.245 27.325);
+
+    /* Bordes e Inputs: Un gris que se note pero no ensucie */
+    --border: oklch(0.91 0.01 264.53);
+    --input: oklch(0.91 0.01 264.53);
+    --ring: oklch(0.7 0.02 261.32);
+
+    /* Sidebar: Un tono sutilmente distinto para separar áreas */
+    --sidebar: oklch(0.97 0.005 264.54);
+    --sidebar-foreground: oklch(0.18 0.02 261.69);
+    --sidebar-primary: oklch(0.25 0.03 264.66);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.94 0.01 264.54);
+    --sidebar-accent-foreground: oklch(0.25 0.03 264.66);
+    --sidebar-border: oklch(0.91 0.01 264.53);
+    --sidebar-ring: oklch(0.7 0.02 261.32);
 }
 
 .dark {

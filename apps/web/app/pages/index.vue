@@ -8,6 +8,18 @@
             },
         },
     });
+
+    const { on } = useRouteError();
+    const errorToast = useErrorToast();
+    onMounted(() => {
+        on("error:unauthorized", () => {
+            errorToast.handle(ResponseCodesRecord.Server.UnAuthorized);
+        });
+
+        on("error:project-not-found", () => {
+            errorToast.handle(ResponseCodesRecord.Server.Project.NotFound);
+        });
+    });
 </script>
 
 <template>

@@ -42,7 +42,7 @@
     });
 
     const { $localeRoute } = useNuxtApp();
-    const errorToast = useServerErrorToast();
+    const errorToast = useErrorToast();
     const api = useApi();
     const [loading] = useToggle(false);
     const router = useRouter();
