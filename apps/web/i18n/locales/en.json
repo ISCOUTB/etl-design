@@ -227,10 +227,26 @@
             "title": "{username}'s Project - {projectName}",
             "sections": {
                 "general_information": {
-                    "tab": "General"
+                    "tab": "General",
+                    "overview": {
+                        "title": "Overview",
+                        "description": "General details about this project."
+                    },
+                    "connection_details": {
+                        "title": "Connection Details",
+                        "description": "Database connection parameters for this project."
+                    },
+                    "connection_string": {
+                        "title": "Connection String",
+                        "description": "Use this URI to connect from your application."
+                    },
+                    "fields": {
+                        "id": "Project ID",
+                        "created_at": "Created"
+                    }
                 },
                 "settings": {
-                    "tab": "settings"
+                    "tab": "Settings"
                 }
             }
         }

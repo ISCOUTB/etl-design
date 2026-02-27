@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import { ResponseCodesRecord } from "#shared/utils/response-codes";
     import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
+    import { Info, Settings } from "lucide-vue-next";
 
     definePageMeta({
         title: "projects.id.fallback_title",
@@ -24,7 +25,6 @@
     });
 
     const errorToast = useServerErrorToast();
-    const tabs = useProjectTabs();
     const { data: _data } = useApiFetch(`/projects/id/${projectId.value}`, {
         method: "GET",
         onResponseError({ response }) {
@@ -55,33 +55,31 @@
     <div class="mx-auto w-full max-w-5xl">
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                project.Name
+                {{ data?.name }}
             </h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">project.description</p>
+            <p class="mt-1.5 text-sm text-muted-foreground">{{ data?.description }}</p>
         </div>
-
-        <pre>
-            {{ data }}
-        </pre>
 
         <Tabs default-value="section:general-information">
             <TabsList>
-                <TabsTrigger
-                    v-for="tab in tabs.tabs.value"
-                    :key="tab.meta.value"
-                    :value="tab.meta.value"
-                    @click="tabs.setActiveTab(tab.meta.value)"
-                >
-                    <component :is="tab.meta.icon" v-if="tab.meta.icon" class="size-4" />
-                    <span>{{ $t(tab.meta.label) }}</span>
+                <TabsTrigger value="section:general-information" class="flex items-center">
+                    <Info />
+                    <span>
+                        {{ $t("projects.id.sections.general_information.tab") }}
+                    </span>
+                </TabsTrigger>
+                <TabsTrigger value="section:settings" class="flex items-center">
+                    <Settings />
+                    <span>
+                        {{ $t("projects.id.sections.settings.tab") }}
+                    </span>
                 </TabsTrigger>
             </TabsList>
-            <TabsContent :value="tabs.activeTabValue.value!">
-                <component
-                    :is="tabs.component.value"
-                    v-if="tabs.component.value"
-                    v-bind="tabs.props.value"
-                />
+            <TabsContent value="section:general-information" class="mt-6">
+                <ProjectGeneralInformation :project="data" />
+            </TabsContent>
+            <TabsContent value="section:settings" class="mt-6">
+                <ProjectSettings :project="data" />
             </TabsContent>
         </Tabs>
     </div>
