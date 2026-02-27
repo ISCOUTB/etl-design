@@ -253,7 +253,33 @@
                     }
                 },
                 "settings": {
-                    "tab": "Settings"
+                    "tab": "Settings",
+                    "overview": {
+                        "title": "Project Settings",
+                        "description": "Update your project configuration and connection details."
+                    },
+                    "edit": {
+                        "title": "Edit Project",
+                        "description": "Modify your project name, description, and database connection.",
+                        "label": "Edit"
+                    },
+                    "ownership": {
+                        "title": "Ownership",
+                        "description": "Transfer this project to another user or organization.",
+                        "transfer": {
+                            "title": "Transfer Project",
+                            "description": "Move this project to a owner. You will lose access unless the new owner grants it.",
+                            "label": "Transfer"
+                        }
+                    },
+                    "delete": {
+                        "title": "Delete this project",
+                        "description": "Once you delete a project, there no going back. This action is irreversible.",
+                        "label": "Delete"
+                    },
+                    "danger_zone": {
+                        "title": "Danger Zone"
+                    }
                 }
             }
         }

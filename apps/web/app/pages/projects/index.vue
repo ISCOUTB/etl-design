@@ -4,6 +4,8 @@
     import {
         AlignLeft,
         Check,
+        ChevronsLeft,
+        ChevronsRight,
         Database,
         Edit,
         ExternalLink,
@@ -46,14 +48,20 @@
     });
     const searchContent = useState("search-content", () => "");
     const debouncedSearchContent = useDebounce(searchContent, 1000);
+    const calculatedSkip = computed(
+        () => (currentPage.value - 1) * config.pagination.defaultPageSize,
+    );
 
-    const { data: _data } = useApiFetch("/projects/search", {
+    const {
+        data: _data,
+        status,
+        refresh,
+    } = useApiFetch("/projects/search", {
         query: {
             name: debouncedSearchContent,
-            skip: (currentPage.value - 1) * config.pagination.defaultPageSize,
+            skip: calculatedSkip,
             limit: config.pagination.defaultPageSize,
         },
-        key: `${currentPage.value}-projects-search`,
     });
     const data = computed(() => {
         const parsed = Response.safeParse(_data.value);
@@ -129,6 +137,11 @@
             },
         ];
     }
+
+    function handlePageChange(page: number) {
+        currentPage.value = page;
+        refresh();
+    }
 </script>
 
 <template>
@@ -167,10 +180,19 @@
                 :items="data?.items"
                 index="id"
                 :page="currentPage"
+                :loading="status === 'pending'"
                 :page-size="data?.limit ?? config.pagination.defaultPageSize"
                 :total-pages="data?.total_pages ?? 1"
                 class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+                @change-page="handlePageChange"
             >
+                <template #controls-previous>
+                    <ChevronsLeft />
+                </template>
+                <template #controls-next>
+                    <ChevronsRight />
+                </template>
+
                 <template #item="{ $item }">
                     <Card
                         class="group relative overflow-hidden transition-colors hover:border-foreground/20"

@@ -13,7 +13,7 @@
     }
 
     interface Emits {
-        loadPage: [page: number];
+        changePage: [page: number];
     }
 
     type PaginationItem = { type: "item"; page: number } | { type: "ellipsis" };
@@ -82,7 +82,7 @@
             return;
         }
 
-        emit("loadPage", newPage);
+        emit("changePage", newPage);
     }
 </script>
 

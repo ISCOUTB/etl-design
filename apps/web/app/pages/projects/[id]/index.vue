@@ -3,11 +3,6 @@
     import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import { Info, Settings } from "lucide-vue-next";
 
-    enum Section {
-        General = "section:general-information",
-        Settings = "section:settings",
-    }
-
     definePageMeta({
         title: "projects.id.fallback_title",
         layout: "sidebar",
@@ -30,7 +25,12 @@
         }),
     });
 
-    const tab = useRouteQuery("tab", Section.General);
+    const Section = computed(() => ({
+        General: $t("projects.id.sections.general_information.tab"),
+        Settings: $t("projects.id.sections.settings.tab"),
+    }));
+
+    const tab = useRouteQuery("tab", Section.value.General, { mode: "replace" });
 
     const errorToast = useErrorToast();
     const { data: _data } = useApiFetch(`/projects/id/${projectId.value}`, {
@@ -84,10 +84,10 @@
                 </TabsTrigger>
             </TabsList>
             <TabsContent :value="Section.General" class="mt-6">
-                <ProjectGeneralInformation :project="data" />
+                <LazyProjectGeneralInformation :project="data" hydrate-on-visible />
             </TabsContent>
             <TabsContent :value="Section.Settings" class="mt-6">
-                <ProjectSettings :project="data" />
+                <LazyProjectSettings :project="data" hydrate-on-visible />
             </TabsContent>
         </Tabs>
     </div>
