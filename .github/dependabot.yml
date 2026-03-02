@@ -1,4 +1,5 @@
 version: 2
+
 updates:
     - package-ecosystem: npm
       target-branch: development
@@ -11,6 +12,14 @@ updates:
           dependencies:
               patterns:
                   - "*"
+              exclude-patterns:
+                  - next-auth
+      ignore:
+          - dependency-name: next-auth
+            update-types:
+                - version-update:semver-major
+                - version-update:semver-minor
+                - version-update:semver-patch
 
     - package-ecosystem: uv
       target-branch: development
