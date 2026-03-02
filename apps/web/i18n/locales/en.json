@@ -275,7 +275,12 @@
                     "delete": {
                         "title": "Delete this project",
                         "description": "Once you delete a project, there no going back. This action is irreversible.",
-                        "label": "Delete"
+                        "label": "Delete",
+                        "modal": {
+                            "title": "Are you absolutely sure?",
+                            "description": "This action cannot be undone. This will permanently delete the {project} project, its connections, and all asociated data.",
+                            "type_project": "Please type {project} to confirm."
+                        }
                     },
                     "danger_zone": {
                         "title": "Danger Zone"

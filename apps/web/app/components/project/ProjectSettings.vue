@@ -1,5 +1,29 @@
 <script setup lang="ts">
+    import type { z } from "zod";
     import { ExternalLink, Pencil, Trash2, TriangleAlert } from "lucide-vue-next";
+
+    interface Props {
+        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema>>;
+    }
+
+    const props = defineProps<Props>();
+
+    const modal = useModal();
+    const project = computed(() => toValue(props.project));
+
+    function deleteProject() {
+        modal.loadComponent({
+            loader: () => import("@/components/project/ProjectDeleteConfirmationModal.vue"),
+            key: "project-delete",
+            props: {
+                project,
+            },
+        });
+
+        if (modal.currentModalKey.value === "project-delete") {
+            modal.open.value = true;
+        }
+    }
 </script>
 
 <template>
@@ -82,7 +106,7 @@
                     </ItemDescription>
                 </ItemContent>
                 <ItemActions>
-                    <Button disabled variant="destructive" class="cursor-not-allowed">
+                    <Button variant="destructive" @click="deleteProject">
                         <Trash2 class="size-4" />
                         <span>
                             {{ $t("projects.id.sections.settings.delete.label") }}

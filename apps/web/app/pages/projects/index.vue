@@ -52,10 +52,13 @@
         () => (currentPage.value - 1) * config.pagination.defaultPageSize,
     );
 
+    const bus = useEventBus(PROJECTS_REFRESH_BUS_KEY);
+
     const {
         data: _data,
         status,
         refresh,
+        clear,
     } = useApiFetch("/projects/search", {
         query: {
             name: debouncedSearchContent,
@@ -142,6 +145,13 @@
         currentPage.value = page;
         refresh();
     }
+
+    onMounted(() => {
+        bus.on(() => {
+            clear();
+            refresh();
+        });
+    });
 </script>
 
 <template>
@@ -208,8 +218,8 @@
                                         :class="
                                             cn(
                                                 'line-clamp-2',
-                                                !$item.description
-                                                    && 'text-yellow-700 dark:text-yellow-400/70 italic font-medium',
+                                                !$item.description &&
+                                                    'text-yellow-700 dark:text-yellow-400/70 italic font-medium',
                                             )
                                         "
                                     >

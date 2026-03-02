@@ -13,6 +13,7 @@ export default withNuxt(
             "vue/script-indent": ["error", 4, { baseIndent: 1 }],
             "style/indent": "off",
             "vue/singleline-html-element-content-newline": "off",
+            "vue/operator-linebreak": "off",
         },
     },
 );

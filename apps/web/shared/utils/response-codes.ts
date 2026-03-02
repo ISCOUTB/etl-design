@@ -25,6 +25,7 @@ export const ResponseCodesRecord = {
         },
         Project: {
             NotFound: "error:project-not-found",
+            CouldNotDelete: "error:could-not-delete-project",
         },
     },
 } as const;
