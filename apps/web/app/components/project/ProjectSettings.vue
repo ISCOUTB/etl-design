@@ -3,7 +3,7 @@
     import { ExternalLink, Pencil, Trash2, TriangleAlert } from "lucide-vue-next";
 
     interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema>>;
+        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
     }
 
     const props = defineProps<Props>();
@@ -14,13 +14,13 @@
     function deleteProject() {
         modal.loadComponent({
             loader: () => import("@/components/project/ProjectDeleteConfirmationModal.vue"),
-            key: "project-delete",
+            key: ModalKeys.Projects.Delete.ConfirmationModal,
             props: {
                 project,
             },
         });
 
-        if (modal.currentModalKey.value === "project-delete") {
+        if (modal.currentModalKey.value === ModalKeys.Projects.Delete.ConfirmationModal) {
             modal.open.value = true;
         }
     }
@@ -36,7 +36,7 @@
                 {{ $t("projects.id.sections.settings.overview.description") }}
             </p>
 
-            <Item variant="outline" class="p-5 rounded-lg">
+            <Item v-if="project" variant="outline" class="p-5 rounded-lg">
                 <ItemContent>
                     <ItemTitle>
                         {{ $t("projects.id.sections.settings.edit.title") }}
@@ -47,7 +47,14 @@
                 </ItemContent>
                 <ItemActions>
                     <Button variant="outline" as-child>
-                        <NuxtLink :to="$localeRoute({ name: 'index' })">
+                        <NuxtLink
+                            :to="
+                                $localeRoute({
+                                    name: 'projects-id-edit',
+                                    params: { id: project.id },
+                                })
+                            "
+                        >
                             <Pencil class-name="size-4" />
                             <span>{{ $t("projects.id.sections.settings.edit.label") }}</span>
                         </NuxtLink>

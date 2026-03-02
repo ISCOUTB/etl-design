@@ -65,6 +65,7 @@
             skip: calculatedSkip,
             limit: config.pagination.defaultPageSize,
         },
+        key: NuxtKeys.Projects.Search,
     });
     const data = computed(() => {
         const parsed = Response.safeParse(_data.value);
@@ -76,6 +77,7 @@
         return parsed.data;
     });
 
+    const modal = useModal();
     const dropdownItems = computed<
         Components.GenericDropdown.Item<z.infer<typeof ResponseProjectSchema>>[][]
     >(() => [
@@ -94,14 +96,40 @@
             {
                 label: "projects.view.dropdown.edit.label",
                 icon: Edit,
-                to: () => $localeRoute({ name: "index" }),
+                to: (context) => {
+                    console.warn(context);
+                    if (!context) {
+                        return;
+                    }
+
+                    return $localeRoute({ name: "projects-id-edit", params: { id: context.id } });
+                },
             },
         ],
         [
             {
                 label: "projects.view.dropdown.delete.label",
                 icon: Trash,
-                to: () => $localeRoute({ name: "index" }),
+                action: (context) => {
+                    if (!context) {
+                        return;
+                    }
+
+                    modal.loadComponent({
+                        loader: () =>
+                            import("@/components/project/ProjectDeleteConfirmationModal.vue"),
+                        key: ModalKeys.Projects.Delete.ConfirmationModal,
+                        props: {
+                            project: context,
+                        },
+                    });
+
+                    if (
+                        modal.currentModalKey.value === ModalKeys.Projects.Delete.ConfirmationModal
+                    ) {
+                        modal.open.value = true;
+                    }
+                },
             },
         ],
     ]);

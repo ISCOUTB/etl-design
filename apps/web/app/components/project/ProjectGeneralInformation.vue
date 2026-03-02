@@ -94,13 +94,10 @@
                         >
                             {{ project.provider }}
                         </Badge>
-                        <TriangleAlert
-                            v-else
-                            class="size-6 text-yellow-500/50 dark:text-orange-500/60"
-                        />
                     </div>
 
                     <ProjectGeneralInformationRow
+                        no-sensitive
                         :icon="Calendar"
                         label="projects.id.sections.general_information.fields.created_at"
                         :value="
@@ -133,13 +130,14 @@
                     />
 
                     <ProjectGeneralInformationRow
+                        copyable
                         :icon="Plug"
                         label="projects.create.fields.db_port.label"
                         :value="project.db_port?.toString()"
                     />
 
                     <ProjectGeneralInformationRow
-                        copyable
+                        no-warning
                         :icon="User"
                         label="projects.create.fields.db_user.label"
                         :value="project.db_user"
@@ -147,6 +145,7 @@
 
                     <ProjectGeneralInformationRow
                         copyable
+                        no-warning
                         :icon="Database"
                         label="projects.create.fields.db_name.label"
                         :value="project.db_name"

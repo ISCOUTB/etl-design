@@ -287,6 +287,13 @@
                     }
                 }
             }
+        },
+        "edit": {
+            "title": "Edit",
+            "header": {
+                "title": "Edit Project",
+                "description": "Review your configuration"
+            }
         }
     }
 }

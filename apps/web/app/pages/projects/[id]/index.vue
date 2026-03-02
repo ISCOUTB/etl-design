@@ -36,9 +36,6 @@
     const { data: _data } = useApiFetch(`/projects/id/${projectId.value}`, {
         method: "GET",
         onResponseError({ response }) {
-            console.warn(response);
-            console.warn(response._data);
-
             const parsedError = ApiErrorSchema.safeParse(response._data);
             if (!parsedError.success) {
                 errorToast.handle(ResponseCodesRecord.Server.UnknownError);
@@ -47,6 +44,7 @@
 
             errorToast.handle(parsedError.data.error);
         },
+        key: NuxtKeys.Projects.Id,
     });
     const data = computed(() => {
         const parsed = ResponseProjectSchema.safeParse(_data.value);
