@@ -3,6 +3,7 @@ import json
 import time
 from typing import Any, Dict, Optional
 
+import grpc
 import httpx
 import pika
 from messaging_utils.core.config import settings as mq_settings
@@ -20,7 +21,7 @@ from src.core.config import settings
 from src.core.database_client import get_database_client
 from src.schemas.workers import ResultsMessage
 from src.utils import create_component_logger, get_datetime_now
-from src.workers.utils import update_task_status
+from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [results] prefix
 logger = create_component_logger("results")
@@ -184,15 +185,100 @@ class ResultWorker:
     def process_results_request(
         self, ch: BlockingChannel, method, properties, body
     ) -> None:
-        message = ResultsMessage(**json.loads(body))
-        task_id = message["task_id"]
-        logger.info(f"Processing results for task_id: {task_id}")
+        """Process results messages with idempotency guarantees.
 
-        # Do magic here...!
-        asyncio.run(self._notify_task_completion(task_id, message, json.loads(body)))
+        Handles result messages by notifying the API of task completion.
+        Implements idempotency checks to prevent duplicate notifications.
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info(f"Results for task_id {task_id} processed and acknowledged.")
+        Args:
+            ch: RabbitMQ channel object for message acknowledgment.
+            method: Message delivery method containing delivery tag and routing info.
+            properties: Message properties (headers, content-type, etc.).
+            body: Raw message body containing the results.
+
+        Message Format:
+            Expected message body should be a JSON-encoded ResultsMessage containing:
+            - task_id: Unique identifier for the task
+            - status: Final status of the task
+            - results: Detailed results data
+
+        Idempotency:
+            - Checks task status before processing
+            - Skips already completed tasks
+            - Prevents duplicate notifications to API
+
+        Error Handling:
+            - Infrastructure errors (gRPC, Redis, HTTP): Requeue for retry
+            - Logic errors: Mark as error, no requeue
+        """
+        task_id = None
+        try:
+            message = ResultsMessage(**json.loads(body))
+            task_id = message["task_id"]
+            logger.info(f"Processing results for task_id: {task_id}")
+
+            # Idempotency check - Skip if already completed
+            current_status = get_task_status(
+                task_id=task_id,
+                task=self.TASK,
+                database_client=self.db_client,
+            )
+
+            if current_status == "completed":
+                logger.info(
+                    f"Task {task_id} already marked as completed. ACK and skip."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # Notify API of task completion
+            asyncio.run(
+                self._notify_task_completion(task_id, message, json.loads(body))
+            )
+
+            # ACK after successful notification
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            logger.info(f"Results for task_id {task_id} processed and acknowledged.")
+
+        except (
+            grpc.RpcError,
+            httpx.ConnectError,
+            httpx.TimeoutException,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            # Infrastructure error - REQUEUE for retry
+            logger.error(
+                f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
+                "Requeueing for retry."
+            )
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+        except Exception as e:
+            # Logic error - NO requeue, mark as error
+            logger.error(
+                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
+                "Marking as error."
+            )
+
+            if task_id:
+                try:
+                    update_task_status(
+                        database_client=self.db_client,
+                        task_id=task_id,
+                        field="status",
+                        value="error",
+                        task=self.TASK,
+                        message=f"Processing failed: {str(e)}",
+                        data={"error": str(e), "update_date": get_datetime_now()},
+                    )
+                except Exception as update_err:
+                    logger.error(
+                        f"Failed to update error status for task {task_id}: {update_err}"
+                    )
+
+            # ACK to prevent infinite retries
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _notify_task_completion(
         self, task_id: str, message: ResultsMessage, raw_data: Optional[Dict[str, Any]] = None

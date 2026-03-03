@@ -5,6 +5,35 @@ from proto_utils.database import dtypes
 from src.core.database_client import DatabaseClient
 
 
+def get_task_status(
+    *,
+    task_id: str,
+    task: str,
+    database_client: DatabaseClient,
+) -> Optional[str]:
+    """Get the current status of a task from the database.
+
+    Args:
+        task_id (str): The unique identifier of the task.
+        task (str): The type of task (e.g., "validation", "insertion").
+        database_client (DatabaseClient): The database client to use.
+
+    Returns:
+        Optional[str]: The current status of the task, or None if not found.
+    """
+    try:
+        response = database_client.get_task_id(
+            dtypes.GetTaskIdRequest(task_id=task_id, task=task)
+        )
+        
+        if response["found"] and response["value"]:
+            return response["value"]["status"]
+    except Exception:
+        pass
+
+    return None
+
+
 def update_task_status(
     *,
     task_id: str,

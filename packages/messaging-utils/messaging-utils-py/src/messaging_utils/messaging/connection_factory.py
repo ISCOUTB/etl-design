@@ -192,6 +192,9 @@ class RabbitMQConnectionFactory:
             - Exchange: typechecking.exchange (topic, durable)
             - Queues: validation, schema, and results queues (all durable)
             - Bindings: Appropriate routing key bindings for message routing
+            - Queue arguments:
+                - x-delivery-limit: Maximum redelivery attempts (3)
+                - x-message-ttl: Message time-to-live in milliseconds (1 hour)
 
         Raises:
             Exception: If exchange/queue declaration or binding fails.
@@ -203,10 +206,18 @@ class RabbitMQConnectionFactory:
                 durable=cls._exchange_info["durable"],
             )
 
-            # Declare queues
+            # Queue arguments for reliability and retry limits
+            queue_arguments = {
+                "x-delivery-limit": 3,  # Max 3 redelivery attempts
+                "x-message-ttl": 3600000,  # 1 hour TTL (in milliseconds)
+            }
+
+            # Declare queues with arguments
             for queue in cls._exchange_info["queues"]:
                 channel.queue_declare(
-                    queue=queue["queue"], durable=queue["durable"]
+                    queue=queue["queue"],
+                    durable=queue["durable"],
+                    arguments=queue_arguments,
                 )
 
                 # Bind queue to exchange with routing key

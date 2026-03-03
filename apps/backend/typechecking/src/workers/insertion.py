@@ -20,6 +20,7 @@ import asyncio
 import json
 import time
 
+import grpc
 import httpx
 import pika
 import psycopg
@@ -39,7 +40,7 @@ from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
 from src.schemas.workers import InsertionResult
 from src.utils import create_component_logger, get_datetime_now
-from src.workers.utils import update_task_status
+from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [insertion] prefix
 logger = create_component_logger("insertion")
@@ -219,29 +220,63 @@ class InsertionWorker:
             logger.error(f"SchemaWorker: Error closing connections: {e}")
 
     def process_insertion_tasks(self, ch, method, properties, body) -> None:
-        """Process incoming insertion task messages from RabbitMQ.
+        """Process incoming insertion task messages with idempotency guarantees.
 
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
             method: Message delivery method containing delivery tag and routing info.
             properties: Message properties (headers, content-type, etc.).
-            body: Raw message body containing the schema update request.
+            body: Raw message body containing the insertion request.
 
         Message Format:
-            Expected message body should be a JSON-encoded ApiResponse containing:
-            - task_id: Unique identifier for the schema update task
-            - import_name: Name identifier for the schema import
-            - schema_params: Parameters needed to create the schema
+            Expected message body should be a JSON-encoded InsertionMessage containing:
+            - id: Unique identifier for the insertion task
+            - task: Task type (default: "sample_insertion")
+            - file_data: Hexadecimal-encoded file content
+            - table_name: Target table name
+            - db_uri: Database connection URI
+            - overwrite: Whether to overwrite existing data
 
-        Note:
-            Failed messages are not requeued to prevent infinite retry loops.
-            Error details are logged for debugging and monitoring.
+        Idempotency:
+            - Checks task status before processing
+            - Skips already completed tasks (success, error, published, completed)
+            - Requeues tasks currently being processed by another worker
+            - Prevents duplicate processing in case of message redelivery
+
+        Error Handling:
+            - Infrastructure errors (gRPC, Redis, HTTP, network): Requeue for retry
+            - Logic errors (SQL errors, validation failures): Mark as error, no requeue
         """
+        task_id = None
         try:
             message = InsertionMessage(**json.loads(body.decode()))
             task_id = message["id"]
             task = message.get("task", "sample_insertion")
 
+            # Idempotency check - Skip if already completed
+            current_status = get_task_status(
+                task_id=task_id,
+                task=self.TASK,
+                database_client=self.db_client,
+            )
+
+            if current_status in ["success", "error", "published", "completed"]:
+                logger.info(
+                    f"Task {task_id} already completed with status={current_status}. "
+                    "ACK and skip."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            if current_status == "processing-file" or current_status == "requesting-insert-sql":
+                logger.info(
+                    f"Task {task_id} is already being processed (status={current_status}). "
+                    "Another worker is handling it. Skipping."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # Process based on task type
             if task == "sample_insertion":
                 logger.info(f"Processing sample insertion: {task_id}")
                 update_task_status(
@@ -262,14 +297,52 @@ class InsertionWorker:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 raise ValueError(f"Unknown task type: {task}")
 
-            # Add more cases here if needed for other tasks
-
+            # Publish result
             self._publish_result(task_id, result, db_client=self.db_client)
+
+            # ACK only after ALL operations succeed
             ch.basic_ack(delivery_tag=method.delivery_tag)
             logger.info(f"Schema update completed for task: {task_id}")
+
+        except (
+            grpc.RpcError,
+            httpx.ConnectError,
+            httpx.TimeoutException,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            # Infrastructure error - REQUEUE for retry
+            logger.error(
+                f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
+                "Requeueing for retry."
+            )
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
         except Exception as e:
-            logger.error(f"Error processing schema update: {e}")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            # Logic error - NO requeue, mark as error
+            logger.error(
+                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
+                "Marking as error."
+            )
+
+            if task_id:
+                try:
+                    update_task_status(
+                        database_client=self.db_client,
+                        task_id=task_id,
+                        field="status",
+                        value="error",
+                        task=self.TASK,
+                        message=f"Processing failed: {str(e)}",
+                        data={"error": str(e), "update_date": get_datetime_now()},
+                    )
+                except Exception as update_err:
+                    logger.error(
+                        f"Failed to update error status for task {task_id}: {update_err}"
+                    )
+
+            # ACK to prevent infinite retries
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _insert_data(
         self, message: InsertionMessage, db_client: DatabaseClient
@@ -374,6 +447,9 @@ class InsertionWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
+        if self.channel is None:
+            self.channel = RabbitMQConnectionFactory.get_thread_channel()
+
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,

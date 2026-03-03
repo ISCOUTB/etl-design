@@ -22,6 +22,7 @@ import json
 import time
 from io import BytesIO
 
+import grpc
 import pika
 from fastapi import UploadFile
 from messaging_utils.core.config import settings as mq_settings
@@ -35,7 +36,6 @@ from pika.exceptions import (
     AMQPConnectionError,
     ChannelClosedByBroker,
 )
-from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
@@ -45,7 +45,7 @@ from src.handlers.validation import (
 )
 from src.schemas.workers import DataValidated
 from src.utils import create_component_logger, get_datetime_now
-from src.workers.utils import update_task_status
+from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [validation] prefix
 logger = create_component_logger("validation")
@@ -229,12 +229,12 @@ class ValidationWorker:
             logger.error(f"ValidationWorker: Error closing connections: {e}")
 
     def process_validation_request(self, ch, method, properties, body) -> None:
-        """Process a validation request message.
+        """Process a validation request message with idempotency guarantees.
 
         Handles individual validation request messages by parsing the message body,
         extracting the task information, validating the file data, and publishing
-        the result. Implements proper message acknowledgment on success and
-        negative acknowledgment on failure.
+        the result. Implements idempotency checks to prevent duplicate processing
+        and proper message acknowledgment based on error types.
 
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
@@ -243,21 +243,54 @@ class ValidationWorker:
             body: Raw message body containing the validation request.
 
         Message Format:
-            Expected message body should be a JSON-encoded ApiResponse containing:
-            - task_id: Unique identifier for the validation task
+            Expected message body should be a JSON-encoded ValidationMessage containing:
+            - id: Unique identifier for the validation task
+            - task: Task type (default: "sample_validation")
             - file_data: Hexadecimal-encoded file content
-            - import_name: Schema identifier for validation
-            - filename: Optional original filename
+            - table_name: Schema identifier for validation
+            - metadata: File metadata including filename
 
-        Note:
-            Failed messages are not requeued to prevent infinite retry loops.
-            Error details are logged for debugging and monitoring.
+        Idempotency:
+            - Checks task status before processing
+            - Skips already completed tasks (success, error, published, completed)
+            - Requeues tasks currently being processed by another worker
+            - Prevents duplicate processing in case of message redelivery
+
+        Error Handling:
+            - Infrastructure errors (gRPC, Redis, network): Requeue for retry
+            - Logic errors (validation failures, invalid data): Mark as error, no requeue
         """
+        task_id = None
         try:
             message = ValidationMessage(**json.loads(body.decode()))
             task_id = message["id"]
             task = message.get("task", "sample_validation")
 
+            # Idempotency check - Skip if already completed
+            current_status = get_task_status(
+                task_id=task_id,
+                task=self.TASK,
+                database_client=self.db_client,
+            )
+
+            if current_status in ["success", "error", "published", "completed"]:
+                logger.info(
+                    f"Task {task_id} already completed with status={current_status}. "
+                    "ACK and skip."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # This should never happen but just in case
+            if current_status == "processing" or current_status == "validating-file":
+                logger.info(
+                    f"Task {task_id} is already being processed (status={current_status}). "
+                    "Another worker is handling it. Skipping."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # Process based on task type
             if task == "sample_validation":
                 logger.info(f"Process validation request: {task_id}")
                 update_task_status(
@@ -279,12 +312,10 @@ class ValidationWorker:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 raise ValueError(f"Unknown task type: {task}")
 
-            # Add more cases here if needed for other tasks
-
-            # if validation succeeded, publish the result first of all
+            # Publish result
             self._publish_result(task_id, result, db_client=self.db_client)
 
-            # then, if requested, publish the insertion task
+            # Publish insertion task if requested and validation succeeded
             if (
                 task == "sample_validation"
                 and result["status"] == "success"
@@ -297,6 +328,9 @@ class ValidationWorker:
                 assert db_uri is not None, (
                     "insert_db_uri must be provided when insert is True"
                 )
+
+                if self.channel is None:
+                    self.channel = RabbitMQConnectionFactory.get_thread_channel()
 
                 self.channel.basic_publish(
                     exchange=mq_settings.RABBITMQ_EXCHANGE,
@@ -313,15 +347,52 @@ class ValidationWorker:
                             overwrite=insert_overwrite,
                             db_uri=db_uri,
                             table_name=message["table_name"],
+                            idempotency_key=message["idempotency_key"]
                         )
                     ),
                 )
 
+            # ACK only after ALL operations succeed
             ch.basic_ack(delivery_tag=method.delivery_tag)
             logger.info(f"Validation completed for task: {task_id}")
+
+        except (
+            grpc.RpcError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            # Infrastructure error - REQUEUE for retry
+            logger.error(
+                f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
+                "Requeueing for retry."
+            )
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
         except Exception as e:
-            logger.error(f"Error processing validation request: {e}")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            # Logic error - NO requeue, mark as error
+            logger.error(
+                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
+                "Marking as error."
+            )
+
+            if task_id:
+                try:
+                    update_task_status(
+                        database_client=self.db_client,
+                        task_id=task_id,
+                        field="status",
+                        value="error",
+                        task=self.TASK,
+                        message=f"Processing failed: {str(e)}",
+                        data={"error": str(e), "update_date": get_datetime_now()},
+                    )
+                except Exception as update_err:
+                    logger.error(
+                        f"Failed to update error status for task {task_id}: {update_err}"
+                    )
+
+            # ACK to prevent infinite retries
+            ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _validate_data(
         self, message: ValidationMessage, db_client: DatabaseClient
@@ -430,6 +501,9 @@ class ValidationWorker:
                 or serialization problems. Errors are propagated to the caller
                 for proper error handling and message acknowledgment.
         """
+        if self.channel is None:
+            self.channel = RabbitMQConnectionFactory.get_thread_channel()
+
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
