@@ -28,7 +28,6 @@ async def get_task_status(
     if not has_permission:
         raise ForbiddenException()
 
-    
     cached_response = database_client.get_task_id(
         dtypes.GetTaskIdRequest(task_id=task_id, task=task)
     )

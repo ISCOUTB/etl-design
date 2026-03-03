@@ -1,11 +1,9 @@
 # TODO: check other types of paginations, such as cursor-based pagination
 # for better performance on large datasets, is also worth considering in the future.
 
-import json
 from typing import Optional
 
 from fastapi import APIRouter, status
-from proto_utils.database import dtypes
 
 from src import models, schemas
 from src.api.deps import (
@@ -14,7 +12,6 @@ from src.api.deps import (
     UserProjectServiceDep,
     UserServiceDep,
 )
-from src.api.utils import invalidate_cache
 from src.exceptions import ForbiddenException
 from src.services.permissions import Action, PermissionService
 
@@ -29,32 +26,8 @@ router = APIRouter()
 async def get_current_user(
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
-    cache_key = f"{current_user.sub}:user_info"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseUserSchema(**json.loads(cached_response["value"]))
-
     response = user_service.get_user_by_id(current_user.sub)
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
-
     return response
 
 
@@ -65,7 +38,6 @@ async def get_current_user(
 )
 async def search_users(
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     user_service: UserServiceDep,
     name: Optional[str] = None,
     email: Optional[str] = None,
@@ -81,12 +53,6 @@ async def search_users(
         raise ForbiddenException()
 
     page = (skip // limit) + 1
-    role_str = role.value if role else "any"
-    cache_key = f"all_users:active={active}:rol={role_str}:limit={limit}:page={page}"
-    cached_response = db_client.redis_get(dtypes.RedisGetRequest(key=cache_key))
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.PaginatedResponse(**json.loads(cached_response["value"]))
-
     users = user_service.search_users(
         active_only=True,
         name=name,
@@ -109,13 +75,6 @@ async def search_users(
         has_prev=skip > 0,
     )
 
-    db_client.redis_set(
-        dtypes.RedisSetRequest(
-            key=cache_key,
-            value=json.dumps(response.model_dump(mode="json")),
-            expiration=None,
-        )
-    )
     return response
 
 
@@ -128,7 +87,6 @@ async def get_user_by_id(
     user_id: str,
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     has_permission = PermissionService.has_permission(
         action=Action.view,
@@ -139,32 +97,7 @@ async def get_user_by_id(
     if not has_permission:
         raise ForbiddenException()
 
-    cache_key = f"{user_id}:user_info"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseUserSchema(**json.loads(cached_response["value"]))
-
     response = user_service.get_user_by_id(user_id)
-
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        # TODO: log the error, but don't fail the request if caching fails
-        pass
-
     return response
 
 
@@ -177,7 +110,6 @@ async def get_user_by_email(
     email: str,
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     has_permission = PermissionService.has_permission(
         action=Action.search, user=current_user, model_key=models.ModelKeys.user
@@ -185,31 +117,7 @@ async def get_user_by_email(
     if not has_permission:
         raise ForbiddenException()
 
-    cache_key = f"{email}:user_info"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseUserSchema(**json.loads(cached_response["value"]))
-
     response = user_service.get_user_by_email(email)
-
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            )
-        )
-    except Exception:
-        # TODO: log the error, but don't fail the request if caching fails
-        pass
-
     return response
 
 
@@ -220,7 +128,6 @@ async def create_user(
     user_data: schemas.CreateUserSchema,
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     has_permission = PermissionService.has_permission(
         action=Action.create, user=current_user, model_key=models.ModelKeys.user
@@ -229,7 +136,6 @@ async def create_user(
         raise ForbiddenException()
 
     new_user = user_service.create_user(user_data)
-    invalidate_cache(db_client, invalidate_lists=True)
     return new_user
 
 
@@ -243,7 +149,6 @@ async def update_user(
     update_data: schemas.UpdateUserSchema,
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     has_permission = PermissionService.has_permission(
         action=Action.update,
@@ -255,8 +160,6 @@ async def update_user(
         raise ForbiddenException()
 
     updated_user = user_service.update_user(update_data=update_data, user_id=user_id)
-    invalidate_cache(db_client, invalidate_lists=True, name=updated_user.id)
-    invalidate_cache(db_client, name=updated_user.email)
     return updated_user
 
 
@@ -269,7 +172,6 @@ async def delete_user(
     user_id: str,
     current_user: CurrentUser,
     user_service: UserServiceDep,
-    db_client: DatabaseClientDep,
 ) -> schemas.ResponseUserSchema:
     has_permission = PermissionService.has_permission(
         action=Action.delete,
@@ -281,8 +183,6 @@ async def delete_user(
         raise ForbiddenException()
 
     deleted_user = user_service.delete_user(user_id)
-    invalidate_cache(db_client, invalidate_lists=True, name=deleted_user.id)
-    invalidate_cache(db_client, name=deleted_user.email)
     return deleted_user
 
 
@@ -310,30 +210,7 @@ async def get_user_project(
     if not has_permission:
         raise ForbiddenException()
 
-    cache_key = f"{user_id}:user_info:{project_id}"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseUserProjectSchema(**json.loads(cached_response["value"]))
-
     response = user_project_service.get_user_type_for_project(user_id, project_id)
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
-
     return response
 
 
@@ -346,7 +223,6 @@ async def get_projects_for_user(
     user_id: str,
     current_user: CurrentUser,
     user_project_service: UserProjectServiceDep,
-    db_client: DatabaseClientDep,
     order_column: Optional[str] = None,
     asc: Optional[bool] = None,
 ) -> schemas.PaginatedResponse[schemas.ResponseUserProjectSchema]:
@@ -358,19 +234,6 @@ async def get_projects_for_user(
     )
     if not has_permission:
         raise ForbiddenException()
-
-    cache_key = f"{user_id}:user_info:projects:page=1"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.PaginatedResponse[schemas.ResponseUserProjectSchema](
-            **json.loads(cached_response["value"])
-        )
 
     projects = user_project_service.get_projects_for_user(
         user_id, order_column=order_column, asc=asc
@@ -385,17 +248,5 @@ async def get_projects_for_user(
         has_next=False,
         has_prev=False,
     )
-
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
 
     return response

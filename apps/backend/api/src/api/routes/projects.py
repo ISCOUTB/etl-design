@@ -1,17 +1,13 @@
-import json
 from typing import Optional
 
 from fastapi import APIRouter, status
-from proto_utils.database import dtypes
 
 from src import models, schemas
 from src.api.deps import (
     CurrentUser,
-    DatabaseClientDep,
     ProjectServiceDep,
     UserProjectServiceDep,
 )
-from src.api.utils import invalidate_cache
 from src.exceptions import ForbiddenException
 from src.services.permissions import Action, PermissionService
 
@@ -27,7 +23,6 @@ router = APIRouter()
 )
 async def search_projects(
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
     name: Optional[str] = None,
     skip: int = 0,
@@ -40,17 +35,6 @@ async def search_projects(
         raise ForbiddenException()
 
     page = (skip // limit) + 1
-    cache_key = f"all_projects:name={name}:limit={limit}:page={page}"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.PaginatedResponse(**json.loads(cached_response["value"]))
-
     projects = project_service.search_projects(name=name, skip=skip, limit=limit)
     total = project_service.count_projects(name=name)
     response = schemas.PaginatedResponse(
@@ -62,18 +46,6 @@ async def search_projects(
         has_next=(skip + limit) < total,
         has_prev=skip > 0,
     )
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        # TODO: log the error, but don't fail the request if cache set fails
-        pass
 
     return response
 
@@ -86,7 +58,6 @@ async def search_projects(
 async def get_project_by_id(
     project_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
     has_permission = PermissionService.has_permission(
@@ -98,31 +69,7 @@ async def get_project_by_id(
     if not has_permission:
         raise ForbiddenException()
 
-    cache_key = f"{project_id}:project_info"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseProjectSchema(**json.loads(cached_response["value"]))
-
     response = project_service.get_project_by_id(project_id)
-
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
-
     return response
 
 
@@ -134,7 +81,6 @@ async def get_project_by_id(
 async def create_project(
     project_data: schemas.CreateProjectSchema,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
@@ -156,7 +102,6 @@ async def create_project(
             )
         )
 
-    invalidate_cache(db_client, invalidate_lists=True, scope="project")
     return response
 
 
@@ -169,7 +114,6 @@ async def update_project(
     project_id: str,
     project_data: schemas.UpdateProjectSchema,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
     has_permission = PermissionService.has_permission(
@@ -184,7 +128,6 @@ async def update_project(
     response = project_service.update_project(
         project_data=project_data, project_id=project_id
     )
-    invalidate_cache(db_client, name=project_id, invalidate_lists=True, scope="project")
     return response
 
 
@@ -196,7 +139,6 @@ async def update_project(
 async def delete_project(
     project_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
     has_permission = PermissionService.has_permission(
@@ -209,7 +151,6 @@ async def delete_project(
         raise ForbiddenException()
 
     response = project_service.delete_project(project_id=project_id)
-    invalidate_cache(db_client, name=project_id, invalidate_lists=True, scope="project")
     return response
 
 
@@ -220,7 +161,6 @@ async def delete_project(
 async def flush_access_project(
     project_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> None:
     has_permission = PermissionService.has_permission(
@@ -233,9 +173,6 @@ async def flush_access_project(
         raise ForbiddenException()
 
     user_project_service.flush_access_project(project_id=project_id)
-    invalidate_cache(
-        db_client, name=project_id, invalidate_lists=True, scope="user_project"
-    )
     return None
 
 
@@ -244,7 +181,6 @@ async def remove_user_from_project(
     project_id: str,
     user_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> None:
     has_permission = PermissionService.has_permission(
@@ -259,12 +195,6 @@ async def remove_user_from_project(
     user_project_service.remove_user_from_project(
         project_id=project_id, user_id=user_id
     )
-    invalidate_cache(
-        db_client, name=project_id, invalidate_lists=True, scope="user_project"
-    )
-    invalidate_cache(
-        db_client, name=user_id, invalidate_lists=True, scope="user_project"
-    )
     return None
 
 
@@ -278,7 +208,6 @@ async def remove_user_from_project(
 async def get_users_for_project(
     project_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.PaginatedResponse[schemas.ResponseUserProjectSchema]:
     has_permission = PermissionService.has_permission(
@@ -286,19 +215,6 @@ async def get_users_for_project(
     )
     if not has_permission:
         raise ForbiddenException()
-
-    cache_key = f"{project_id}:user_project_info"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.PaginatedResponse[schemas.ResponseUserProjectSchema](
-            **json.loads(cached_response["value"])
-        )
 
     users = user_project_service.get_users_for_project(project_id=project_id)
     response = schemas.PaginatedResponse(
@@ -310,19 +226,6 @@ async def get_users_for_project(
         has_next=False,
         has_prev=False,
     )
-
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(response.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
-
     return response
 
 
@@ -335,7 +238,6 @@ async def get_user_project(
     project_id: str,
     user_id: str,
     current_user: CurrentUser,
-    db_client: DatabaseClientDep,
     user_project_service: UserProjectServiceDep,
 ) -> schemas.ResponseUserProjectSchema:
     has_permission = PermissionService.has_permission(
@@ -347,30 +249,7 @@ async def get_user_project(
     if not has_permission:
         raise ForbiddenException()
 
-    cache_key = f"{user_id}:user_project_info:{project_id}"
-    try:
-        cached_response = db_client.redis_get(
-            dtypes.RedisGetRequest(key=cache_key), False
-        )
-    except Exception:
-        cached_response = dtypes.RedisGetResponse(found=False, value=None)
-
-    if cached_response["found"] and cached_response["value"] is not None:
-        return schemas.ResponseUserProjectSchema(**json.loads(cached_response["value"]))
-
     user_project = user_project_service.get_user_type_for_project(
         user_id=user_id, project_id=project_id
     )
-    try:
-        db_client.redis_set(
-            dtypes.RedisSetRequest(
-                key=cache_key,
-                value=json.dumps(user_project.model_dump(mode="json")),
-                expiration=None,
-            ),
-            False,
-        )
-    except Exception:
-        pass
-
     return user_project
