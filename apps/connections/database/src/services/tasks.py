@@ -61,7 +61,7 @@ class DatabaseTasksService:
         """
         task_id = request["task_id"]
         task = request["task"]
-        
+
         try:
             # Update task in Redis with atomic pipeline
             redis_db.update_task_id(
@@ -134,7 +134,7 @@ class DatabaseTasksService:
         task_id = request["task_id"]
         task = request["task"]
         value = request["value"].copy()
-        
+
         try:
             # Set task in Redis with atomic pipeline
             redis_db.set_task_id(
@@ -304,7 +304,8 @@ class DatabaseTasksService:
                 ) from mongo_error
 
             return dtypes.RemoveTaskIdResponse(
-                success=True, message="Task removed successfully from both Redis and MongoDB"
+                success=True,
+                message="Task removed successfully from both Redis and MongoDB",
             )
         except Exception as e:
             return dtypes.RemoveTaskIdResponse(
@@ -414,11 +415,15 @@ def _set_task_id_mongo(
     # Try to use transaction, fallback to non-transactional if not supported
     try:
         with mongo_tasks_connection.transaction() as session:
-            mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True, session=session)
+            mongo_tasks_connection.collection.replace_one(
+                filter_query, document, upsert=True, session=session
+            )
     except pymongo.errors.OperationFailure as transaction_error:
         # MongoDB not in replica set mode, do non-transactional operation
         if "Transaction numbers" in str(transaction_error):
-            mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True)
+            mongo_tasks_connection.collection.replace_one(
+                filter_query, document, upsert=True
+            )
         else:
             raise
 
@@ -495,6 +500,7 @@ def _get_tasks_by_import_name_mongo(
             continue  # Skip malformed documents
 
     return tasks
+
 
 def _remove_task_id_mongo(
     task_id: str,

@@ -25,7 +25,7 @@ def get_task_status(
         response = database_client.get_task_id(
             dtypes.GetTaskIdRequest(task_id=task_id, task=task)
         )
-        
+
         if response["found"] and response["value"]:
             return response["value"]["status"]
     except Exception:

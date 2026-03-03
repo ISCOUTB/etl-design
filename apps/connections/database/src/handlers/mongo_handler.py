@@ -18,8 +18,7 @@ class MongoOperation(Protocol[RequestT, ResponseT]):
         /,
         *,
         mongo_schemas_connection: MongoConnection,
-    ) -> ResponseT:
-        ...
+    ) -> ResponseT: ...
 
 
 class MongoHandler(BaseHandler):

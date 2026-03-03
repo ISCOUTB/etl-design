@@ -281,10 +281,15 @@ class ResultWorker:
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _notify_task_completion(
-        self, task_id: str, message: ResultsMessage, raw_data: Optional[Dict[str, Any]] = None
+        self,
+        task_id: str,
+        message: ResultsMessage,
+        raw_data: Optional[Dict[str, Any]] = None,
     ) -> None:
         try:
-            async with httpx.AsyncClient(timeout=settings.API_TIMEOUT_SECONDS) as client:
+            async with httpx.AsyncClient(
+                timeout=settings.API_TIMEOUT_SECONDS
+            ) as client:
                 response = await client.post(
                     settings.API_REQUEST_URL,
                     json={

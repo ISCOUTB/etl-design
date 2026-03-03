@@ -268,7 +268,10 @@ class InsertionWorker:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            if current_status == "processing-file" or current_status == "requesting-insert-sql":
+            if (
+                current_status == "processing-file"
+                or current_status == "requesting-insert-sql"
+            ):
                 logger.info(
                     f"Task {task_id} is already being processed (status={current_status}). "
                     "Another worker is handling it. Skipping."

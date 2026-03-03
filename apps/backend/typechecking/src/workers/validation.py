@@ -347,7 +347,7 @@ class ValidationWorker:
                             overwrite=insert_overwrite,
                             db_uri=db_uri,
                             table_name=message["table_name"],
-                            idempotency_key=message["idempotency_key"]
+                            idempotency_key=message["idempotency_key"],
                         )
                     ),
                 )

@@ -19,8 +19,7 @@ class RedisOperation(Protocol[RequestT, ResponseT]):
         /,
         *,
         redis_db: RedisConnection,
-    ) -> ResponseT:
-        ...
+    ) -> ResponseT: ...
 
 
 class RedisHandler(BaseHandler):

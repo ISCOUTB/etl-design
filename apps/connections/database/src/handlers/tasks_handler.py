@@ -22,8 +22,7 @@ class DatabaseOperation(Protocol[RequestT, ResponseT]):
         *,
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
-    ) -> ResponseT:
-        ...
+    ) -> ResponseT: ...
 
 
 class DatabaseTasksHandler(BaseHandler):
