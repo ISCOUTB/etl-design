@@ -1,16 +1,15 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: ddl-generator
-    description: A Python gRPC service that converts Excel formula Abstract Syntax Trees (AST) into SQL expressions. This service is responsible for translating the hierarchical structure of Excel formulas into equivalent SQL statements that can be used in database queries.
+    description: |
+        A Python gRPC service that converts Excel formula Abstract 
+        Syntax Trees (AST) into SQL expressions. This service is 
+        responsible for translating the hierarchical structure 
+        of Excel formulas into equivalent SQL statements that can 
+        be used in database queries.
 
-type: application
+layer: application
 
 language: python
-
-toolchain:
-    python:
-        version: "3.12.10"
 
 tasks:
     test:
@@ -29,9 +28,8 @@ tasks:
 
     uv:
         command: uv
-        toolchain: python
+        toolchains: python
         options:
-            runFromWorkspaceRoot: false
             cache: false
 
     run:
@@ -41,8 +39,8 @@ tasks:
             - python
             - -m
             - src.server
-        toolchain: python
-        local: true
+        toolchains: python
+        preset: server
 
     docker-build:
         command: docker
@@ -51,5 +49,6 @@ tasks:
             - -f
             - ./apps/backend/parsers/ddl-generator/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true

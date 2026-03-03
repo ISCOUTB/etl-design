@@ -4,6 +4,8 @@ project:
     name: iac
     description: cloud infraestructure
 
+layer: automation
+
 tasks:
     swarm-dev:
         command: bash

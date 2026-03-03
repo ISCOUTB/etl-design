@@ -1,16 +1,16 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: sql-builder
-    description: A Python gRPC service that constructs complete SQL statements from individual DDL expressions and column metadata. This service is responsible for assembling final CREATE TABLE and INSERT statements by managing dependencies and execution order of SQL expressions.
+    description: |
+        A Python gRPC service that constructs complete 
+        SQL statements from individual DDL expressions and 
+        column metadata. This service is responsible for 
+        assembling final CREATE TABLE and INSERT statements 
+        by managing dependencies and execution order of 
+        SQL expressions.
 
-type: application
+layer: application
 
 language: python
-
-toolchain:
-    python:
-        version: "3.12.10"
 
 tasks:
     test:
@@ -25,13 +25,12 @@ tasks:
             - --cov-report=term-missing
             - --cov-report=html
             - --cov-report=xml
-        toolchain: python
+        toolchains: python
 
     uv:
         command: uv
-        toolchain: python
+        toolchains: python
         options:
-            runFromWorkspaceRoot: false
             cache: false
 
     run:
@@ -41,8 +40,8 @@ tasks:
             - python
             - -m
             - src.server
-        toolchain: python
-        local: true
+        toolchains: python
+        preset: server
 
     docker-build:
         command: docker

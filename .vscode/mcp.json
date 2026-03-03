@@ -1,0 +1,10 @@
+{
+    "servers": {
+        "moon": {
+            "args": ["mcp"],
+            "command": "moon",
+            "cwd": "${workspaceFolder}",
+            "type": "stdio"
+        }
+    }
+}

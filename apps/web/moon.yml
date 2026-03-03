@@ -2,8 +2,7 @@ project:
     name: web
     description: web side application for end-users
 
-toolchain:
-    node:
+layer: application
 
 language: typescript
 
@@ -13,7 +12,7 @@ tasks:
         args:
             - --filter
             - "@sloth/apps-web"
-        toolchain: node
+        toolchains: node
         options:
             runFromWorkspaceRoot: true
             cache: false
@@ -22,19 +21,14 @@ tasks:
         command: npx
         args:
             - nuxt@latest
-        toolchain: node
-        local: true
-        options:
-            runFromWorkspaceRoot: false
+        toolchains: node
+        preset: server
 
     shadcn:
         command: npx
         args:
             - shadcn-vue@latest
-        toolchain: node
-        local: true
-        options:
-            runFromWorkspaceRoot: false
+        toolchains: node
 
     docker-build:
         command: docker
@@ -43,7 +37,5 @@ tasks:
             - -f
             - apps/web/Dockerfile
             - .
-        local: true
-        platform: system
         options:
             runFromWorkspaceRoot: true
