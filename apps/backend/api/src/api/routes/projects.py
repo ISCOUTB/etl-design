@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, status
+from proto_utils.database.dtypes import ApiResponse
 
 from src import models, schemas
 from src.api.deps import (
@@ -157,12 +158,12 @@ async def delete_project(
 # ============== User Project routes ==============
 
 
-@router.delete("/{project_id}/flush", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}/flush", status_code=status.HTTP_200_OK)
 async def flush_access_project(
     project_id: str,
     current_user: CurrentUser,
     user_project_service: UserProjectServiceDep,
-) -> None:
+) -> ApiResponse:
     has_permission = PermissionService.has_permission(
         action=Action.flush,
         user=current_user,
@@ -173,16 +174,21 @@ async def flush_access_project(
         raise ForbiddenException()
 
     user_project_service.flush_access_project(project_id=project_id)
-    return None
+    return ApiResponse(
+        status="flushed",
+        message=f"Flushed access for project {project_id}",
+        data={},
+        code=status.HTTP_200_OK,
+    )
 
 
-@router.delete("/{project_id}/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}/users/{user_id}", status_code=status.HTTP_200_OK)
 async def remove_user_from_project(
     project_id: str,
     user_id: str,
     current_user: CurrentUser,
     user_project_service: UserProjectServiceDep,
-) -> None:
+) -> ApiResponse:
     has_permission = PermissionService.has_permission(
         action=Action.delete,
         user=current_user,
@@ -195,7 +201,12 @@ async def remove_user_from_project(
     user_project_service.remove_user_from_project(
         project_id=project_id, user_id=user_id
     )
-    return None
+    return ApiResponse(
+        status="deleted",
+        message=f"Removed user {user_id} from project {project_id}",
+        data={},
+        code=status.HTTP_200_OK,
+    )
 
 
 # A priori, a project shouldn't have so many users, so we won't implement pagination here.

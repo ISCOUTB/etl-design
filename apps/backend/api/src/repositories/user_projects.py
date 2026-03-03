@@ -150,9 +150,7 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
     def flush_access_project(self, project_id: str) -> None:
         # Flush all user-project associations for a project to force re-checking permissions
         self.db.query(models.UserProject).filter(
-            models.UserProject.project_id == project_id,
-            models.UserProject.role
-            != models.UserProjectType.OWNER,  # Keep owners to avoid locking themselves out
+            models.UserProject.project_id == project_id
         ).delete()
         self.db.flush()
         return None
