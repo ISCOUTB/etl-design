@@ -5,13 +5,18 @@ It includes a connection wrapper class that simplifies common MongoDB operations
 and provides pre-configured connections for tasks and schemas collections.
 
 The module uses PyMongo for database interactions and includes basic CRUD operations
-with proper error handling and type hints.
+with proper error handling, type hints, and transaction support for ACID compliance.
 """
+
+from contextlib import contextmanager
+from typing import Dict, Optional
 
 import pymongo
 import pymongo.collection
 import pymongo.database
 import pymongo.errors
+import pymongo.results
+from pymongo.client_session import ClientSession
 
 
 class MongoConnection:
@@ -91,15 +96,27 @@ class MongoConnection:
             )
         return self.__collection
 
-    def insert_one(self, document: dict) -> pymongo.results.InsertOneResult:
-        """Insert a single document into the collection."""
+    def insert_one(
+        self, document: Dict, session: Optional[ClientSession] = None
+    ) -> pymongo.results.InsertOneResult:
+        """Insert a single document into the collection (supports transactions).
+
+        Args:
+            document (Dict): Document to insert.
+            session (ClientSession, optional): MongoDB session for transaction support.
+
+        Returns:
+            pymongo.results.InsertOneResult: Result of the insert operation.
+        """
+        if session:
+            return self.__collection.insert_one(document, session=session)
         return self.__collection.insert_one(document)
 
-    def count_documents(self, filter: dict = None) -> int:
+    def count_documents(self, filter: Optional[Dict] = None) -> int:
         """Count the number of documents in the collection.
 
         Args:
-            filter (dict, optional): Query filter to count specific documents.
+            filter (Dict, optional): Query filter to count specific documents.
                                    Defaults to None (counts all documents).
 
         Returns:
@@ -107,41 +124,85 @@ class MongoConnection:
         """
         return self.__collection.count_documents(filter if filter is not None else {})
 
-    def find_one(self, filter: dict = None, projection: dict = None):
+    def find_one(
+        self, filter: Optional[Dict] = None, projection: Optional[Dict] = None
+    ):
         """Find a single document in the collection.
 
         Args:
-            filter (dict, optional): Query filter to find specific document.
+            filter (Dict, optional): Query filter to find specific document.
                                    Defaults to None (finds any document).
-            projection (dict, optional): Fields to include/exclude in the result.
+            projection (Dict, optional): Fields to include/exclude in the result.
                                        Defaults to None (returns all fields).
 
         Returns:
-            dict or None: The found document or None if not found.
+            Dict or None: The found document or None if not found.
         """
         return self.__collection.find_one(
             filter if filter is not None else {}, projection
         )
 
-    def update_one(self, filter: dict, update: dict) -> pymongo.results.UpdateResult:
-        """Update a single document in the collection.
+    def update_one(
+        self, filter: Dict, update: Dict, session: Optional[ClientSession] = None
+    ) -> pymongo.results.UpdateResult:
+        """Update a single document in the collection (supports transactions).
 
         Args:
-            filter (dict): Query filter to identify the document to update.
-            update (dict): Update operations to apply to the document.
+            filter (Dict): Query filter to identify the document to update.
+            update (Dict): Update operations to apply to the document.
+            session (ClientSession, optional): MongoDB session for transaction support.
 
         Returns:
             pymongo.results.UpdateResult: Result of the update operation.
         """
+        if session:
+            return self.__collection.update_one(filter, update, session=session)
         return self.__collection.update_one(filter, update)
 
-    def delete_one(self, filter: dict) -> pymongo.results.DeleteResult:
-        """Delete a single document in the collection.
+    def delete_one(
+        self, filter: Dict, session: Optional[ClientSession] = None
+    ) -> pymongo.results.DeleteResult:
+        """Delete a single document in the collection (supports transactions).
 
         Args:
-            filter (dict): Query filter to identify the document to delete.
+            filter (Dict): Query filter to identify the document to delete.
+            session (ClientSession, optional): MongoDB session for transaction support.
 
         Returns:
             pymongo.results.DeleteResult: Result of the delete operation.
         """
+        if session:
+            return self.__collection.delete_one(filter, session=session)
         return self.__collection.delete_one(filter)
+
+    # ==================== Transactions ====================
+
+    @contextmanager
+    def transaction(self):
+        """Context manager for atomic MongoDB transactions.
+
+        MongoDB transactions require a replica set. This context manager
+        provides ACID guarantees for multi-document operations.
+
+        Usage:
+            with mongo_conn.transaction() as session:
+                mongo_conn.update_one(filter1, update1, session=session)
+                mongo_conn.update_one(filter2, update2, session=session)
+                # Auto commits if no exception, auto aborts on exception
+
+        Yields:
+            ClientSession: MongoDB session for transactional operations.
+
+        Raises:
+            pymongo.errors.OperationFailure: If MongoDB is not configured
+                for transactions (requires replica set).
+        """
+        session = self.__client.start_session()
+        try:
+            with session.start_transaction():
+                yield session
+        except Exception:
+            session.abort_transaction()
+            raise
+        finally:
+            session.end_session()

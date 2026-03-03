@@ -183,7 +183,10 @@ class RedisConnection:
         data: Optional[Dict[str, Any]] = None,
         reset_data: bool = False,
     ) -> None:
-        """Update a specific field in a task ID's data in the Redis cache.
+        """Update a specific field in a task ID's data in the Redis cache (ATOMIC).
+
+        Uses Redis pipeline for atomic multi-command execution. All operations
+        succeed or fail together, preventing partial updates.
 
         Args:
             task_id (str): Unique identifier for the task.
@@ -196,31 +199,50 @@ class RedisConnection:
 
         Returns:
             None:
+
+        Raises:
+            Exception: If pipeline execution fails. Caller responsible for error handling.
         """
         task_key = f"{task}:task:{task_id}"
         if isinstance(value, dict):
             value = json.dumps(value)
-        self.redis_client.hset(task_key, field, value)
 
-        if message:
-            self.redis_client.hset(task_key, "message", message)
+        # Use pipeline for atomic operations
+        pipe = self.redis_client.pipeline(transaction=True)
+        try:
+            # Add all operations to pipeline
+            pipe.hset(task_key, field, value)
 
-        if data:
-            cached_data = (
-                self.get_task_id(task_id, task)["data"] if not reset_data else {}
-            )
-            cached_data = {**cached_data, **data}
-            self.redis_client.hset(task_key, "data", json.dumps(cached_data))
+            if message:
+                pipe.hset(task_key, "message", message)
 
-        if field == "status":
-            ttl = self._get_task_ttl(value)
-            self.redis_client.expire(task_key, ttl)
+            if data:
+                cached_data = (
+                    self.get_task_id(task_id, task)["data"] if not reset_data else {}
+                )
+                cached_data = {**cached_data, **data}
+                pipe.hset(task_key, "data", json.dumps(cached_data))
+
+            if field == "status":
+                ttl = self._get_task_ttl(value)
+                pipe.expire(task_key, ttl)
+
+            # Execute pipeline atomically
+            pipe.execute()
+        except redis.exceptions.WatchError:
+            # Key was modified by another client (optimistic lock failure)
+            raise Exception(f"Task {task_id} was modified by another process")
+        except Exception:
+            raise
+        finally:
+            pipe.reset()
 
     def set_task_id(self, task_id: str, value: ApiResponse, task: str) -> None:
-        """Set a task ID with associated data in the Redis cache.
+        """Set a task ID with associated data in the Redis cache (ATOMIC).
 
         Stores the task data as a hash and adds the task ID to the import name's
-        task set for efficient querying by import name.
+        task set for efficient querying by import name. Uses pipeline for atomic
+        multi-command execution.
 
         Args:
             task_id (str): Unique identifier for the task.
@@ -229,6 +251,9 @@ class RedisConnection:
 
         Returns:
             None:
+
+        Raises:
+            Exception: If pipeline execution fails. Caller responsible for error handling.
         """
         import_name = value["data"].get("import_name", "default")
 
@@ -242,12 +267,22 @@ class RedisConnection:
 
         task_key = f"{task}:task:{task_id}"
         import_key = f"{task}:import:{import_name}:tasks"
-        self.redis_client.hset(task_key, mapping=redis_value)
-        self.redis_client.sadd(import_key, task_id)
-
         ttl = self._get_task_ttl(value["status"])
-        self.redis_client.expire(task_key, ttl)
-        self.redis_client.expire(import_key, ttl)
+
+        # Use pipeline for atomic operations
+        pipe = self.redis_client.pipeline(transaction=True)
+        try:
+            pipe.hset(task_key, mapping=redis_value)
+            pipe.sadd(import_key, task_id)
+            pipe.expire(task_key, ttl)
+            pipe.expire(import_key, ttl)
+            pipe.execute()
+        except redis.exceptions.WatchError:
+            raise Exception(f"Task {task_id} was modified by another process")
+        except Exception:
+            raise
+        finally:
+            pipe.reset()
 
     def get_task_id(self, task_id: str, task: str) -> Optional[ApiResponse]:
         """Retrieve a task by its ID from the Redis cache.

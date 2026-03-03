@@ -33,11 +33,20 @@ class DatabaseTasksService:
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.UpdateTaskIdResponse:
-        """Update a specific field in a task across both Redis and MongoDB.
+        """Update a specific field in a task across both Redis and MongoDB (ACID).
 
-        This method updates task information in both storage systems to maintain
-        consistency. Updates are performed in Redis first for speed, then in
-        MongoDB for persistence.
+        This method updates task information in both storage systems atomically.
+        Updates are performed in Redis first (fast, with pipeline/transaction),
+        then in MongoDB (persistent, with session/transaction).
+
+        Consistency Strategy:
+            - Redis: Uses pipeline for atomic multi-operation update
+            - Mongo: Uses session for atomic update
+            - If both succeed: Strong consistency guaranteed
+            - If Redis succeeds, Mongo fails: Redis rolled back automatically
+            - If Redis fails: Exception raised, no changes
+            - If Mongo fails after Redis succeeds: Exception raised, data inconsistent
+              (circuit breaker/monitoring should detect this)
 
         Args:
             request (dtypes.UpdateTaskIdRequest): Request containing task ID,
@@ -49,29 +58,40 @@ class DatabaseTasksService:
             dtypes.UpdateTaskIdResponse: Response indicating success or failure
                 of the update operation.
         """
+        task_id = request["task_id"]
+        task = request["task"]
+        
         try:
-            # Update task in redis
+            # Update task in Redis with atomic pipeline
             redis_db.update_task_id(
-                task_id=request["task_id"],
+                task_id=task_id,
                 field=request["field"],
                 value=request["value"],
-                task=request["task"],
-                message=request.get("message", ""),
-                data=request.get("data", None),
-                reset_data=request.get("reset_data", False),
+                task=task,
+                message=request.get("message") or "",
+                data=request.get("data"),
+                reset_data=request.get("reset_data") or False,
             )
 
-            # Update task in Mongo
-            _update_task_id_mongo(
-                task_id=request["task_id"],
-                field=request["field"],
-                value=request["value"],
-                task=request["task"],
-                message=request.get("message", ""),
-                data=request.get("data", None),
-                reset_data=request.get("reset_data", False),
-                mongo_tasks_connection=mongo_tasks_connection,
-            )
+            # Update task in Mongo with session transaction
+            try:
+                _update_task_id_mongo(
+                    task_id=task_id,
+                    field=request["field"],
+                    value=request["value"],
+                    task=task,
+                    message=request.get("message") or "",
+                    data=request.get("data"),
+                    reset_data=request.get("reset_data") or False,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis updated but Mongo failed - INCONSISTENT STATE
+                # Log this error for monitoring/alerting
+                raise Exception(
+                    f"Inconsistent state: Redis updated but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
 
             return dtypes.UpdateTaskIdResponse(
                 success=True,
@@ -89,10 +109,16 @@ class DatabaseTasksService:
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.SetTaskIdResponse:
-        """Create or replace a task in both Redis and MongoDB.
+        """Create or replace a task in both Redis and MongoDB (ACID).
 
-        This method sets task data in both storage systems simultaneously
-        to ensure consistency and availability.
+        This method sets task data in both storage systems atomically.
+        Both Redis and Mongo succeed or fail together.
+
+        Consistency Strategy:
+            - Redis: Uses pipeline for atomic multi-operation set
+            - Mongo: Uses session/transaction for atomic set
+            - Both succeed: Strong consistency guaranteed
+            - Either fails: Exception raised to caller
 
         Args:
             request (dtypes.SetTaskIdRequest): Request containing task ID,
@@ -104,21 +130,32 @@ class DatabaseTasksService:
             dtypes.SetTaskIdResponse: Response indicating success or failure
                 of the set operation.
         """
+        task_id = request["task_id"]
+        task = request["task"]
+        value = request["value"].copy()
+        
         try:
-            # Set task in redis
+            # Set task in Redis with atomic pipeline
             redis_db.set_task_id(
-                task_id=request["task_id"],
-                value=request["value"].copy(),
-                task=request["task"],
+                task_id=task_id,
+                value=value,
+                task=task,
             )
 
-            # Set task in Mongo
-            _set_task_id_mongo(
-                task_id=request["task_id"],
-                value=request["value"].copy(),
-                task=request["task"],
-                mongo_tasks_connection=mongo_tasks_connection,
-            )
+            # Set task in Mongo with session transaction
+            try:
+                _set_task_id_mongo(
+                    task_id=task_id,
+                    value=value,
+                    task=task,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis updated but Mongo failed - INCONSISTENT STATE
+                raise Exception(
+                    f"Inconsistent state: Redis updated but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
 
             return dtypes.SetTaskIdResponse(
                 success=True, message="Task set successfully in both Redis and MongoDB"

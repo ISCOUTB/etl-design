@@ -122,12 +122,17 @@ class MongoSchemasService:
         *,
         mongo_schemas_connection: MongoConnection,
     ) -> dtypes.MongoInsertOneSchemaResponse:
-        """Insert or update a JSON schema in the database.
+        """Insert or update a JSON schema in the database (ATOMIC).
 
         This method handles schema insertion with intelligent version management.
         If no schema exists, it inserts a new one. If a schema exists and is
         identical, it returns no-change status. If different, it updates the
         schema and moves the old one to releases.
+
+        Uses MongoDB transactions for ACID guarantees:
+        - All operations (insert/update/release management) succeed together
+        - Or entire transaction rolls back on any failure
+        - Prevents partial schema updates
 
         Args:
             request (dtypes.MongoInsertOneSchemaRequest): Request containing
@@ -159,9 +164,10 @@ class MongoSchemasService:
         # Try to fetch the existing schema document, and if it's not, then insert a new one.
         if total_documents <= 0 or schemas_releases["schema"] is None:
             try:
-                result: pymongo.results.InsertOneResult = (
-                    mongo_schemas_connection.insert_one(request)
-                )
+                with mongo_schemas_connection.transaction() as session:
+                    result: pymongo.results.InsertOneResult = (
+                        mongo_schemas_connection.insert_one(request, session=session)
+                    )
                 return dtypes.MongoInsertOneSchemaResponse(
                     status="inserted",
                     result={
@@ -298,11 +304,16 @@ class MongoSchemasService:
         *,
         mongo_schemas_connection: MongoConnection,
     ) -> dtypes.MongoUpdateOneJsonSchemaResponse:
-        """Update an existing JSON schema.
+        """Update an existing JSON schema (ATOMIC).
 
         This method updates an existing schema with a new version, preserving
         the old version in the releases history. It includes schema comparison
         to avoid unnecessary updates when schemas are identical.
+
+        Uses MongoDB transactions for ACID guarantees:
+        - Set new schema + push to releases happens atomically
+        - Or entire transaction rolls back on any failure
+        - Prevents inconsistent release history
 
         Args:
             request (dtypes.MongoUpdateOneJsonSchemaRequest): Request containing
@@ -330,9 +341,7 @@ class MongoSchemasService:
         current_schema_doc = existing_schema["schema"]
 
         # Compare the new schema with the current active schema
-        if MongoSchemasService.compare_schemas(
-            current_schema_doc, request["schema"]
-        ):
+        if MongoSchemasService.compare_schemas(current_schema_doc, request["schema"]):
             return dtypes.MongoUpdateOneJsonSchemaResponse(
                 status="no_change",
                 result={
@@ -340,18 +349,22 @@ class MongoSchemasService:
                 },
             )
 
-        # Update the document with the new schema
+        # Update the document with the new schema using transaction
         try:
-            result: pymongo.results.UpdateResult = mongo_schemas_connection.update_one(
-                {"import_name": request["import_name"]},
-                {
-                    "$set": {
-                        "active_schema": request["schema"],
-                        "created_at": request["created_at"],
-                    },
-                    "$push": {"schemas_releases": current_schema_doc.copy()},
-                },
-            )
+            with mongo_schemas_connection.transaction() as session:
+                result: pymongo.results.UpdateResult = (
+                    mongo_schemas_connection.update_one(
+                        {"import_name": request["import_name"]},
+                        {
+                            "$set": {
+                                "active_schema": request["schema"],
+                                "created_at": request["created_at"],
+                            },
+                            "$push": {"schemas_releases": current_schema_doc.copy()},
+                        },
+                        session=session,
+                    )
+                )
 
             if result.modified_count > 0:
                 return dtypes.MongoUpdateOneJsonSchemaResponse(
@@ -412,9 +425,12 @@ class MongoSchemasService:
         releases = full_doc.get("schemas_releases", [])
 
         if not releases:
-            result: pymongo.results.DeleteResult = mongo_schemas_connection.delete_one(
-                {"import_name": request["import_name"]}
-            )
+            with mongo_schemas_connection.transaction() as session:
+                result: pymongo.results.DeleteResult = (
+                    mongo_schemas_connection.delete_one(
+                        {"import_name": request["import_name"]}, session=session
+                    )
+                )
             return dtypes.MongoDeleteOneJsonSchemaResponse(
                 success=True,
                 message=f"Schema with import_name '{request['import_name']}' deleted",
@@ -422,18 +438,20 @@ class MongoSchemasService:
                 extra={**result.raw_result},
             )
 
-        result: pymongo.results.UpdateResult = mongo_schemas_connection.update_one(
-            {"import_name": request["import_name"]},
-            {
-                "$set": {
-                    "active_schema": releases[-1]["schema"].copy(),
-                    "created_at": releases[-1].get(
-                        "created_at", full_doc.get("created_at", datetime.now(UTC))
-                    ),
+        with mongo_schemas_connection.transaction() as session:
+            result: pymongo.results.UpdateResult = mongo_schemas_connection.update_one(
+                {"import_name": request["import_name"]},
+                {
+                    "$set": {
+                        "active_schema": releases[-1]["schema"].copy(),
+                        "created_at": releases[-1].get(
+                            "created_at", full_doc.get("created_at", datetime.now(UTC))
+                        ),
+                    },
+                    "$pop": {"schemas_releases": 1},
                 },
-                "$pop": {"schemas_releases": 1},
-            },
-        )
+                session=session,
+            )
 
         return dtypes.MongoDeleteOneJsonSchemaResponse(
             success=True,
