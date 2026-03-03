@@ -15,10 +15,12 @@
             return;
         }
 
-        return `${auth.data.value.user.email}/${project.value.name}`;
+        return $t("projects.id.sections.settings.delete.validation", {
+            project: project.value.name,
+        });
     });
 
-    const userInput = useState(() => "");
+    const userInput = useState(NuxtKeys.Projects.Delete.Validation(project.value), () => "");
     const isValid = computed(() => userInput.value === expectedConfirmation.value);
 
     const { $localeRoute } = useNuxtApp();
@@ -73,7 +75,7 @@
                         keypath="projects.id.sections.settings.delete.modal.type_project"
                         tag="p"
                     >
-                        <template #project>
+                        <template #validation>
                             <code class="rounded bg-muted px-1 py-0.5 font-mono font-bold text-xs">
                                 {{ expectedConfirmation }}
                             </code>

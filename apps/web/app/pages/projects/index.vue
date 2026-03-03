@@ -9,6 +9,7 @@
         Database,
         Edit,
         ExternalLink,
+        Folder,
         MoreVertical,
         Plug,
         Plus,
@@ -56,7 +57,6 @@
         data: _data,
         status,
         refresh,
-        clear,
     } = useApiFetch("/projects/search", {
         query: {
             name: debouncedSearchContent,
@@ -95,7 +95,6 @@
                 label: "projects.view.dropdown.edit.label",
                 icon: Edit,
                 to: (context) => {
-                    console.warn(context);
                     if (!context) {
                         return;
                     }
@@ -220,6 +219,28 @@
                 </template>
                 <template #controls-next>
                     <ChevronsRight />
+                </template>
+
+                <template #empty>
+                    <Empty class="bg-red-50">
+                        <EmptyHeader>
+                            <EmptyMedia>
+                                <Folder class="size-4" />
+                            </EmptyMedia>
+                            <EmptyTitle>{{ $t("projects.view.empty.header.title") }}</EmptyTitle>
+                            <EmptyDescription>
+                                {{ $t("projects.view.empty.header.description") }}
+                            </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent>
+                            <NuxtLink as-child :to="$localeRoute({ name: 'projects-create' })">
+                                <Button>
+                                    <Plus class="size-4" />
+                                    <span>{{ $t("projects.create.header.title") }}</span>
+                                </Button>
+                            </NuxtLink>
+                        </EmptyContent>
+                    </Empty>
                 </template>
 
                 <template #item="{ $item }">

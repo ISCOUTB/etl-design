@@ -2,5 +2,10 @@
     "devDependencies": {
         "@sloth/tools-eslint": "workspace:*",
         "eslint": "^10.0.2"
+    },
+    "pnpm": {
+        "overrides": {
+            "eslint": "^9"
+        }
     }
 }

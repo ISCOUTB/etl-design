@@ -36,7 +36,9 @@ async def search_projects(
         raise ForbiddenException()
 
     page = (skip // limit) + 1
-    projects = project_service.search_projects(name=name, skip=skip, limit=limit)
+    projects = project_service.search_projects(
+        name=name, user_id=current_user.id, skip=skip, limit=limit
+    )
     total = project_service.count_projects(name=name)
     response = schemas.PaginatedResponse(
         items=projects,

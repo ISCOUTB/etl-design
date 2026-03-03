@@ -114,11 +114,12 @@ class ProjectService:
         self,
         name: Optional[str] = None,
         *,
+        user_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[schemas.ResponseProjectSchema]:
         encrypted_projects = self.repository.search_projects(
-            name=name, skip=skip, limit=limit
+            name=name, user_id=user_id, skip=skip, limit=limit
         )
         projects = list(map(self.__decrypt_db_credentials, encrypted_projects))
         for project in projects:

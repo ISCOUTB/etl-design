@@ -227,6 +227,12 @@
                 "no_db_name": "No Database",
                 "no_provider": "No Provider",
                 "no_field": "This project has no ({field}) configured.\nPlease review your config."
+            },
+            "empty": {
+                "header": {
+                    "title": "No Proyect yet",
+                    "description": "You haven't created any projects yet. Get started by creating your first project."
+                }
             }
         },
         "id": {
@@ -277,10 +283,11 @@
                         "title": "Delete this project",
                         "description": "Once you delete a project, there no going back. This action is irreversible.",
                         "label": "Delete",
+                        "validation": "delete {project}",
                         "modal": {
                             "title": "Are you absolutely sure?",
                             "description": "This action cannot be undone. This will permanently delete the {project} project, its connections, and all asociated data.",
-                            "type_project": "Please type {project} to confirm."
+                            "type_project": "Please type {validation} to confirm."
                         }
                     },
                     "danger_zone": {

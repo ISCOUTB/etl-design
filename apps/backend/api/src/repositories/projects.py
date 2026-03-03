@@ -17,12 +17,21 @@ class ProjectRepository(BaseRepository[models.Project]):
         self,
         name: Optional[str] = None,
         *,
+        user_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[models.Project]:
         base_query = self.db.query(models.Project)
+
+        if user_id is not None:
+            base_query = base_query.join(
+                models.UserProject, models.UserProject.project_id == models.Project.id
+            ).filter(models.UserProject.user_id == user_id)
+
         if name:
             base_query = base_query.filter(models.Project.name.ilike(f"{name}%"))
+
+        base_query = base_query.distinct()
 
         if skip is not None:
             base_query = base_query.offset(skip)
