@@ -501,8 +501,7 @@ class IdempotencyService:
             raise AppException() from e
 
         try:
-            db_task.status = models.TaskStatus.PUBLISHED
-
+            db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
             publisher.publish_validation_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
                 file_data=file_content,

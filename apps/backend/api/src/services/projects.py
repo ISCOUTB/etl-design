@@ -101,11 +101,11 @@ class ProjectService:
         print(project.name, project.db_user, project.db_password)
         try:
             return create_postgres_uri(
-                user=project.db_user,
-                password=project.db_password,
-                host=project.db_host,
-                port=project.db_port,
-                db_name=project.db_name,
+                user=project.db_user,  # type: ignore
+                password=project.db_password,  # type: ignore
+                host=project.db_host,  # type: ignore
+                port=project.db_port,  # type: ignore
+                db_name=project.db_name,  # type: ignore
             )
         except Exception:
             raise InvalidDBCredentialsException()
@@ -151,9 +151,9 @@ class ProjectService:
 
         print(project.id, project.name, project.db_user, project.db_password)
         project = self.__decrypt_db_credentials(project)
-        
-        # Desasociar el objeto de la sesión para evitar que autoflush guarde
-        # valores plaintext si hay operaciones de DB subsecuentes
+
+        # Disassociate the object from the session to prevent autoflush from
+        # saving plaintext values if there are subsequent DB operations
         self.repository.db.expunge(project)
 
         print(project.id, project.name, project.db_user, project.db_password)

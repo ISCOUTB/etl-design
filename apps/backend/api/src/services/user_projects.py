@@ -113,7 +113,9 @@ class UserProjectService:
                         ),
                     )
 
-            self.user_project_repo.remove_user_from_project(db_user_project=db_user_project)
+            self.user_project_repo.remove_user_from_project(
+                db_user_project=db_user_project
+            )
             self.db.commit()
         except Exception as e:
             self.db.rollback()

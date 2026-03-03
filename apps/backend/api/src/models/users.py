@@ -45,7 +45,10 @@ class User(BaseModel):
     status = Column(user_status_enum, default=UserStatus.ACTIVE, nullable=False)
 
     created_at = Column(
-        DateTime(timezone=True), default=None, nullable=False, server_default=text("NOW()")
+        DateTime(timezone=True),
+        default=None,
+        nullable=False,
+        server_default=text("NOW()"),
     )
     updated_at = Column(
         DateTime(timezone=True),

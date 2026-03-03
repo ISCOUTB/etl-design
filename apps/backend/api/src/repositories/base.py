@@ -98,7 +98,7 @@ class BaseRepository(Generic[T]):
         obj_id: Optional[str] = None,
         db_obj: Optional[T] = None,
         relationship_attrs: Optional[List[str]] = None,
-        filter_related_items: Optional[Callable[[T], bool]] = None
+        filter_related_items: Optional[Callable[[T], bool]] = None,
     ) -> DeleteResult[T]:
         """Delete a record only if it has no dependent child records.
 

@@ -37,7 +37,11 @@ class UploadRepository:
         )
 
     def update_upload_task_status(
-        self, *, task_id: Optional[str] = None, status: models.TaskStatus, db_obj: Optional[models.UploadTask] = None
+        self,
+        *,
+        task_id: Optional[str] = None,
+        status: models.TaskStatus,
+        db_obj: Optional[models.UploadTask] = None,
     ) -> models.UploadTask | None:
         if db_obj is None:
             assert task_id is not None, "Either task_id or db_obj must be provided"
@@ -61,12 +65,14 @@ class UploadRepository:
                 models.UploadTask.user_id == user_id,
                 models.UploadTask.project_id == project_id,
                 models.UploadTask.created_at > utc_now() - timedelta(days=30),
-                models.UploadTask.status.in_([
-                    models.TaskStatus.PENDING.name,
-                    models.TaskStatus.PUBLISHED.name,
-                    models.TaskStatus.PROCESSING.name,
-                    models.TaskStatus.COMPLETED.name,
-                ]),
+                models.UploadTask.status.in_(
+                    [
+                        models.TaskStatus.PENDING.name,
+                        models.TaskStatus.PUBLISHED.name,
+                        models.TaskStatus.PROCESSING.name,
+                        models.TaskStatus.COMPLETED.name,
+                    ]
+                ),
             )
             .order_by(models.UploadTask.created_at.desc())
             .first()

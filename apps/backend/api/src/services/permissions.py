@@ -33,12 +33,12 @@ def _load_user_projects_for_project(project_id: str) -> List[UserProject]:
         project_uuid = UUID(project_id)
     except ValueError:
         return []
-    
+
     with SessionLocal() as db:
-        user_projects = db.query(UserProject).filter(
-            UserProject.project_id == project_uuid
-        ).all()
-    
+        user_projects = (
+            db.query(UserProject).filter(UserProject.project_id == project_uuid).all()
+        )
+
     return user_projects if user_projects else []
 
 

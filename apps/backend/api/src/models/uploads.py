@@ -50,4 +50,6 @@ class UploadTask(BaseModel):
     )
 
     user = relationship("User", foreign_keys=[user_id])
-    project = relationship("Project", back_populates="upload_tasks", foreign_keys=[project_id])
+    project = relationship(
+        "Project", back_populates="upload_tasks", foreign_keys=[project_id]
+    )
