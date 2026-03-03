@@ -36,7 +36,7 @@
                 method: "DELETE",
             });
 
-            clearNuxtData(NuxtKeys.Projects.Search);
+            await refreshNuxtData(NuxtKeys.Projects.Search);
             await navigateTo($localeRoute({ name: "projects" }));
         } catch (error) {
             console.warn(error);

@@ -5,3 +5,5 @@ export function ifEmpty<T extends string | undefined | null>(payload: T, default
 
     return defaultValue;
 }
+
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -64,6 +64,7 @@
             limit: config.pagination.defaultPageSize,
         },
         key: NuxtKeys.Projects.Search,
+        cache: "no-cache",
     });
     const data = computed(() => {
         const parsed = Response.safeParse(_data.value);
@@ -173,8 +174,8 @@
 </script>
 
 <template>
-    <TooltipProvider>
-        <div class="mx-auto w-full max-w-5xl">
+    <div class="mx-auto w-full max-w-5xl flex flex-col grow">
+        <TooltipProvider>
             <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
@@ -222,12 +223,14 @@
                 </template>
 
                 <template #empty>
-                    <Empty class="bg-red-50">
+                    <Empty>
                         <EmptyHeader>
                             <EmptyMedia>
                                 <Folder class="size-4" />
                             </EmptyMedia>
-                            <EmptyTitle>{{ $t("projects.view.empty.header.title") }}</EmptyTitle>
+                            <EmptyTitle>
+                                {{ $t("projects.view.empty.header.title") }}
+                            </EmptyTitle>
                             <EmptyDescription>
                                 {{ $t("projects.view.empty.header.description") }}
                             </EmptyDescription>
@@ -384,6 +387,6 @@
                     </Card>
                 </template>
             </PaginationRoot>
-        </div>
-    </TooltipProvider>
+        </TooltipProvider>
+    </div>
 </template>

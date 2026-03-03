@@ -87,28 +87,28 @@
 </script>
 
 <template>
-    <section>
-        <div class="relative w-full h-full">
-            <div v-if="loading">
-                <slot name="skeleton">
-                    <div>
-                        <div class="w-full h-full flex items-center justify-center">
-                            <slot name="spinner" />
-                        </div>
-                    </div>
-                </slot>
-            </div>
+    <section class="flex flex-col grow">
+        <template v-if="loading">
+            <slot name="loading">
+                <div class="h-full flex items-center justify-center">
+                    <slot name="spinner">
+                        <Spinner class="size-6" />
+                    </slot>
+                </div>
+            </slot>
+        </template>
 
-            <div v-if="!items || items.length === 0" class="w-full h-full">
-                <slot name="empty" />
-            </div>
+        <template v-if="!loading && (!items || items.length === 0)">
+            <slot name="empty" />
+        </template>
 
-            <div v-if="items" v-bind="$attrs">
+        <template v-if="items && items.length > 0">
+            <div v-bind="$attrs" class="w-full">
                 <template v-for="(item, itemIndex) in items" :key="item[props.index]">
                     <slot name="item" v-bind="{ ...item, $item: item, $index: itemIndex }" />
                 </template>
             </div>
-        </div>
+        </template>
 
         <Pagination v-if="totalPages > 1" :items-per-page="pageSize" class="mt-6">
             <PaginationContent>
