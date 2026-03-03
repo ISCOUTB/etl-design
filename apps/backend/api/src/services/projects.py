@@ -98,7 +98,6 @@ class ProjectService:
 
         project = self.__decrypt_db_credentials(encrypted_project)
         self.repository.db.expunge(project)
-        print(project.name, project.db_user, project.db_password)
         try:
             return create_postgres_uri(
                 user=project.db_user,  # type: ignore
@@ -133,11 +132,9 @@ class ProjectService:
         self, project_data: schemas.CreateProjectSchema
     ) -> schemas.ResponseProjectSchema:
         project = self.repository.create_project(project_data)
-        print(project.id, project.name, project.db_user, project.db_password)
         try:
             self.repository.db.flush()  # Ensure project ID is generated before encryption
             project = self.__encrypt_db_credentials(project, project_data)
-            print(project.id, project.name, project.db_user, project.db_password)
             self.repository.db.commit()
         except IntegrityError as e:
             self.repository.db.rollback()
@@ -150,14 +147,11 @@ class ProjectService:
             self.repository.db.rollback()
             raise AppException() from e
 
-        print(project.id, project.name, project.db_user, project.db_password)
         project = self.__decrypt_db_credentials(project)
 
         # Disassociate the object from the session to prevent autoflush from
         # saving plaintext values if there are subsequent DB operations
         self.repository.db.expunge(project)
-
-        print(project.id, project.name, project.db_user, project.db_password)
         return ParserService.parse_project(project)
 
     def update_project(

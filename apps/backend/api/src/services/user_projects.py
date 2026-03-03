@@ -3,7 +3,11 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from src import models, schemas
-from src.exceptions import AppException, UserProjectNotFoundException
+from src.exceptions import (
+    AppException,
+    UserAlreadyInProjectException,
+    UserProjectNotFoundException,
+)
 from src.repositories.user_projects import UserProjectRepository
 from src.services.parser import ParserService
 
@@ -56,13 +60,41 @@ class UserProjectService:
         )
         return ParserService.parse_user_projects(user_projects)
 
+    # Currently, there's no constraint that prevents a project of having
+    # multiple owners, but we can enforce that in the future if needed
     def add_user_to_project(
         self, user_project_data: schemas.CreateUserProjectSchema
     ) -> schemas.ResponseUserProjectSchema:
-        db_user_project = self.user_project_repo.add_user_to_project(
-            user_project_data=user_project_data
+        user_project = self.user_project_repo.get_user_type_for_project(
+            user_id=user_project_data.user_id,
+            project_id=user_project_data.project_id,
+            active_only=False,
         )
-        self.db.commit()
+        if user_project is not None:
+            if bool(user_project.status == models.Status.ACTIVE):
+                raise UserAlreadyInProjectException()
+            else:
+                try:
+                    response = self.user_project_repo.update_user_project(
+                        update_data=schemas.UpdateUserProjectSchema(
+                            role=user_project_data.role, status=models.Status.ACTIVE
+                        ),
+                        db_user_project=user_project,
+                    )
+                    self.db.commit()
+                    return ParserService.parse_user_project(response)
+                except Exception as e:
+                    self.db.rollback()
+                    raise AppException() from e
+
+        try:
+            db_user_project = self.user_project_repo.add_user_to_project(
+                user_project_data
+            )
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            raise AppException() from e
         return ParserService.parse_user_project(db_user_project)
 
     def update_user_project(
@@ -97,7 +129,7 @@ class UserProjectService:
             # to the older user that accessed the project as SHARED,
             # if there are no more users with access to the project, then the project remains
             # orphaned until another user accesses it or an admin assigns an owner to it
-            if db_user_project.role == models.UserProjectType.OWNER:
+            if bool(db_user_project.role == models.UserProjectType.OWNER):
                 users_in_project = self.user_project_repo.get_users_for_project(
                     project_id=project_id,
                     order_column="updated_at",

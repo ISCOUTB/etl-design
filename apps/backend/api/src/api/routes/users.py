@@ -54,7 +54,8 @@ async def search_users(
 
     page = (skip // limit) + 1
     users = user_service.search_users(
-        active_only=True,
+        active_only=active,
+        role=role,
         name=name,
         email=email,
         skip=skip,

@@ -35,3 +35,9 @@ class InvalidDBCredentialsException(AppException):
     status_code = 400
     error_code = "error:invalid-db-credentials"
     message = "Invalid database credentials provided"
+
+
+class UserAlreadyInProjectException(AppException):
+    status_code = 400
+    error_code = "error:user-already-in-project"
+    message = "User is already associated with the project"

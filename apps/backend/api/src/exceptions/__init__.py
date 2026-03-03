@@ -18,6 +18,7 @@ from src.exceptions.projects import (
     ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
     ProjectNotFoundException,
+    UserAlreadyInProjectException,
 )
 from src.exceptions.schemas import (
     InvalidJsonSchemaException,
@@ -63,6 +64,7 @@ __all__ = [
     "InvalidProjectDataException",
     "InvalidDBCredentialsException",
     "DatabaseConnectionException",
+    "UserAlreadyInProjectException",
     # Schema exceptions
     "InvalidJsonSchemaException",
     "SchemaNotFoundException",

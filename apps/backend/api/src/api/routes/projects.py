@@ -1,3 +1,7 @@
+# TODO: Define how a normal user can add another user to a project.
+# Maybe, the user receives an invite link with a token that they can use to join the project with a predefined role (e.g., editor, viewer).
+# or, maybe, the user can only add other users by their email, and they will receive an email with the invite link.
+
 from typing import Optional
 
 from fastapi import APIRouter, status
@@ -158,6 +162,65 @@ async def delete_project(
 
 
 # ============== User Project routes ==============
+
+
+@router.post(
+    "/{project_id}/users/invite",
+    response_model=schemas.ResponseUserProjectSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def invite_user_to_project(
+    project_id: str,
+    user_project_data: schemas.CreateUserProjectSchema,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+) -> schemas.ResponseUserProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.invite,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(
+            user_id=user_project_data.user_id, project_id=project_id
+        ),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    raise NotImplementedError("Inviting users by email is not implemented yet")
+
+
+# This endpoint is only reserved for SUDO users, as they can add any user to any project.
+# Normal users should use the invite endpoint instead.
+@router.post(
+    "/{project_id}/users",
+    response_model=schemas.ResponseUserProjectSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_user_to_project(
+    project_id: str,
+    user_project_data: schemas.AddUserProjectSchema,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+) -> schemas.ResponseUserProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.create,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(
+            user_id=user_project_data.user_id, project_id=project_id
+        ),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    response = user_project_service.add_user_to_project(
+        schemas.CreateUserProjectSchema(
+            user_id=user_project_data.user_id,
+            project_id=project_id,
+            role=user_project_data.role,
+        ),
+    )
+    return response
 
 
 @router.delete("/{project_id}/flush", status_code=status.HTTP_200_OK)

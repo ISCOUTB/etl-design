@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Dict, List, Tuple
-from uuid import UUID
 
 from src.core.database_sql import SessionLocal
 from src.models import (
@@ -9,10 +8,10 @@ from src.models import (
     Model,
     ModelKey,
     ModelKeys,
+    Status,
     UserProject,
     UserProjectType,
     UserRole,
-    UserStatus,
 )
 from src.repositories import UserProjectRepository, UserRepository
 from src.schemas.token import TokenPayload
@@ -25,18 +24,13 @@ def _is_user_active(user: TokenPayload) -> bool:
     if user_record is None:
         return False
 
-    return user_record.status == UserStatus.ACTIVE  # type: ignore
+    return user_record.status == Status.ACTIVE  # type: ignore
 
 
 def _load_user_projects_for_project(project_id: str) -> List[UserProject]:
-    try:
-        project_uuid = UUID(project_id)
-    except ValueError:
-        return []
-
     with SessionLocal() as db:
-        user_projects = (
-            db.query(UserProject).filter(UserProject.project_id == project_uuid).all()
+        user_projects = UserProjectRepository(db=db).get_users_for_project(
+            project_id=project_id
         )
 
     return user_projects if user_projects else []
@@ -63,6 +57,11 @@ class Action(StrEnum):
 
     # Special action for flushing access to a project, which is different from delete
     flush = "flush"
+
+    # Special actions for user_project model. This action is used by a owner of a project
+    # to add a new member to a project. The logic behind this action is different from the
+    # normal create action
+    invite = "invite"
 
     # Special operations for uploads
     validate = "validate"
@@ -153,7 +152,8 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
                 )
                 and str(repo_model.user_id) == user.id
             ),
-            Action.create: lambda user, model: (
+            Action.create: False,
+            Action.invite: lambda user, model: (
                 model is not None
                 and (
                     (
@@ -325,6 +325,7 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             Action.view: True,
             Action.search: True,
             Action.create: True,
+            Action.invite: True,
             Action.update: True,
             Action.delete: True,
         },
