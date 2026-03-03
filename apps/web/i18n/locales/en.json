@@ -10,7 +10,8 @@
             "password_mismatch": "Passwords do not match"
         },
         "actions": {
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "save_changes": "Save Changes"
         },
         "pagination": {
             "previous": "Previous Page",
@@ -293,6 +294,11 @@
             "header": {
                 "title": "Edit Project",
                 "description": "Review your configuration"
+            },
+            "events": {
+                "project_updated": {
+                    "title": "Project Updated!"
+                }
             }
         }
     }

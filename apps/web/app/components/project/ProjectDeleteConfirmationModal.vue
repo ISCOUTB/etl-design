@@ -22,7 +22,6 @@
     const isValid = computed(() => userInput.value === expectedConfirmation.value);
 
     const { $localeRoute } = useNuxtApp();
-    const bus = useEventBus(PROJECTS_REFRESH_BUS_KEY);
     const api = useApi();
     const errorToast = useErrorToast();
     async function handleDelete() {
@@ -35,8 +34,8 @@
                 method: "DELETE",
             });
 
+            clearNuxtData(NuxtKeys.Projects.Search);
             await navigateTo($localeRoute({ name: "projects" }));
-            bus.emit();
         } catch (error) {
             console.warn(error);
 

@@ -11,6 +11,7 @@
 <template>
     <div>
         <NuxtLayout>
+            <NuxtLoadingIndicator />
             <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
             <Toaster />
         </NuxtLayout>

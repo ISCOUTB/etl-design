@@ -52,8 +52,6 @@
         () => (currentPage.value - 1) * config.pagination.defaultPageSize,
     );
 
-    const bus = useEventBus(PROJECTS_REFRESH_BUS_KEY);
-
     const {
         data: _data,
         status,
@@ -173,13 +171,6 @@
         currentPage.value = page;
         refresh();
     }
-
-    onMounted(() => {
-        bus.on(() => {
-            clear();
-            refresh();
-        });
-    });
 </script>
 
 <template>
