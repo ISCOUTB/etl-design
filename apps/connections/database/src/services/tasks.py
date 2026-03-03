@@ -11,6 +11,7 @@ and data consistency management between the two storage systems.
 
 from typing import Any, Dict, List, Optional
 
+import pymongo.errors
 from proto_utils.database import dtypes
 
 from src.core.database_mongo import MongoConnection
@@ -362,8 +363,16 @@ def _update_task_id_mongo(
             merged_data = {**existing_data, **data}
             update_ops["$set"]["data"] = merged_data
 
-    with mongo_tasks_connection.transaction() as session:
-        mongo_tasks_connection.update_one(filter_query, update_ops, session=session)
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            mongo_tasks_connection.update_one(filter_query, update_ops, session=session)
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            mongo_tasks_connection.update_one(filter_query, update_ops)
+        else:
+            raise
 
 
 def _set_task_id_mongo(
@@ -402,8 +411,16 @@ def _set_task_id_mongo(
 
     # Use upsert to either insert or update
     filter_query = {"task_id": task_id, "task": task}
-    with mongo_tasks_connection.transaction() as session:
-        mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True, session=session)
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True, session=session)
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True)
+        else:
+            raise
 
 
 def _get_task_id_mongo(
@@ -499,8 +516,19 @@ def _remove_task_id_mongo(
         None:
     """
     filter_query = {"task_id": task_id, "task": task}
-    with mongo_tasks_connection.transaction() as session:
-        result = mongo_tasks_connection.delete_one(filter_query, session=session)
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            result = mongo_tasks_connection.delete_one(filter_query, session=session)
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            result = mongo_tasks_connection.delete_one(filter_query)
+        else:
+            raise
 
+    # Don't raise exception if task not found - make it idempotent
+    # This allows removal to succeed even if task only exists in one storage
     if result.deleted_count == 0:
-        raise Exception(f"Task with ID {task_id} not found in MongoDB for deletion.")
+        # Task not found in MongoDB, but that's okay for idempotent delete
+        pass

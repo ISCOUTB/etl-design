@@ -201,8 +201,5 @@ class MongoConnection:
         try:
             with session.start_transaction():
                 yield session
-        except Exception:
-            session.abort_transaction()
-            raise
         finally:
             session.end_session()

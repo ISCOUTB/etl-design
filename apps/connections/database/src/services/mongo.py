@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from typing import Dict, Optional
 
 import pymongo
+import pymongo.errors
 import pymongo.results
 from proto_utils.database import dtypes
 
@@ -204,10 +205,22 @@ class MongoSchemasService:
         # Try to fetch the existing schema document, and if it's not, then insert a new one.
         if total_documents <= 0 or schemas_releases["schema"] is None:
             try:
-                with mongo_schemas_connection.transaction() as session:
-                    result: pymongo.results.InsertOneResult = (
-                        mongo_schemas_connection.insert_one(request, session=session)
-                    )
+                # Try to use transaction, fallback to non-transactional if not supported
+                try:
+                    with mongo_schemas_connection.transaction() as session:
+                        result: pymongo.results.InsertOneResult = (
+                            mongo_schemas_connection.insert_one(
+                                request, session=session
+                            )
+                        )
+                except pymongo.errors.OperationFailure as transaction_error:
+                    # MongoDB not in replica set mode, do non-transactional insert
+                    if "Transaction numbers" in str(transaction_error):
+                        result: pymongo.results.InsertOneResult = (
+                            mongo_schemas_connection.insert_one(request)
+                        )
+                    else:
+                        raise
                 return dtypes.MongoInsertOneSchemaResponse(
                     status="inserted",
                     result={
@@ -224,8 +237,9 @@ class MongoSchemasService:
         # If the schema already exists, compare it with the new one,
         # and if they are identical, return a no-change response.
         new_active_schema = request["active_schema"]
+        existing_active_schema = schemas_releases["schema"]
         if MongoSchemasService.compare_schemas(
-            schemas_releases["schema"], new_active_schema
+            existing_active_schema, new_active_schema
         ):
             return dtypes.MongoInsertOneSchemaResponse(
                 status="no_change",
@@ -234,23 +248,53 @@ class MongoSchemasService:
 
         # If the schema is different, update the existing document.
         try:
-            result: pymongo.results.UpdateResult = mongo_schemas_connection.update_one(
-                {"import_name": request["import_name"]},
-                {
-                    "$set": {
-                        "active_schema": new_active_schema.copy(),
-                        "created_at": request["created_at"],
-                    },
-                    "$push": {
-                        "schemas_releases": {
-                            "schema": (schemas_releases["schema"]).copy(),
-                            "created_at": schemas_releases["extra"].get(
-                                "created_at", datetime.now(UTC)
-                            ),
-                        }
-                    },
-                },
-            )
+            # Try to use transaction, fallback to non-transactional if not supported
+            try:
+                with mongo_schemas_connection.transaction() as session:
+                    result: pymongo.results.UpdateResult = (
+                        mongo_schemas_connection.update_one(
+                            {"import_name": request["import_name"]},
+                            {
+                                "$set": {
+                                    "active_schema": new_active_schema.copy(),
+                                    "created_at": request["created_at"],
+                                },
+                                "$push": {
+                                    "schemas_releases": {
+                                        "schema": existing_active_schema.copy(),
+                                        "created_at": schemas_releases["extra"].get(
+                                            "created_at", datetime.now(UTC)
+                                        ),
+                                    }
+                                },
+                            },
+                            session=session,
+                        )
+                    )
+            except pymongo.errors.OperationFailure as transaction_error:
+                # MongoDB not in replica set mode, do non-transactional update
+                if "Transaction numbers" in str(transaction_error):
+                    result: pymongo.results.UpdateResult = (
+                        mongo_schemas_connection.update_one(
+                            {"import_name": request["import_name"]},
+                            {
+                                "$set": {
+                                    "active_schema": new_active_schema.copy(),
+                                    "created_at": request["created_at"],
+                                },
+                                "$push": {
+                                    "schemas_releases": {
+                                        "schema": existing_active_schema.copy(),
+                                        "created_at": schemas_releases["extra"].get(
+                                            "created_at", datetime.now(UTC)
+                                        ),
+                                    }
+                                },
+                            },
+                        )
+                    )
+                else:
+                    raise
         except Exception as e:
             return dtypes.MongoInsertOneSchemaResponse(
                 status="error",
@@ -326,16 +370,23 @@ class MongoSchemasService:
                     status="not_found", extra={}, schema=None
                 )
         except Exception as e:
-            extra = {"error": str(e)}
-
             return dtypes.MongoFindJsonSchemaResponse(
-                status="error", extra=extra, schema=None
+                status="error", extra={"error": str(e)}, schema=None
             )
 
+        active_schema = schema_doc.get("active_schema", {})
         return dtypes.MongoFindJsonSchemaResponse(
             status="found",
-            extra={"created_at": schema_doc.get("created_at", datetime.now(UTC))},
-            schema=schema_doc["active_schema"],
+            extra={
+                "created_at": schema_doc.get("created_at", datetime.now(UTC)),
+                "import_name": schema_doc.get("import_name", ""),
+            },
+            schema=dtypes.JsonSchema(
+                schema=active_schema.get("schema", ""),
+                properties=active_schema.get("properties", {}),
+                required=active_schema.get("required", []),
+                type=active_schema.get("type", ""),
+            ),
         )
 
     @staticmethod
@@ -378,10 +429,12 @@ class MongoSchemasService:
                 },
             )
 
-        current_schema_doc = existing_schema["schema"]
+        current_active_schema = existing_schema["schema"]
 
         # Compare the new schema with the current active schema
-        if MongoSchemasService.compare_schemas(current_schema_doc, request["schema"]):
+        if MongoSchemasService.compare_schemas(
+            current_active_schema, request["schema"]
+        ):
             return dtypes.MongoUpdateOneJsonSchemaResponse(
                 status="no_change",
                 result={
@@ -391,20 +444,53 @@ class MongoSchemasService:
 
         # Update the document with the new schema using transaction
         try:
-            with mongo_schemas_connection.transaction() as session:
-                result: pymongo.results.UpdateResult = (
-                    mongo_schemas_connection.update_one(
-                        {"import_name": request["import_name"]},
-                        {
-                            "$set": {
-                                "active_schema": request["schema"],
-                                "created_at": request["created_at"],
+            # Try to use transaction, fallback to non-transactional if not supported
+            try:
+                with mongo_schemas_connection.transaction() as session:
+                    result: pymongo.results.UpdateResult = (
+                        mongo_schemas_connection.update_one(
+                            {"import_name": request["import_name"]},
+                            {
+                                "$set": {
+                                    "active_schema": request["schema"],
+                                    "created_at": request["created_at"],
+                                },
+                                "$push": {
+                                    "schemas_releases": {
+                                        "schema": current_active_schema.copy(),
+                                        "created_at": existing_schema["extra"].get(
+                                            "created_at", datetime.now(UTC)
+                                        ),
+                                    }
+                                },
                             },
-                            "$push": {"schemas_releases": current_schema_doc.copy()},
-                        },
-                        session=session,
+                            session=session,
+                        )
                     )
-                )
+            except pymongo.errors.OperationFailure as transaction_error:
+                # MongoDB not in replica set mode, do non-transactional update
+                if "Transaction numbers" in str(transaction_error):
+                    result: pymongo.results.UpdateResult = (
+                        mongo_schemas_connection.update_one(
+                            {"import_name": request["import_name"]},
+                            {
+                                "$set": {
+                                    "active_schema": request["schema"],
+                                    "created_at": request["created_at"],
+                                },
+                                "$push": {
+                                    "schemas_releases": {
+                                        "schema": current_active_schema.copy(),
+                                        "created_at": existing_schema["extra"].get(
+                                            "created_at", datetime.now(UTC)
+                                        ),
+                                    }
+                                },
+                            },
+                        )
+                    )
+                else:
+                    raise
 
             if result.modified_count > 0:
                 return dtypes.MongoUpdateOneJsonSchemaResponse(
@@ -465,12 +551,24 @@ class MongoSchemasService:
         releases = full_doc.get("schemas_releases", [])
 
         if not releases:
-            with mongo_schemas_connection.transaction() as session:
-                result: pymongo.results.DeleteResult = (
-                    mongo_schemas_connection.delete_one(
-                        {"import_name": request["import_name"]}, session=session
+            # Try to use transaction, fallback to non-transactional if not supported
+            try:
+                with mongo_schemas_connection.transaction() as session:
+                    result: pymongo.results.DeleteResult = (
+                        mongo_schemas_connection.delete_one(
+                            {"import_name": request["import_name"]}, session=session
+                        )
                     )
-                )
+            except pymongo.errors.OperationFailure as transaction_error:
+                # MongoDB not in replica set mode, do non-transactional operation
+                if "Transaction numbers" in str(transaction_error):
+                    result: pymongo.results.DeleteResult = (
+                        mongo_schemas_connection.delete_one(
+                            {"import_name": request["import_name"]}
+                        )
+                    )
+                else:
+                    raise
             return dtypes.MongoDeleteOneJsonSchemaResponse(
                 success=True,
                 message=f"Schema with import_name '{request['import_name']}' deleted",
@@ -478,20 +576,45 @@ class MongoSchemasService:
                 extra={**result.raw_result},
             )
 
-        with mongo_schemas_connection.transaction() as session:
-            result: pymongo.results.UpdateResult = mongo_schemas_connection.update_one(
-                {"import_name": request["import_name"]},
-                {
-                    "$set": {
-                        "active_schema": releases[-1]["schema"].copy(),
-                        "created_at": releases[-1].get(
-                            "created_at", full_doc.get("created_at", datetime.now(UTC))
-                        ),
-                    },
-                    "$pop": {"schemas_releases": 1},
-                },
-                session=session,
-            )
+        # Try to use transaction, fallback to non-transactional if not supported
+        try:
+            with mongo_schemas_connection.transaction() as session:
+                result: pymongo.results.UpdateResult = (
+                    mongo_schemas_connection.update_one(
+                        {"import_name": request["import_name"]},
+                        {
+                            "$set": {
+                                "active_schema": releases[-1]["schema"].copy(),
+                                "created_at": releases[-1].get(
+                                    "created_at",
+                                    full_doc.get("created_at", datetime.now(UTC)),
+                                ),
+                            },
+                            "$pop": {"schemas_releases": 1},
+                        },
+                        session=session,
+                    )
+                )
+        except pymongo.errors.OperationFailure as transaction_error:
+            # MongoDB not in replica set mode, do non-transactional operation
+            if "Transaction numbers" in str(transaction_error):
+                result: pymongo.results.UpdateResult = (
+                    mongo_schemas_connection.update_one(
+                        {"import_name": request["import_name"]},
+                        {
+                            "$set": {
+                                "active_schema": releases[-1]["schema"].copy(),
+                                "created_at": releases[-1].get(
+                                    "created_at",
+                                    full_doc.get("created_at", datetime.now(UTC)),
+                                ),
+                            },
+                            "$pop": {"schemas_releases": 1},
+                        },
+                    )
+                )
+            else:
+                raise
 
         return dtypes.MongoDeleteOneJsonSchemaResponse(
             success=True,
