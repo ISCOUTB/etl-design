@@ -40,6 +40,7 @@ service DatabaseService {
     // MongoDB operations specifically for JSON schema management
 
     rpc MongoPing(mongo.MongoPingRequest) returns (mongo.MongoPingResponse) {}
+    rpc MongoGetRawSchemas(mongo.MongoGetRawSchemasRequest) returns (mongo.MongoGetRawSchemasResponse) {}
     rpc MongoInsertOneSchema(mongo.MongoInsertOneSchemaRequest) returns (mongo.MongoInsertOneSchemaResponse) {}
     rpc MongoCountAllDocuments(mongo.MongoCountAllDocumentsRequest) returns (mongo.MongoCountAllDocumentsResponse) {}
     rpc MongoFindJsonSchema(mongo.MongoFindJsonSchemaRequest) returns (mongo.MongoFindJsonSchemaResponse) {}
@@ -55,6 +56,7 @@ service DatabaseService {
     rpc SetTaskId(SetTaskIdRequest) returns (SetTaskIdResponse) {}
     rpc GetTaskId(GetTaskIdRequest) returns (GetTaskIdResponse) {}
     rpc GetTasksByImportName(GetTasksByImportNameRequest) returns (GetTasksByImportNameResponse) {}
+    rpc RemoveTaskId(RemoveTaskIdRequest) returns (RemoveTaskIdResponse) {}
 }
 
 // ================== Both - Related to task IDs ==================
@@ -114,4 +116,16 @@ message GetTasksByImportNameRequest {
 // Response message containing all tasks matching the import name criteria
 message GetTasksByImportNameResponse {
     repeated utils.ApiResponse tasks = 1;  // List of all matching tasks
+}
+
+// Request message for removing a specific task by its ID
+message RemoveTaskIdRequest {
+    string task_id = 1;  // Unique identifier of the task to remove
+    string task = 2;  // Task type/category to remove from
+}
+
+// Response message for task removal operations
+message RemoveTaskIdResponse {
+    bool success = 1;  // Indicates if the task was successfully removed
+    string message = 2; // Descriptive message about the operation result or any errors
 }

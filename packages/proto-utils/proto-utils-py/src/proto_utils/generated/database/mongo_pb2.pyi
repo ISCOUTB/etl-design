@@ -1,4 +1,4 @@
-from ..database import utils_pb2 as _utils_pb2
+from database import utils_pb2 as _utils_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -16,6 +16,33 @@ class MongoPingResponse(_message.Message):
     PONG_FIELD_NUMBER: _ClassVar[int]
     pong: bool
     def __init__(self, pong: bool = ...) -> None: ...
+
+class MongoGetRawSchemasRequest(_message.Message):
+    __slots__ = ("import_name",)
+    IMPORT_NAME_FIELD_NUMBER: _ClassVar[int]
+    import_name: str
+    def __init__(self, import_name: _Optional[str] = ...) -> None: ...
+
+class MongoGetRawSchemasResponse(_message.Message):
+    __slots__ = ("id", "import_name", "created_at", "active_schema", "schemas_releases")
+    class SchemaRelease(_message.Message):
+        __slots__ = ("created_at", "schema")
+        CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+        SCHEMA_FIELD_NUMBER: _ClassVar[int]
+        created_at: str
+        schema: _utils_pb2.JsonSchema
+        def __init__(self, created_at: _Optional[str] = ..., schema: _Optional[_Union[_utils_pb2.JsonSchema, _Mapping]] = ...) -> None: ...
+    ID_FIELD_NUMBER: _ClassVar[int]
+    IMPORT_NAME_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    ACTIVE_SCHEMA_FIELD_NUMBER: _ClassVar[int]
+    SCHEMAS_RELEASES_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    import_name: str
+    created_at: str
+    active_schema: _utils_pb2.JsonSchema
+    schemas_releases: _containers.RepeatedCompositeFieldContainer[MongoGetRawSchemasResponse.SchemaRelease]
+    def __init__(self, id: _Optional[str] = ..., import_name: _Optional[str] = ..., created_at: _Optional[str] = ..., active_schema: _Optional[_Union[_utils_pb2.JsonSchema, _Mapping]] = ..., schemas_releases: _Optional[_Iterable[_Union[MongoGetRawSchemasResponse.SchemaRelease, _Mapping]]] = ...) -> None: ...
 
 class MongoInsertOneSchemaRequest(_message.Message):
     __slots__ = ("import_name", "created_at", "active_schema", "schemas_releases")

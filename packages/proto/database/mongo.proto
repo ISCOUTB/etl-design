@@ -20,6 +20,25 @@ message MongoPingResponse {
 
 // ================== Mongo - Related to schemas ==================
 
+// Request message for retrieving all raw schemas associated with a specific import name
+// Used to get the full history of schema versions for an import name
+message MongoGetRawSchemasRequest {
+    string import_name = 1; // The unique identifier of the import name to retrieve associated schemas
+}
+
+message MongoGetRawSchemasResponse {
+    message SchemaRelease {
+        string created_at = 1; // ISO timestamp when this schema version was created
+        utils.JsonSchema schema = 2; // The JSON schema definition for this version
+    }
+
+    string id = 1; // Unique identifier of the document in MongoDB
+    string import_name = 2; // The unique identifier of the import name associated with these schemas
+    string created_at = 3; // ISO timestamp when this document was created
+    utils.JsonSchema active_schema = 4; // The currently active/latest version of the schema
+    repeated SchemaRelease schemas_releases = 5; // Historical versions of the schema for versioning
+}
+
 // Request message for inserting a new schema document into MongoDB
 // Used to store JSON schema definitions with version history
 message MongoInsertOneSchemaRequest {
