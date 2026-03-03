@@ -97,8 +97,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "grpcio", specifier = ">=1.74.0" },
-    { name = "grpcio-tools", specifier = ">=1.74.0" },
+    { name = "grpcio", specifier = ">=1.78.0" },
+    { name = "grpcio-tools", specifier = ">=1.78.0" },
 ]
 
 [[package]]
