@@ -49,7 +49,8 @@ class DatabaseClient:
         Safely closes the channel if it exists. Should be called when
         the client is no longer needed to release resources.
         """
-        self._channel.close()
+        if self._channel is not None:
+            self._channel.close()
 
     def _initialize_channel(self) -> None:
         """Initialize or reinitialize the gRPC channel and stub.
@@ -126,7 +127,11 @@ class DatabaseClient:
                 current_delay *= self.backoff
 
         # Should never reach here, but just in case
-        raise last_exception
+        raise (
+            last_exception
+            if last_exception
+            else RuntimeError(f"{operation_name} failed without exception details.")
+        )
 
     # ============================ Redis Methods ============================
 
@@ -134,6 +139,9 @@ class DatabaseClient:
         self, request: dtypes.RedisGetKeysRequest, retry_on_failure: bool = True
     ) -> dtypes.RedisGetKeysResponse:
         def _operation() -> dtypes.RedisGetKeysResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = RedisSerde.serialize_get_keys_request(request)
             response = self._stub.RedisGetKeys(request_proto)
             return RedisSerde.deserialize_get_keys_response(response)
@@ -146,6 +154,9 @@ class DatabaseClient:
         self, request: dtypes.RedisSetRequest, retry_on_failure: bool = True
     ) -> dtypes.RedisSetResponse:
         def _operation() -> dtypes.RedisSetResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = RedisSerde.serialize_set_request(request)
             response = self._stub.RedisSet(request_proto)
             return RedisSerde.deserialize_set_response(response)
@@ -154,8 +165,13 @@ class DatabaseClient:
             return self._execute_with_retry(_operation, "RedisSet")
         return _operation()
 
-    def redis_get(self, request: dtypes.RedisGetRequest, retry_on_failure: bool = True) -> dtypes.RedisGetResponse:
+    def redis_get(
+        self, request: dtypes.RedisGetRequest, retry_on_failure: bool = True
+    ) -> dtypes.RedisGetResponse:
         def _operation() -> dtypes.RedisGetResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = RedisSerde.serialize_get_request(request)
             response = self._stub.RedisGet(request_proto)
             return RedisSerde.deserialize_get_response(response)
@@ -168,6 +184,9 @@ class DatabaseClient:
         self, request: dtypes.RedisDeleteRequest, retry_on_failure: bool = True
     ) -> dtypes.RedisDeleteResponse:
         def _operation() -> dtypes.RedisDeleteResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = RedisSerde.serialize_delete_request(request)
             response = self._stub.RedisDelete(request_proto)
             return RedisSerde.deserialize_delete_response(response)
@@ -177,9 +196,12 @@ class DatabaseClient:
         return _operation()
 
     def redis_ping(
-        self, request: dtypes.RedisPingRequest = None, retry_on_failure: bool = True
+        self, request: Optional[dtypes.RedisPingRequest] = None, retry_on_failure: bool = True
     ) -> dtypes.RedisPingResponse:
         def _operation() -> dtypes.RedisPingResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             local_request = request
             if local_request is None:
                 local_request = dtypes.RedisPingRequest()
@@ -192,9 +214,12 @@ class DatabaseClient:
         return _operation()
 
     def redis_get_cache(
-        self, request: dtypes.RedisGetCacheRequest = None, retry_on_failure: bool = True
+        self, request: Optional[dtypes.RedisGetCacheRequest] = None, retry_on_failure: bool = True
     ) -> dtypes.RedisGetCacheResponse:
         def _operation() -> dtypes.RedisGetCacheResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             local_request = request
             if local_request is None:
                 local_request = dtypes.RedisGetCacheRequest()
@@ -208,10 +233,13 @@ class DatabaseClient:
 
     def clear_cache(
         self,
-        request: dtypes.RedisClearCacheRequest = None,
+        request: Optional[dtypes.RedisClearCacheRequest] = None,
         retry_on_failure: bool = True,
     ) -> dtypes.RedisClearCacheResponse:
         def _operation() -> dtypes.RedisClearCacheResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             local_request = request
             if local_request is None:
                 local_request = dtypes.RedisClearCacheRequest()
@@ -226,9 +254,12 @@ class DatabaseClient:
     # ============================ Mongo Methods ============================
 
     def mongo_ping(
-        self, request: dtypes.MongoPingRequest = None, retry_on_failure: bool = True
+        self, request: Optional[dtypes.MongoPingRequest] = None, retry_on_failure: bool = True
     ) -> dtypes.MongoPingResponse:
         def _operation() -> dtypes.MongoPingResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_ping_request(request)
             response = self._stub.MongoPing(request_proto)
             return MongoSerde.deserialize_ping_response(response)
@@ -237,10 +268,28 @@ class DatabaseClient:
             return self._execute_with_retry(_operation, "MongoPing")
         return _operation()
 
+    def mongo_get_raw_schemas(
+        self, request: dtypes.MongoGetRawSchemasRequest, retry_on_failure: bool = True
+    ) -> dtypes.MongoGetRawSchemasResponse:
+        def _operation() -> dtypes.MongoGetRawSchemasResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
+            request_proto = MongoSerde.serialize_get_raw_schemas_request(request)
+            response = self._stub.MongoGetRawSchemas(request_proto)
+            return MongoSerde.deserialize_get_raw_schemas_response(response)
+
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoGetRawSchemas")
+        return _operation()
+
     def mongo_insert_one_schema(
         self, request: dtypes.MongoInsertOneSchemaRequest, retry_on_failure: bool = True
     ) -> dtypes.MongoInsertOneSchemaResponse:
         def _operation() -> dtypes.MongoInsertOneSchemaResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_insert_one_schema_request(request)
             response = self._stub.MongoInsertOneSchema(request_proto)
             return MongoSerde.deserialize_insert_one_schema_response(response)
@@ -251,10 +300,13 @@ class DatabaseClient:
 
     def mongo_count_all_documents(
         self,
-        request: dtypes.MongoCountAllDocumentsRequest = None,
+        request: Optional[dtypes.MongoCountAllDocumentsRequest] = None,
         retry_on_failure: bool = True,
     ) -> dtypes.MongoCountAllDocumentsResponse:
         def _operation() -> dtypes.MongoCountAllDocumentsResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             local_request = request
             if local_request is None:
                 local_request = dtypes.MongoCountAllDocumentsRequest()
@@ -272,6 +324,9 @@ class DatabaseClient:
         self, request: dtypes.MongoFindJsonSchemaRequest, retry_on_failure: bool = True
     ) -> dtypes.MongoFindJsonSchemaResponse:
         def _operation() -> dtypes.MongoFindJsonSchemaResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_find_jsonschema_request(request)
             response = self._stub.MongoFindJsonSchema(request_proto)
             return MongoSerde.deserialize_find_jsonschema_response(response)
@@ -286,6 +341,9 @@ class DatabaseClient:
         retry_on_failure: bool = True,
     ) -> dtypes.MongoUpdateOneJsonSchemaResponse:
         def _operation() -> dtypes.MongoUpdateOneJsonSchemaResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_update_one_jsonschema_request(request)
             response = self._stub.MongoUpdateOneJsonSchema(request_proto)
             return MongoSerde.deserialize_update_one_jsonschema_response(response)
@@ -300,6 +358,9 @@ class DatabaseClient:
         retry_on_failure: bool = True,
     ) -> dtypes.MongoDeleteOneJsonSchemaResponse:
         def _operation() -> dtypes.MongoDeleteOneJsonSchemaResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_delete_one_jsonschema_request(request)
             response = self._stub.MongoDeleteOneJsonSchema(request_proto)
             return MongoSerde.deserialize_delete_one_jsonschema_response(response)
@@ -314,6 +375,9 @@ class DatabaseClient:
         retry_on_failure: bool = True,
     ) -> dtypes.MongoDeleteImportNameResponse:
         def _operation() -> dtypes.MongoDeleteImportNameResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = MongoSerde.serialize_delete_import_name_request(request)
             response = self._stub.MongoDeleteImportName(request_proto)
             return MongoSerde.deserialize_delete_import_name_response(response)
@@ -328,6 +392,9 @@ class DatabaseClient:
         self, request: dtypes.UpdateTaskIdRequest, retry_on_failure: bool = True
     ) -> dtypes.UpdateTaskIdResponse:
         def _operation() -> dtypes.UpdateTaskIdResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = DatabaseSerde.serialize_update_task_id_request(request)
             response = self._stub.UpdateTaskId(request_proto)
             return DatabaseSerde.deserialize_update_task_id_response(response)
@@ -340,6 +407,9 @@ class DatabaseClient:
         self, request: dtypes.GetTaskIdRequest, retry_on_failure: bool = True
     ) -> dtypes.GetTaskIdResponse:
         def _operation() -> dtypes.GetTaskIdResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = DatabaseSerde.serialize_get_task_id_request(request)
             response = self._stub.GetTaskId(request_proto)
             return DatabaseSerde.deserialize_get_task_id_response(response)
@@ -352,6 +422,9 @@ class DatabaseClient:
         self, request: dtypes.GetTasksByImportNameRequest, retry_on_failure: bool = True
     ) -> dtypes.GetTasksByImportNameResponse:
         def _operation() -> dtypes.GetTasksByImportNameResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = DatabaseSerde.serialize_get_tasks_by_import_name_request(
                 request
             )
@@ -366,10 +439,28 @@ class DatabaseClient:
         self, request: dtypes.SetTaskIdRequest, retry_on_failure: bool = True
     ) -> dtypes.SetTaskIdResponse:
         def _operation() -> dtypes.SetTaskIdResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
             request_proto = DatabaseSerde.serialize_set_task_id_request(request)
             response = self._stub.SetTaskId(request_proto)
             return DatabaseSerde.deserialize_set_task_id_response(response)
 
         if retry_on_failure:
             return self._execute_with_retry(_operation, "SetTaskId")
+        return _operation()
+
+    def remove_task_id(
+        self, request: dtypes.RemoveTaskIdRequest, retry_on_failure: bool = True
+    ) -> dtypes.RemoveTaskIdResponse:
+        def _operation() -> dtypes.RemoveTaskIdResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
+            request_proto = DatabaseSerde.serialize_remove_task_id_request(request)
+            response = self._stub.RemoveTaskId(request_proto)
+            return DatabaseSerde.deserialize_remove_task_id_response(response)
+
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "RemoveTaskId")
         return _operation()

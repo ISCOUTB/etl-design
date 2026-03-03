@@ -168,6 +168,7 @@ class DatabaseTasksService:
     @staticmethod
     def get_task_id(
         request: dtypes.GetTaskIdRequest,
+        *,
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.GetTaskIdResponse:
@@ -212,6 +213,7 @@ class DatabaseTasksService:
     @staticmethod
     def get_tasks_by_import_name(
         request: dtypes.GetTasksByImportNameRequest,
+        *,
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.GetTasksByImportNameResponse:
@@ -257,6 +259,56 @@ class DatabaseTasksService:
             return dtypes.GetTasksByImportNameResponse(tasks=mongo_tasks)
         except Exception:
             return dtypes.GetTasksByImportNameResponse(tasks=[])
+
+    def remove_task_id(
+        self,
+        request: dtypes.RemoveTaskIdRequest,
+        *,
+        redis_db: RedisConnection,
+        mongo_tasks_connection: MongoConnection,
+    ) -> dtypes.RemoveTaskIdResponse:
+        """Remove a task by ID from both Redis and MongoDB.
+
+        This method removes a task from both storage systems. It attempts to
+        remove from Redis first, then MongoDB, and handles any inconsistencies
+        that may arise if one operation succeeds and the other fails.
+
+        Args:
+            request (dtypes.RemoveTaskIdRequest): Request containing task ID and context.
+            redis_db (RedisConnection): Active Redis connection.
+            mongo_tasks_connection (MongoConnection): Active MongoDB tasks connection.
+
+        Returns:
+            dtypes.RemoveTaskIdResponse: Response indicating success or failure of the removal operation.
+        """
+        task_id = request["task_id"]
+        task = request["task"]
+
+        try:
+            # Remove from Redis first
+            redis_db.remove_task_id(task_id=task_id, task=task)
+
+            # Remove from MongoDB
+            try:
+                _remove_task_id_mongo(
+                    task_id=task_id,
+                    task=task,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis removed but Mongo failed - INCONSISTENT STATE
+                raise Exception(
+                    f"Inconsistent state: Redis removed but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
+
+            return dtypes.RemoveTaskIdResponse(
+                success=True, message="Task removed successfully from both Redis and MongoDB"
+            )
+        except Exception as e:
+            return dtypes.RemoveTaskIdResponse(
+                success=False, message=f"Error removing task: {str(e)}"
+            )
 
 
 # ===================== MongoDB Helper Functions =====================
@@ -310,7 +362,8 @@ def _update_task_id_mongo(
             merged_data = {**existing_data, **data}
             update_ops["$set"]["data"] = merged_data
 
-    mongo_tasks_connection.update_one(filter_query, update_ops)
+    with mongo_tasks_connection.transaction() as session:
+        mongo_tasks_connection.update_one(filter_query, update_ops, session=session)
 
 
 def _set_task_id_mongo(
@@ -349,7 +402,8 @@ def _set_task_id_mongo(
 
     # Use upsert to either insert or update
     filter_query = {"task_id": task_id, "task": task}
-    mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True)
+    with mongo_tasks_connection.transaction() as session:
+        mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True, session=session)
 
 
 def _get_task_id_mongo(
@@ -424,3 +478,29 @@ def _get_tasks_by_import_name_mongo(
             continue  # Skip malformed documents
 
     return tasks
+
+def _remove_task_id_mongo(
+    task_id: str,
+    task: str,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Remove a task by its ID from MongoDB.
+
+    This is a helper function that handles the MongoDB-specific deletion logic
+    for task data. It includes proper error handling to ensure that the operation
+    is performed correctly.
+
+    Args:
+        task_id (str): Unique identifier for the task.
+        task (str): The task or context under which the task is stored.
+        mongo_tasks_connection (MongoConnection): Active MongoDB tasks connection.
+
+    Returns:
+        None:
+    """
+    filter_query = {"task_id": task_id, "task": task}
+    with mongo_tasks_connection.transaction() as session:
+        result = mongo_tasks_connection.delete_one(filter_query, session=session)
+
+    if result.deleted_count == 0:
+        raise Exception(f"Task with ID {task_id} not found in MongoDB for deletion.")

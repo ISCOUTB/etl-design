@@ -117,6 +117,46 @@ class MongoSchemasService:
         return dtypes.MongoPingResponse(pong=mongo_schemas_connection.is_healthy())
 
     @staticmethod
+    def get_raw_schemas(
+        request: dtypes.MongoGetRawSchemasRequest,
+        *,
+        mongo_schemas_connection: MongoConnection,
+    ) -> Optional[dtypes.MongoGetRawSchemasResponse]:
+        """Get raw schema documents from MongoDB by import name.
+
+        Args:
+            request (dtypes.MongoGetRawSchemasRequest): Request containing the import name to search for.
+            mongo_schemas_connection (MongoConnection): MongoDB connection instance.
+
+        Returns:
+            dtypes.MongoGetRawSchemasResponse: Response containing the raw schema documents or appropriate status.
+        """
+        try:
+            schema_doc = mongo_schemas_connection.find_one(
+                {"import_name": request["import_name"]}
+            )
+            if not schema_doc:
+                return None
+        except Exception:
+            return None
+
+        return dtypes.MongoGetRawSchemasResponse(
+            id=str(schema_doc.get("_id", "")),
+            import_name=schema_doc.get("import_name", ""),
+            created_at=str(schema_doc.get("created_at", "")),
+            active_schema=schema_doc.get("active_schema", {}),
+            schemas_releases=list(
+                map(
+                    lambda release: dtypes.MongoGetRawSchemasResponseSchemaRelease(
+                        created_at=str(release.get("created_at", "")),
+                        schema=release.get("schema", {}),
+                    ),
+                    schema_doc.get("schemas_releases", []),
+                )
+            ),
+        )
+
+    @staticmethod
     def insert_one_schema(
         request: dtypes.MongoInsertOneSchemaRequest,
         *,

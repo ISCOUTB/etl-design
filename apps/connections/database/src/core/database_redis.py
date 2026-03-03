@@ -341,6 +341,42 @@ class RedisConnection:
             tasks.append(ApiResponse(**task_data))
         return tasks
 
+    def remove_task_id(self, task_id: str, task: str) -> bool:
+        """Remove a specific task ID from the Redis cache.
+
+        This method deletes the task data and removes the task ID from the
+        associated import name's task set. Uses pipeline for atomic multi-command
+        execution.
+
+        Args:
+            task_id (str): Unique identifier for the task to remove.
+            task (str): The task or context under which the task is stored.
+        Returns:
+            bool: True if the task was successfully removed, False if task did not exist.
+        """
+        task_key = f"{task}:task:{task_id}"
+        task_data = self.redis_client.hgetall(task_key)
+
+        if not task_data:
+            return False
+
+        import_name = json.loads(task_data["data"]).get("import_name", "default")
+        import_key = f"{task}:import:{import_name}:tasks"
+
+        # Use pipeline for atomic operations
+        pipe = self.redis_client.pipeline(transaction=True)
+        try:
+            pipe.delete(task_key)
+            pipe.srem(import_key, task_id)
+            pipe.execute()
+            return True
+        except redis.exceptions.WatchError:
+            raise Exception(f"Task {task_id} was modified by another process")
+        except Exception:
+            raise
+        finally:
+            pipe.reset()
+
     # =================== Manage all cache ===================
 
     def get_cache(self) -> Dict[str, Any]:

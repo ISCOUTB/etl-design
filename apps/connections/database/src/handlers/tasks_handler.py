@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from typing import Protocol, runtime_checkable
 
 import pymongo.errors
 import redis.exceptions
@@ -8,24 +8,39 @@ from proto_utils.generated.database import database_pb2
 
 from src.core.database_mongo import MongoConnection
 from src.core.database_redis import RedisConnection
-from src.handlers.base import BaseHandler, Request, T
+from src.handlers.base import BaseHandler, RequestT, ResponseT
 from src.services.tasks import DatabaseTasksService
 from src.utils.logger import logger
+
+
+@runtime_checkable
+class DatabaseOperation(Protocol[RequestT, ResponseT]):
+    def __call__(
+        self,
+        request: RequestT,
+        /,
+        *,
+        redis_db: RedisConnection,
+        mongo_tasks_connection: MongoConnection,
+    ) -> ResponseT:
+        ...
 
 
 class DatabaseTasksHandler(BaseHandler):
     def __init__(self):
         super().__init__()
+        self.backoff = max(self.backoff_redis, self.backoff_mongo)
 
     def _execute_with_retry(
         self,
-        operation: Callable[[Request, RedisConnection, MongoConnection], T],
-        request: Request,
-    ) -> T:
+        operation: DatabaseOperation[RequestT, ResponseT],
+        request: RequestT,
+    ) -> ResponseT:
         max_retries = max(self.max_retries_redis, self.max_retries_mongo)
         retry_delay = max(self.retry_delay_redis, self.retry_delay_mongo)
         current_delay = retry_delay
         last_exception = None
+        operation_name = getattr(operation, "__name__", operation.__class__.__name__)
 
         for attempt in range(1, max_retries + 1):
             try:
@@ -46,13 +61,13 @@ class DatabaseTasksHandler(BaseHandler):
                 last_exception = e
                 if attempt == max_retries:
                     logger.error(
-                        f"Database operation '{operation.__name__}' failed after "
+                        f"Database operation '{operation_name}' failed after "
                         f"{max_retries} attempts: {e}"
                     )
                     raise
 
                 logger.warning(
-                    f"Database operation '{operation.__name__}' failed "
+                    f"Database operation '{operation_name}' failed "
                     f"(attempt {attempt}/{max_retries}): {e}. "
                     f"Retrying in {current_delay}s..."
                 )
@@ -60,7 +75,9 @@ class DatabaseTasksHandler(BaseHandler):
                 current_delay *= self.backoff
 
         # just in case
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        raise Exception("Unknown error during database operation")
 
     def update_task_id(
         self,
@@ -106,3 +123,14 @@ class DatabaseTasksHandler(BaseHandler):
             DatabaseTasksService.set_task_id, deserialized_request
         )
         return DatabaseSerde.serialize_set_task_id_response(service_response)
+
+    def remove_task_id(
+        self,
+        request: database_pb2.RemoveTaskIdRequest,
+    ) -> database_pb2.RemoveTaskIdResponse:
+        deserialized_request = DatabaseSerde.deserialize_remove_task_id_request(request)
+        service = DatabaseTasksService()
+        service_response = self._execute_with_retry(
+            service.remove_task_id, deserialized_request
+        )
+        return DatabaseSerde.serialize_remove_task_id_response(service_response)

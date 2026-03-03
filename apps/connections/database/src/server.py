@@ -333,6 +333,40 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_PING] Health check failed: {e}")
             raise
 
+    def MongoGetRawSchemas(
+        self,
+        request: mongo_pb2.MongoGetRawSchemasRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> mongo_pb2.MongoGetRawSchemasResponse:
+        """Retrieve raw schemas from MongoDB.
+
+        Args:
+            request: Request containing parameters for schema retrieval.
+            context: gRPC service context for the request.
+
+        Returns:
+            MongoGetRawSchemasResponse containing the raw schemas.
+
+        Raises:
+            grpc.RpcError: If MongoDB operation fails.
+        """
+        logger.info(
+            f"[MONGO_GET_RAW_SCHEMAS] Request from client {context.peer()} - "
+            f"ImportName: '{request.import_name}'"
+        )
+
+        try:
+            response = self.mongo_handler.get_raw_schemas(request)
+            schema_count = len(response.schemas_releases) + 1  # +1 for the main schema
+            logger.info(
+                f"[MONGO_GET_RAW_SCHEMAS] Schema retrieval completed - "
+                f"ImportName: '{request.import_name}', SchemaCount: {schema_count}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[MONGO_GET_RAW_SCHEMAS] Operation failed: {e}")
+            raise
+
     def MongoInsertOneSchema(
         self,
         request: mongo_pb2.MongoInsertOneSchemaRequest,
@@ -669,6 +703,39 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             return response
         except Exception as e:
             logger.error(f"[TASKS_SET] Operation failed: {e}")
+            raise
+
+    def RemoveTaskId(
+        self,
+        request: database_pb2.RemoveTaskIdRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> database_pb2.RemoveTaskIdResponse:
+        """Remove a task ID from the database.
+
+        Args:
+            request: Request containing task information to remove.
+            context: gRPC service context for the request.
+
+        Returns:
+            RemoveTaskIdResponse indicating removal operation result.
+
+        Raises:
+            grpc.RpcError: If database operation fails.
+        """
+        logger.info(
+            f"[TASKS_REMOVE] Request from client {context.peer()} - "
+            f"TaskID: '{request.task_id}', Task: '{request.task}'"
+        )
+
+        try:
+            response = self.database_tasks_handler.remove_task_id(request)
+            logger.info(
+                f"[TASKS_REMOVE] Task removal completed - "
+                f"TaskID: '{request.task_id}', Success: {response.success}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[TASKS_REMOVE] Operation failed: {e}")
             raise
 
 
