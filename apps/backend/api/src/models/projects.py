@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship
 from uuidv7 import uuid7
 
 from src.core.database_sql import BaseModel
-from src.models.dtypes import user_project_type_enum
+from src.models.dtypes import Status, status_enum, user_project_type_enum
 from src.utils import utc_now
 
 
@@ -69,6 +69,7 @@ class UserProject(BaseModel):
     __table_args__ = (
         Index("idx_user_project_project_id", "project_id"),
         Index("idx_user_project_role", "role"),
+        Index("idx_user_project_status", "status"),
         {"schema": "public"},
     )
 
@@ -85,6 +86,7 @@ class UserProject(BaseModel):
         nullable=False,
     )
     role = Column(user_project_type_enum, nullable=False)
+    status = Column(status_enum, default=Status.ACTIVE, nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),

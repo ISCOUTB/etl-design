@@ -120,9 +120,9 @@ class UserService:
             raise UserNotFoundException()
 
         match db_user.status:
-            case models.UserStatus.ACTIVE:
+            case models.Status.ACTIVE:
                 response = self.repository.inactivate_user(db_user=db_user)
-            case models.UserStatus.INACTIVE:
+            case models.Status.INACTIVE:
                 response = self.repository.delete_user(db_user=db_user)
             case _:
                 raise AppException("Invalid user status")

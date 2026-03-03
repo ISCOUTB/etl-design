@@ -15,8 +15,10 @@ from src.schemas.uploads import (
     UploadTaskUpdateSchema,
 )
 from src.schemas.user_projects import (
+    AddUserProjectSchema,
     BaseUserProjectSchema,
     CreateUserProjectSchema,
+    InviteUserProjectSchema,
     ResponseUserProjectSchema,
     UpdateUserProjectSchema,
 )
@@ -47,8 +49,10 @@ __all__ = [
     "ResponseProjectSchema",
     "UpdateProjectSchema",
     # User-Project Association Schemas
+    "AddUserProjectSchema",
     "BaseUserProjectSchema",
     "CreateUserProjectSchema",
+    "InviteUserProjectSchema",
     "ResponseUserProjectSchema",
     "UpdateUserProjectSchema",
     # Token Schemas

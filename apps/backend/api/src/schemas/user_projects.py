@@ -1,8 +1,9 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
-from src.models import UserProjectType
+from src.models import Status, UserProjectType
 
 
 class BaseUserProjectSchema(BaseModel):
@@ -19,14 +20,30 @@ class CreateUserProjectSchema(BaseUserProjectSchema):
     pass
 
 
+class InviteUserProjectSchema(BaseModel):
+    """Schema for inviting a user to a project."""
+
+    email: str
+    role: UserProjectType
+
+
+class AddUserProjectSchema(BaseModel):
+    """Schema for adding an existing user to a project."""
+
+    user_id: str
+    role: UserProjectType
+
+
 class UpdateUserProjectSchema(BaseModel):
     """Schema for updating user-project association."""
 
-    role: UserProjectType | None = None
+    role: Optional[UserProjectType] = None
+    status: Optional[Status] = None
 
 
 class ResponseUserProjectSchema(BaseUserProjectSchema):
     """Schema for project data in API responses."""
 
+    status: Status
     created_at: datetime
     updated_at: datetime

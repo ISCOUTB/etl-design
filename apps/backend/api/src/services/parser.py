@@ -53,6 +53,7 @@ class ParserService:
             user_id=str(user_project.user_id),
             project_id=str(user_project.project_id),
             role=user_project.role,
+            status=user_project.status,
             created_at=user_project.created_at,
             updated_at=user_project.updated_at,
         )

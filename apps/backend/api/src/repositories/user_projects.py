@@ -14,6 +14,7 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
         return (
             self.db.query(models.UserProject)
             .filter(
+                models.UserProject.status == models.Status.ACTIVE,
                 models.UserProject.project_id == project_id,
                 models.UserProject.role == models.UserProjectType.OWNER,
             )
@@ -21,17 +22,19 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
         )
 
     def get_user_type_for_project(
-        self, user_id: str, project_id: str
+        self, user_id: str, project_id: str, active_only: bool = True
     ) -> Optional[models.UserProject]:
-        user_project = (
-            self.db.query(models.UserProject)
-            .filter(
-                models.UserProject.project_id == project_id,
-                models.UserProject.user_id == user_id,
-            )
-            .first()
+        base_query = self.db.query(models.UserProject).filter(
+            models.UserProject.project_id == project_id,
+            models.UserProject.user_id == user_id,
         )
-        return user_project
+
+        if active_only:
+            base_query = base_query.filter(
+                models.UserProject.status == models.Status.ACTIVE
+            )
+
+        return base_query.first()
 
     def get_projects_for_user(
         self,
@@ -40,7 +43,8 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
         asc: Optional[bool] = None,
     ) -> List[models.UserProject]:
         base_query = self.db.query(models.UserProject).filter(
-            models.UserProject.user_id == user_id
+            models.UserProject.user_id == user_id,
+            models.UserProject.status == models.Status.ACTIVE,
         )
 
         if order_column:
@@ -62,7 +66,8 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
         asc: Optional[bool] = None,
     ) -> List[models.UserProject]:
         base_query = self.db.query(models.UserProject).filter(
-            models.UserProject.project_id == project_id
+            models.UserProject.project_id == project_id,
+            models.UserProject.status == models.Status.ACTIVE,
         )
 
         if role:
@@ -86,9 +91,9 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
             user_id=user_project_data.user_id,
             project_id=user_project_data.project_id,
             role=user_project_data.role,
+            status=models.Status.ACTIVE,
         )
         self.db.add(db_user_project)
-        self.db.flush()
         return db_user_project
 
     def update_user_project(
@@ -108,6 +113,7 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
                 .filter(
                     models.UserProject.user_id == user_id,
                     models.UserProject.project_id == project_id,
+                    models.UserProject.status == models.Status.ACTIVE,
                 )
                 .first()
             )
@@ -137,20 +143,21 @@ class UserProjectRepository(BaseRepository[models.UserProject]):
                 .filter(
                     models.UserProject.user_id == user_id,
                     models.UserProject.project_id == project_id,
+                    models.UserProject.status == models.Status.ACTIVE,
                 )
                 .first()
             )
             if not db_user_project:
                 return schemas.DeleteResult(success=False, status="not_found", obj=None)
 
-        self.db.delete(db_user_project)
-        self.db.flush()
+        # Instead of deleting the record, we mark it as INACTIVE to keep historical data
+        db_user_project.status = models.Status.INACTIVE  # type: ignore
         return schemas.DeleteResult(success=True, status="deleted", obj=db_user_project)
 
     def flush_access_project(self, project_id: str) -> None:
         # Flush all user-project associations for a project to force re-checking permissions
         self.db.query(models.UserProject).filter(
-            models.UserProject.project_id == project_id
-        ).delete()
-        self.db.flush()
+            models.UserProject.project_id == project_id,
+            models.UserProject.status == models.Status.ACTIVE,
+        ).update({"status": models.Status.INACTIVE}, synchronize_session="fetch")
         return None

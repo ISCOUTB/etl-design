@@ -20,7 +20,7 @@ class UserRepository(BaseRepository[models.User]):
         base_query = self.db.query(models.User).filter(models.User.email == email)
         if active_only:
             base_query = base_query.filter(
-                models.User.status == models.UserStatus.ACTIVE
+                models.User.status == models.Status.ACTIVE
             )
 
         return base_query.first()
@@ -38,7 +38,7 @@ class UserRepository(BaseRepository[models.User]):
         base_query = self.db.query(models.User)
         if active_only:
             base_query = base_query.filter(
-                models.User.status == models.UserStatus.ACTIVE
+                models.User.status == models.Status.ACTIVE
             )
 
         if name:
@@ -69,7 +69,7 @@ class UserRepository(BaseRepository[models.User]):
         base_query = self.db.query(models.User)
         if active_only:
             base_query = base_query.filter(
-                models.User.status == models.UserStatus.ACTIVE
+                models.User.status == models.Status.ACTIVE
             )
 
         if name:
@@ -137,7 +137,7 @@ class UserRepository(BaseRepository[models.User]):
             if not db_user:
                 return None
 
-        db_user.status = models.UserStatus.INACTIVE  # type: ignore
+        db_user.status = models.Status.INACTIVE  # type: ignore
 
         # Maybe "inactive" preffix could be enough to avoid email conflicts,
         # but to be safe we append the user ID too

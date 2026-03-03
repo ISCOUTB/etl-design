@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship
 from uuidv7 import uuid7
 
 from src.core.database_sql import BaseModel
-from src.models.dtypes import UserRole, UserStatus, user_role_enum, user_status_enum
+from src.models.dtypes import Status, UserRole, status_enum, user_role_enum
 from src.utils import utc_now
 
 
@@ -42,7 +42,7 @@ class User(BaseModel):
     name = Column(String, default=None, nullable=False)
     email = Column(String, default=None, nullable=False)
     role = Column(user_role_enum, default=UserRole.USER, nullable=False)
-    status = Column(user_status_enum, default=UserStatus.ACTIVE, nullable=False)
+    status = Column(status_enum, default=Status.ACTIVE, nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),

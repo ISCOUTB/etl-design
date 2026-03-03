@@ -25,10 +25,10 @@ from src.models import (  # noqa: E402, F401
     UploadTask,
     User,
     UserProject,
+    status_enum,
     task_status_enum,
     user_project_type_enum,
     user_role_enum,
-    user_status_enum,
 )
 
 target_metadata = BaseModel.metadata

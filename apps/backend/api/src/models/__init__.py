@@ -1,12 +1,12 @@
 from src.models.dtypes import (
+    Status,
     TaskStatus,
     UserProjectType,
     UserRole,
-    UserStatus,
+    status_enum,
     task_status_enum,
     user_project_type_enum,
     user_role_enum,
-    user_status_enum,
 )
 from src.models.keys import AnyModelKey, Model, ModelKey, ModelKeys
 from src.models.projects import Project, UserProject
@@ -17,9 +17,9 @@ __all__ = [
     # === User ===
     "User",
     "UserRole",
-    "UserStatus",
+    "Status",
     "user_role_enum",
-    "user_status_enum",
+    "status_enum",
     # === Project ===
     "Project",
     "UserProject",

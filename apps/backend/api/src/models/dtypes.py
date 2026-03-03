@@ -10,7 +10,7 @@ class UserRole(enum.Enum):
     USER = "user"
 
 
-class UserStatus(enum.Enum):
+class Status(enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
 
@@ -23,9 +23,9 @@ user_role_enum = Enum(
     schema="public",
 )
 
-user_status_enum = Enum(
-    UserStatus,
-    name="user_status_enum",
+status_enum = Enum(
+    Status,
+    name="status_enum",
     native_enum=True,
     create_type=True,
     schema="public",

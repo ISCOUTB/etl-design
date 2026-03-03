@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 from src.exceptions import EmailFormatException, InvalidUserDataException
-from src.models.dtypes import UserRole, UserStatus
+from src.models.dtypes import Status, UserRole
 
 
 class BaseUserSchema(BaseModel):
@@ -53,7 +53,7 @@ class UpdateUserSchema(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     role: Optional[UserRole] = None
-    status: Optional[UserStatus] = None
+    status: Optional[Status] = None
     password: Optional[str] = None
 
     @field_validator("email")
@@ -77,6 +77,6 @@ class ResponseUserSchema(BaseUserSchema):
     """Schema for user data in API responses."""
 
     id: str
-    status: UserStatus
+    status: Status
     created_at: datetime
     updated_at: datetime

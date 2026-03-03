@@ -79,7 +79,7 @@ class ProjectRepository(BaseRepository[models.Project]):
         """Delete a project from the database, only if it has no associated users."""
 
         def filter_active_users(user: models.User) -> bool:
-            return user.status == models.UserStatus.ACTIVE  # type: ignore
+            return user.status == models.Status.ACTIVE  # type: ignore
 
         return self._conditional_delete(
             models.Project,
