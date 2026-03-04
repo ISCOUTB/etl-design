@@ -13,6 +13,13 @@ export const NuxtKeys = {
                 return `project:${project.id}:delete`;
             },
         },
+        SharedState: (candidateId: z.infer<typeof ResponseProjectSchema>["id"] | undefined) => {
+            if (!candidateId) {
+                return "project:state";
+            }
+
+            return `project:${candidateId}:state`;
+        },
     },
 };
 

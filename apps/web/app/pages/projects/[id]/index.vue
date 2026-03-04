@@ -1,6 +1,5 @@
 <script setup lang="ts">
-    import { ResponseCodesRecord } from "#shared/utils/response-codes";
-    import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
+    import type { z } from "zod";
     import { Info, Settings } from "lucide-vue-next";
 
     definePageMeta({
@@ -18,6 +17,9 @@
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
 
+    const KEY = NuxtKeys.Projects.SharedState(projectId.value?.toString());
+    const sharedState = useState<z.infer<typeof ResponseProjectSchema>>(KEY);
+
     const auth = useAuth();
     useHead({
         title: $t("projects.id.title", {
@@ -31,39 +33,15 @@
     }));
 
     const tab = useRouteQuery("tab", Section.value.General, { mode: "replace" });
-
-    const errorToast = useErrorToast();
-    const { data: _data } = useApiFetch(`/projects/id/${projectId.value}`, {
-        method: "GET",
-        onResponseError({ response }) {
-            const parsedError = ApiErrorSchema.safeParse(response._data);
-            if (!parsedError.success) {
-                errorToast.handle(ResponseCodesRecord.Server.UnknownError);
-                return;
-            }
-
-            errorToast.handle(parsedError.data.error);
-        },
-        key: NuxtKeys.Projects.Id,
-    });
-    const data = computed(() => {
-        const parsed = ResponseProjectSchema.safeParse(_data.value);
-        if (!parsed.success) {
-            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
-            return;
-        }
-
-        return parsed.data;
-    });
 </script>
 
 <template>
     <div class="mx-auto w-full max-w-5xl">
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                {{ data?.name }}
+                {{ sharedState.name }}
             </h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">{{ data?.description }}</p>
+            <p class="mt-1.5 text-sm text-muted-foreground">{{ sharedState.description }}</p>
         </div>
 
         <Tabs v-model="tab" :default-value="Section.General">
@@ -82,10 +60,10 @@
                 </TabsTrigger>
             </TabsList>
             <TabsContent :value="Section.General" class="mt-6">
-                <LazyProjectGeneralInformation :project="data" hydrate-on-visible />
+                <LazyProjectGeneralInformation :project="sharedState" hydrate-on-visible />
             </TabsContent>
             <TabsContent :value="Section.Settings" class="mt-6">
-                <LazyProjectSettings :project="data" hydrate-on-visible />
+                <LazyProjectSettings :project="sharedState" hydrate-on-visible />
             </TabsContent>
         </Tabs>
     </div>

@@ -19,6 +19,14 @@
         on("error:project-not-found", () => {
             errorToast.handle(ResponseCodesRecord.Server.Project.NotFound);
         });
+
+        on("server:bad-payload", () => {
+            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
+        });
+
+        on("server:unknown-error", () => {
+            errorToast.handle(ResponseCodesRecord.Server.UnknownError);
+        });
     });
 </script>
 
