@@ -1,6 +1,6 @@
 /* eslint-disable style/indent */
 import type { UseWebSocketReturn } from "@vueuse/core";
-import type gsap from "gsap";
+import type { gsap } from "gsap";
 import "vue-router";
 
 // source: @sidebase/nuxt-auth/dist/runtime/middleware/sidebase-auth.d.ts
