@@ -32,7 +32,46 @@
         Settings: $t("projects.id.sections.settings.tab"),
     }));
 
-    const tab = useRouteQuery("tab", Section.value.General, { mode: "replace" });
+    const tab = useRouteQuery("tab", Section.value.General, {
+        mode: "replace",
+        transform: (value) => {
+            const sections = Object.values(Section.value);
+            const found = sections.find((section) => section === value);
+            if (found) {
+                return found;
+            }
+
+            return Section.value.General;
+        },
+    });
+
+    const tabs = useTabsManager(
+        [
+            {
+                tab: {
+                    label: "projects.id.sections.general_information.tab",
+                    value: Section.value.General,
+                    icon: Info,
+                },
+                component: () => import("@/components/project/ProjectGeneralInformation.vue"),
+                props: {
+                    project: sharedState,
+                },
+            },
+            {
+                tab: {
+                    label: "projects.id.sections.settings.tab",
+                    value: Section.value.Settings,
+                    icon: Settings,
+                },
+                component: () => import("@/components/project/ProjectSettings.vue"),
+                props: {
+                    project: sharedState,
+                },
+            },
+        ],
+        { model: tab },
+    );
 </script>
 
 <template>
@@ -46,24 +85,24 @@
 
         <Tabs v-model="tab" :default-value="Section.General">
             <TabsList>
-                <TabsTrigger :value="Section.General" class="flex items-center">
-                    <Info />
+                <TabsTrigger
+                    v-for="entry in tabs.tabs.value.values()"
+                    :key="entry.tab.value"
+                    :value="entry.tab.value"
+                    @click="tabs.setActive(entry.tab.value)"
+                >
+                    <component :is="entry.tab.icon" v-if="entry.tab.icon" />
                     <span>
-                        {{ $t("projects.id.sections.general_information.tab") }}
-                    </span>
-                </TabsTrigger>
-                <TabsTrigger :value="Section.Settings" class="flex items-center">
-                    <Settings />
-                    <span>
-                        {{ $t("projects.id.sections.settings.tab") }}
+                        {{ $t(entry.tab.label) }}
                     </span>
                 </TabsTrigger>
             </TabsList>
-            <TabsContent :value="Section.General" class="mt-6">
-                <LazyProjectGeneralInformation :project="sharedState" hydrate-on-visible />
-            </TabsContent>
-            <TabsContent :value="Section.Settings" class="mt-6">
-                <LazyProjectSettings :project="sharedState" hydrate-on-visible />
+            <TabsContent
+                v-if="tabs.activeTab.value && tabs.component.value"
+                :value="tabs.activeTab.value"
+                class="mt-6"
+            >
+                <component :is="tabs.component.value" v-bind="tabs.props.value" />
             </TabsContent>
         </Tabs>
     </div>
