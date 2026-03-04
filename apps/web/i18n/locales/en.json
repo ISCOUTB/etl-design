@@ -24,7 +24,7 @@
         },
         "clipboard": {
             "copy": "Copy",
-            "copied": "Copied"
+            "copied": "Copied to clipboard"
         }
     },
     "settings": {

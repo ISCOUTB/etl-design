@@ -11,9 +11,9 @@
         Hash,
         Plug,
         Server,
-        TriangleAlert,
         User,
     } from "lucide-vue-next";
+    import { toast } from "vue-sonner";
     import { cn } from "@/lib/utils";
 
     interface Props {
@@ -42,6 +42,12 @@
     });
 
     const clipboard = useClipboard();
+
+    onMounted(() => {
+        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
+            immediate: true,
+        });
+    });
 </script>
 
 <template>
@@ -137,6 +143,7 @@
                     />
 
                     <ProjectGeneralInformationRow
+                        copyable
                         no-warning
                         :icon="User"
                         label="projects.create.fields.db_user.label"
@@ -152,6 +159,7 @@
                     />
 
                     <ProjectGeneralInformationRow
+                        copyable
                         no-warning
                         :icon="Globe"
                         label="projects.create.fields.db_params.label"

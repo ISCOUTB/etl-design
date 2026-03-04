@@ -20,7 +20,23 @@ type Props = Partial<ToastNotification> & {
 };
 
 export default function () {
-    const { t } = useI18n();
+    const { t, te } = useI18n();
+
+    function resolveI18nText<T>(value?: T) {
+        if (!value) {
+            return value;
+        }
+
+        if (typeof value !== "string") {
+            return value;
+        }
+
+        if (te(value)) {
+            return t(value);
+        }
+
+        return value;
+    }
 
     function getDefaults(errorCode: ResponseCodes.Code | string | undefined): ErrorCodeDefaults {
         switch (errorCode) {
@@ -75,9 +91,11 @@ export default function () {
     }
 
     function show(notification: ToastNotification) {
-        toast.error(notification.title, {
-            description: notification.description,
-            ...notification,
+        const { title, description, ...rest } = notification;
+
+        toast.error(resolveI18nText(title) ?? title, {
+            description: resolveI18nText(description) ?? description,
+            ...rest,
         });
     }
 

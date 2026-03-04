@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { HTMLAttributes } from "vue";
     import { Copy, TriangleAlert } from "lucide-vue-next";
+    import { toast } from "vue-sonner";
     import { cn } from "@/lib/utils";
 
     interface Props {
@@ -19,6 +20,12 @@
 
     const value = computed(() => toValue(props.value));
     const clipboard = useClipboard();
+
+    onMounted(() => {
+        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
+            immediate: true,
+        });
+    });
 </script>
 
 <template>

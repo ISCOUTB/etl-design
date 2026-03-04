@@ -12,7 +12,7 @@
     <div>
         <NuxtLayout>
             <NuxtLoadingIndicator />
-            <NuxtPage :transition="{ name: 'my', mode: 'in-out', onBeforeEnter }" />
+            <NuxtPage :transition="{ name: 'my', mode: 'out-in', onBeforeEnter }" />
             <Toaster />
         </NuxtLayout>
     </div>

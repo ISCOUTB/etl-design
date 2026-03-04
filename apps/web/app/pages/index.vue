@@ -9,24 +9,9 @@
         },
     });
 
-    const { on } = useRouteError();
-    const errorToast = useErrorToast();
+    const routeError = useRouteError();
     onMounted(() => {
-        on("error:unauthorized", () => {
-            errorToast.handle(ResponseCodesRecord.Server.UnAuthorized);
-        });
-
-        on("error:project-not-found", () => {
-            errorToast.handle(ResponseCodesRecord.Server.Project.NotFound);
-        });
-
-        on("server:bad-payload", () => {
-            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
-        });
-
-        on("server:unknown-error", () => {
-            errorToast.handle(ResponseCodesRecord.Server.UnknownError);
-        });
+        routeError.onToast();
     });
 </script>
 

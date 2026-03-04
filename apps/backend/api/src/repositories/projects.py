@@ -24,9 +24,14 @@ class ProjectRepository(BaseRepository[models.Project]):
         base_query = self.db.query(models.Project)
 
         if user_id is not None:
-            base_query = base_query.join(
-                models.UserProject, models.UserProject.project_id == models.Project.id
-            ).filter(models.UserProject.user_id == user_id)
+            base_query = (
+                base_query.join(
+                    models.UserProject,
+                    models.UserProject.project_id == models.Project.id,
+                )
+                .filter(models.UserProject.user_id == user_id)
+                .filter(models.UserProject.status == models.Status.ACTIVE)
+            )
 
         if name:
             base_query = base_query.filter(models.Project.name.ilike(f"{name}%"))

@@ -5,6 +5,22 @@ interface Args {
     description: string;
 }
 
+type RouteErrorArgs = Partial<Args>;
+type RouteErrorHandler = (args: RouteErrorArgs) => unknown;
+type RouteErrorMap = Partial<Record<ResponseCodes.Code, RouteErrorHandler>>;
+
+function toText<T extends string>(value: unknown): T | undefined {
+    if (Array.isArray(value)) {
+        return value[0]?.toString();
+    }
+
+    if (value == null) {
+        return undefined;
+    }
+
+    return String(value) as T;
+}
+
 export default function () {
     const watchers = useState<Set<WatchStopHandle>>(
         "use-route-error:watchers",
@@ -12,38 +28,76 @@ export default function () {
     );
 
     const route = useRoute();
+    const errorToast = useErrorToast();
 
-    function on<T extends ResponseCodes.Code>(
-        error: T,
-        cb: (args: Partial<Args>) => unknown,
-        path?: string,
-    ) {
+    function createQuery() {
+        const query = new Map(Object.entries(route.query));
+
+        query.delete("error");
+        query.delete("title");
+        query.delete("description");
+
+        return query;
+    }
+
+    function clearQuery(targetPath?: string) {
+        navigateTo({
+            path: targetPath ?? route.path,
+            query: Object.fromEntries(createQuery()),
+        });
+    }
+
+    function onMap(map: RouteErrorMap, path?: string) {
         const stopWatcher = watch(
             () => route.query.error,
-            (generatedError) => {
-                if ((generatedError as T) !== error) {
+            (error) => {
+                const errorCode = toText<ResponseCodes.Code>(error);
+                if (!errorCode) {
                     return;
                 }
 
-                const query = new Map(Object.entries(route.query));
-                query.delete("error");
+                const handler = map[errorCode];
+                if (!handler) {
+                    return;
+                }
 
-                const targetPath = path ?? route.path;
-
-                cb({
-                    title: query.get("title")?.toString(),
-                    description: query.get("description")?.toString(),
+                handler({
+                    title: toText(route.query.title),
+                    description: toText(route.query.description),
                 });
 
-                navigateTo({
-                    path: targetPath,
-                    query: Object.fromEntries(query),
-                });
+                clearQuery(path);
             },
             { immediate: true },
         );
 
         watchers.value.add(stopWatcher);
+    }
+
+    function onToast(path?: string) {
+        const stopWatcher = watch(
+            () => route.query.error,
+            (error) => {
+                const errorCode = toText<ResponseCodes.Code>(error);
+                if (!errorCode) {
+                    return;
+                }
+
+                errorToast.handle(errorCode, {
+                    title: toText(route.query.title),
+                    description: toText(route.query.description),
+                });
+
+                clearQuery(path);
+            },
+            { immediate: true },
+        );
+
+        watchers.value.add(stopWatcher);
+    }
+
+    function on<T extends ResponseCodes.Code>(error: T, cb: RouteErrorHandler, path?: string) {
+        onMap({ [error]: cb }, path);
     }
 
     onUnmounted(() => {
@@ -52,6 +106,8 @@ export default function () {
     });
 
     return {
+        onMap,
+        onToast,
         on,
     };
 }
