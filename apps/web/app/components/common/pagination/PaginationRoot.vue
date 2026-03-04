@@ -1,10 +1,4 @@
 <script setup lang="ts" generic="TData">
-    // TODO
-    /**
-     * When changing between states, it happends inmediately
-     * which looks really bad
-     */
-
     interface Props {
         items: MaybeRefOrGetter<TData[] | undefined>;
         index: keyof TData;
@@ -37,6 +31,8 @@
     const loading = computed(() => toValue(props.loading));
     const page = computed(() => toValue(props.page));
     const totalPages = computed(() => toValue(props.totalPages));
+
+    const animations = usePaginationAnimations();
 
     const hasNext = computed(() => page.value < totalPages.value);
     const hasPrevious = computed(() => page.value > 1);
@@ -94,27 +90,45 @@
 
 <template>
     <section class="flex flex-col grow">
-        <template v-if="loading">
-            <slot name="loading">
-                <div class="h-full flex items-center justify-center">
-                    <slot name="spinner">
-                        <Spinner class="size-6" />
-                    </slot>
-                </div>
-            </slot>
-        </template>
+        <Transition
+            mode="out-in"
+            :css="false"
+            @enter="animations.onStateEnter"
+            @leave="animations.onStateLeave"
+        >
+            <template v-if="loading">
+                <slot name="loading">
+                    <div class="h-full flex items-center justify-center">
+                        <slot name="spinner">
+                            <Spinner class="size-6" />
+                        </slot>
+                    </div>
+                </slot>
+            </template>
 
-        <template v-if="!loading && (!items || items.length === 0)">
-            <slot name="empty" />
-        </template>
+            <template v-else-if="!items || items.length === 0">
+                <slot name="empty" />
+            </template>
 
-        <template v-if="items && items.length > 0">
-            <div v-bind="$attrs" class="w-full">
-                <template v-for="(item, itemIndex) in items" :key="item[props.index]">
+            <TransitionGroup
+                v-else
+                key="list"
+                tag="div"
+                v-bind="$attrs"
+                class="w-full"
+                :css="false"
+                @enter="animations.onItemEnter"
+                @leave="animations.onItemLeave"
+            >
+                <div
+                    v-for="(item, itemIndex) in items"
+                    :key="String(item[props.index])"
+                    :data-index="itemIndex"
+                >
                     <slot name="item" v-bind="{ ...item, $item: item, $index: itemIndex }" />
-                </template>
-            </div>
-        </template>
+                </div>
+            </TransitionGroup>
+        </Transition>
 
         <Pagination v-if="totalPages > 1" :items-per-page="pageSize" class="mt-6">
             <PaginationContent>

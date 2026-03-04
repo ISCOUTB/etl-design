@@ -100,12 +100,12 @@
 
 <template>
     <Suspense>
-        <form v-bind="$attrs" class="mx-auto w-full max-w-2xl" @submit="onSubmit">
-            <div class="mb-8">
+        <form v-bind="$attrs" @submit="onSubmit">
+            <div class="mb-8 space-y-1.5">
                 <h1 class="text-2xl font-semibold tracking-tight text-foreground">
                     {{ $t("projects.edit.header.title") }}
                 </h1>
-                <p class="mt-1.5 text-sm text-muted-foreground">
+                <p class="text-sm text-muted-foreground">
                     {{ $t("projects.edit.header.description") }}
                 </p>
             </div>

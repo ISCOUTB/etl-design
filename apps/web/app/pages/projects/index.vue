@@ -211,7 +211,7 @@
                 <template #loading>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <template v-for="i in config.pagination.defaultPageSize" :key="i">
-                            <Skeleton class="w-full h-84" />
+                            <Skeleton class="w-full h-82.5" />
                         </template>
                     </div>
                 </template>

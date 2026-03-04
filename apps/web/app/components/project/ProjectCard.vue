@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Database, MoreVertical } from "lucide-vue-next";
+    import { Check, Database, MoreVertical } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
@@ -19,7 +19,7 @@
 </script>
 
 <template>
-    <Card class="group relative overflow-hidden transition-colors hover:border-foreground/20 h-84">
+    <Card class="group relative overflow-hidden transition-colors hover:border-foreground/20">
         <CardHeader>
             <Field orientation="horizontal">
                 <Database class="size-8" stroke-width="2" />

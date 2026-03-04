@@ -1,5 +1,6 @@
 /* eslint-disable style/indent */
 import type { UseWebSocketReturn } from "@vueuse/core";
+import type gsap from "gsap";
 import "vue-router";
 
 // source: @sidebase/nuxt-auth/dist/runtime/middleware/sidebase-auth.d.ts
@@ -29,6 +30,7 @@ type AuthMiddlewareMeta =
 declare module "#app" {
     interface NuxtApp {
         $socket: UseWebSocketReturn<WebSocket.Message>;
+        $gsap: typeof gsap;
     }
 
     interface PageMeta {
@@ -40,6 +42,7 @@ declare module "#app" {
 declare module "vue" {
     interface ComponentCustomProperties {
         $socket: UseWebSocketReturn<WebSocket.Message>;
+        $gsap: typeof gsap;
     }
 }
 
