@@ -30,8 +30,9 @@ export function useApi() {
 }
 
 export function useApiFetch<T>(url: string | (() => string), options: UseFetchOptions<T> = {}) {
-    return useFetch(url, {
-        ...options,
-        $fetch: useApi(),
-    });
+    return useFetch(url, { ...options, $fetch: useApi() });
+}
+
+export function useLazyApiFetch<T>(url: string | (() => string), options: UseFetchOptions<T>) {
+    return useLazyFetch(url, { ...options, $fetch: useApi() });
 }

@@ -3,21 +3,16 @@
     import { PaginatedResponse, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import {
         AlignLeft,
-        Check,
         ChevronsLeft,
         ChevronsRight,
-        Database,
         Edit,
         ExternalLink,
-        Folder,
-        MoreVertical,
         Plug,
         Plus,
         Search,
         Server,
         Trash,
     } from "lucide-vue-next";
-    import { cn } from "@/lib/utils";
 
     definePageMeta({
         title: "projects.view.title",
@@ -28,15 +23,6 @@
             },
         },
     });
-
-    interface ProjectInformation {
-        label: string;
-        value: string | undefined | null;
-        fallbackValue: string;
-        icon?: Components.LucideIconComponent;
-        warning?: boolean;
-        tooltip?: string;
-    }
 
     const { $localeRoute } = useNuxtApp();
     const errorToast = useErrorToast();
@@ -53,18 +39,13 @@
         () => (currentPage.value - 1) * config.pagination.defaultPageSize,
     );
 
-    const {
-        data: _data,
-        status,
-        refresh,
-    } = useApiFetch("/projects/search", {
+    const { data: _data, status } = useApiFetch("/projects/search", {
         query: {
             name: debouncedSearchContent,
             skip: calculatedSkip,
             limit: config.pagination.defaultPageSize,
         },
         key: NuxtKeys.Projects.Search,
-        cache: "no-cache",
     });
     const data = computed(() => {
         const parsed = Response.safeParse(_data.value);
@@ -132,7 +113,9 @@
         ],
     ]);
 
-    function makeInfo(project: z.infer<typeof ResponseProjectSchema>): ProjectInformation[] {
+    function makeInfo(
+        project: z.infer<typeof ResponseProjectSchema>,
+    ): Schemas.Project.ProjectInformation[] {
         return [
             {
                 label: $t("projects.create.fields.db_host.label"),
@@ -169,7 +152,6 @@
 
     function handlePageChange(page: number) {
         currentPage.value = page;
-        refresh();
     }
 </script>
 
@@ -223,168 +205,23 @@
                 </template>
 
                 <template #empty>
-                    <Empty>
-                        <EmptyHeader>
-                            <EmptyMedia>
-                                <Folder class="size-4" />
-                            </EmptyMedia>
-                            <EmptyTitle>
-                                {{ $t("projects.view.empty.header.title") }}
-                            </EmptyTitle>
-                            <EmptyDescription>
-                                {{ $t("projects.view.empty.header.description") }}
-                            </EmptyDescription>
-                        </EmptyHeader>
-                        <EmptyContent>
-                            <NuxtLink as-child :to="$localeRoute({ name: 'projects-create' })">
-                                <Button>
-                                    <Plus class="size-4" />
-                                    <span>{{ $t("projects.create.header.title") }}</span>
-                                </Button>
-                            </NuxtLink>
-                        </EmptyContent>
-                    </Empty>
+                    <LazyProjectEmpty />
+                </template>
+
+                <template #loading>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <template v-for="i in config.pagination.defaultPageSize" :key="i">
+                            <Skeleton class="w-full h-84" />
+                        </template>
+                    </div>
                 </template>
 
                 <template #item="{ $item }">
-                    <Card
-                        class="group relative overflow-hidden transition-colors hover:border-foreground/20"
-                    >
-                        <CardHeader>
-                            <Field orientation="horizontal">
-                                <Database class="size-8" stroke-width="2" />
-                                <FieldContent>
-                                    <CardTitle>
-                                        {{ $item.name }}
-                                    </CardTitle>
-                                    <CardDescription
-                                        :class="
-                                            cn(
-                                                'line-clamp-2',
-                                                !$item.description &&
-                                                    'text-yellow-700 dark:text-yellow-400/70 italic font-medium',
-                                            )
-                                        "
-                                    >
-                                        {{
-                                            ifEmpty(
-                                                $item.description,
-                                                $t("projects.view.content.no_description"),
-                                            )
-                                        }}
-                                    </CardDescription>
-                                </FieldContent>
-                                <DropdownMenuRoot :context="$item" :items="dropdownItems">
-                                    <template #trigger>
-                                        <Button
-                                            variant="ghost"
-                                            class="size-8 p-0 opacity-0 group-hover:opacity-100"
-                                        >
-                                            <MoreVertical class="size-4" />
-                                        </Button>
-                                    </template>
-                                </DropdownMenuRoot>
-                            </Field>
-                        </CardHeader>
-                        <CardContent>
-                            <div
-                                class="grid grid-cols-1 gap-px overflow-hidden rounded-lg border bg-border"
-                            >
-                                <div
-                                    v-for="info in makeInfo($item)"
-                                    :key="info.label"
-                                    class="flex justify-between items-center bg-card px-3 py-2.5 h-14"
-                                >
-                                    <template v-if="!info.value?.toString().length">
-                                        <div class="flex flex-col">
-                                            <span
-                                                class="text-[10px] uppercase tracking-wider text-muted-foreground"
-                                            >
-                                                {{ info.label }}
-                                            </span>
-                                            <span
-                                                class="mt-0.5 truncate font-mono text-xs text-foreground"
-                                            >
-                                                {{ info.fallbackValue }}
-                                            </span>
-                                        </div>
-                                        <template v-if="info.tooltip && info.tooltip.length > 0">
-                                            <Tooltip :delay-duration="800">
-                                                <TooltipTrigger as-child>
-                                                    <component
-                                                        :is="info.icon"
-                                                        v-if="info.warning"
-                                                        class="size-4 text-yellow-700 dark:text-orange-500"
-                                                    />
-                                                </TooltipTrigger>
-                                                <TooltipContent align="end" side="bottom">
-                                                    <span
-                                                        v-html="
-                                                            info.tooltip.replace(/\n/g, '<br />')
-                                                        "
-                                                    />
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </template>
-                                        <template v-else>
-                                            <component
-                                                :is="info.icon"
-                                                v-if="info.warning"
-                                                class="size-4 text-yellow-500"
-                                            />
-                                        </template>
-                                    </template>
-                                    <template v-else>
-                                        <div class="flex flex-col">
-                                            <span
-                                                class="text-[10px] uppercase tracking-wider text-muted-foreground"
-                                            >
-                                                {{ info.label }}
-                                            </span>
-                                            <span
-                                                class="mt-0.5 truncate font-mono text-xs text-foreground"
-                                            >
-                                                <SensitiveInfoInline :value="info.value" />
-                                            </span>
-                                        </div>
-
-                                        <Check class="text-green-500 size-4" />
-                                    </template>
-                                </div>
-                            </div>
-
-                            <div class="mt-3.5 flex items-center justify-between">
-                                <Badge
-                                    :class="
-                                        cn(
-                                            'text-xs bg-yellow-500 text-gray-100 font-bold',
-                                            $item.provider?.length && 'bg-green-500',
-                                        )
-                                    "
-                                >
-                                    {{
-                                        ifEmpty(
-                                            $item.provider,
-                                            $t("projects.view.content.no_provider"),
-                                        )
-                                    }}
-                                </Badge>
-
-                                <span class="text-[10px] text-muted-foreground">
-                                    {{
-                                        new Date($item.created_at).toLocaleDateString(
-                                            $i18n.locale,
-                                            {
-                                                month: "long",
-                                                day: "numeric",
-                                                year: "numeric",
-                                            },
-                                        )
-                                    }}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <ProjectCard
+                        :project="$item"
+                        :dropdown-items="dropdownItems"
+                        :make-info="makeInfo"
+                    />
                 </template>
             </PaginationRoot>
         </TooltipProvider>

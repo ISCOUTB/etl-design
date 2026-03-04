@@ -1,4 +1,10 @@
 <script setup lang="ts" generic="TData">
+    // TODO
+    /**
+     * When changing between states, it happends inmediately
+     * which looks really bad
+     */
+
     interface Props {
         items: MaybeRefOrGetter<TData[] | undefined>;
         index: keyof TData;
