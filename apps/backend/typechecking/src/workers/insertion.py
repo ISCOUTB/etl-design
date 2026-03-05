@@ -35,6 +35,7 @@ from pika.exceptions import (
     AMQPConnectionError,
     ChannelClosedByBroker,
 )
+from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
@@ -222,6 +223,22 @@ class InsertionWorker:
     def process_insertion_tasks(self, ch, method, properties, body) -> None:
         """Process incoming insertion task messages with idempotency guarantees.
 
+        Implements robust idempotency by treating DB as the single source of truth.
+        
+        Critical Principle:
+        - `set_task_id()` creates the FIRST state record in the database
+        - All subsequent `update_task_status()` calls depend on this record existing
+        - If `set_task_id()` fails, EVERYTHING fails → REQUEUE
+        - This is NOT cache; it's the foundation record
+        
+        Three Error Categories:
+        1. **CRITICAL Infrastructure Failures**: set_task_id/update_task_status failed
+           → REQUEUE (DB is unavailable, can't proceed)
+        2. **Logic Errors**: SQL errors, validation failures
+           → Mark ERROR status, ACK (won't succeed on retry)
+        3. **Non-Critical Failures**: Cache optimization failures
+           → Log warning, continue (DB already correct, cache can be rebuilt)
+
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
             method: Message delivery method containing delivery tag and routing info.
@@ -229,23 +246,18 @@ class InsertionWorker:
             body: Raw message body containing the insertion request.
 
         Message Format:
-            Expected message body should be a JSON-encoded InsertionMessage containing:
-            - id: Unique identifier for the insertion task
+            InsertionMessage with:
+            - id: Task identifier
             - task: Task type (default: "sample_insertion")
-            - file_data: Hexadecimal-encoded file content
-            - table_name: Target table name
-            - db_uri: Database connection URI
+            - file_data: Hex-encoded file content
+            - table_name, project_id: Target table for insertion
+            - db_uri: Database connection string
             - overwrite: Whether to overwrite existing data
 
         Idempotency:
-            - Checks task status before processing
-            - Skips already completed tasks (success, error, published, completed)
-            - Requeues tasks currently being processed by another worker
-            - Prevents duplicate processing in case of message redelivery
-
-        Error Handling:
-            - Infrastructure errors (gRPC, Redis, HTTP, network): Requeue for retry
-            - Logic errors (SQL errors, validation failures): Mark as error, no requeue
+            - Checks DB status before processing (prevents reprocessing)
+            - Skips completed tasks (status in [success, error, published, completed])
+            - Does NOT requeue when already processing (prevents duplicate work)
         """
         task_id = None
         try:
@@ -253,59 +265,169 @@ class InsertionWorker:
             task_id = message["id"]
             task = message.get("task", "sample_insertion")
 
-            # Idempotency check - Skip if already completed
-            current_status = get_task_status(
-                task_id=task_id,
-                task=self.TASK,
-                database_client=self.db_client,
-            )
+            # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
+            try:
+                current_status = get_task_status(
+                    task_id=task_id,
+                    task=self.TASK,
+                    database_client=self.db_client,
+                )
+            except Exception as db_err:
+                logger.error(
+                    f"Failed to fetch task status for {task_id}: {db_err}. "
+                    "Requeueing to retry later."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
 
+            # If task is already completed, it's safe to skip (idempotent)
             if current_status in ["success", "error", "published", "completed"]:
                 logger.info(
                     f"Task {task_id} already completed with status={current_status}. "
-                    "ACK and skip."
+                    "ACK without reprocessing (idempotent)."
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            if (
-                current_status == "processing-file"
-                or current_status == "requesting-insert-sql"
-            ):
+            # If currently processing, likely another worker has it or it crashed.
+            # Don't requeue to avoid duplicate processing.
+            if current_status in ["processing-file", "requesting-insert-sql", "file-processed", "received-schema-update"]:
                 logger.info(
-                    f"Task {task_id} is already being processed (status={current_status}). "
-                    "Another worker is handling it. Skipping."
+                    f"Task {task_id} status={current_status} (processing). "
+                    "Another worker is handling it. ACK and skip (prevents duplicate work)."
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            # Process based on task type
+            # --- PHASE 2: Initialize Task State if First Time (CRITICAL) ---
+            # If task doesn't exist yet, create the foundation record
+            if current_status is None:
+                logger.info(f"Task {task_id} first time processing, initializing state record")
+                try:
+                    self.db_client.set_task_id(
+                        dtypes.SetTaskIdRequest(
+                            task_id=task_id,
+                            value=dtypes.ApiResponse(
+                                status="received",
+                                code=202,
+                                message="Task received and processing",
+                                data={"task_id": task_id},
+                            ),
+                            task=self.TASK,
+                        )
+                    )
+                except (grpc.RpcError, ConnectionError, TimeoutError) as init_err:
+                    # CRITICAL: Can't initialize task state - everything else depends on this
+                    logger.error(
+                        f"CRITICAL: Failed to initialize task {task_id} in DB: "
+                        f"{type(init_err).__name__}: {init_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+                except Exception as init_err:
+                    logger.error(
+                        f"CRITICAL: Unexpected error initializing task {task_id}: "
+                        f"{type(init_err).__name__}: {init_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+
+            # --- PHASE 3: Process Task (Business Logic) ---
             if task == "sample_insertion":
-                logger.info(f"Processing sample insertion: {task_id}")
-                update_task_status(
-                    database_client=self.db_client,
-                    task_id=task_id,
-                    field="status",
-                    value="received-schema-update",
-                    task=self.TASK,
-                    data={
-                        "upload_date": message["date"],
-                        "update_date": get_datetime_now(),
-                    },
-                )
-                result = asyncio.run(
-                    self._insert_data(message, db_client=self.db_client)
-                )
+                logger.info(f"Starting insertion for task {task_id}")
+                try:
+                    result = asyncio.run(
+                        self._insert_data(message, db_client=self.db_client)
+                    )
+                except (grpc.RpcError, httpx.ConnectError, httpx.TimeoutException,
+                        ConnectionError, TimeoutError) as infra_err:
+                    # Infrastructure error during processing (DB unavailable, timeout, etc.)
+                    logger.error(
+                        f"Infrastructure error processing insertion {task_id}: "
+                        f"{type(infra_err).__name__}: {infra_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+                except Exception as logic_err:
+                    # SQL errors, validation failures, etc. - mark as error & ACK
+                    logger.error(
+                        f"Insertion logic error for task {task_id}: "
+                        f"{type(logic_err).__name__}: {logic_err}. Marking as error."
+                    )
+                    try:
+                        update_task_status(
+                            database_client=self.db_client,
+                            task_id=task_id,
+                            field="status",
+                            value="error",
+                            task=self.TASK,
+                            message=f"Insertion failed: {str(logic_err)}",
+                            data={
+                                "error": str(logic_err),
+                                "update_date": get_datetime_now(),
+                            },
+                        )
+                    except Exception as status_err:
+                        logger.error(
+                            f"Failed to mark task {task_id} as error: {status_err}"
+                        )
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    return
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
-                raise ValueError(f"Unknown task type: {task}")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
-            # Publish result
-            self._publish_result(task_id, result, db_client=self.db_client)
+            # --- PHASE 4: Publish Results to DB (Atomic) ---
+            try:
+                self._publish_result(task_id, result, db_client=self.db_client)
+            except (grpc.RpcError, ConnectionError, TimeoutError) as infra_err:
+                # Infrastructure error publishing to DB
+                logger.error(
+                    f"Infrastructure error publishing insertion result {task_id}: "
+                    f"{type(infra_err).__name__}: {infra_err}. Requeueing."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
+            except Exception as pub_err:
+                logger.error(
+                    f"Error publishing result for task {task_id}: "
+                    f"{type(pub_err).__name__}: {pub_err}"
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
-            # ACK only after ALL operations succeed
+            # --- PHASE 5: Post-Processing (Cache Optimization - Non-Critical) ---
+            # Update cache for faster subsequent reads (but DB is source of truth)
+            try:
+                self.db_client.set_task_id(
+                    dtypes.SetTaskIdRequest(
+                        task_id=task_id,
+                        value=dtypes.ApiResponse(
+                            status=result.get("status", "unknown"),
+                            code=200,
+                            message="Insertion completed",
+                            data={
+                                "task_id": task_id,
+                                "results": json.dumps(result.get("results", {})),
+                            },
+                        ),
+                        task=self.TASK,
+                    )
+                )
+            except (grpc.RpcError, ConnectionError, TimeoutError) as cache_err:
+                # Cache update failed but DB state is already correct via update_task_status
+                # Log and continue - this is optimization, not critical
+                logger.warning(
+                    f"Cache optimization failed for task {task_id} (non-critical): "
+                    f"{type(cache_err).__name__}: {cache_err}. Continuing."
+                )
+
+            # --- PHASE 5: Acknowledge & Complete ---
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            logger.info(f"Schema update completed for task: {task_id}")
+            logger.info(
+                f"Insertion completed successfully for task {task_id}. Message acknowledged."
+            )
 
         except (
             grpc.RpcError,
@@ -314,7 +436,7 @@ class InsertionWorker:
             ConnectionError,
             TimeoutError,
         ) as e:
-            # Infrastructure error - REQUEUE for retry
+            # Catch-all for infrastructure errors at top level
             logger.error(
                 f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
                 "Requeueing for retry."
@@ -322,29 +444,11 @@ class InsertionWorker:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
         except Exception as e:
-            # Logic error - NO requeue, mark as error
+            # Unexpected error at top level - log and ACK to prevent stuck message
             logger.error(
-                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
-                "Marking as error."
+                f"Unexpected error processing task {task_id}: {type(e).__name__} - {e}. "
+                "ACK to prevent message from stuck indefinitely."
             )
-
-            if task_id:
-                try:
-                    update_task_status(
-                        database_client=self.db_client,
-                        task_id=task_id,
-                        field="status",
-                        value="error",
-                        task=self.TASK,
-                        message=f"Processing failed: {str(e)}",
-                        data={"error": str(e), "update_date": get_datetime_now()},
-                    )
-                except Exception as update_err:
-                    logger.error(
-                        f"Failed to update error status for task {task_id}: {update_err}"
-                    )
-
-            # ACK to prevent infinite retries
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _insert_data(

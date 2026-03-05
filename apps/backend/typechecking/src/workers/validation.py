@@ -34,8 +34,10 @@ from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
     AMQPConnectionError,
+    AMQPError,
     ChannelClosedByBroker,
 )
+from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
@@ -231,10 +233,21 @@ class ValidationWorker:
     def process_validation_request(self, ch, method, properties, body) -> None:
         """Process a validation request message with idempotency guarantees.
 
-        Handles individual validation request messages by parsing the message body,
-        extracting the task information, validating the file data, and publishing
-        the result. Implements idempotency checks to prevent duplicate processing
-        and proper message acknowledgment based on error types.
+        Implements robust idempotency by treating DB as the single source of truth.
+        
+        Critical Principle:
+        - `set_task_id()` creates the FIRST state record in the database
+        - All subsequent `update_task_status()` calls depend on this record existing
+        - If `set_task_id()` fails, EVERYTHING fails → REQUEUE
+        - This is NOT cache; it's the foundation record
+        
+        Three Error Categories:
+        1. **CRITICAL Infrastructure Failures**: set_task_id/update_task_status failed
+           → REQUEUE (DB is unavailable, can't proceed)
+        2. **Logic Errors**: validation failed, bad data
+           → Mark ERROR status, ACK (won't succeed on retry)
+        3. **Non-Critical Failures**: Cache optimization failures
+           → Log warning, continue (DB already correct, cache can be rebuilt)
 
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
@@ -243,22 +256,18 @@ class ValidationWorker:
             body: Raw message body containing the validation request.
 
         Message Format:
-            Expected message body should be a JSON-encoded ValidationMessage containing:
-            - id: Unique identifier for the validation task
+            ValidationMessage with:
+            - id: Task identifier
             - task: Task type (default: "sample_validation")
-            - file_data: Hexadecimal-encoded file content
-            - table_name: Schema identifier for validation
-            - metadata: File metadata including filename
+            - file_data: Hex-encoded file content
+            - table_name, project_id: Schema identification
+            - metadata: File metadata
+            - insert: Whether to enqueue insertion task after success
 
         Idempotency:
-            - Checks task status before processing
-            - Skips already completed tasks (success, error, published, completed)
-            - Requeues tasks currently being processed by another worker
-            - Prevents duplicate processing in case of message redelivery
-
-        Error Handling:
-            - Infrastructure errors (gRPC, Redis, network): Requeue for retry
-            - Logic errors (validation failures, invalid data): Mark as error, no requeue
+            - Checks DB status before processing (prevents reprocessing)
+            - Skips completed tasks (status in [success, error, published, completed])
+            - Does NOT requeue when already processing (prevents duplicate work)
         """
         task_id = None
         try:
@@ -266,102 +275,214 @@ class ValidationWorker:
             task_id = message["id"]
             task = message.get("task", "sample_validation")
 
-            # Idempotency check - Skip if already completed
-            current_status = get_task_status(
-                task_id=task_id,
-                task=self.TASK,
-                database_client=self.db_client,
-            )
+            # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
+            try:
+                current_status = get_task_status(
+                    task_id=task_id,
+                    task=self.TASK,
+                    database_client=self.db_client,
+                )
+            except Exception as db_err:
+                logger.error(
+                    f"Failed to fetch task status for {task_id}: {db_err}. "
+                    "Requeueing to retry later."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
 
+            # If task is already completed, it's safe to skip (idempotent)
             if current_status in ["success", "error", "published", "completed"]:
                 logger.info(
                     f"Task {task_id} already completed with status={current_status}. "
-                    "ACK and skip."
+                    "ACK without reprocessing (idempotent)."
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            # This should never happen but just in case
-            if current_status == "processing" or current_status == "validating-file":
+            # If currently processing, another worker has it or it crashed mid-work.
+            # We don't requeue to avoid two workers processing same task.
+            if current_status in ["processing", "validating-file", "received-sample-validation"]:
                 logger.info(
-                    f"Task {task_id} is already being processed (status={current_status}). "
-                    "Another worker is handling it. Skipping."
+                    f"Task {task_id} status={current_status} (processing/received). "
+                    "Another worker likely handling it. ACK and skip (prevents duplicate work)."
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            # Process based on task type
+            # --- PHASE 2: Initialize Task State if First Time (CRITICAL) ---
+            # If task doesn't exist yet, create the foundation record
+            if current_status is None:
+                logger.info(f"Task {task_id} first time processing, initializing state record")
+                try:
+                    self.db_client.set_task_id(
+                        dtypes.SetTaskIdRequest(
+                            task_id=task_id,
+                            value=dtypes.ApiResponse(
+                                status="received",
+                                code=202,
+                                message="Task received and processing",
+                                data={"task_id": task_id},
+                            ),
+                            task=self.TASK,
+                        )
+                    )
+                except (grpc.RpcError, ConnectionError, TimeoutError) as init_err:
+                    # CRITICAL: Can't initialize task state - everything else depends on this
+                    logger.error(
+                        f"CRITICAL: Failed to initialize task {task_id} in DB: "
+                        f"{type(init_err).__name__}: {init_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+                except Exception as init_err:
+                    logger.error(
+                        f"CRITICAL: Unexpected error initializing task {task_id}: "
+                        f"{type(init_err).__name__}: {init_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+
+            # --- PHASE 3: Process Task (Business Logic) ---
             if task == "sample_validation":
-                logger.info(f"Process validation request: {task_id}")
-                update_task_status(
-                    database_client=self.db_client,
-                    task_id=task_id,
-                    field="status",
-                    value="received-sample-validation",
-                    task=self.TASK,
-                    data={
-                        "upload_date": message["date"],
-                        "update_date": get_datetime_now(),
-                        "insert_task": str(message["insert"]),
-                    },
-                )
-                result = asyncio.run(
-                    self._validate_data(message, db_client=self.db_client)
-                )
+                logger.info(f"Starting validation for task {task_id}")
+                try:
+                    # Mark as processing before actual work (atomic DB state)
+                    update_task_status(
+                        database_client=self.db_client,
+                        task_id=task_id,
+                        field="status",
+                        value="received-sample-validation",
+                        task=self.TASK,
+                        data={
+                            "upload_date": message["date"],
+                            "update_date": get_datetime_now(),
+                            "insert_task": str(message["insert"]),
+                        },
+                    )
+                    
+                    # Do the validation work
+                    result = asyncio.run(
+                        self._validate_data(message, db_client=self.db_client)
+                    )
+                except (grpc.RpcError, ConnectionError, TimeoutError) as infra_err:
+                    # Infrastructure error during processing (e.g., DB client failed)
+                    logger.error(
+                        f"Infrastructure error processing validation {task_id}: "
+                        f"{type(infra_err).__name__}: {infra_err}. Requeueing."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+                except Exception as logic_err:
+                    # Logic errors (validation failed, bad data, etc.) - mark error & ACK
+                    logger.error(
+                        f"Validation logic error for task {task_id}: "
+                        f"{type(logic_err).__name__}: {logic_err}. Marking as error."
+                    )
+                    try:
+                        update_task_status(
+                            database_client=self.db_client,
+                            task_id=task_id,
+                            field="status",
+                            value="error",
+                            task=self.TASK,
+                            message=f"Validation failed: {str(logic_err)}",
+                            data={
+                                "error": str(logic_err),
+                                "update_date": get_datetime_now(),
+                            },
+                        )
+                    except Exception as status_err:
+                        logger.error(
+                            f"Failed to mark task {task_id} as error: {status_err}"
+                        )
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    return
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
-                raise ValueError(f"Unknown task type: {task}")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
-            # Publish result
-            self._publish_result(task_id, result, db_client=self.db_client)
+            # --- PHASE 4: Publish Results to DB (Atomic) ---
+            try:
+                self._publish_result(task_id, result, db_client=self.db_client)
+            except (grpc.RpcError, ConnectionError, TimeoutError) as infra_err:
+                # Infrastructure error publishing to DB (e.g., gRPC/database down)
+                logger.error(
+                    f"Infrastructure error publishing validation result {task_id}: "
+                    f"{type(infra_err).__name__}: {infra_err}. Requeueing."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
+            except Exception as pub_err:
+                # Unexpected error during result publishing
+                logger.error(
+                    f"Error publishing result for task {task_id}: "
+                    f"{type(pub_err).__name__}: {pub_err}"
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
+            # --- PHASE 5: Trigger Next Task in Pipeline ---
             # Publish insertion task if requested and validation succeeded
             if (
                 task == "sample_validation"
-                and result["status"] == "success"
-                and message["insert"]
+                and result.get("status") == "success"
+                and message.get("insert")
             ):
-                insert_overwrite = message.get("insert_overwrite", None)
-                insert_overwrite = insert_overwrite or False
-
-                db_uri = message.get("insert_db_uri", None)
-                assert db_uri is not None, (
-                    "insert_db_uri must be provided when insert is True"
-                )
-
-                if self.channel is None:
-                    self.channel = RabbitMQConnectionFactory.get_thread_channel()
-
-                self.channel.basic_publish(
-                    exchange=mq_settings.RABBITMQ_EXCHANGE,
-                    routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
-                    body=json.dumps(
-                        InsertionMessage(
-                            id=task_id,
-                            task="sample_insertion",
-                            file_data=message["file_data"],
-                            project_id=message["project_id"],
-                            metadata=message["metadata"],
-                            date=get_datetime_now(),
-                            extra={"validation_task_id": task_id},
-                            overwrite=insert_overwrite,
-                            db_uri=db_uri,
-                            table_name=message["table_name"],
-                            idempotency_key=message["idempotency_key"],
+                try:
+                    insert_overwrite = message.get("insert_overwrite", False) or False
+                    db_uri = message.get("insert_db_uri")
+                    
+                    if not db_uri:
+                        logger.warning(
+                            f"Task {task_id} requested insertion but no db_uri provided. Skipping."
                         )
-                    ),
-                )
+                    else:
+                        if self.channel is None:
+                            self.channel = RabbitMQConnectionFactory.get_thread_channel()
 
-            # ACK only after ALL operations succeed
+                        self.channel.basic_publish(
+                            exchange=mq_settings.RABBITMQ_EXCHANGE,
+                            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
+                            body=json.dumps(
+                                InsertionMessage(
+                                    id=task_id,
+                                    task="sample_insertion",
+                                    file_data=message["file_data"],
+                                    project_id=message["project_id"],
+                                    metadata=message["metadata"],
+                                    date=get_datetime_now(),
+                                    extra={"validation_task_id": task_id},
+                                    overwrite=insert_overwrite,
+                                    db_uri=db_uri,
+                                    table_name=message["table_name"],
+                                    idempotency_key=message["idempotency_key"],
+                                )
+                            ),
+                        )
+                        logger.info(f"Insertion task enqueued for task {task_id}")
+                except (AMQPError, Exception) as queue_err:
+                    # Couldn't publish to next queue. This is a problem but don't requeue
+                    # the original message (it's already processed in DB).
+                    # User would need to manually retry insertion if critical.
+                    logger.error(
+                        f"Failed to publish insertion task for {task_id}: "
+                        f"{type(queue_err).__name__}: {queue_err}. "
+                        "Validation saved but insertion won't trigger automatically."
+                    )
+
+            # --- PHASE 6: Acknowledge & Complete ---
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            logger.info(f"Validation completed for task: {task_id}")
+            logger.info(
+                f"Validation completed successfully for task {task_id}. Message acknowledged."
+            )
 
         except (
             grpc.RpcError,
             ConnectionError,
             TimeoutError,
         ) as e:
-            # Infrastructure error - REQUEUE for retry
+            # Catch-all for infrastructure errors at top level
             logger.error(
                 f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
                 "Requeueing for retry."
@@ -369,29 +490,11 @@ class ValidationWorker:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
         except Exception as e:
-            # Logic error - NO requeue, mark as error
+            # Unexpected error at top level - log and ACK to prevent stuck message
             logger.error(
-                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
-                "Marking as error."
+                f"Unexpected error processing task {task_id}: {type(e).__name__} - {e}. "
+                "ACK to prevent message from stuck indefinitely."
             )
-
-            if task_id:
-                try:
-                    update_task_status(
-                        database_client=self.db_client,
-                        task_id=task_id,
-                        field="status",
-                        value="error",
-                        task=self.TASK,
-                        message=f"Processing failed: {str(e)}",
-                        data={"error": str(e), "update_date": get_datetime_now()},
-                    )
-                except Exception as update_err:
-                    logger.error(
-                        f"Failed to update error status for task {task_id}: {update_err}"
-                    )
-
-            # ACK to prevent infinite retries
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _validate_data(

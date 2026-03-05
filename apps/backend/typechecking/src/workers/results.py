@@ -16,6 +16,7 @@ from pika.exceptions import (
     AMQPConnectionError,
     ChannelClosedByBroker,
 )
+from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import get_database_client
@@ -187,8 +188,21 @@ class ResultWorker:
     ) -> None:
         """Process results messages with idempotency guarantees.
 
-        Handles result messages by notifying the API of task completion.
-        Implements idempotency checks to prevent duplicate notifications.
+        Implements robust idempotency by treating DB as the single source of truth.
+        
+        Critical Principle:
+        - `set_task_id()` creates the FIRST state record in the database
+        - All subsequent `update_task_status()` calls depend on this record existing
+        - If `set_task_id()` fails, EVERYTHING fails → REQUEUE
+        - This is NOT cache; it's the foundation record
+        
+        Three Error Categories:
+        1. **CRITICAL Infrastructure Failures**: set_task_id/update_task_status failed
+           → REQUEUE (DB is unavailable, can't proceed)
+        2. **Logic Errors**: API notification failed
+           → Mark ERROR status, ACK (don't retry - prevents duplicate notifications)
+        3. **Non-Critical Failures**: Cache optimization failures
+           → Log warning, continue (DB already correct, cache can be rebuilt)
 
         Args:
             ch: RabbitMQ channel object for message acknowledgment.
@@ -197,19 +211,15 @@ class ResultWorker:
             body: Raw message body containing the results.
 
         Message Format:
-            Expected message body should be a JSON-encoded ResultsMessage containing:
-            - task_id: Unique identifier for the task
+            ResultsMessage with:
+            - task_id: Task identifier
             - status: Final status of the task
-            - results: Detailed results data
+            - results: Detailed results data to send to API
 
         Idempotency:
-            - Checks task status before processing
-            - Skips already completed tasks
-            - Prevents duplicate notifications to API
-
-        Error Handling:
-            - Infrastructure errors (gRPC, Redis, HTTP): Requeue for retry
-            - Logic errors: Mark as error, no requeue
+            - Checks DB status before processing (prevents duplicate notifications)
+            - Skips already completed tasks (status = "completed")
+            - Does NOT requeue when already notifying (prevents duplicate API calls)
         """
         task_id = None
         try:
@@ -217,28 +227,125 @@ class ResultWorker:
             task_id = message["task_id"]
             logger.info(f"Processing results for task_id: {task_id}")
 
-            # Idempotency check - Skip if already completed
-            current_status = get_task_status(
-                task_id=task_id,
-                task=self.TASK,
-                database_client=self.db_client,
-            )
+            # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
+            try:
+                current_status = get_task_status(
+                    task_id=task_id,
+                    task=self.TASK,
+                    database_client=self.db_client,
+                )
+            except Exception as db_err:
+                logger.error(
+                    f"Failed to fetch task status for {task_id}: {db_err}. "
+                    "Requeueing to retry later."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
 
+            # If task is already completed, it's safe to skip (idempotent - API already notified)
             if current_status == "completed":
                 logger.info(
-                    f"Task {task_id} already marked as completed. ACK and skip."
+                    f"Task {task_id} already marked as completed. "
+                    "API already notified. ACK without reprocessing (idempotent)."
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            # Notify API of task completion
-            asyncio.run(
-                self._notify_task_completion(task_id, message, json.loads(body))
-            )
+            # If currently notifying, another worker likely has it.
+            # Don't requeue to prevent duplicate API notifications.
+            if current_status == "notifying":
+                logger.info(
+                    f"Task {task_id} status=notifying (in progress). "
+                    "Another worker is notifying the API. ACK and skip (prevents duplicate calls)."
+                )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
 
-            # ACK after successful notification
+            # --- PHASE 2: Initialize Task State Record (CRITICAL Foundation) ---
+            # Create first task state record in DB if this is the first time processing
+            if current_status is None:
+                try:
+                    self.db_client.set_task_id(
+                        dtypes.SetTaskIdRequest(
+                            task_id=task_id,
+                            value=dtypes.ApiResponse(
+                                status="received",
+                                code=200,
+                                message="Task received for results processing",
+                                data={"update_date": get_datetime_now()},
+                            ),
+                            task=self.TASK,
+                        )
+                    )
+                    logger.debug(
+                        f"Task {task_id} foundation record created in DB (status=received)."
+                    )
+                except (grpc.RpcError, ConnectionError, TimeoutError) as init_err:
+                    # Critical failure: cannot create foundation record
+                    logger.error(
+                        f"Failed to initialize task {task_id} foundation record: "
+                        f"{type(init_err).__name__}: {init_err}. "
+                        "REQUEUE (critical infrastructure failure)."
+                    )
+                    ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                    return
+
+            # --- PHASE 3: Notify API (Business Logic & Mark Result) ---
+            try:
+                # Mark as notifying to prevent other workers from processing
+                update_task_status(
+                    database_client=self.db_client,
+                    task_id=task_id,
+                    task=self.TASK,
+                    field="status",
+                    value="notifying",
+                    data={"update_date": get_datetime_now()},
+                )
+                
+                # Do the actual notification work
+                asyncio.run(
+                    self._notify_task_completion(task_id, message, json.loads(body))
+                )
+            except (grpc.RpcError, httpx.ConnectError, httpx.TimeoutException,
+                    ConnectionError, TimeoutError) as infra_err:
+                # Infrastructure error during notification (API/DB unavailable, timeout)
+                logger.error(
+                    f"Infrastructure error notifying API for task {task_id}: "
+                    f"{type(infra_err).__name__}: {infra_err}. Requeueing."
+                )
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                return
+            except Exception as logic_err:
+                # Unexpected error during notification - mark as error & ACK
+                logger.error(
+                    f"Error notifying API for task {task_id}: "
+                    f"{type(logic_err).__name__}: {logic_err}. Marking as error."
+                )
+                try:
+                    update_task_status(
+                        database_client=self.db_client,
+                        task_id=task_id,
+                        task=self.TASK,
+                        field="status",
+                        value="error",
+                        message=f"Notification failed: {str(logic_err)}",
+                        data={
+                            "error": str(logic_err),
+                            "update_date": get_datetime_now(),
+                        },
+                    )
+                except Exception as status_err:
+                    logger.error(
+                        f"Failed to mark task {task_id} as error: {status_err}"
+                    )
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                return
+
+            # --- PHASE 4: Acknowledge & Complete ---
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            logger.info(f"Results for task_id {task_id} processed and acknowledged.")
+            logger.info(
+                f"Results for task_id {task_id} processed and acknowledged."
+            )
 
         except (
             grpc.RpcError,
@@ -247,7 +354,7 @@ class ResultWorker:
             ConnectionError,
             TimeoutError,
         ) as e:
-            # Infrastructure error - REQUEUE for retry
+            # Catch-all for infrastructure errors at top level
             logger.error(
                 f"Infrastructure error for task {task_id}: {type(e).__name__} - {e}. "
                 "Requeueing for retry."
@@ -255,29 +362,11 @@ class ResultWorker:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
         except Exception as e:
-            # Logic error - NO requeue, mark as error
+            # Unexpected error at top level - log and ACK to prevent stuck message
             logger.error(
-                f"Processing error for task {task_id}: {type(e).__name__} - {e}. "
-                "Marking as error."
+                f"Unexpected error processing task {task_id}: {type(e).__name__} - {e}. "
+                "ACK to prevent message from stuck indefinitely."
             )
-
-            if task_id:
-                try:
-                    update_task_status(
-                        database_client=self.db_client,
-                        task_id=task_id,
-                        field="status",
-                        value="error",
-                        task=self.TASK,
-                        message=f"Processing failed: {str(e)}",
-                        data={"error": str(e), "update_date": get_datetime_now()},
-                    )
-                except Exception as update_err:
-                    logger.error(
-                        f"Failed to update error status for task {task_id}: {update_err}"
-                    )
-
-            # ACK to prevent infinite retries
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
     async def _notify_task_completion(

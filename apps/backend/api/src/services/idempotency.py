@@ -2,7 +2,7 @@
 
 import hashlib
 from datetime import datetime, timedelta
-from typing import Optional, Tuple
+from typing import Optional
 
 import grpc
 from fastapi import UploadFile
@@ -12,7 +12,7 @@ from messaging_utils.schemas import Metadata
 from pika.exceptions import AMQPError
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from uuidv7 import uuid7
 
@@ -52,28 +52,6 @@ class IdempotencyService:
 
         return hashlib.sha256(data.encode()).hexdigest()
 
-    def validate_idempotency_key(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        idempotency_key: str,
-    ) -> Tuple[bool, models.UploadTask | None]:
-        is_duplicate, task = self.upload_repository.check_idempotency_task(
-            idempotency_key=idempotency_key,
-            user_id=user_id,
-            project_id=project_id,
-        )
-
-        if not is_duplicate or task is None:
-            return False, None
-
-        ttl_seconds = settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
-
-        task_creation = task.created_at
-        is_expired = bool(task_creation < (utc_now() - timedelta(seconds=ttl_seconds)))
-        return (not is_expired), task
-
     async def validate_task(
         self,
         db_client: DatabaseClient,
@@ -102,49 +80,6 @@ class IdempotencyService:
             file_hash=file_hash,
             metadata=VALIDATION_TASK,
         )
-        is_duplicate, existing_task = self.validate_idempotency_key(
-            user_id=user_id,
-            project_id=project_id,
-            idempotency_key=idempotency_key,
-        )
-
-        if is_duplicate and existing_task is not None:
-            try:
-                existing_response = db_client.get_task_id(
-                    dtypes.GetTaskIdRequest(
-                        task=VALIDATION_TASK, task_id=str(existing_task.task_id)
-                    )
-                )
-                if (
-                    existing_response["found"]
-                    and existing_response["value"] is not None
-                ):
-                    response = existing_response["value"]
-                    if response["status"] in {
-                        models.TaskStatus.PENDING.value,
-                        models.TaskStatus.PUBLISHED.value,
-                    }:
-                        response["status"] = existing_task.status.value
-                        response["message"] = "This validation is already in progress"
-                        response["code"] = 202
-
-                    return response
-            except Exception as e:
-                print(
-                    "Error fetching existing task from cache, returning database status",
-                    e,
-                )
-
-            return dtypes.ApiResponse(
-                status=existing_task.status.value,
-                code=202,  # Still processing
-                message="This validation is already in progress",
-                data={
-                    "task_id": str(existing_task.task_id),
-                    "project_id": project_id,
-                    "idempotency_key": idempotency_key,
-                },
-            )
 
         task_id = str(uuid7())
 
@@ -155,14 +90,14 @@ class IdempotencyService:
             size=len(file_content),
         )
 
-        # First, create the task in Redis and in our database with status "pending"
+        # First, create the task in database with status "pending"
         try:
             # Save the task in the database with status "pending"
             db_task = self.upload_repository.create_upload_task(
                 upload_task_create=schemas.UploadTaskCreateSchema(
                     task_id=task_id,
                     idempotency_key=idempotency_key,
-                    status=models.TaskStatus.PENDING,  # type: ignore
+                    status=models.TaskStatus.PENDING,
                     user_id=user_id,
                     project_id=project_id,
                     file_hash=file_hash,
@@ -170,39 +105,41 @@ class IdempotencyService:
                 )
             )
 
-            # Set the task ID in Redis with the appropriate key and value
-            db_client.set_task_id(
-                dtypes.SetTaskIdRequest(
-                    task_id=task_id,
-                    value=dtypes.ApiResponse(
-                        status=models.TaskStatus.PENDING.value,
-                        code=202,
-                        message="Validation request created successfully",
-                        data={"task_id": task_id, "project_id": project_id},
-                    ),
-                    task=VALIDATION_TASK,
-                )
-            )
             self.upload_repository.db.commit()
-        except grpc.RpcError as e:
-            # If it's a grpc problem, then it's neccesary make a roll back, and raise the same exception
-            # the grpc_exception_handler will manage this exception and return the appropriate response,
-            # so we can just raise the same error.
-            print("gRPC error occurred, rolling back task creation", e)
+        except IntegrityError as e:
             self.upload_repository.db.rollback()
-            raise
+            if "uq_idempotency_key_active_window" in str(e.orig):
+                print(
+                    "Idempotency key already exists for an active task, returning existing task"
+                )
+                existing_task = self.upload_repository.check_idempotency_task(
+                    idempotency_key=idempotency_key,
+                    user_id=user_id,
+                    project_id=project_id,
+                    statuses=[
+                        models.TaskStatus.PENDING,
+                        models.TaskStatus.PUBLISHED,
+                    ],
+                )
+                if existing_task:
+                    return dtypes.ApiResponse(
+                        status=existing_task.status.value,
+                        code=202,  # Still processing
+                        message="This validation is already in progress",
+                        data={
+                            "task_id": str(existing_task.task_id),
+                            "project_id": project_id,
+                            "idempotency_key": idempotency_key,
+                        },
+                    )
         except OperationalError as e:
-            # If the problem is the postgres database, that means, we should roll back the transaction,
-            # update the cache to remove the pending task, and raise an AppException.
+            # If the problem is the postgres database, roll back the transaction and raise an AppException.
             print("Database operation failed, rolling back task creation", e)
-
-            # TODO: Use the `db_client` to remove a task
             self.upload_repository.db.rollback()
             raise AppException() from e
+
         except Exception as e:
             print("Failed to create upload task, rolling back", e)
-
-            # TODO: use the `db_client` to remove a task
             self.upload_repository.db.rollback()
             raise AppException() from e
 
@@ -210,6 +147,9 @@ class IdempotencyService:
         try:
             # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
 
             # Publish in RabbitMQ
             publisher.publish_validation_request(
@@ -230,13 +170,37 @@ class IdempotencyService:
             raise AppException() from e
         except AMQPError as e:
             print("Failed to publish validation request, rolling back task creation", e)
-            self.upload_repository.db.rollback()
+
+            db_task.status = models.TaskStatus.PENDING  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
+            self.upload_repository.db.commit()
 
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
             print("Failed to publish validation request, rolling back task creation", e)
             raise AppException() from e
+
+        # Update cache (not critical, best effort)
+        try:
+            db_client.set_task_id(
+                dtypes.SetTaskIdRequest(
+                    task_id=task_id,
+                    value=dtypes.ApiResponse(
+                        status=models.TaskStatus.PUBLISHED.value,
+                        code=202,
+                        message="Validation request published successfully",
+                        data={"task_id": task_id, "project_id": project_id},
+                    ),
+                    task=VALIDATION_TASK,
+                )
+            )
+        except grpc.RpcError as redis_err:
+            # Redis/gRPC failed, but DB is already updated
+            # Log and continue (Redis is cache, not critical)
+            print(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",
@@ -275,38 +239,6 @@ class IdempotencyService:
             file_hash=file_hash,
             metadata=INSERTION_TASK,
         )
-        is_duplicate, existing_task = self.validate_idempotency_key(
-            user_id=user_id,
-            project_id=project_id,
-            idempotency_key=idempotency_key,
-        )
-
-        if is_duplicate and existing_task is not None:
-            try:
-                existing_response = db_client.get_task_id(
-                    dtypes.GetTaskIdRequest(
-                        task=VALIDATION_TASK, task_id=str(existing_task.task_id)
-                    )
-                )
-                if (
-                    existing_response["found"]
-                    and existing_response["value"] is not None
-                ):
-                    response = existing_response["value"]
-                    if response["status"] in {
-                        models.TaskStatus.PENDING.value,
-                        models.TaskStatus.PUBLISHED.value,
-                    }:
-                        response["status"] = existing_task.status.value
-                        response["message"] = "This validation is already in progress"
-                        response["code"] = 202
-
-                    return response
-            except Exception as e:
-                print(
-                    "Error fetching existing task from cache, returning database status",
-                    e,
-                )
 
         task_id = str(uuid7())
 
@@ -316,12 +248,13 @@ class IdempotencyService:
             size=len(file_content),
         )
 
+        # First, create the task in database with status "pending"
         try:
             db_task = self.upload_repository.create_upload_task(
                 upload_task_create=schemas.UploadTaskCreateSchema(
                     task_id=task_id,
                     idempotency_key=idempotency_key,
-                    status=models.TaskStatus.PENDING,  # type: ignore
+                    status=models.TaskStatus.PENDING,
                     user_id=user_id,
                     project_id=project_id,
                     file_hash=file_hash,
@@ -329,35 +262,52 @@ class IdempotencyService:
                 )
             )
 
-            db_client.set_task_id(
-                dtypes.SetTaskIdRequest(
-                    task_id=task_id,
-                    value=dtypes.ApiResponse(
-                        status=models.TaskStatus.PENDING.value,
-                        code=202,
-                        message="Insertion request created successfully",
-                        data={"task_id": task_id, "project_id": project_id},
-                    ),
-                    task=INSERTION_TASK,
-                )
-            )
             self.upload_repository.db.commit()
-        except grpc.RpcError as e:
-            print("gRPC error occurred, rolling back task creation", e)
+        except IntegrityError as e:
             self.upload_repository.db.rollback()
-            raise
+            if "uq_idempotency_key_active_window" in str(e.orig):
+                print(
+                    "Idempotency key already exists for an active task, returning existing task"
+                )
+                existing_task = self.upload_repository.check_idempotency_task(
+                    idempotency_key=idempotency_key,
+                    user_id=user_id,
+                    project_id=project_id,
+                    statuses=[
+                        models.TaskStatus.PENDING,
+                        models.TaskStatus.PUBLISHED,
+                    ],
+                )
+                if existing_task:
+                    return dtypes.ApiResponse(
+                        status=existing_task.status.value,
+                        code=202,  # Still processing
+                        message="This insertion is already in progress",
+                        data={
+                            "task_id": str(existing_task.task_id),
+                            "project_id": project_id,
+                            "idempotency_key": idempotency_key,
+                        },
+                    )
         except OperationalError as e:
             print("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
+
         except Exception as e:
             print("Failed to create upload task, rolling back", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
+        # Second, publish the task to rabbitmq broker
         try:
+            # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
 
+            # Publish in RabbitMQ
             publisher.publish_insertion_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
                 file_data=file_content,
@@ -378,11 +328,37 @@ class IdempotencyService:
             raise AppException() from e
         except AMQPError as e:
             print("Failed to publish insertion request, rolling back task creation", e)
-            self.upload_repository.db.rollback()
+
+            db_task.status = models.TaskStatus.PENDING  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
+            self.upload_repository.db.commit()
+
+            # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
             print("Failed to publish insertion request, rolling back task creation", e)
             raise AppException() from e
+
+        # Update cache (not critical, best effort)
+        try:
+            db_client.set_task_id(
+                dtypes.SetTaskIdRequest(
+                    task_id=task_id,
+                    value=dtypes.ApiResponse(
+                        status=models.TaskStatus.PUBLISHED.value,
+                        code=202,
+                        message="Insertion request published successfully",
+                        data={"task_id": task_id, "project_id": project_id},
+                    ),
+                    task=INSERTION_TASK,
+                )
+            )
+        except grpc.RpcError as redis_err:
+            # Redis/gRPC failed, but DB is already updated
+            # Log and continue (Redis is cache, not critical)
+            print(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",
@@ -421,38 +397,6 @@ class IdempotencyService:
             file_hash=file_hash,
             metadata=VALIDATION_TASK,
         )
-        is_duplicate, existing_task = self.validate_idempotency_key(
-            user_id=user_id,
-            project_id=project_id,
-            idempotency_key=idempotency_key,
-        )
-
-        if is_duplicate and existing_task is not None:
-            try:
-                existing_response = db_client.get_task_id(
-                    dtypes.GetTaskIdRequest(
-                        task=VALIDATION_TASK, task_id=str(existing_task.task_id)
-                    )
-                )
-                if (
-                    existing_response["found"]
-                    and existing_response["value"] is not None
-                ):
-                    response = existing_response["value"]
-                    if response["status"] in {
-                        models.TaskStatus.PENDING.value,
-                        models.TaskStatus.PUBLISHED.value,
-                    }:
-                        response["status"] = existing_task.status.value
-                        response["message"] = "This validation is already in progress"
-                        response["code"] = 202
-
-                    return response
-            except Exception as e:
-                print(
-                    "Error fetching existing task from cache, returning database status",
-                    e,
-                )
 
         task_id = str(uuid7())
         metadata = Metadata(
@@ -461,12 +405,13 @@ class IdempotencyService:
             size=len(file_content),
         )
 
+        # First, create the task in database with status "pending"
         try:
             db_task = self.upload_repository.create_upload_task(
                 upload_task_create=schemas.UploadTaskCreateSchema(
                     task_id=task_id,
                     idempotency_key=idempotency_key,
-                    status=models.TaskStatus.PENDING,  # type: ignore
+                    status=models.TaskStatus.PENDING,
                     user_id=user_id,
                     project_id=project_id,
                     file_hash=file_hash,
@@ -474,34 +419,52 @@ class IdempotencyService:
                 )
             )
 
-            db_client.set_task_id(
-                dtypes.SetTaskIdRequest(
-                    task_id=task_id,
-                    value=dtypes.ApiResponse(
-                        status=models.TaskStatus.PENDING.value,
-                        code=202,
-                        message="Validation/Insertion request created successfully",
-                        data={"task_id": task_id, "project_id": project_id},
-                    ),
-                    task=VALIDATION_TASK,
-                )
-            )
             self.upload_repository.db.commit()
-        except grpc.RpcError as e:
-            print("gRPC error occurred, rolling back task creation", e)
+        except IntegrityError as e:
             self.upload_repository.db.rollback()
-            raise
+            if "uq_idempotency_key_active_window" in str(e.orig):
+                print(
+                    "Idempotency key already exists for an active task, returning existing task"
+                )
+                existing_task = self.upload_repository.check_idempotency_task(
+                    idempotency_key=idempotency_key,
+                    user_id=user_id,
+                    project_id=project_id,
+                    statuses=[
+                        models.TaskStatus.PENDING,
+                        models.TaskStatus.PUBLISHED,
+                    ],
+                )
+                if existing_task:
+                    return dtypes.ApiResponse(
+                        status=existing_task.status.value,
+                        code=202,  # Still processing
+                        message="This validation/insertion is already in progress",
+                        data={
+                            "task_id": str(existing_task.task_id),
+                            "project_id": project_id,
+                            "idempotency_key": idempotency_key,
+                        },
+                    )
         except OperationalError as e:
             print("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
+
         except Exception as e:
             print("Failed to create upload task, rolling back", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
+        # Second, publish the task to rabbitmq broker
         try:
+            # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
+
+            # Publish in RabbitMQ
             publisher.publish_validation_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
                 file_data=file_content,
@@ -526,7 +489,14 @@ class IdempotencyService:
                 "Failed to publish validation/insertion request, rolling back task creation",
                 e,
             )
-            self.upload_repository.db.rollback()
+
+            db_task.status = models.TaskStatus.PENDING  # type: ignore
+            db_task.locked_until = utc_now() + timedelta(  # type: ignore
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
+            self.upload_repository.db.commit()
+
+            # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
             print(
@@ -534,6 +504,25 @@ class IdempotencyService:
                 e,
             )
             raise AppException() from e
+
+        # Update cache (not critical, best effort)
+        try:
+            db_client.set_task_id(
+                dtypes.SetTaskIdRequest(
+                    task_id=task_id,
+                    value=dtypes.ApiResponse(
+                        status=models.TaskStatus.PUBLISHED.value,
+                        code=202,
+                        message="Validation/Insertion request published successfully",
+                        data={"task_id": task_id, "project_id": project_id},
+                    ),
+                    task=VALIDATION_TASK,
+                )
+            )
+        except grpc.RpcError as redis_err:
+            # Redis/gRPC failed, but DB is already updated
+            # Log and continue (Redis is cache, not critical)
+            print(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",
