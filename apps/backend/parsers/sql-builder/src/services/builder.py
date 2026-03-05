@@ -45,7 +45,7 @@ def build_sql(
         Dict[int, List[SQLResponseSQLContent]]: Dictionary mapping column names to their SQL expressions.
     """
     primary_key_suffix = (
-        "id SERIAL PRIMARY KEY, " if not has_primary_key(dtypes) else ""
+        "id SERIAL PRIMARY KEY, " if not has_primary_key(dtypes) and "id" not in dtypes else ""
     )
     priorities = {
         col: get_priority_level(dependency_graph, col) for col in cols
@@ -53,7 +53,7 @@ def build_sql(
     level_0 = list(filter(lambda pair: pair[1] == 0, priorities.items()))
     sql_expressions = {}
 
-    columns_lvl0 = ["id"] if not has_primary_key(dtypes) else []
+    columns_lvl0 = ["id"] if not primary_key_suffix else []
     sql_level0 = (
         f"CREATE TABLE IF NOT EXISTS {table_name} ({primary_key_suffix}"
     )
