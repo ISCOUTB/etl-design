@@ -1,10 +1,11 @@
-from datetime import timedelta
-from typing import Optional, Tuple
+from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from src import models, schemas
+from src.core.config import settings
 from src.utils import utc_now
 
 
@@ -13,16 +14,23 @@ class UploadRepository:
         self.db = db
 
     def create_upload_task(
-        self, *, upload_task_create: schemas.UploadTaskCreateSchema
+        self,
+        *,
+        upload_task_create: schemas.UploadTaskCreateSchema,
+        locked_until: Optional[datetime] = None,
     ) -> models.UploadTask:
+        if locked_until is None:
+            locked_until = utc_now() + timedelta(seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS)
+
         upload_task = models.UploadTask(
-            task_id=UUID(upload_task_create.task_id),  # type: ignore
-            idempotency_key=upload_task_create.idempotency_key,  # type: ignore
-            status=upload_task_create.status,  # type: ignore
-            user_id=UUID(upload_task_create.user_id),  # type: ignore
-            project_id=UUID(upload_task_create.project_id),  # type: ignore
-            file_hash=upload_task_create.file_hash,  # type: ignore
-            task_metadata=upload_task_create.task_metadata,  # type: ignore
+            task_id=UUID(upload_task_create.task_id),
+            idempotency_key=upload_task_create.idempotency_key,
+            status=upload_task_create.status,
+            user_id=UUID(upload_task_create.user_id),
+            project_id=UUID(upload_task_create.project_id),
+            file_hash=upload_task_create.file_hash,
+            task_metadata=upload_task_create.task_metadata,
+            locked_until=locked_until,
         )
         self.db.add(upload_task)
         self.db.flush()
@@ -42,7 +50,7 @@ class UploadRepository:
         task_id: Optional[str] = None,
         status: models.TaskStatus,
         db_obj: Optional[models.UploadTask] = None,
-    ) -> models.UploadTask | None:
+    ) -> Optional[models.UploadTask]:
         if db_obj is None:
             assert task_id is not None, "Either task_id or db_obj must be provided"
 
@@ -56,26 +64,31 @@ class UploadRepository:
         return db_obj
 
     def check_idempotency_task(
-        self, *, idempotency_key: str, user_id: str, project_id: str
-    ) -> Tuple[bool, models.UploadTask | None]:
+        self,
+        *,
+        idempotency_key: str,
+        user_id: str,
+        project_id: str,
+        statuses: Optional[list[models.TaskStatus]] = None,
+    ) -> Optional[models.UploadTask]:
+        if statuses is None:
+            statuses = [
+                models.TaskStatus.PENDING,
+                models.TaskStatus.PUBLISHED,
+                models.TaskStatus.PROCESSING,
+                models.TaskStatus.COMPLETED,
+            ]
+
         task = (
             self.db.query(models.UploadTask)
             .filter(
                 models.UploadTask.idempotency_key == idempotency_key,
                 models.UploadTask.user_id == user_id,
                 models.UploadTask.project_id == project_id,
-                models.UploadTask.created_at > utc_now() - timedelta(days=30),
-                models.UploadTask.status.in_(
-                    [
-                        models.TaskStatus.PENDING.name,
-                        models.TaskStatus.PUBLISHED.name,
-                        models.TaskStatus.PROCESSING.name,
-                        models.TaskStatus.COMPLETED.name,
-                    ]
-                ),
+                models.UploadTask.status.in_(statuses),
             )
             .order_by(models.UploadTask.created_at.desc())
             .first()
         )
 
-        return task is not None, task
+        return task

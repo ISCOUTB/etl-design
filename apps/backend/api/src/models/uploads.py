@@ -9,9 +9,10 @@ from sqlalchemy import (
     String,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, ExcludeConstraint
 from sqlalchemy.orm import relationship
 
+from src.core.config import settings
 from src.core.database_sql import BaseModel
 from src.models.dtypes import TaskStatus, task_status_enum
 from src.utils import utc_now
@@ -24,6 +25,15 @@ class UploadTask(BaseModel):
         Index("idx_status", "status"),
         Index("idx_user_id", "user_id"),
         Index("idx_project_id", "project_id"),
+        ExcludeConstraint(
+            ("idempotency_key", "="),
+            (
+                text("tstzrange(created_at, locked_until, '[)')"),
+                "&&",
+            ),
+            where=text("status IN ('PENDING', 'PUBLISHED')"),
+            name="uq_idempotency_key_active_window",
+        ),
         {"schema": "public"},
     )
 
@@ -37,6 +47,13 @@ class UploadTask(BaseModel):
     file_hash = Column(String, nullable=True)
     task_metadata = Column(JSONB, nullable=True)
 
+    locked_until = Column(
+        DateTime(timezone=True),
+        default=(
+            utc_now() + timedelta(seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS)
+        ),
+        nullable=True,
+    )
     created_at = Column(
         DateTime(timezone=True),
         server_default=text("NOW()"),
@@ -45,7 +62,7 @@ class UploadTask(BaseModel):
     updated_at = Column(
         DateTime(timezone=True),
         server_default=text("NOW()"),
-        onupdate=lambda: utc_now() + timedelta(hours=1),
+        onupdate=utc_now,
         nullable=False,
     )
 
