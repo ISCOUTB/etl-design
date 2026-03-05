@@ -9,6 +9,7 @@ from src.schemas.projects import (
 )
 from src.schemas.token import TokenPayload
 from src.schemas.uploads import (
+    CreateTableFromJsonSchemaRequest,
     UploadTaskBaseSchema,
     UploadTaskCreateSchema,
     UploadTaskResponseSchema,
@@ -58,6 +59,7 @@ __all__ = [
     # Token Schemas
     "TokenPayload",
     # Upload Schemas
+    "CreateTableFromJsonSchemaRequest",
     "UploadTaskBaseSchema",
     "UploadTaskCreateSchema",
     "UploadTaskResponseSchema",

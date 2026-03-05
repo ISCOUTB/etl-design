@@ -11,7 +11,9 @@ from proto_utils.generated.parsers import (
 )
 
 from src.core.config import settings
+from src.schemas import JSONSchemaRequest
 from src.services.insert import create_sql_for_insertion
+from src.services.json_schema import json_schema_to_sql_builder_payload
 from src.services.parse_formulas import generate_sql, parse_formulas_with_ddl
 from src.utils import LOGGING_CONFIG, logger
 from src.utils.deps import (
@@ -51,7 +53,37 @@ app.add_middleware(
 )
 
 
-@app.post("/excel-parser")
+@app.post("/parser/json")
+@monitor_performance("read_json")
+async def read_json(
+    sql_builder_stub: SQLBuilderDep,
+    payload: JSONSchemaRequest,
+) -> Dict[str, str]:
+    if settings.EXCEL_READER_DEBUG:
+        logger.debug(f"Received JSON schema for table: {payload.table_name}")
+
+    table_name = payload.table_name.strip()
+    if not table_name:
+        raise HTTPException(status_code=400, detail="'table_name' is required")
+
+    try:
+        cols, dtypes = json_schema_to_sql_builder_payload(
+            payload.jsonschema,
+            payload.primary_keys,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    sql_statement = generate_sql(
+        sql_builder_stub,
+        cols,
+        dtypes,
+        table_name,
+    )
+    return {table_name: sql_statement}
+
+
+@app.post("/parser/excel")
 @monitor_performance("read_excel")
 async def read_excel(
     spreadsheet: UploadFile,

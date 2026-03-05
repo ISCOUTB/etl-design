@@ -1,7 +1,8 @@
-from typing import Dict, Optional, TypedDict
+from typing import Any, Dict, Optional, TypedDict
 
 from proto_utils.generated.parsers import ddl_generator_pb2, dtypes_pb2
 from proto_utils.parsers.dtypes import AST
+from pydantic import BaseModel, Field
 
 
 class CellData(TypedDict):
@@ -71,3 +72,17 @@ class ParseFormulasResult(TypedDict):
 
     result: DataInfo
     columns: ColumnsInfo
+
+
+class JSONSchemaRequest(BaseModel):
+    jsonschema: Dict[str, Any]
+    table_name: str
+    primary_keys: list[str] = Field(default_factory=list)
+
+
+class JSONSchemaColumn(TypedDict):
+    type: str
+    extra: str
+
+
+JSONSchemaDTypes = Dict[str, Dict[str, str]]

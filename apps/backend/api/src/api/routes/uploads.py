@@ -3,11 +3,11 @@
 # All upload operations (validate, insert, process) use idempotency keys
 # to prevent duplicate requests within a configurable time window.
 
-from typing import Annotated
+from typing import Annotated, Any
 
 import httpx
 import psycopg2
-from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Query, UploadFile
 from proto_utils.database import dtypes
 
 from src.api.deps import (
@@ -20,11 +20,25 @@ from src.api.deps import (
 from src.core.config import settings
 from src.exceptions import ForbiddenException
 from src.models import Project
+from src.schemas import CreateTableFromJsonSchemaRequest
 from src.services.permissions import Action, ModelKeys, PermissionService
 
 router = APIRouter()
 
 HTTPX_CLIENT = httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS)
+
+
+def _execute_sql_per_sheet(
+    *,
+    project_service: ProjectServiceDep,
+    project_id: str,
+    sql_per_sheet: dict[str, str],
+) -> None:
+    with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
+        cur = conn.cursor()
+        for _, sql in sql_per_sheet.items():
+            cur.execute(sql)
+        conn.commit()
 
 
 @router.post("/validate")
@@ -153,7 +167,7 @@ async def process(
         raise
 
 
-@router.post("/table")
+@router.post("/table-excel")
 async def create_table(
     current_user: CurrentUser,
     project_service: ProjectServiceDep,
@@ -161,6 +175,7 @@ async def create_table(
     project_id: Annotated[str, Form()],
     table_name: Annotated[str, Form()],
     dtypes: Annotated[str, Form()],
+    execute_sql: bool = True,
 ):
     has_permission = PermissionService.has_permission(
         user=current_user,
@@ -177,7 +192,7 @@ async def create_table(
     fill_spaces = "_"
     try:
         response = await HTTPX_CLIENT.post(
-            f"{settings.EXCEL_READER_URL}/excel-parser",
+            f"{settings.EXCEL_READER_URL}/parser/excel",
             files={
                 "spreadsheet": (
                     spreadsheet.filename,
@@ -200,16 +215,103 @@ async def create_table(
             detail=f"Failed to communicate with Excel Reader service: {str(e)}",
         )
 
+    if execute_sql:
+        try:
+            _execute_sql_per_sheet(
+                project_service=project_service,
+                project_id=project_id,
+                sql_per_sheet=sql_per_sheet,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create table in the database: {str(e)}",
+            )
+
+        return {
+            "message": "Table created successfully",
+            "sql_per_sheet": sql_per_sheet,
+        }
+
+    return {
+        "message": "SQL generated successfully (execution skipped)",
+        "sql_per_sheet": sql_per_sheet,
+    }
+
+
+@router.post("/table-json")
+async def create_table_from_json_schema(
+    current_user: CurrentUser,
+    project_service: ProjectServiceDep,
+    payload: CreateTableFromJsonSchemaRequest,
+    execute_sql: Annotated[bool, Query()] = True,
+) -> dict[str, Any]:
+    """Create a table from a JSON Schema.
+
+    Accepts a JSON request body with:
+    - table_name: Name of the table to create
+    - jsonschema: JSON Schema object describing the table structure
+    - primary_keys: List of column names that form the primary key (optional)
+    - execute_sql: Query parameter to execute the generated SQL (default: true)
+    """
+    project_id = payload.project_id
+
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.table,
+        model_key=ModelKeys.upload,
+        model=Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
     try:
-        with psycopg2.connect(project_service.get_project_db_uri(project_id)) as conn:
-            cur = conn.cursor()
-            for _, sql in sql_per_sheet.items():
-                cur.execute(sql)
-            conn.commit()
+        response = await HTTPX_CLIENT.post(
+            f"{settings.EXCEL_READER_URL}/parser/json",
+            json={
+                "table_name": payload.table_name,
+                "jsonschema": payload.jsonschema,
+                "primary_keys": payload.primary_keys,
+            },
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create table in the database: {str(e)}",
+            detail=f"Failed to communicate with Excel Reader service: {str(e)}",
         )
 
-    return {"message": "Table created successfully", "sql_per_sheet": sql_per_sheet}
+    if response.is_error:
+        try:
+            detail = response.json().get("detail", response.text)
+        except Exception:
+            detail = response.text
+
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Excel Reader error: {detail}",
+        )
+
+    sql_per_sheet = response.json()
+
+    if execute_sql:
+        try:
+            _execute_sql_per_sheet(
+                project_service=project_service,
+                project_id=project_id,
+                sql_per_sheet=sql_per_sheet,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create table in the database: {str(e)}",
+            )
+
+        return {
+            "message": "Table created successfully",
+            "sql_per_sheet": sql_per_sheet,
+        }
+
+    return {
+        "message": "SQL generated successfully (execution skipped)",
+        "sql_per_sheet": sql_per_sheet,
+    }
