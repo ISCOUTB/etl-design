@@ -10,8 +10,8 @@ package formula_parser;
 
 // Service definition for parsing Excel formulas
 service FormulaParser {
-    // Parses an Excel formula string into tokens and AST
-    // Takes a raw Excel formula and returns structured representations
+  // Parses an Excel formula string into tokens and AST
+  // Takes a raw Excel formula and returns structured representations
   rpc ParseFormula(FormulaParserRequest) returns (FormulaParserResponse) {}
 }
 
@@ -24,8 +24,8 @@ message FormulaParserRequest {
 // Response message containing the parsing results
 // Provides the original formula, generated tokens, AST, and any error information
 message FormulaParserResponse {
-  string                 formula = 1;                  // The original Excel formula that was parsed
-  optional dtypes.Tokens tokens  = 2;   // Tokens generated during the parsing process
-  optional dtypes.AST    ast     = 3;         // The resulting Abstract Syntax Tree structure
-  string                 error   = 4;                    // Error message if there was a problem during parsing
+  string                 formula = 1;  // The original Excel formula that was parsed
+  optional dtypes.Tokens tokens  = 2;  // Tokens generated during the parsing process
+  optional dtypes.AST    ast     = 3;  // The resulting Abstract Syntax Tree structure
+  string                 error   = 4;  // Error message if there was a problem during parsing
 }
