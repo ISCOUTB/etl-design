@@ -126,6 +126,10 @@
             "not_found": {
                 "title": "The Project requested does not exists",
                 "description": "Review your projects and try again"
+            },
+            "file_not_supported": {
+                "title": "The given file format is not supported",
+                "description": "Please provide a valid one"
             }
         }
     },
@@ -292,6 +296,34 @@
                     },
                     "danger_zone": {
                         "title": "Danger Zone"
+                    }
+                },
+                "schema": {
+                    "tab": "Schema",
+                    "header": {
+                        "title": "Schema Configuration",
+                        "description": "Upload your database schema to get started. You can provide an Excel file or a JSON schema definition."
+                    },
+                    "cards": {
+                        "json_schema": "JSON Schema",
+                        "upload_json": "Upload a .json file with your schema structure",
+                        "supported_formats": "Upload .xlsx, .xls, or .csv files with your table definitions"
+                    },
+                    "dropzone": {
+                        "title": "Drop your file here, or ",
+                        "browse": "browse",
+                        "supported": "Supports {formats} formats"
+                    },
+                    "expected_json": {
+                        "title": "Schema Format",
+                        "description": "Learn how to structure your schema file for optimal import",
+                        "expected": "Expected JSON Structure",
+                        "example_filename": "schema.example.json"
+                    },
+                    "events": {
+                        "upload_file": {
+                            "label": "Upload File"
+                        }
                     }
                 }
             }

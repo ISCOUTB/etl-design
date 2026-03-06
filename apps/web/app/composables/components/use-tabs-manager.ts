@@ -1,5 +1,5 @@
 /* eslint-disable style/type-generic-spacing */
-import type { Component } from "vue";
+import type { Component, Raw } from "vue";
 
 interface TabMeta {
     label: string;
@@ -40,6 +40,8 @@ export default function <C extends Component>(
         return firstTabValue;
     });
 
+    const componentCache = shallowRef(new Map<TabMeta["value"], Raw<C>>());
+
     const currentEntry = computed(() => {
         const found = tabs.value.get(activeTab.value);
         if (found) {
@@ -55,13 +57,23 @@ export default function <C extends Component>(
         return fallback;
     });
 
-    const component = computed(() =>
-        defineAsyncComponent({
-            loader: currentEntry.value.component,
-            delay: 0,
-            timeout: 5000,
-        }),
-    );
+    const component = computed(() => {
+        const entry = currentEntry.value;
+        const key = entry.tab.value;
+
+        const cached = componentCache.value.get(key);
+        if (cached) {
+            return cached;
+        }
+
+        const wrapped = markRaw(
+            defineAsyncComponent({ loader: entry.component, delay: 0, timeout: 5000 }),
+        );
+
+        componentCache.value.set(key, wrapped);
+
+        return wrapped;
+    });
 
     const props = computed(() => currentEntry.value.props);
 

@@ -20,4 +20,13 @@ export default defineAppConfig({
     pagination: {
         defaultPageSize: 10,
     },
+    files: {
+        supportedFormats: ["json", "xlsx", "xls", "csv"],
+        supportedMimeTypes: [
+            "application/json",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "text/csv",
+        ],
+    },
 });

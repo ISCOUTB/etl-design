@@ -20,6 +20,16 @@ export const NuxtKeys = {
 
             return `project:${candidateId}:state`;
         },
+        UploadFile: (project: z.infer<typeof ResponseProjectSchema> | undefined) => {
+            if (!project) {
+                return "projects:upload-file";
+            }
+
+            return `project:${project.id}:upload-file`;
+        },
+        Schemas: {
+            ExampleFormat: "project:schema:example-format",
+        },
     },
 };
 

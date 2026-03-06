@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Info, Settings } from "lucide-vue-next";
+    import { Database, Info, Settings } from "lucide-vue-next";
 
     definePageMeta({
         title: "projects.id.fallback_title",
@@ -29,6 +29,7 @@
 
     const Section = computed(() => ({
         General: $t("projects.id.sections.general_information.tab"),
+        Schema: $t("projects.id.sections.schema.tab"),
         Settings: $t("projects.id.sections.settings.tab"),
     }));
 
@@ -54,6 +55,17 @@
                     icon: Info,
                 },
                 component: () => import("@/components/project/ProjectGeneralInformation.vue"),
+                props: {
+                    project: sharedState,
+                },
+            },
+            {
+                tab: {
+                    label: "projects.id.sections.schema.tab",
+                    value: Section.value.Schema,
+                    icon: Database,
+                },
+                component: () => import("@/components/project/ProjectSchema.vue"),
                 props: {
                     project: sharedState,
                 },
