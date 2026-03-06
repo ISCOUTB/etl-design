@@ -53,7 +53,10 @@ class Settings(BaseSettings):
     CREDENTIALS_SECRET_KEY: str
     CREDENTIALS_SIGN: str
 
-    IDEMPOTENCY_KEY_EXPIRATION_SECONDS: int = 60 * 10  # 10 minutes
+    # For pending status
+    IDEMPOTENCY_TTL_DEFAULT_SECONDS: int = 60 * 10  # 10 minutes
+    IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: int = 60 * 1  # 1 minute
+    IDEMPOTENCY_TTL_PUBLISHED_SECONDS: int = 60 * 30  # 30 minutes
 
     FIRST_SUPERUSER_NAME: str
     FIRST_SUPERUSER_EMAIL: str

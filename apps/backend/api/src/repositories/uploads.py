@@ -21,7 +21,7 @@ class UploadRepository:
     ) -> models.UploadTask:
         if locked_until is None:
             locked_until = utc_now() + timedelta(
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_DEFAULT_SECONDS
             )
 
         upload_task = models.UploadTask(

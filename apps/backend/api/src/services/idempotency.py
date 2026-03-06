@@ -71,7 +71,7 @@ class IdempotencyService:
             self.upload_repository.db.rollback()
             print(f"Failed to update task status for task_id={task_id}: {e}")
             raise AppException() from e
-        
+
         return obj
 
     async def validate_task(
@@ -124,7 +124,11 @@ class IdempotencyService:
                     project_id=project_id,
                     file_hash=file_hash,
                     task_metadata=metadata,
-                )
+                ),
+                locked_until=(
+                    utc_now()
+                    + timedelta(seconds=settings.IDEMPOTENCY_TTL_DEFAULT_SECONDS)
+                ),
             )
 
             self.upload_repository.db.commit()
@@ -170,7 +174,7 @@ class IdempotencyService:
             # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
             # Publish in RabbitMQ
@@ -195,7 +199,7 @@ class IdempotencyService:
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS
             )
             self.upload_repository.db.commit()
 
@@ -281,7 +285,11 @@ class IdempotencyService:
                     project_id=project_id,
                     file_hash=file_hash,
                     task_metadata=metadata,
-                )
+                ),
+                locked_until=(
+                    utc_now()
+                    + timedelta(seconds=settings.IDEMPOTENCY_TTL_DEFAULT_SECONDS)
+                ),
             )
 
             self.upload_repository.db.commit()
@@ -326,7 +334,7 @@ class IdempotencyService:
             # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
             # Publish in RabbitMQ
@@ -353,7 +361,7 @@ class IdempotencyService:
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS
             )
             self.upload_repository.db.commit()
 
@@ -438,7 +446,11 @@ class IdempotencyService:
                     project_id=project_id,
                     file_hash=file_hash,
                     task_metadata=metadata,
-                )
+                ),
+                locked_until=(
+                    utc_now()
+                    + timedelta(seconds=settings.IDEMPOTENCY_TTL_DEFAULT_SECONDS)
+                ),
             )
 
             self.upload_repository.db.commit()
@@ -483,7 +495,7 @@ class IdempotencyService:
             # Update the status to published
             db_task.status = models.TaskStatus.PUBLISHED  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
             # Publish in RabbitMQ
@@ -514,7 +526,7 @@ class IdempotencyService:
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
-                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+                seconds=settings.IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS
             )
             self.upload_repository.db.commit()
 

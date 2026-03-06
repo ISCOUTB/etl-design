@@ -50,7 +50,7 @@ class UploadTask(BaseModel):
     locked_until = Column(
         DateTime(timezone=True),
         default=(
-            utc_now() + timedelta(seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS)
+            utc_now() + timedelta(seconds=settings.IDEMPOTENCY_TTL_DEFAULT_SECONDS)
         ),
         nullable=True,
     )
