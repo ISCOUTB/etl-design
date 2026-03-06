@@ -24,7 +24,7 @@
         "@sloth/tools-eslint": "workspace:*",
         "@sloth/tools-tsconfig": "workspace:*",
         "@types/google-protobuf": "^3.15.12",
-        "@types/node": "^25.3.3",
+        "@types/node": "^25.3.5",
         "eslint": "^10.0.2",
         "tsup": "^8.5.1",
         "typescript": "^5.9.3"

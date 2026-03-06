@@ -19,7 +19,7 @@
         "@sloth/tools-eslint": "workspace:*",
         "@sloth/tools-tsconfig": "workspace:*",
         "@types/lodash": "^4.17.24",
-        "@types/node": "^25.3.3",
+        "@types/node": "^25.3.5",
         "@vitest/coverage-v8": "^4.0.18",
         "consola": "^3.4.2",
         "eslint": "^10.0.2",
