@@ -52,6 +52,28 @@ class IdempotencyService:
 
         return hashlib.sha256(data.encode()).hexdigest()
 
+    def get_task_by_id(self, *, task_id: str) -> Optional[models.UploadTask]:
+        return self.upload_repository.get_upload_task_by_id(task_id=task_id)
+
+    def update_task_status(
+        self,
+        *,
+        task_id: Optional[str] = None,
+        status: models.TaskStatus,
+        db_obj: Optional[models.UploadTask] = None,
+    ) -> Optional[models.UploadTask]:
+        try:
+            obj = self.upload_repository.update_upload_task_status(
+                task_id=task_id, status=status, db_obj=db_obj
+            )
+            self.upload_repository.db.commit()
+        except Exception as e:
+            self.upload_repository.db.rollback()
+            print(f"Failed to update task status for task_id={task_id}: {e}")
+            raise AppException() from e
+        
+        return obj
+
     async def validate_task(
         self,
         db_client: DatabaseClient,

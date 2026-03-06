@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter
 from proto_utils.database import dtypes
 
-from src.api.deps import CurrentUser, DatabaseClientDep
+from src.api.deps import CurrentUser, DatabaseClientDep, IdempotencyServiceDep
 from src.core.constants import VALIDATION_TASK
 from src.exceptions import ForbiddenException, TaskNotFoundException
 from src.models import Project
@@ -17,6 +17,7 @@ async def get_task_status(
     task_id: str,
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    idempotency_service: IdempotencyServiceDep,
     task: str = VALIDATION_TASK,
 ) -> dtypes.ApiResponse:
     """Get the status of a long-running task by its ID."""
@@ -33,7 +34,18 @@ async def get_task_status(
     )
 
     if not cached_response["found"] or cached_response["value"] is None:
-        raise TaskNotFoundException()
+        # If not found in redis/mongo, search in the main database (PostgreSQL)
+        # as a fallback
+        task = idempotency_service.get_task_by_id(task_id=task_id)
+        if task is None:
+            raise TaskNotFoundException()
+
+        return dtypes.ApiResponse(
+            code=200,
+            status=task.status.value,
+            message="Task found in main database",
+            data={"task_id": task_id, "status": task.status.value},
+        )
 
     return cached_response["value"]
 
@@ -43,6 +55,7 @@ async def list_tasks(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
     project_id: str,
+    table_name: str,
     task: str = VALIDATION_TASK,
 ) -> List[dtypes.ApiResponse]:
     """List all tasks associated with a specific import name."""
@@ -56,20 +69,11 @@ async def list_tasks(
         raise ForbiddenException()
 
     response = database_client.get_tasks_by_import_name(
-        dtypes.GetTasksByImportNameRequest(import_name=project_id, task=task)
+        dtypes.GetTasksByImportNameRequest(
+            import_name=f"{project_id}__{table_name}", task=task
+        )
     )
     if not response["tasks"]:
         raise TaskNotFoundException()
 
     return response["tasks"]
-
-
-@router.post("/{task_id}/retry")
-async def retry_task(
-    task_id: str,
-    database_client: DatabaseClientDep,
-    task: str = VALIDATION_TASK,
-) -> dtypes.ApiResponse:
-    """Retry a failed task by its ID."""
-    # TODO: Implement the logic to retry the task, e.g., by re-queuing it or resetting its status.
-    pass

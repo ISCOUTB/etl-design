@@ -20,7 +20,9 @@ class UploadRepository:
         locked_until: Optional[datetime] = None,
     ) -> models.UploadTask:
         if locked_until is None:
-            locked_until = utc_now() + timedelta(seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS)
+            locked_until = utc_now() + timedelta(
+                seconds=settings.IDEMPOTENCY_KEY_EXPIRATION_SECONDS
+            )
 
         upload_task = models.UploadTask(
             task_id=UUID(upload_task_create.task_id),
