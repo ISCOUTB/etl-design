@@ -158,6 +158,47 @@ class MongoSchemasService:
         )
 
     @staticmethod
+    def get_schemas_by_import_regex(
+        request: dtypes.MongoGetSchemasByImportRegexRequest,
+        *,
+        mongo_schemas_connection: MongoConnection,
+    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+        """Get raw schema documents from MongoDB by import name regex.
+
+        Args:
+            request (dtypes.MongoGetSchemasByImportRegexRequest): Request containing the import name regex to search for.
+            mongo_schemas_connection (MongoConnection): MongoDB connection instance.
+
+        Returns:
+            dtypes.MongoGetSchemasByImportRegexResponse: Response containing the list of raw schema documents matching the regex.
+        """
+        try:
+            regex_pattern = f".*{request['import_name']}.*"
+            schema_docs = mongo_schemas_connection.find({"import_name": {"$regex": regex_pattern}})
+            schemas = []
+            for schema_doc in schema_docs:
+                schemas.append(
+                    dtypes.MongoGetRawSchemasResponse(
+                        id=str(schema_doc.get("_id", "")),
+                        import_name=schema_doc.get("import_name", ""),
+                        created_at=str(schema_doc.get("created_at", "")),
+                        active_schema=schema_doc.get("active_schema", {}),
+                        schemas_releases=list(
+                            map(
+                                lambda release: dtypes.MongoGetRawSchemasResponseSchemaRelease(
+                                    created_at=str(release.get("created_at", "")),
+                                    schema=release.get("schema", {}),
+                                ),
+                                schema_doc.get("schemas_releases", []),
+                            )
+                        ),
+                    )
+                )
+            return dtypes.MongoGetSchemasByImportRegexResponse(schemas=schemas)
+        except Exception:
+            return dtypes.MongoGetSchemasByImportRegexResponse(schemas=[])
+
+    @staticmethod
     def insert_one_schema(
         request: dtypes.MongoInsertOneSchemaRequest,
         *,

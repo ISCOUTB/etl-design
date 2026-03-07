@@ -41,6 +41,7 @@ service DatabaseService {
 
   rpc MongoPing(mongo.MongoPingRequest) returns (mongo.MongoPingResponse) {}
   rpc MongoGetRawSchemas(mongo.MongoGetRawSchemasRequest) returns (mongo.MongoGetRawSchemasResponse) {}
+  rpc MongoGetSchemasByImportRegex(mongo.MongoGetSchemasByImportRegexRequest) returns (mongo.MongoGetSchemasByImportRegexResponse) {}
   rpc MongoInsertOneSchema(mongo.MongoInsertOneSchemaRequest) returns (mongo.MongoInsertOneSchemaResponse) {}
   rpc MongoCountAllDocuments(mongo.MongoCountAllDocumentsRequest) returns (mongo.MongoCountAllDocumentsResponse) {}
   rpc MongoFindJsonSchema(mongo.MongoFindJsonSchemaRequest) returns (mongo.MongoFindJsonSchemaResponse) {}

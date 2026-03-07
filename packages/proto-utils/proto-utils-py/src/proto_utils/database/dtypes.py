@@ -279,6 +279,26 @@ class MongoGetRawSchemasResponse(TypedDict):
     schemas_releases: List[MongoGetRawSchemasResponseSchemaRelease]
 
 
+class MongoGetSchemasByImportRegexRequest(TypedDict):
+    """Request message for retrieving all schema documents associated with an import name pattern.
+
+    Attributes:
+        import_name (str): The unique identifier of the import name to retrieve associated schemas (supports regex patterns)
+    """
+
+    import_name: str
+
+
+class MongoGetSchemasByImportRegexResponse(TypedDict):
+    """Response message containing all schema documents associated with the import name pattern.
+
+    Attributes:
+        schemas (List[MongoGetRawSchemasResponse]): List of schema documents matching the import name pattern
+    """
+
+    schemas: List[MongoGetRawSchemasResponse]
+
+
 class MongoInsertOneSchemaRequest(TypedDict):
     """Request message for inserting a new schema document into MongoDB.
 

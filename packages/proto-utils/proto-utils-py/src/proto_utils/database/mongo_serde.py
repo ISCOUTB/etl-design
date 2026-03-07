@@ -179,6 +179,84 @@ class MongoSerde:
         )
 
     @staticmethod
+    def serialize_get_schemas_by_import_regex_request(
+        request: dtypes.MongoGetSchemasByImportRegexRequest,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexRequest:
+        """Serialize a MongoGetSchemasByImportRegexRequest dictionary to Protocol Buffer format.
+
+        Args:
+            request: The MongoDB get schemas by import regex request dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetSchemasByImportRegexRequest message.
+        """
+        return mongo_pb2.MongoGetSchemasByImportRegexRequest(
+            import_name=request["import_name"],
+        )
+
+    @staticmethod
+    def deserialize_get_schemas_by_import_regex_request(
+        proto: mongo_pb2.MongoGetSchemasByImportRegexRequest,
+    ) -> dtypes.MongoGetSchemasByImportRegexRequest:
+        """Deserialize a Protocol Buffer MongoGetSchemasByImportRegexRequest to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetSchemasByImportRegexRequest message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get schemas by import regex request dictionary.
+        """
+        return dtypes.MongoGetSchemasByImportRegexRequest(
+            import_name=proto.import_name,
+        )
+
+    @staticmethod
+    def serialize_get_schemas_by_import_regex_response(
+        response: dtypes.MongoGetSchemasByImportRegexResponse,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexResponse:
+        """Serialize a MongoGetSchemasByImportRegexResponse dictionary to Protocol Buffer format.
+
+        Args:
+            response: The MongoDB get schemas by import regex response dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetSchemasByImportRegexResponse message.
+        """
+        return mongo_pb2.MongoGetSchemasByImportRegexResponse(
+            schemas=list(
+                map(
+                    lambda schema: MongoSerde.serialize_get_raw_schemas_response(
+                        schema
+                    ),
+                    response["schemas"],
+                )
+            ),
+        )
+
+    @staticmethod
+    def deserialize_get_schemas_by_import_regex_response(
+        proto: mongo_pb2.MongoGetSchemasByImportRegexResponse,
+    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+        """Deserialize a Protocol Buffer MongoGetSchemasByImportRegexResponse to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetSchemasByImportRegexResponse message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get schemas by import regex response dictionary.
+        """
+        return dtypes.MongoGetSchemasByImportRegexResponse(
+            schemas=list(
+                map(
+                    lambda schema_proto: MongoSerde.deserialize_get_raw_schemas_response(
+                        schema_proto
+                    ),
+                    proto.schemas,
+                )
+            ),
+        )
+
+    @staticmethod
     def serialize_insert_one_schema_request(
         request: dtypes.MongoInsertOneSchemaRequest,
     ) -> mongo_pb2.MongoInsertOneSchemaRequest:

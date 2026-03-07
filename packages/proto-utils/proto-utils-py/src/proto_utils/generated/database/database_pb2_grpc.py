@@ -90,6 +90,11 @@ class DatabaseServiceStub(object):
                 request_serializer=database_dot_mongo__pb2.MongoGetRawSchemasRequest.SerializeToString,
                 response_deserializer=database_dot_mongo__pb2.MongoGetRawSchemasResponse.FromString,
                 _registered_method=True)
+        self.MongoGetSchemasByImportRegex = channel.unary_unary(
+                '/database_service.DatabaseService/MongoGetSchemasByImportRegex',
+                request_serializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.SerializeToString,
+                response_deserializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.FromString,
+                _registered_method=True)
         self.MongoInsertOneSchema = channel.unary_unary(
                 '/database_service.DatabaseService/MongoInsertOneSchema',
                 request_serializer=database_dot_mongo__pb2.MongoInsertOneSchemaRequest.SerializeToString,
@@ -216,6 +221,12 @@ class DatabaseServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def MongoGetSchemasByImportRegex(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def MongoInsertOneSchema(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -333,6 +344,11 @@ def add_DatabaseServiceServicer_to_server(servicer, server):
                     servicer.MongoGetRawSchemas,
                     request_deserializer=database_dot_mongo__pb2.MongoGetRawSchemasRequest.FromString,
                     response_serializer=database_dot_mongo__pb2.MongoGetRawSchemasResponse.SerializeToString,
+            ),
+            'MongoGetSchemasByImportRegex': grpc.unary_unary_rpc_method_handler(
+                    servicer.MongoGetSchemasByImportRegex,
+                    request_deserializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.FromString,
+                    response_serializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.SerializeToString,
             ),
             'MongoInsertOneSchema': grpc.unary_unary_rpc_method_handler(
                     servicer.MongoInsertOneSchema,
@@ -639,6 +655,33 @@ class DatabaseService(object):
             '/database_service.DatabaseService/MongoGetRawSchemas',
             database_dot_mongo__pb2.MongoGetRawSchemasRequest.SerializeToString,
             database_dot_mongo__pb2.MongoGetRawSchemasResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MongoGetSchemasByImportRegex(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/database_service.DatabaseService/MongoGetSchemasByImportRegex',
+            database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.SerializeToString,
+            database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.FromString,
             options,
             channel_credentials,
             insecure,

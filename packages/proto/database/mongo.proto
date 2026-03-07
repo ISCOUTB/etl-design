@@ -39,6 +39,14 @@ message MongoGetRawSchemasResponse {
   repeated SchemaRelease schemas_releases = 5;  // Historical versions of the schema for versioning
 }
 
+message MongoGetSchemasByImportRegexRequest {
+  string import_name = 1;  // The unique identifier of the import name to retrieve associated schemas
+}
+
+message MongoGetSchemasByImportRegexResponse {
+  repeated MongoGetRawSchemasResponse schemas = 1;  // List of schema documents associated with the import name
+}
+
 // Request message for inserting a new schema document into MongoDB
 // Used to store JSON schema definitions with version history
 message MongoInsertOneSchemaRequest {

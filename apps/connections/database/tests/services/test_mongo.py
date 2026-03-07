@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from uuid import uuid4
 
 from proto_utils.database import dtypes
@@ -691,3 +692,75 @@ def test_get_raw_schemas_empty_releases(
     assert response["import_name"] == import_name
     assert response["active_schema"] == json_schema
     assert len(response["schemas_releases"]) == 0
+
+
+def test_get_schemas_by_import_regex_success(
+    mongo_schemas_connection: MongoConnection,
+) -> None:
+    """Test getting schemas by import_name regex returns matching documents."""
+    json_schema: dtypes.JsonSchema = {
+        "schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+        },
+        "required": ["name"],
+    }
+
+    pattern_seed = f"regex_match_{uuid4()}"
+    matching_import_names = [
+        f"{pattern_seed}_v1",
+        f"{pattern_seed}_v2",
+    ]
+    non_matching_import_name = f"other_import_{uuid4()}"
+
+    for import_name in [*matching_import_names, non_matching_import_name]:
+        MongoSchemasService.insert_one_schema(
+            request=dtypes.MongoInsertOneSchemaRequest(
+                import_name=import_name,
+                created_at=datetime.now(),
+                active_schema=json_schema,
+                schemas_releases=[],
+            ),
+            mongo_schemas_connection=mongo_schemas_connection,
+        )
+
+    response = MongoSchemasService.get_schemas_by_import_regex(
+        request=dtypes.MongoGetSchemasByImportRegexRequest(import_name=pattern_seed),
+        mongo_schemas_connection=mongo_schemas_connection,
+    )
+
+    returned_import_names = {schema["import_name"] for schema in response["schemas"]}
+    assert returned_import_names == set(matching_import_names)
+    assert len(response["schemas"]) == 2
+
+
+def test_get_schemas_by_import_regex_no_matches(
+    mongo_schemas_connection: MongoConnection,
+) -> None:
+    """Test getting schemas by import_name regex with no matches."""
+    response = MongoSchemasService.get_schemas_by_import_regex(
+        request=dtypes.MongoGetSchemasByImportRegexRequest(
+            import_name=f"non_existent_pattern_{uuid4()}"
+        ),
+        mongo_schemas_connection=mongo_schemas_connection,
+    )
+
+    assert response["schemas"] == []
+
+
+def test_get_schemas_by_import_regex_on_error_returns_empty_list(
+    mongo_schemas_connection: MongoConnection,
+) -> None:
+    """Test getting schemas by import_name regex returns empty list on DB errors."""
+    with patch.object(
+        mongo_schemas_connection,
+        "find",
+        side_effect=Exception("Database error"),
+    ):
+        response = MongoSchemasService.get_schemas_by_import_regex(
+            request=dtypes.MongoGetSchemasByImportRegexRequest(import_name="any"),
+            mongo_schemas_connection=mongo_schemas_connection,
+        )
+
+    assert response["schemas"] == []

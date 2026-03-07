@@ -367,6 +367,40 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_GET_RAW_SCHEMAS] Operation failed: {e}")
             raise
 
+    def MongoGetSchemasByImportRegex(
+        self,
+        request: mongo_pb2.MongoGetSchemasByImportRegexRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexResponse:
+        """Retrieve schemas from MongoDB matching an import name regex.
+
+        Args:
+            request: Request containing the import name regex to search for.
+            context: gRPC service context for the request.
+
+        Returns:
+             MongoGetSchemasByImportRegexResponse containing the matching schemas.
+
+        Raises:
+            grpc.RpcError: If MongoDB operation fails.
+        """
+        logger.info(
+            f"[MONGO_GET_SCHEMAS_BY_REGEX] Request from client {context.peer()} - "
+            f"ImportNameRegex: '{request.import_name}'"
+        )
+
+        try:
+            response = self.mongo_handler.get_schemas_by_import_regex(request)
+            schema_count = len(response.schemas)
+            logger.info(
+                f"[MONGO_GET_SCHEMAS_BY_REGEX] Schema retrieval completed - "
+                f"ImportNameRegex: '{request.import_name}', SchemaCount: {schema_count}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[MONGO_GET_SCHEMAS_BY_REGEX] Operation failed: {e}")
+            raise
+
     def MongoInsertOneSchema(
         self,
         request: mongo_pb2.MongoInsertOneSchemaRequest,

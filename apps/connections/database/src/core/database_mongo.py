@@ -142,6 +142,32 @@ class MongoConnection:
             filter if filter is not None else {}, projection
         )
 
+    def find(
+        self,
+        filter: Optional[Dict] = None,
+        projection: Optional[Dict] = None,
+        limit: Optional[int] = None,
+    ):
+        """Find multiple documents in the collection.
+
+        Args:
+            filter (Dict, optional): Query filter to find specific documents.
+                                   Defaults to None (finds all documents).
+            projection (Dict, optional): Fields to include/exclude in the results.
+                                       Defaults to None (returns all fields).
+            limit (int, optional): Maximum number of documents to return.
+                                   Defaults to None (returns all matching documents).
+
+        Returns:
+            pymongo.cursor.Cursor: Cursor to iterate over the found documents.
+        """
+        cursor = self.__collection.find(
+            filter if filter is not None else {}, projection
+        )
+        if limit is not None:
+            cursor = cursor.limit(limit)
+        return cursor
+
     def update_one(
         self, filter: Dict, update: Dict, session: Optional[ClientSession] = None
     ) -> pymongo.results.UpdateResult:

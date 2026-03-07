@@ -44,6 +44,18 @@ class MongoGetRawSchemasResponse(_message.Message):
     schemas_releases: _containers.RepeatedCompositeFieldContainer[MongoGetRawSchemasResponse.SchemaRelease]
     def __init__(self, id: _Optional[str] = ..., import_name: _Optional[str] = ..., created_at: _Optional[str] = ..., active_schema: _Optional[_Union[_utils_pb2.JsonSchema, _Mapping]] = ..., schemas_releases: _Optional[_Iterable[_Union[MongoGetRawSchemasResponse.SchemaRelease, _Mapping]]] = ...) -> None: ...
 
+class MongoGetSchemasByImportRegexRequest(_message.Message):
+    __slots__ = ("import_name",)
+    IMPORT_NAME_FIELD_NUMBER: _ClassVar[int]
+    import_name: str
+    def __init__(self, import_name: _Optional[str] = ...) -> None: ...
+
+class MongoGetSchemasByImportRegexResponse(_message.Message):
+    __slots__ = ("schemas",)
+    SCHEMAS_FIELD_NUMBER: _ClassVar[int]
+    schemas: _containers.RepeatedCompositeFieldContainer[MongoGetRawSchemasResponse]
+    def __init__(self, schemas: _Optional[_Iterable[_Union[MongoGetRawSchemasResponse, _Mapping]]] = ...) -> None: ...
+
 class MongoInsertOneSchemaRequest(_message.Message):
     __slots__ = ("import_name", "created_at", "active_schema", "schemas_releases")
     IMPORT_NAME_FIELD_NUMBER: _ClassVar[int]
