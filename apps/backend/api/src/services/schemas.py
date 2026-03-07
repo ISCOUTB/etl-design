@@ -18,6 +18,45 @@ from src.utils import utc_now_iso
 
 class SchemaService:
     @staticmethod
+    def get_raw_schema(
+        import_name: str, database_client: DatabaseClient
+    ) -> dtypes.MongoGetRawSchemasResponse | None:
+        """
+        Fetch the raw JSON schema for a given import name.
+
+        Args:
+            import_name (str): The name of the import to fetch the schema for.
+            database_client (DatabaseClient): The database client to use for fetching the schema.
+        Returns:
+            dtypes.MongoGetRawSchemasResponse | None: The raw schema response if found, None otherwise.
+        """
+        schema_doc = database_client.mongo_get_raw_schemas(
+            dtypes.MongoGetRawSchemasRequest(import_name=import_name)
+        )
+
+        if schema_doc["id"] == "":
+            return None        
+        return schema_doc
+
+    @staticmethod
+    def get_schemas_by_project_id(
+        project_id: str, database_client: DatabaseClient
+    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+        """
+        Fetch schemas that match a given regular expression.
+
+        Args:
+            project_id (str): The project ID to match in the import name.
+            database_client (DatabaseClient): The database client to use for fetching the schemas.
+        
+        Returns:
+            dtypes.MongoGetSchemasByImportRegexResponse: The response containing matching schemas.
+        """
+        return database_client.mongo_get_schemas_by_import_regex(
+            dtypes.MongoGetSchemasByImportRegexRequest(import_name=f"{project_id}")
+        )
+
+    @staticmethod
     def get_active_schema(
         import_name: str, database_client: DatabaseClient
     ) -> dtypes.JsonSchema | None:
@@ -87,9 +126,6 @@ class SchemaService:
             )
         )
 
-    # TODO: This is deleting all schema versions even if there are releases,
-    # we should only delete the active one and keep the history
-    # Change this
     @staticmethod
     def remove_schema(
         import_name: str,

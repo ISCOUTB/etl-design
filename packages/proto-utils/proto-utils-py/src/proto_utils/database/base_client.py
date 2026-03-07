@@ -196,7 +196,9 @@ class DatabaseClient:
         return _operation()
 
     def redis_ping(
-        self, request: Optional[dtypes.RedisPingRequest] = None, retry_on_failure: bool = True
+        self,
+        request: Optional[dtypes.RedisPingRequest] = None,
+        retry_on_failure: bool = True,
     ) -> dtypes.RedisPingResponse:
         def _operation() -> dtypes.RedisPingResponse:
             if self._stub is None:
@@ -214,7 +216,9 @@ class DatabaseClient:
         return _operation()
 
     def redis_get_cache(
-        self, request: Optional[dtypes.RedisGetCacheRequest] = None, retry_on_failure: bool = True
+        self,
+        request: Optional[dtypes.RedisGetCacheRequest] = None,
+        retry_on_failure: bool = True,
     ) -> dtypes.RedisGetCacheResponse:
         def _operation() -> dtypes.RedisGetCacheResponse:
             if self._stub is None:
@@ -254,7 +258,9 @@ class DatabaseClient:
     # ============================ Mongo Methods ============================
 
     def mongo_ping(
-        self, request: Optional[dtypes.MongoPingRequest] = None, retry_on_failure: bool = True
+        self,
+        request: Optional[dtypes.MongoPingRequest] = None,
+        retry_on_failure: bool = True,
     ) -> dtypes.MongoPingResponse:
         def _operation() -> dtypes.MongoPingResponse:
             if self._stub is None:
@@ -281,6 +287,25 @@ class DatabaseClient:
 
         if retry_on_failure:
             return self._execute_with_retry(_operation, "MongoGetRawSchemas")
+        return _operation()
+
+    def mongo_get_schemas_by_import_regex(
+        self,
+        request: dtypes.MongoGetSchemasByImportRegexRequest,
+        retry_on_failure: bool = True,
+    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+        def _operation() -> dtypes.MongoGetSchemasByImportRegexResponse:
+            if self._stub is None:
+                raise RuntimeError("gRPC stub is not initialized.")
+
+            request_proto = MongoSerde.serialize_get_schemas_by_import_regex_request(
+                request
+            )
+            response = self._stub.MongoGetSchemasByImportRegex(request_proto)
+            return MongoSerde.deserialize_get_schemas_by_import_regex_response(response)
+
+        if retry_on_failure:
+            return self._execute_with_retry(_operation, "MongoGetSchemasByImportRegex")
         return _operation()
 
     def mongo_insert_one_schema(

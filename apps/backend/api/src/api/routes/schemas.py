@@ -19,6 +19,7 @@ from proto_utils.database import dtypes
 from src import models
 from src.api.deps import CurrentUser, DatabaseClientDep
 from src.exceptions import (
+    AppException,
     ForbiddenException,
     InvalidJsonSchemaException,
     SchemaNotFoundException,
@@ -102,6 +103,97 @@ async def create_or_update_schema(
             message=f"Failed to save schema: {str(e)}",
             data={"import_name": import_name},
         )
+
+
+@router.get("/{project_id}/raw")
+async def get_raw_schema(
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    project_id: str,
+    table_name: str,
+) -> dtypes.MongoGetRawSchemasResponse:
+    """
+    Retrieve the raw schema document for a given import name.
+
+    This endpoint fetches the raw JSON schema document associated with the specified
+    import name from the database, without any additional processing or formatting.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        project_id: Unique identifier for the schema to retrieve.
+        table_name: The name of the table associated with the schema
+            (used to construct import_name).
+    Returns:
+        dtypes.MongoGetRawSchemasResponse
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    import_name = f"{project_id}__{table_name}"
+    try:
+        # Retrieve raw schema from database
+        raw_schema = SchemaService.get_raw_schema(
+            import_name=import_name,
+            database_client=database_client,
+        )
+    except Exception as e:
+        raise AppException() from e
+
+    from pprint import pprint
+
+    pprint(raw_schema)
+
+    # Raise AppException for 404 to match FastAPI conventions
+    if raw_schema is None:
+        raise SchemaNotFoundException()
+
+    return raw_schema
+
+
+@router.get("/search/{project_id}")
+async def search_schemas(
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    project_id: str,
+) -> dtypes.MongoGetSchemasByImportRegexResponse:
+    """
+    Search for schemas matching the given criteria.
+
+    This endpoint allows searching for schemas based on the provided project ID and
+    table name. It returns a list of matching schemas with their details.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        project_id: Unique identifier for the project to search within.
+        table_name: The name of the table to filter schemas by.
+    Returns:
+        dtypes.MongoGetSchemasByImportRegexResponse
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    try:
+        # Search for schemas in the database
+        search_results = SchemaService.get_schemas_by_project_id(
+            project_id=project_id,
+            database_client=database_client,
+        )
+    except Exception as e:
+        raise AppException() from e
+
+    return search_results
 
 
 @router.get("/{project_id}", response_model=dtypes.ApiResponse)
