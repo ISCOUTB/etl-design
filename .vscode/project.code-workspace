@@ -45,6 +45,10 @@
             "path": "../apps/web",
         },
         {
+            "name": "[ Package ] Proto-Files",
+            "path": "../packages/proto",
+        },
+        {
             "name": "[ Package ] Proto-Javascript",
             "path": "../packages/proto-utils/proto-utils-js",
         },
