@@ -476,6 +476,7 @@
                         </span>
                     </Button>
 
+                    <!-- TODO: /projects/[id]/edit -> /projects does not load the projects properly -->
                     <Button type="button" variant="destructive" @click="$router.back()">
                         {{ $t("common.actions.cancel") }}
                     </Button>
