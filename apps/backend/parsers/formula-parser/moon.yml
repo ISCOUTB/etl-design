@@ -27,6 +27,7 @@ tasks:
             - "@etl-design/apps-formula-parser"
         toolchains: node
         options:
+            runFromWorkspaceRoot: true
             cache: false
 
     lint:
@@ -74,3 +75,4 @@ tasks:
         toolchains: system
         options:
             runFromWorkspaceRoot: true
+            cache: false

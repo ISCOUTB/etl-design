@@ -39,3 +39,4 @@ tasks:
             - .
         options:
             runFromWorkspaceRoot: true
+            cache: false

@@ -1,8 +1,8 @@
-FROM node:lts-alpine AS workspace
+FROM node:lts AS workspace
 
 WORKDIR /workspace
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml /workspace/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /workspace/
 
 COPY /apps/web /workspace/apps/web
 
@@ -12,7 +12,7 @@ COPY /tools/tsconfig /workspace/tools/tsconfig
 
 COPY .moon /workspace/.moon
 
-FROM node:lts-alpine AS builder
+FROM node:lts AS builder
 
 ENV NODE_ENV="production"
 ENV PNPM_HOME="/pnpm"
@@ -31,8 +31,9 @@ RUN --mount=type=cache,target=/pnpm/store \
 RUN --mount=type=cache,target=/app/.pnpm \
     pnpm i --offline --frozen-lockfile
 
+
 # BUILD TASK
-RUN moon web:nuxt -- build
+RUN moon run web:nuxt -- build 
 
 FROM gcr.io/distroless/nodejs22-debian13 AS runner
 

@@ -27,8 +27,9 @@ tasks:
             - eslint:build
 
     build:
-        command: npx
+        command: pnpm
         args:
+            - exec
             - tsup
         deps:
             - ^:generate

@@ -1,0 +1,9 @@
+$schema: https://moonrepo.dev/schemas/toolchain.json
+
+node:
+    packageManager: pnpm
+
+unstable_python:
+    packageManager: uv
+
+unstable_uv: {}

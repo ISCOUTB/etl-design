@@ -9,7 +9,7 @@ COPY tools/eslint /workspace/tools/eslint/
 COPY tools/tsconfig /workspace/tools/tsconfig/
 COPY .moon /workspace/.moon/
 
-FROM node:lts-alpine AS builder
+FROM node:lts AS builder
 
 ENV NODE_ENV="production"
 ENV PNPM_HOME="/pnpm"
@@ -25,7 +25,7 @@ COPY --from=workspace /workspace /app/
 RUN --mount=type=cache,target=/app/.pnpm \
     pnpm i
 
-RUN moon formula-parser:build
+RUN moon run formula-parser:build
 
 FROM node:lts-alpine AS runner
 
