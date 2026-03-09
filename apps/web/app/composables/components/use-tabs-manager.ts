@@ -4,6 +4,7 @@ import type { Component, Raw } from "vue";
 interface TabMeta {
     label: string;
     value: string;
+    hidden?: boolean | (() => boolean);
     atomic?: boolean | (() => boolean);
     icon?: Components.LucideIconComponent;
 }
@@ -26,9 +27,10 @@ export default function <C extends Component>(
 ) {
     const route = useRoute();
     const initial = toValue(initialTabs);
+    const filteredTabs = computed(() => filterTabs(initial));
 
-    const tabs = shallowRef(new Map(initial.map((entry) => [entry.tab.value, entry])));
-    const firstTabValue = initial[0].tab.value;
+    const tabs = shallowRef(new Map(filteredTabs.value.map((entry) => [entry.tab.value, entry])));
+    const firstTabValue = computed(() => filteredTabs.value[0]?.tab.value ?? initial[0].tab.value);
 
     const stateKey = options?.key ?? `use-tabs-manager:${route.path}`;
     const activeTab = useState<string>(stateKey, () => {
@@ -49,7 +51,7 @@ export default function <C extends Component>(
         }
 
         const fallback =
-            tabs.value.get(firstTabValue) ?? ([...tabs.value.values()][0] as TabEntry<C>);
+            tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry<C>);
         if (fallback) {
             activeTab.value = fallback?.tab.value;
         }
@@ -94,6 +96,10 @@ export default function <C extends Component>(
         if (atomic) {
             tabs.value.delete(previous.tab.value);
         }
+    }
+
+    function filterTabs(tabs: [TabEntry<C>, ...TabEntry<C>[]]) {
+        return tabs.filter((entry) => !toValue(entry.tab.hidden));
     }
 
     onMounted(() => {

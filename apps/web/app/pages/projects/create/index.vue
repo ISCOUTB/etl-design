@@ -11,5 +11,5 @@
 </script>
 
 <template>
-    <ProjectCreateForm class="mx-auto w-full max-w-2xl" />
+    <ProjectCreateForm class="mx-auto w-full max-w-5xl" />
 </template>
