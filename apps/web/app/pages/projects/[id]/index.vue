@@ -46,6 +46,7 @@
         },
     });
 
+    const animations = useTabsAnimations();
     const tabs = useTabsManager(
         [
             {
@@ -109,13 +110,21 @@
                     </span>
                 </TabsTrigger>
             </TabsList>
-            <TabsContent
-                v-if="tabs.activeTab.value && tabs.component.value"
-                :value="tabs.activeTab.value"
-                class="mt-6"
+            <Transition
+                mode="out-in"
+                :css="false"
+                @enter="animations.onPanelEnter"
+                @leave="animations.onPanelLeave"
             >
-                <component :is="tabs.component.value" v-bind="tabs.props.value" />
-            </TabsContent>
+                <TabsContent
+                    v-if="tabs.activeTab.value && tabs.component.value"
+                    :key="tabs.activeTab.value"
+                    :value="tabs.activeTab.value"
+                    class="mt-6"
+                >
+                    <component :is="tabs.component.value" v-bind="tabs.props.value" />
+                </TabsContent>
+            </Transition>
         </Tabs>
     </div>
 </template>
