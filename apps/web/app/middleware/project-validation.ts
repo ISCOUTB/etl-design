@@ -51,5 +51,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
                 $localePath({ name: "index", query: { error: parsedError.data.error } }),
             );
         }
+
+        return navigateTo(
+            $localePath({
+                name: "index",
+                query: { error: ResponseCodesRecord.Server.UnknownError },
+            }),
+        );
     }
 });

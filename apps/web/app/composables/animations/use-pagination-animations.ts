@@ -1,7 +1,13 @@
 export default function () {
     const { $gsap } = useNuxtApp();
+    const preferredMotion = usePreferredReducedMotion();
 
     function onStateEnter(element: Element, done: () => void) {
+        if (preferredMotion.value === "reduce") {
+            done();
+            return;
+        }
+
         $gsap.fromTo(
             element,
             { autoAlpha: 0, y: 6 },
@@ -10,6 +16,11 @@ export default function () {
     }
 
     function onStateLeave(element: Element, done: () => void) {
+        if (preferredMotion.value === "reduce") {
+            done();
+            return;
+        }
+
         $gsap.to(element, {
             autoAlpha: 0,
             y: -4,
@@ -20,6 +31,11 @@ export default function () {
     }
 
     function onItemEnter(element: Element, done: () => void) {
+        if (preferredMotion.value === "reduce") {
+            done();
+            return;
+        }
+
         $gsap.fromTo(
             element,
             { autoAlpha: 0, y: 8 },
@@ -28,6 +44,11 @@ export default function () {
     }
 
     function onItemLeave(element: Element, done: () => void) {
+        if (preferredMotion.value === "reduce") {
+            done();
+            return;
+        }
+
         $gsap.to(element, {
             autoAlpha: 0,
             y: -6,

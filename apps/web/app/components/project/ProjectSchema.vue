@@ -35,6 +35,15 @@
                 processFile(file);
             }
         },
+        onOver: (_, event) => {
+            event.preventDefault();
+            if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = "copy";
+            }
+        },
+        onLeave: (_, event) => {
+            event.preventDefault();
+        },
         dataTypes: config.files.supportedMimeTypes,
         multiple: false,
         preventDefaultForUnhandled: true,
@@ -84,6 +93,13 @@
         }
         processFile(file);
     }
+
+    const animations = useSchemaUploadAnimation();
+    onMounted(() => {
+        whenever(isOverDropZone, (flag) => {
+            animations.animateDropzoneHover(dropzone.value, flag);
+        });
+    });
 </script>
 
 <template>
@@ -127,92 +143,111 @@
                 </Item>
             </div>
 
-            <template v-if="!uploadedFile">
-                <Label
-                    ref="dropzoneRef"
-                    :class="
-                        cn(
-                            'relative min-h-80 cursor-pointer flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
-                            isOverDropZone
-                                ? 'border-primary bg-primary/5'
-                                : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-                        )
-                    "
-                >
-                    <Input
-                        type="file"
-                        class="sr-only"
-                        :accept="
-                            config.files.supportedFormats.map((format) => `.${format}`).join(',')
+            <Transition
+                mode="out-in"
+                appear
+                @enter="animations.onUploadStateEnter"
+                @leave="animations.onUploadStateLeave"
+            >
+                <template v-if="!uploadedFile">
+                    <Label
+                        ref="dropzoneRef"
+                        :class="
+                            cn(
+                                'relative min-h-80 cursor-pointer flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
+                                isOverDropZone
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-muted-foreground/25 hover:border-muted-foreground/50',
+                            )
                         "
-                        @change="handleInputChange"
-                    />
+                    >
+                        <Input
+                            type="file"
+                            class="sr-only"
+                            :accept="
+                                config.files.supportedFormats
+                                    .map((format) => `.${format}`)
+                                    .join(',')
+                            "
+                            @change="handleInputChange"
+                        />
 
-                    <div class="flex flex-col items-center gap-3 text-center">
-                        <div class="flex size-12 items-center justify-center rounded-full bg-muted">
-                            <Upload class="size-5 text-muted-foreground" />
+                        <div class="flex flex-col items-center gap-3 text-center">
+                            <div
+                                class="flex size-12 items-center justify-center rounded-full bg-muted"
+                            >
+                                <Upload class="size-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-foreground">
+                                    {{ $t("projects.id.sections.schema.dropzone.title") }}
+                                    <span class="text-primary">
+                                        {{ $t("projects.id.sections.schema.dropzone.browse") }}
+                                    </span>
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    <i18n-t
+                                        keypath="projects.id.sections.schema.dropzone.supported"
+                                    >
+                                        <template #formats>
+                                            <span class="font-bold">
+                                                {{
+                                                    config.files.supportedFormats
+                                                        .map((format) => `.${format}`)
+                                                        .join(",")
+                                                }}
+                                            </span>
+                                        </template>
+                                    </i18n-t>
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-foreground">
-                                {{ $t("projects.id.sections.schema.dropzone.title") }}
-                                <span class="text-primary">
-                                    {{ $t("projects.id.sections.schema.dropzone.browse") }}
+                    </Label>
+                </template>
+
+                <template v-else>
+                    <div>
+                        <Item variant="outline">
+                            <ItemMedia>
+                                <div class="bg-emerald-500/10 p-2 rounded-md">
+                                    <FileIcon class="size-5 text-emerald-500" />
+                                </div>
+                            </ItemMedia>
+                            <ItemContent>
+                                <ItemTitle class="truncate font-medium text-foreground">
+                                    {{ uploadedFile.name }}
+                                </ItemTitle>
+                                <ItemDescription>
+                                    {{ uploadedFile.size }}
+                                </ItemDescription>
+                            </ItemContent>
+                            <ItemActions>
+                                <Button v-if="fileURL" as-child variant="ghost">
+                                    <NuxtLink :to="fileURL" :download="uploadedFile.name">
+                                        <Download class="size-4" />
+                                    </NuxtLink>
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    @click="uploadedFile = undefined"
+                                >
+                                    <X class="size-4" />
+                                </Button>
+                            </ItemActions>
+                        </Item>
+
+                        <div class="mt-6 flex justify-end">
+                            <Button>
+                                <Upload />
+                                <span>
+                                    {{ $t("projects.id.sections.schema.events.upload_file.label") }}
                                 </span>
-                            </p>
-                            <p class="mt-1 text-xs text-muted-foreground">
-                                <i18n-t keypath="projects.id.sections.schema.dropzone.supported">
-                                    <template #formats>
-                                        <span class="font-bold">
-                                            {{
-                                                config.files.supportedFormats
-                                                    .map((format) => `.${format}`)
-                                                    .join(",")
-                                            }}
-                                        </span>
-                                    </template>
-                                </i18n-t>
-                            </p>
+                            </Button>
                         </div>
                     </div>
-                </Label>
-            </template>
-
-            <template v-else>
-                <Item variant="outline">
-                    <ItemMedia>
-                        <div class="bg-emerald-500/10 p-2 rounded-md">
-                            <FileIcon class="size-5 text-emerald-500" />
-                        </div>
-                    </ItemMedia>
-                    <ItemContent>
-                        <ItemTitle class="truncate font-medium text-foreground">
-                            {{ uploadedFile.name }}
-                        </ItemTitle>
-                        <ItemDescription>
-                            {{ uploadedFile.size }}
-                        </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                        <Button v-if="fileURL" as-child variant="ghost">
-                            <NuxtLink :to="fileURL" :download="uploadedFile.name">
-                                <Download class="size-4" />
-                            </NuxtLink>
-                        </Button>
-                        <Button variant="ghost" size="icon" @click="uploadedFile = undefined">
-                            <X class="size-4" />
-                        </Button>
-                    </ItemActions>
-                </Item>
-
-                <div class="mt-6 flex justify-end">
-                    <Button>
-                        <Upload />
-                        <span>
-                            {{ $t("projects.id.sections.schema.events.upload_file.label") }}
-                        </span>
-                    </Button>
-                </div>
-            </template>
+                </template>
+            </Transition>
         </section>
 
         <section>
