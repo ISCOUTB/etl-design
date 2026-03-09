@@ -44,7 +44,6 @@
         onLeave: (_, event) => {
             event.preventDefault();
         },
-        dataTypes: config.files.supportedMimeTypes,
         multiple: false,
         preventDefaultForUnhandled: true,
     });
@@ -56,29 +55,27 @@
 
     async function processFile(file: File) {
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const fileType = await fileTypeFromBuffer(bytes);
-        if (!fileType) {
+        const detected = await fileTypeFromBuffer(bytes);
+
+        const ext = (detected?.ext ?? getFileExtension(file.name)).toLowerCase();
+        const mime = normalizeMime(detected?.mime ?? file.type);
+
+        const validExt = config.files.supportedFormats.includes(ext);
+        const validMime = !mime.length || config.files.supportedMimeTypes.includes(mime);
+
+        if (!validExt || !validMime) {
+            toast.error($t("errors.project.file_not_supported.title"), {
+                description: $t("errors.project.file_not_supported.description"),
+            });
             return;
         }
 
-        const validFile =
-            config.files.supportedFormats.includes(fileType.ext) &&
-            config.files.supportedMimeTypes.includes(fileType.mime);
-
-        if (validFile) {
-            uploadedFile.value = {
-                name: file.name,
-                size: filesize(file.size),
-                type: fileType.ext,
-                blob: new Blob([file], { type: file.type }),
-            };
-
-            return;
-        }
-
-        toast.error($t("errors.project.file_not_supported.title"), {
-            description: $t("errors.project.file_not_supported.description"),
-        });
+        uploadedFile.value = {
+            name: file.name,
+            size: filesize(file.size),
+            type: ext,
+            blob: new Blob([file], { type: mime }),
+        };
     }
 
     function handleInputChange(event: Event) {

@@ -1,17 +1,17 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "object",
-  "properties": {
-    "name": {
-      "type": "string"
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "properties": {
+        "age": {
+            "minimum": 0,
+            "type": "integer"
+        },
+        "is_adult": {
+            "type": "boolean"
+        },
+        "name": {
+            "type": "string"
+        }
     },
-    "age": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "is_adult": {
-      "type": "boolean"
-    }
-  },
-  "required": ["name", "age", "is_adult"]
+    "required": ["name", "age", "is_adult"],
+    "type": "object"
 }

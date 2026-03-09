@@ -7,3 +7,12 @@ export function ifEmpty<T extends string | undefined | null>(payload: T, default
 }
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function getFileExtension(name: string): string {
+    const ext = name.split(".").pop()?.toLowerCase();
+    return ext ?? "";
+}
+
+export function normalizeMime(mime: string | undefined): string {
+    return (mime ?? "").toLowerCase().trim();
+}
