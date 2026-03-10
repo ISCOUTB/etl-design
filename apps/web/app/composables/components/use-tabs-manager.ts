@@ -1,7 +1,6 @@
-/* eslint-disable style/type-generic-spacing */
 import type { Component, Raw } from "vue";
 
-interface TabMeta {
+export interface TabMeta {
     label: string;
     value: string;
     hidden?: boolean | (() => boolean);
@@ -9,20 +8,20 @@ interface TabMeta {
     icon?: Components.LucideIconComponent;
 }
 
-interface TabEntry<C extends Component = Component> {
+export interface TabEntry {
     tab: TabMeta;
-    component: Components.ComponentLoader<C>;
-    props: Components.ComponentProps<C>;
+    component: Components.ComponentLoader<Component>;
+    props: Components.ComponentProps<Component>;
 }
 
-interface UseTabsManagerOptions {
+export interface UseTabsManagerOptions {
     key?: string;
     initialActive?: string;
     model: Ref<string>;
 }
 
-export default function <C extends Component>(
-    initialTabs: MaybeRefOrGetter<[TabEntry<C>, ...TabEntry<C>[]]>,
+export default function (
+    initialTabs: MaybeRefOrGetter<[TabEntry, ...TabEntry[]]>,
     options?: UseTabsManagerOptions,
 ) {
     const route = useRoute();
@@ -42,7 +41,7 @@ export default function <C extends Component>(
         return firstTabValue;
     });
 
-    const componentCache = shallowRef(new Map<TabMeta["value"], Raw<C>>());
+    const componentCache = shallowRef(new Map<TabMeta["value"], Raw<Component>>());
 
     const currentEntry = computed(() => {
         const found = tabs.value.get(activeTab.value);
@@ -51,7 +50,7 @@ export default function <C extends Component>(
         }
 
         const fallback =
-            tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry<C>);
+            tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry);
         if (fallback) {
             activeTab.value = fallback?.tab.value;
         }
@@ -79,6 +78,18 @@ export default function <C extends Component>(
 
     const props = computed(() => currentEntry.value.props);
 
+    function addTab(entry: TabEntry) {
+        const next = new Map(tabs.value);
+        next.set(entry.tab.value, entry);
+        tabs.value = next;
+    }
+
+    function removeTab(value: TabMeta["value"]) {
+        const next = new Map(tabs.value);
+        next.delete(value);
+        tabs.value = next;
+    }
+
     function setActive(tabValue: TabMeta["value"]) {
         const targetTab = tabs.value.get(tabValue);
         if (!targetTab) {
@@ -94,11 +105,11 @@ export default function <C extends Component>(
 
         const atomic = toValue(previous.tab.atomic);
         if (atomic) {
-            tabs.value.delete(previous.tab.value);
+            removeTab(previous.tab.value);
         }
     }
 
-    function filterTabs(tabs: [TabEntry<C>, ...TabEntry<C>[]]) {
+    function filterTabs(tabs: [TabEntry, ...TabEntry[]]) {
         return tabs.filter((entry) => !toValue(entry.tab.hidden));
     }
 
@@ -114,5 +125,7 @@ export default function <C extends Component>(
         props: readonly(props),
         activeTab: readonly(activeTab),
         setActive,
+        addTab,
+        removeTab,
     };
 }

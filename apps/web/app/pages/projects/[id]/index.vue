@@ -28,10 +28,11 @@
         }),
     });
 
-    const Section = computed(() => ({
+    const Section = computed<Tabs.Project.ProjectSections>(() => ({
         General: $t("projects.id.sections.general_information.tab"),
         Schema: $t("projects.id.sections.schema.tab"),
         Settings: $t("projects.id.sections.settings.tab"),
+        File: $t("projects.id.sections.file.tab"),
     }));
 
     const tab = useRouteQuery("tab", Section.value.General, {
@@ -48,6 +49,7 @@
     });
 
     const animations = useTabsAnimations();
+
     const tabs = useTabsManager(
         [
             {
@@ -70,6 +72,8 @@
                 component: () => import("@/components/project/ProjectSchema.vue"),
                 props: {
                     project: sharedState,
+                    manager: () => tabs,
+                    section: Section,
                 },
             },
             {
@@ -90,10 +94,6 @@
 
 <template>
     <div class="mx-auto w-full max-w-5xl">
-        <pre>
-            {{ auth.data.value?.accessToken }}
-        </pre>
-
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
                 {{ sharedState.name }}
@@ -107,6 +107,7 @@
                     v-for="entry in tabs.tabs.value.values()"
                     :key="entry.tab.value"
                     :value="entry.tab.value"
+                    class="data-[state=]"
                     @click="tabs.setActive(entry.tab.value)"
                 >
                     <component :is="entry.tab.icon" v-if="entry.tab.icon" />
@@ -127,7 +128,7 @@
                     :value="tabs.activeTab.value"
                     class="mt-6"
                 >
-                    <component :is="tabs.component.value" v-bind="tabs.props.value" />
+                    <component :is="tabs.component.value" v-bind="{ ...tabs.props.value }" />
                 </TabsContent>
             </Transition>
         </Tabs>

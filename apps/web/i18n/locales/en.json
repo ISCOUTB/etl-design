@@ -325,6 +325,9 @@
                             "label": "Upload File"
                         }
                     }
+                },
+                "file": {
+                    "tab": "File"
                 }
             }
         },

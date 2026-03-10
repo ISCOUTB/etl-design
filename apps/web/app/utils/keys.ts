@@ -29,6 +29,7 @@ export const NuxtKeys = {
         },
         Schemas: {
             ExampleFormat: "project:schema:example-format",
+            RowId: "__rowId",
         },
     },
     Components: {

@@ -8,6 +8,8 @@
 
     interface Props {
         project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
+        manager: () => ReturnType<typeof useTabsManager>;
+        section: MaybeRefOrGetter<Tabs.Project.ProjectSections>;
     }
 
     interface UploadedFile {
@@ -19,6 +21,8 @@
 
     const props = defineProps<Props>();
     const project = computed(() => toValue(props.project));
+    const manager = computed(() => toValue(props.manager));
+    const section = computed(() => toValue(props.section));
 
     const config = useAppConfig();
     const uploadedFile = useState<UploadedFile | undefined>(
@@ -96,6 +100,37 @@
         whenever(isOverDropZone, (flag) => {
             animations.animateDropzoneHover(dropzone.value, flag);
         });
+
+        watch(
+            uploadedFile,
+            (file) => {
+                const hasTab = manager.value.tabs.value.has(section.value.File);
+
+                if (file && !hasTab) {
+                    manager.value.addTab({
+                        tab: {
+                            label: "projects.id.sections.file.tab",
+                            value: section.value.File,
+                            icon: FileIcon,
+                        },
+                        component: () => import("@/components/project/ProjectFileVisualizer.vue"),
+                        props: {
+                            name: uploadedFile.value?.name,
+                            size: uploadedFile.value?.size,
+                            blob: uploadedFile.value?.blob,
+                            format: uploadedFile.value?.type,
+                        },
+                    });
+
+                    return;
+                }
+
+                if (!file && hasTab) {
+                    manager.value.removeTab(section.value.File);
+                }
+            },
+            { immediate: true },
+        );
     });
 </script>
 
