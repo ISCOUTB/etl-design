@@ -1,6 +1,103 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
 services:
+    traefik:
+        image: traefik:v3.6
+        networks:
+            - monitoring
+            - traefik_proxy
+        ports:
+            # Expose Traefik's entry points to the Swarm
+            # Swarm requires the long syntax for ports.
+            - target: 80 # Container port (Traefik web entry point)
+              published: 80 # Host port exposed on the nodes
+              protocol: tcp
+              # 'host' mode binds directly to the node's IP where the task runs.
+              # 'ingress' mode uses Swarm's Routing Mesh (load balances across nodes).
+              # Choose based on your load balancing strategy. 'host' is often simpler if using an external LB.
+              mode: host
+
+            - target: 443 # Container port (Traefik websecure entry point)
+              published: 443 # Host port
+              protocol: tcp
+              mode: host
+
+        command:
+            # HTTP EntryPoint
+            - "--entrypoints.web.address=:80"
+
+            # Configure HTTP to HTTPS Redirection
+            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+            - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+
+            # HTTPS EntryPoint
+            - "--entrypoints.websecure.address=:443"
+
+            # Internal metrics entrypoint (private, only inside the cluster)
+            - "--entrypoints.metrics.address=:8082"
+            - "--entrypoints.websecure.http.tls.certresolver=le"
+            - "--entrypoints.websecure.http.tls=true"
+            - --certificatesresolvers.le.acme.tlschallenge=true
+            - --certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL?Variable not set}
+            - --certificatesresolvers.le.acme.storage=/certificates/acme.json
+
+            # Providers
+
+            # Enable the Docker Swarm provider (instead of Docker provider)
+            - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+
+            # Watch for Swarm service changes (requires socket access)
+            - "--providers.swarm.watch=true"
+
+            # Recommended: Don't expose services by default; require explicit labels
+            - "--providers.swarm.exposedbydefault=false"
+
+            # Specify the default network for Traefik to connect to services
+            - "--providers.swarm.network=traefik_traefik_proxy"
+
+            # API & Dashboard
+            - "--api.dashboard=true" # Enable the dashboard
+            - "--api.insecure=false" # Explicitly disable insecure API mod
+
+            # Observability
+            - "--log.level=INFO" # Set the Log Level e.g INFO, DEBUG
+            - "--accesslog=true" # Enable Access Logs
+            - "--metrics.prometheus=true" # Enable Prometheus metrics
+            - "--metrics.prometheus.entrypoint=metrics"
+
+        deploy:
+            mode: replicated
+            replicas: 1
+            placement:
+                # Placement constraints restrict where Traefik tasks can run.
+                # Running on manager nodes is common for accessing the Swarm API via the socket.
+                constraints:
+                    - node.role == manager
+
+            # Traefik Dynamic configuration via labels
+            # In Swarm, labels on the service definition configure Traefik routing for that service.
+            labels:
+                - "traefik.enable=true"
+                - "traefik.metrics.prometheus=true"
+
+                # Dashboard router
+                - "traefik.http.routers.dashboard.rule=Host(`dashboard.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.dashboard.entrypoints=websecure"
+                - "traefik.http.routers.dashboard.service=api@internal"
+                - "traefik.http.routers.dashboard.tls=true"
+
+                # Basic‑auth middleware
+                - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USERNAME?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
+                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm"
+
+                # Service hint
+                - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - traefik-public-certificates:/certificates/
+
     prometheus:
         image: prom/prometheus:latest
         user: root
@@ -14,11 +111,7 @@ services:
             - "--storage.tsdb.retention.time=3d"
         networks:
             - monitoring
-        ports:
-            - published: 9090
-              target: 9090
-              protocol: tcp
-              mode: ingress
+            - traefik_proxy
         deploy:
             placement:
                 constraints:
@@ -26,6 +119,34 @@ services:
             resources:
                 limits:
                     memory: 512M
+            labels:
+                - "traefik.enable=true"
+                - "traefik.http.routers.prometheus.rule=Host(`prometheus.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.prometheus.entrypoints=websecure"
+                - "traefik.http.routers.prometheus.tls=true"
+                - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+    grafana:
+        image: grafana/grafana:latest
+        networks:
+            - monitoring
+            - traefik_proxy
+        environment:
+            GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD?Variable not set}
+            GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+        volumes:
+            - grafana-data:/var/lib/grafana
+        configs:
+            - source: grafana_datasources
+              target: /etc/grafana/provisioning/datasources/datasources.yml
+            - source: grafana_dashboards_provider
+              target: /etc/grafana/provisioning/dashboards/dashboards.yml
+        deploy:
+            labels:
+                - "traefik.enable=true"
+                - "traefik.http.routers.grafana.rule=Host(`grafana.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.grafana.entrypoints=websecure"
+                - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
     cadvisor:
         image: gcr.io/cadvisor/cadvisor:latest
@@ -43,6 +164,8 @@ services:
             mode: global
             labels:
                 - prometheus-job=cadvisor
+                - prometheus-port=8080
+                - prometheus-path=/metrics
             resources:
                 limits:
                     memory: 256M
@@ -63,6 +186,8 @@ services:
             mode: global
             labels:
                 - prometheus-job=node-exporter
+                - prometheus-port=9100
+                - prometheus-path=/metrics
 
     scaler:
         image: vulcan99/autoscaler:latest
@@ -85,9 +210,9 @@ services:
     formula-parser:
         image: vulcan99/formula-parser:latest
         environment:
-            FORMULA_PARSER_HOST: ${PARSERS_FORMULA_PARSER_HOST}
-            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT}
-            DEBUG_FORMULA_PARSER: ${PARSERS_DEBUG_FORMULA_PARSER}
+            FORMULA_PARSER_HOST: "0.0.0.0"
+            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
+            DEBUG_FORMULA_PARSER: "false"
         networks:
             - monitoring
             - parsers
@@ -104,9 +229,9 @@ services:
     ddl-generator:
         image: vulcan99/ddl-generator:latest
         environment:
-            DDL_GENERATOR_HOST: ${PARSERS_DDL_GENERATOR_HOST}
-            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT}
-            DDL_GENERATOR_DEBUG: ${PARSERS_DDL_GENERATOR_DEBUG}
+            DDL_GENERATOR_HOST: "0.0.0.0"
+            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
+            DDL_GENERATOR_DEBUG: "false"
         networks:
             - monitoring
             - parsers
@@ -123,9 +248,9 @@ services:
     sql-builder:
         image: vulcan99/sql-builder:latest
         environment:
-            SQL_BUILDER_HOST: ${PARSERS_SQL_BUILDER_HOST}
+            SQL_BUILDER_HOST: "0.0.0.0"
             SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT}
-            SQL_BUILDER_DEBUG: ${PARSERS_SQL_BUILDER_DEBUG}
+            SQL_BUILDER_DEBUG: "false"
         networks:
             - monitoring
             - parsers
@@ -142,15 +267,15 @@ services:
     excel-reader:
         image: vulcan99/excel-reader:latest
         environment:
-            FORMULA_PARSER_HOST: "formula-parser"
-            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT}
-            DDL_GENERATOR_HOST: "ddl-generator"
-            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT}
-            SQL_BUILDER_HOST: "sql-builder"
-            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT}
-            EXCEL_READER_HOST: ${PARSERS_EXCEL_READER_HOST}
-            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT}
-            EXCEL_READER_DEBUG: ${PARSERS_EXCEL_READER_DEBUG}
+            FORMULA_PARSER_HOST: formula-parser
+            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
+            DDL_GENERATOR_HOST: ddl-generator
+            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
+            SQL_BUILDER_HOST: sql-builder
+            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT?Variable not set}
+            EXCEL_READER_HOST: "0.0.0.0"
+            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT?Variable not set}
+            EXCEL_READER_DEBUG: "false"
         networks:
             - monitoring
             - parsers
@@ -163,6 +288,9 @@ services:
                     memory: "1024m"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=excel-reader
+                - prometheus-port=${PARSERS_EXCEL_READER_PORT?Variable not set}
+                - prometheus-path=/metrics
 
     rabbitmq:
         image: rabbitmq:4-management
@@ -173,16 +301,6 @@ services:
         networks:
             - monitoring
             - rabbit
-        ports:
-            - published: 5672
-              target: 5672
-              protocol: tcp
-              mode: ingress
-
-            - published: 15672
-              target: 15672
-              protocol: tcp
-              mode: ingress
         volumes:
             - rabbitmq-data:/var/lib/rabbitmq
         deploy:
@@ -192,6 +310,12 @@ services:
                     memory: "512m"
                 limits:
                     memory: "1024m"
+            labels:
+                - "traefik.enable=true"
+                - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.rabbitmq.entrypoints=websecure"
+                - "traefik.http.routers.rabbitmq.tls=true"
+                - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
 
     mongo:
         image: mongo:7.0
@@ -201,11 +325,6 @@ services:
         networks:
             - monitoring
             - mongo
-        ports:
-            - published: 27017
-              target: 27017
-              protocol: tcp
-              mode: ingress
         volumes:
             - mongo-data:/data/db
         deploy:
@@ -227,11 +346,6 @@ services:
         networks:
             - monitoring
             - redis
-        ports:
-            - published: 6379
-              target: 6379
-              protocol: tcp
-              mode: ingress
         volumes:
             - redis-data:/data
         deploy:
@@ -243,20 +357,15 @@ services:
                     memory: "512m"
 
     postgres:
-        image: postgres:17
+        image: postgres:18
         environment:
-            POSTGRES_USER: ${POSTGRES_USER}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
             PGDATA: /var/lib/postgresql/data/pgdata
         networks:
             - monitoring
             - postgres
-        ports:
-            - published: 5431
-              target: 5432
-              protocol: tcp
-              mode: ingress
         volumes:
             - postgres-data:/var/lib/postgresql/data
         deploy:
@@ -268,31 +377,31 @@ services:
                     memory: "512m"
 
     database:
-        image: vulcan99/etl-database:1.03
+        image: vulcan99/etl-database:latest
         environment:
             MONGO_HOST: mongo
             MONGO_PORT: 27017
-            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME?Variable not set}
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD?Variable not set}
             MONGO_DB: ${MONGO_DB}
-            MONGO_SCHEMAS_COLLECTION: ${MONGO_SCHEMAS_COLLECTION}
-            MONGO_TASKS_COLLECTION: ${MONGO_TASKS_COLLECTION}
-            MONGO_MAX_RETRIES: ${MONGO_MAX_RETRIES}
-            MONGO_RETRY_DELAY_SECONDS: ${MONGO_RETRY_DELAY_SECONDS}
-            MONGO_RETRY_BACKOFF_FACTOR: ${MONGO_RETRY_BACKOFF_FACTOR}
+            MONGO_SCHEMAS_COLLECTION: ${MONGO_SCHEMAS_COLLECTION?Variable not set}
+            MONGO_TASKS_COLLECTION: ${MONGO_TASKS_COLLECTION?Variable not set}
+            MONGO_MAX_RETRIES: ${MONGO_MAX_RETRIES-5}
+            MONGO_RETRY_DELAY_SECONDS: ${MONGO_RETRY_DELAY_SECONDS-1}
+            MONGO_RETRY_BACKOFF_FACTOR: ${MONGO_RETRY_BACKOFF_FACTOR-2}
 
             REDIS_HOST: redis
             REDIS_PORT: 6379
-            REDIS_DB: ${REDIS_DB}
-            REDIS_PASSWORD: ${REDIS_PASSWORD}
-            REDIS_EXPIRE_SECONDS: ${REDIS_EXPIRE_SECONDS}
-            REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES}
-            REDIS_RETRY_DELAY_SECONDS: ${REDIS_RETRY_DELAY_SECONDS}
-            REDIS_RETRY_BACKOFF_FACTOR: ${REDIS_RETRY_BACKOFF_FACTOR}
+            REDIS_DB: ${REDIS_DB?Variable not set}
+            REDIS_PASSWORD: ${REDIS_PASSWORD?Variable not set}
+            REDIS_EXPIRE_SECONDS: ${REDIS_EXPIRE_SECONDS?Variable not set}
+            REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES-5}
+            REDIS_RETRY_DELAY_SECONDS: ${REDIS_RETRY_DELAY_SECONDS-1}
+            REDIS_RETRY_BACKOFF_FACTOR: ${REDIS_RETRY_BACKOFF_FACTOR-2}
 
-            DATABASE_CONNECTION_HOST: ${DATABASE_CONNECTION_HOST}
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
-            DATABASE_CONNECTION_DEBUG: ${DATABASE_CONNECTION_DEBUG}
+            DATABASE_CONNECTION_HOST: "0.0.0.0"
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_CONNECTION_DEBUG: "false"
 
             TASK_TTL_PENDING_SECONDS: ${TASK_TTL_PENDING_SECONDS}
             TASK_TTL_PROCESSING_SECONDS: ${TASK_TTL_PROCESSING_SECONDS}
@@ -321,30 +430,47 @@ services:
                 - scaler.enabled=true
 
     typechecking:
-        image: vulcan99/typechecking
+        image: vulcan99/typechecking:latest
         environment:
-            MINIMAL_SERVER_HOST: ${DATABASE_CONNECTION_HOST}
-            MINIMAL_SERVER_PORT: ${DATABASE_CONNECTION_PORT}
-            MINIMAL_SERVER_DEBUG: ${DATABASE_CONNECTION_DEBUG}
+            MINIMAL_SERVER_HOST: "0.0.0.0"
+            MINIMAL_SERVER_PORT: ${MINIMAL_SERVER_PORT?Variable not set}
+            MINIMAL_SERVER_DEBUG: "false"
 
             RABBITMQ_HOST: rabbitmq
             RABBITMQ_PORT: 5672
-            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST}
-            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES}
-            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS}
-            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER}
-            RABBITMQ_THRESHOLD_SECONDS: ${RABBITMQ_THRESHOLD_SECONDS}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
+            RABBITMQ_THRESHOLD_SECONDS: ${RABBITMQ_THRESHOLD_SECONDS-60}
 
             MAX_WORKERS: ${MAX_WORKERS}
-            WORKER_PREFETCH_COUNT: ${WORKER_PREFETCH_COUNT}
+            WORKER_PREFETCH_COUNT: ${WORKER_PREFETCH_COUNT-1}
 
             DATABASE_CONNECTION_HOST: database
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
-            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
-            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
-            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES-5}
+            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS-1}
+            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER-2}
+
+            API_REQUEST_URL: http://api:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}/events/task-completed
+            API_TIMEOUT_SECONDS: ${API_TIMEOUT_SECONDS-30}
+
+            EXCEL_READER_HOST: excel-reader
+            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT}
+            EXCEL_READER_TIMEOUT_SECONDS: ${EXCEL_READER_TIMEOUT_SECONDS-30}
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "curl -f http://localhost:${MINIMAL_SERVER_PORT?Variable not set}/health || exit 1",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
         networks:
             - monitoring
             - rabbit
@@ -358,45 +484,68 @@ services:
                     memory: "1536m"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=typechecking
+                - prometheus-port=${MINIMAL_SERVER_PORT?Variable not set}
+                - prometheus-path=/metrics
 
     api:
-        image: vulcan99/etl-api:1.01
+        image: vulcan99/etl-api:latest
         environment:
-            API_V1_STR: ${API_V1_STR}
-            CORS_ORIGINS: ${CORS_ORIGINS}
-            SERVER_HOST: ${SERVER_HOST}
-            SERVER_PORT: ${SERVER_PORT}
-            SERVER_DEBUG: ${SERVER_DEBUG}
-            SECRET_KEY: ${SECRET_KEY}
+            API_V1_STR: ${API_V1_STR-/api/v1}
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set}
+            SERVER_HOST: "0.0.0.0"
+            SERVER_PORT: ${SERVER_PORT?Variable not set}
+            SERVER_DEBUG: "false"
+            SECRET_KEY: ${SECRET_KEY?Variable not set}
+            AUTH_INFO: ${AUTH_INFO?Variable not set}
 
-            FIRST_SUPERUSER: ${FIRST_SUPERUSER}
+            CREDENTIALS_SECRET_KEY: ${CREDENTIALS_SECRET_KEY?Variable not set}
+            CREDENTIALS_SIGN: ${CREDENTIALS_SIGN?Variable not set}
+
+            IDEMPOTENCY_TTL_DEFAULT_SECONDS: ${IDEMPOTENCY_TTL_DEFAULT_SECONDS-600}
+            IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: ${IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS-60}
+            IDEMPOTENCY_TTL_PUBLISHED_SECONDS: ${IDEMPOTENCY_TTL_PUBLISHED_SECONDS-1800}
+
+            FIRST_SUPERUSER_NAME: ${FIRST_SUPERUSER}
+            FIRST_SUPERUSER_EMAIL: ${FIRST_SUPERUSER_EMAIL}
             FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD}
 
             DATABASE_CONNECTION_HOST: database
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
             DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
             DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
             DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
 
             RABBITMQ_HOST: rabbitmq
             RABBITMQ_PORT: 5672
-            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST}
-            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES}
-            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS}
-            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER}
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
 
             POSTGRES_HOST: postgres
-            POSTGRES_PORT: 5431
-            POSTGRES_USER: ${POSTGRES_USER}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "curl -f http://localhost:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}/healthcheck/ || exit 1",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
         networks:
             - monitoring
             - postgres
             - grpc
             - rabbit
+            - traefik_proxy
         deploy:
             resources:
                 reservations:
@@ -405,18 +554,45 @@ services:
                     memory: "1536m"
             labels:
                 - scaler.enabled=true
+                - "traefik.enable=${TRAEFIK_EXPOSE_API-false}"
+                - "traefik.http.routers.api.rule=Host(`api.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.api.entrypoints=websecure"
+                - "traefik.http.routers.api.tls=true"
+                - "traefik.http.services.api.loadbalancer.server.port=${SERVER_PORT?Variable not set}"
+                - prometheus-job=api
+                - prometheus-port=${SERVER_PORT?Variable not set}
+                - prometheus-path=/api/v1/metrics
+
 networks:
     monitoring:
+        driver: overlay
     parsers:
+        driver: overlay
     redis:
+        driver: overlay
     postgres:
+        driver: overlay
     mongo:
+        driver: overlay
     rabbit:
+        driver: overlay
     grpc:
+        driver: overlay
+    traefik_proxy:
+        driver: overlay
+        attachable: true
+
+configs:
+    grafana_datasources:
+        file: ./grafana/provisioning/datasources/datasources.yml
+    grafana_dashboards_provider:
+        file: ./grafana/provisioning/dashboards/dashboards.yml
 
 volumes:
     prometheus-data:
+    grafana-data:
     rabbitmq-data:
     mongo-data:
     redis-data:
     postgres-data:
+    traefik-public-certificates:
