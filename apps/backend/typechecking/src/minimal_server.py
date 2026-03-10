@@ -1,6 +1,7 @@
 from typing import Annotated, Dict, Generator
 
 from fastapi import Depends, FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
@@ -13,6 +14,8 @@ from src.utils.uvicorn_logger import LOGGING_CONFIG
 logger = create_component_logger("http-server")
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 def generate_new_db_client() -> Generator[DatabaseClient, None, None]:

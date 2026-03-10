@@ -5,6 +5,7 @@ import grpc
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pika.exceptions import AMQPError
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api.exceptions import (
     app_exception_handler,
@@ -39,6 +40,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan,
 )
+
+# Register Prometheus middleware and metrics route before startup.
+Instrumentator().instrument(app).expose(app, endpoint=f"{settings.API_V1_STR}/metrics")
 
 if settings.CORS_ORIGINS:
     app.add_middleware(

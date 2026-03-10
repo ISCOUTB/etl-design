@@ -24,6 +24,7 @@ dependencies = [
     "jwcrypto>=1.5.6",
     "bcrypt>=5.0.0",
     "pyaegis>=0.2.0",
+    "prometheus-fastapi-instrumentator>=7.1.0",
 ]
 
 [tool.uv.sources]

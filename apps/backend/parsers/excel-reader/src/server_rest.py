@@ -4,6 +4,7 @@ from typing import Annotated, Dict
 
 from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 from proto_utils.generated.parsers import (
     ddl_generator_pb2_grpc,
     formula_parser_pb2_grpc,
@@ -43,6 +44,8 @@ SQLBuilderDep = Annotated[
 # ======== Server ========
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.add_middleware(
     CORSMiddleware,
