@@ -31,6 +31,11 @@ export const NuxtKeys = {
             ExampleFormat: "project:schema:example-format",
         },
     },
+    Components: {
+        DataTable: {
+            Sorting: (route: string) => `data-table:sorting-state:${route}`,
+        },
+    },
 };
 
 export const ModalKeys = {

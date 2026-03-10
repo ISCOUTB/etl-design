@@ -89,7 +89,11 @@
 </script>
 
 <template>
-    <div v-if="sharedState" class="mx-auto w-full max-w-5xl">
+    <div class="mx-auto w-full max-w-5xl">
+        <pre>
+            {{ auth.data.value?.accessToken }}
+        </pre>
+
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
                 {{ sharedState.name }}
