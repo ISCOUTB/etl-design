@@ -1,7 +1,7 @@
 {
     "devDependencies": {
         "@sloth/tools-eslint": "workspace:*",
-        "eslint": "^10.0.2"
+        "eslint": "^10.0.3"
     },
     "pnpm": {
         "overrides": {
