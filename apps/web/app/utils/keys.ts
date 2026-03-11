@@ -20,8 +20,9 @@ export const NuxtKeys = {
 
             return `project:${candidateId}:state`;
         },
-        UploadFile: (route: string) => `project:${route}:upload-file`,
         Schemas: {
+            UploadFile: (route: string) => `project:${route}:upload-file`,
+            Columns: (route: string) => `project:${route}:columns-definition`,
             ExampleFormat: "project:schema:example-format",
             RowId: "__rowId",
         },
