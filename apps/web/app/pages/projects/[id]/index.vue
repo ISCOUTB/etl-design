@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Database, Info, Settings } from "lucide-vue-next";
+    import { Database, FileIcon, Info, Settings } from "lucide-vue-next";
+    import { cn } from "@/lib/utils";
 
     definePageMeta({
         title: "projects.id.fallback_title",
@@ -28,25 +29,7 @@
         }),
     });
 
-    const Section = computed<Tabs.Project.ProjectSections>(() => ({
-        General: $t("projects.id.sections.general_information.tab"),
-        Schema: $t("projects.id.sections.schema.tab"),
-        Settings: $t("projects.id.sections.settings.tab"),
-        File: $t("projects.id.sections.file.tab"),
-    }));
-
-    const tab = useRouteQuery("tab", Section.value.General, {
-        mode: "replace",
-        transform: (value) => {
-            const sections = Object.values(Section.value);
-            const found = sections.find((section) => section === value);
-            if (found) {
-                return found;
-            }
-
-            return Section.value.General;
-        },
-    });
+    const { Section, tab, uploadedFile } = useProjectTabsSharedState();
 
     const animations = useTabsAnimations();
 
@@ -70,11 +53,7 @@
                     icon: Database,
                 },
                 component: () => import("@/components/project/ProjectSchema.vue"),
-                props: {
-                    project: sharedState,
-                    manager: () => tabs,
-                    section: Section,
-                },
+                props: {},
             },
             {
                 tab: {
@@ -90,6 +69,47 @@
         ],
         { model: tab },
     );
+
+    onMounted(() => {
+        watch(
+            uploadedFile,
+            (file) => {
+                const hasTab = tabs.tabs.value.has(Section.value.File);
+
+                if (file && !hasTab) {
+                    tabs.addTab({
+                        tab: {
+                            label: "projects.id.sections.file.tab",
+                            value: Section.value.File,
+                            icon: FileIcon,
+                            class: cn(
+                                "relative transition-colors",
+                                "data-[state=inactive]:font-semibold data-[state=inactive]:border",
+                                "data-[state=active]:ring-2",
+
+                                "data-[state=inactive]:bg-amber-100 data-[state=inactive]:text-amber-900",
+                                "data-[state=inactive]:border-amber-300",
+                                "data-[state=active]:ring-amber-300/70",
+
+                                "dark:data-[state=inactive]:bg-amber-500/20 dark:data-[state=inactive]:text-amber-100",
+                                "dark:data-[state=inactive]:border-amber-400/40",
+                                "dark:data-[state=active]:ring-amber-400/40",
+                            ),
+                        },
+                        component: () => import("@/components/project/ProjectFileVisualizer.vue"),
+                        props: {},
+                    });
+
+                    return;
+                }
+
+                if (!file && hasTab) {
+                    tabs.removeTab(Section.value.File);
+                }
+            },
+            { immediate: true },
+        );
+    });
 </script>
 
 <template>
@@ -107,7 +127,7 @@
                     v-for="entry in tabs.tabs.value.values()"
                     :key="entry.tab.value"
                     :value="entry.tab.value"
-                    class="data-[state=]"
+                    :class="entry.tab.class"
                     @click="tabs.setActive(entry.tab.value)"
                 >
                     <component :is="entry.tab.icon" v-if="entry.tab.icon" />

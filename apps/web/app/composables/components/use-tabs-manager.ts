@@ -6,12 +6,13 @@ export interface TabMeta {
     hidden?: boolean | (() => boolean);
     atomic?: boolean | (() => boolean);
     icon?: Components.LucideIconComponent;
+    class?: string | string[] | Record<string, boolean>;
 }
 
 export interface TabEntry {
     tab: TabMeta;
     component: Components.ComponentLoader<Component>;
-    props: Components.ComponentProps<Component>;
+    props: Record<string, unknown>;
 }
 
 export interface UseTabsManagerOptions {

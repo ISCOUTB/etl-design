@@ -3,14 +3,8 @@
     import Ajv from "ajv";
     import { read, utils } from "xlsx";
 
-    interface Props {
-        name: string;
-        size: string;
-        blob: Blob;
-        format: "json" | "csv" | "xlsx" | "xls";
-    }
+    const { uploadedFile } = useProjectTabsSharedState();
 
-    const props = defineProps<Props>();
     const ajv = shallowRef(new Ajv({ strict: true, allErrors: true, validateSchema: true }));
 
     function withRowId(rows: Record<string, unknown>[]): Record<string, unknown>[] {
@@ -20,16 +14,16 @@
         }));
     }
 
-    const isTabular = computed(() => props.format !== "json");
+    const isTabular = computed(() => uploadedFile.value?.type !== "json");
 
     const parsed = computedAsync<Record<string, unknown>[]>(async () => {
         if (!isTabular.value) {
             return [];
         }
 
-        const buffer = await props.blob.arrayBuffer();
+        const buffer = await uploadedFile.value?.blob.arrayBuffer();
 
-        if (props.format === "csv") {
+        if (uploadedFile.value?.type === "csv") {
             const text = new TextDecoder().decode(buffer);
             const wb = read(text, { type: "string", cellDates: true, raw: true });
 
@@ -72,11 +66,11 @@
     });
 
     const schema = computedAsync(async () => {
-        if (isTabular.value) {
+        if (isTabular.value || !uploadedFile.value) {
             return;
         }
 
-        const payload = JSON.parse(await props.blob.text());
+        const payload = JSON.parse(await uploadedFile.value.blob.text());
         const declaredDraft7 =
             typeof payload === "object" &&
             payload !== null &&
@@ -99,13 +93,13 @@
         :data="parsed"
         :columns="columns"
     >
-        <TableCaption> {{ `${name} - (${size})` }} </TableCaption>
+        <TableCaption> {{ uploadedFile?.name }} </TableCaption>
         <DataTableHeader />
         <TableBody>
-            <DataTableVirtualList>
+            <DataTableVirtualList :row-height="37">
                 <DataTableContent />
             </DataTableVirtualList>
         </TableBody>
     </DataTable>
-    <CodeBlock v-else :content="schema?.payload" :file="props.name" />
+    <CodeBlock v-else :content="schema?.payload" :file="uploadedFile?.name" />
 </template>

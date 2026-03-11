@@ -13,7 +13,7 @@ export interface Column<T> {
 
 export interface DataTableContext<T> {
     index: keyof T;
-    columns: Column<T>[];
+    columns: ComputedRef<Column<T>[]>;
     data: ComputedRef<T[]>;
     sortedData: ComputedRef<T[]>;
     sorting: Ref<SortingState<T>>;

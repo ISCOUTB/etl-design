@@ -6,7 +6,7 @@
 
     interface Props<T> {
         index: keyof T;
-        columns: Column<T>[];
+        columns: MaybeRefOrGetter<Column<T>[]>;
         data: MaybeRefOrGetter<T[] | undefined>;
         pageSize?: number;
         compareFn?: (sorting: SortingState<T>) => (a: T, b: T) => number;
@@ -46,6 +46,7 @@
         () => ({ key: props.index, direction: "asc" }),
     );
     const sortedData = computed(() => data.value.toSorted(props.compareFn(sorting.value)));
+    const columns = computed(() => toValue(props.columns));
 
     function toggleSorting(key: keyof TData) {
         if (sorting.value.key !== key) {
@@ -73,7 +74,7 @@
 
     provideDataTableContext<TData>({
         index: props.index,
-        columns: props.columns,
+        columns,
         data,
         sortedData,
         sorting,

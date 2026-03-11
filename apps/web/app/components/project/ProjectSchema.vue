@@ -1,56 +1,13 @@
 <script setup lang="ts">
-    import type { z } from "zod";
     import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
     import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
-    import { cn } from "~/lib/utils";
 
-    interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
-        manager: () => ReturnType<typeof useTabsManager>;
-        section: MaybeRefOrGetter<Tabs.Project.ProjectSections>;
-    }
-
-    interface UploadedFile {
-        name: string;
-        size: string;
-        type: string;
-        blob: Blob;
-    }
-
-    const props = defineProps<Props>();
-    const project = computed(() => toValue(props.project));
-    const manager = computed(() => toValue(props.manager));
-    const section = computed(() => toValue(props.section));
+    const { uploadedFile } = useProjectTabsSharedState();
 
     const config = useAppConfig();
-    const uploadedFile = useState<UploadedFile | undefined>(
-        NuxtKeys.Projects.UploadFile(project.value),
-        () => undefined,
-    );
     const fileURL = useObjectUrl(() => uploadedFile.value?.blob);
-
-    const dropzone = useTemplateRef<HTMLElement>("dropzoneRef");
-    const { isOverDropZone } = useDropZone(dropzone, {
-        onDrop: (files) => {
-            const file = files?.[0];
-            if (file) {
-                processFile(file);
-            }
-        },
-        onOver: (_, event) => {
-            event.preventDefault();
-            if (event.dataTransfer) {
-                event.dataTransfer.dropEffect = "copy";
-            }
-        },
-        onLeave: (_, event) => {
-            event.preventDefault();
-        },
-        multiple: false,
-        preventDefaultForUnhandled: true,
-    });
 
     const { data: schemaExample } = useFetch<string>("/examples/schema.example.json", {
         method: "GET",
@@ -71,6 +28,7 @@
             toast.error($t("errors.project.file_not_supported.title"), {
                 description: $t("errors.project.file_not_supported.description"),
             });
+
             return;
         }
 
@@ -92,46 +50,9 @@
         if (!file) {
             return;
         }
+
         processFile(file);
     }
-
-    const animations = useSchemaUploadAnimation();
-    onMounted(() => {
-        whenever(isOverDropZone, (flag) => {
-            animations.animateDropzoneHover(dropzone.value, flag);
-        });
-
-        watch(
-            uploadedFile,
-            (file) => {
-                const hasTab = manager.value.tabs.value.has(section.value.File);
-
-                if (file && !hasTab) {
-                    manager.value.addTab({
-                        tab: {
-                            label: "projects.id.sections.file.tab",
-                            value: section.value.File,
-                            icon: FileIcon,
-                        },
-                        component: () => import("@/components/project/ProjectFileVisualizer.vue"),
-                        props: {
-                            name: uploadedFile.value?.name,
-                            size: uploadedFile.value?.size,
-                            blob: uploadedFile.value?.blob,
-                            format: uploadedFile.value?.type,
-                        },
-                    });
-
-                    return;
-                }
-
-                if (!file && hasTab) {
-                    manager.value.removeTab(section.value.File);
-                }
-            },
-            { immediate: true },
-        );
-    });
 </script>
 
 <template>
@@ -175,69 +96,23 @@
                 </Item>
             </div>
 
-            <Transition
-                mode="out-in"
-                appear
-                @enter="animations.onUploadStateEnter"
-                @leave="animations.onUploadStateLeave"
+            <DropzoneArea
+                :state="uploadedFile"
+                :supported-formats="
+                    config.files.supportedFormats.map((format) => `.${format}`).join(',')
+                "
+                :dropzone-options="{ multiple: false }"
+                @dropped="
+                    (files) => {
+                        const file = files?.[0];
+                        if (file) {
+                            processFile(file);
+                        }
+                    }
+                "
+                @change="handleInputChange"
             >
-                <template v-if="!uploadedFile">
-                    <Label
-                        ref="dropzoneRef"
-                        :class="
-                            cn(
-                                'relative min-h-80 cursor-pointer flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
-                                isOverDropZone
-                                    ? 'border-primary bg-primary/5'
-                                    : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-                            )
-                        "
-                    >
-                        <Input
-                            type="file"
-                            class="sr-only"
-                            :accept="
-                                config.files.supportedFormats
-                                    .map((format) => `.${format}`)
-                                    .join(',')
-                            "
-                            @change="handleInputChange"
-                        />
-
-                        <div class="flex flex-col items-center gap-3 text-center">
-                            <div
-                                class="flex size-12 items-center justify-center rounded-full bg-muted"
-                            >
-                                <Upload class="size-5 text-muted-foreground" />
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-foreground">
-                                    {{ $t("projects.id.sections.schema.dropzone.title") }}
-                                    <span class="text-primary">
-                                        {{ $t("projects.id.sections.schema.dropzone.browse") }}
-                                    </span>
-                                </p>
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    <i18n-t
-                                        keypath="projects.id.sections.schema.dropzone.supported"
-                                    >
-                                        <template #formats>
-                                            <span class="font-bold">
-                                                {{
-                                                    config.files.supportedFormats
-                                                        .map((format) => `.${format}`)
-                                                        .join(",")
-                                                }}
-                                            </span>
-                                        </template>
-                                    </i18n-t>
-                                </p>
-                            </div>
-                        </div>
-                    </Label>
-                </template>
-
-                <template v-else>
+                <template #file-selected="{ state }">
                     <div>
                         <Item variant="outline">
                             <ItemMedia>
@@ -247,15 +122,15 @@
                             </ItemMedia>
                             <ItemContent>
                                 <ItemTitle class="truncate font-medium text-foreground">
-                                    {{ uploadedFile.name }}
+                                    {{ state.name }}
                                 </ItemTitle>
                                 <ItemDescription>
-                                    {{ uploadedFile.size }}
+                                    {{ state.size }}
                                 </ItemDescription>
                             </ItemContent>
                             <ItemActions>
                                 <Button v-if="fileURL" as-child variant="ghost">
-                                    <NuxtLink :to="fileURL" :download="uploadedFile.name">
+                                    <NuxtLink :to="fileURL" :download="state.name">
                                         <Download class="size-4" />
                                     </NuxtLink>
                                 </Button>
@@ -279,7 +154,7 @@
                         </div>
                     </div>
                 </template>
-            </Transition>
+            </DropzoneArea>
         </section>
 
         <section>

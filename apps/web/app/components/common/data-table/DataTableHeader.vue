@@ -7,7 +7,7 @@
 <template>
     <TableHeader>
         <TableRow>
-            <TableHead v-for="column in context.columns" :key="column.key">
+            <TableHead v-for="column in context.columns.value" :key="column.key">
                 <span>
                     <template v-if="$te(column.label)">
                         {{ $t(column.label) }}

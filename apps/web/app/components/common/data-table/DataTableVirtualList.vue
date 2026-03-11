@@ -52,7 +52,7 @@
 <template>
     <TableRow v-if="topSpacerHeight > 0" aria-hidden="true">
         <TableCell
-            :colspan="context.columns.length"
+            :colspan="context.columns.value.length"
             class="h-0 border-0 p-0"
             :style="{ height: `${topSpacerHeight}px` }"
         />
@@ -62,7 +62,7 @@
 
     <TableRow v-if="bottomSpacerHeight > 0" aria-hidden="true">
         <TableCell
-            :colspan="context.columns.length"
+            :colspan="context.columns.value.length"
             class="h-0 border-0 p-0"
             :style="{ height: `${bottomSpacerHeight}px` }"
         />
