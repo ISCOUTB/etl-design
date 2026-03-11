@@ -4,15 +4,16 @@
     import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const { uploadedFile } = useProjectTabsSharedState();
+    const {
+        uploadedFile,
+        columns,
+        sampleValueByColumn,
+        selectedDataTypes,
+        getColumnDataTypeModel,
+    } = useProjectTabsSharedState();
 
     const config = useAppConfig();
     const fileURL = useObjectUrl(() => uploadedFile.value?.blob);
-
-    const { data: schemaExample } = useFetch<string>("/examples/schema.example.json", {
-        method: "GET",
-        key: NuxtKeys.Projects.Schemas.ExampleFormat,
-    });
 
     async function processFile(file: File) {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -53,6 +54,17 @@
 
         processFile(file);
     }
+
+    const dataTypeModels = computed(() =>
+        Object.fromEntries(
+            columns.value.map((column) => [
+                String(column.key),
+                getColumnDataTypeModel(String(column.key)),
+            ]),
+        ),
+    );
+
+    const animations = useProjectSchemaAnimations();
 </script>
 
 <template>
@@ -143,32 +155,94 @@
                                 </Button>
                             </ItemActions>
                         </Item>
-
-                        <div class="mt-6 flex justify-end">
-                            <Button>
-                                <Upload />
-                                <span>
-                                    {{ $t("projects.id.sections.schema.events.upload_file.label") }}
-                                </span>
-                            </Button>
-                        </div>
                     </div>
                 </template>
             </DropzoneArea>
         </section>
 
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.schema.expected_json.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.schema.expected_json.description") }}
-            </p>
-
-            <CodeBlock
-                :content="schemaExample"
-                :file="$t('projects.id.sections.schema.expected_json.example_filename')"
+        <Transition
+            appear
+            mode="out-in"
+            @enter="animations.onSchemaEnter"
+            @leave="animations.onSchemaLeave"
+        >
+            <ProjectSchemaExample
+                v-if="!uploadedFile || (uploadedFile && uploadedFile.type === 'json')"
             />
-        </section>
+            <div v-else>
+                <h3 className="mb-1 text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.schema.datatype_table.title") }}
+                </h3>
+                <p className="mb-4 text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.schema.datatype_table.description") }}
+                </p>
+
+                <div class="rounded-lg border border-amber-300/70 overflow-hidden">
+                    <Table>
+                        <TableHeader>
+                            <TableRow class="hover:bg-amber-300/30">
+                                <TableHead class="p-4">
+                                    {{
+                                        $t(
+                                            "projects.id.sections.schema.datatype_table.header.column",
+                                        )
+                                    }}
+                                </TableHead>
+                                <TableHead class="p-4">
+                                    {{
+                                        $t(
+                                            "projects.id.sections.schema.datatype_table.header.sample_value",
+                                        )
+                                    }}
+                                </TableHead>
+                                <TableHead class="p-4">
+                                    {{
+                                        $t(
+                                            "projects.id.sections.schema.datatype_table.header.data_type",
+                                        )
+                                    }}
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow
+                                v-for="column in columns"
+                                :key="column.key"
+                                class="hover:bg-amber-300/10"
+                            >
+                                <TableCell class="font-mono text-sm px-4">
+                                    {{ column.label }}
+                                </TableCell>
+                                <TableCell class="px-4 py-2 text-muted-foreground">
+                                    <span
+                                        class="truncate rounded bg-muted px-2 py-0.5 font-mono text-xs"
+                                    >
+                                        {{ sampleValueByColumn[column.key] }}
+                                    </span>
+                                </TableCell>
+                                <TableCell class="px-4 py-2">
+                                    <SchemaDataTypeSelect
+                                        v-model:model-value="dataTypeModels[column.key]!.value"
+                                        default-value="text"
+                                        @update:model-value="(payload) => console.warn(payload)"
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        </Transition>
+
+        <div class="flex justify-end">
+            <Button @click="console.warn(dataTypeModels, selectedDataTypes)">
+                <Upload />
+                <span>
+                    {{ $t("projects.id.sections.schema.events.upload_file.label") }}
+                </span>
+            </Button>
+        </div>
+
+        <section class="py-6" />
     </div>
 </template>

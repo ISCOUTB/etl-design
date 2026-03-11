@@ -16,7 +16,7 @@
 <template>
     <template v-for="row in rows" :key="String(row[context.index])">
         <TableRow>
-            <TableCell v-for="column in context.columns.value" :key="String(column.key)">
+            <TableCell v-for="column in context.columns.value" :key="String(column.key)" class="px-4">
                 <slot
                     :name="`cell-${column.key.toString()}`"
                     v-bind="{ row, value: row[column.key as keyof TData], column }"

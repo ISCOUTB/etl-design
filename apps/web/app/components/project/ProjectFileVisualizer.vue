@@ -27,19 +27,21 @@
 </script>
 
 <template>
-    <DataTable
-        v-if="isTabular"
-        :index="NuxtKeys.Projects.Schemas.RowId"
-        :data="parsedFileContent"
-        :columns="columns"
-    >
-        <TableCaption> {{ uploadedFile?.name }} </TableCaption>
-        <DataTableHeader />
-        <TableBody>
-            <DataTableVirtualList :row-height="37">
-                <DataTableContent />
-            </DataTableVirtualList>
-        </TableBody>
-    </DataTable>
-    <CodeBlock v-else :content="schema?.payload" :file="uploadedFile?.name" />
+    <div class="rounded-lg">
+        <DataTable
+            v-if="isTabular"
+            :index="NuxtKeys.Projects.Schemas.RowId"
+            :data="parsedFileContent"
+            :columns="columns"
+        >
+            <DataTableHeader />
+            <TableBody>
+                <DataTableVirtualList :row-height="37">
+                    <DataTableContent />
+                </DataTableVirtualList>
+            </TableBody>
+        </DataTable>
+        <CodeBlock v-else :content="schema?.payload" :file="uploadedFile?.name" />
+    </div>
+    <section class="py-12" />
 </template>

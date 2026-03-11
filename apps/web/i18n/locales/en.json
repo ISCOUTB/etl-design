@@ -324,6 +324,22 @@
                         "upload_file": {
                             "label": "Upload File"
                         }
+                    },
+                    "datatype_table": {
+                        "title": "Configure Column Types",
+                        "description": "Review the detected columns and adjust their data types as needed.",
+                        "header": {
+                            "column": "Column",
+                            "sample_value": "Sample Value",
+                            "data_type": "Data Type"
+                        },
+                        "datatype": {
+                            "text": "Text",
+                            "int": "Integer",
+                            "float": "Float",
+                            "double": "Double",
+                            "boolean": "Boolean"
+                        }
                     }
                 },
                 "file": {

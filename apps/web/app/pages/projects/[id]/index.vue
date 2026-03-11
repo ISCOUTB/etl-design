@@ -108,6 +108,10 @@
         },
         { immediate: true },
     );
+
+    onMounted(() => {
+        tabs.preloadTabs([Section.value.Schema, Section.value.Settings]);
+    });
 </script>
 
 <template>

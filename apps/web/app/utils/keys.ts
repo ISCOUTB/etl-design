@@ -23,6 +23,7 @@ export const NuxtKeys = {
         Schemas: {
             UploadFile: (route: string) => `project:${route}:upload-file`,
             Columns: (route: string) => `project:${route}:columns-definition`,
+            SelectedDataType: (route: string) => `projects:${route}:selected-data-type`,
             ExampleFormat: "project:schema:example-format",
             RowId: "__rowId",
         },

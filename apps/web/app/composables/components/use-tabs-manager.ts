@@ -59,24 +59,7 @@ export default function (
         return fallback;
     });
 
-    const component = computed(() => {
-        const entry = currentEntry.value;
-        const key = entry.tab.value;
-
-        const cached = componentCache.value.get(key);
-        if (cached) {
-            return cached;
-        }
-
-        const wrapped = markRaw(
-            defineAsyncComponent({ loader: entry.component, delay: 0, timeout: 5000 }),
-        );
-
-        componentCache.value.set(key, wrapped);
-
-        return wrapped;
-    });
-
+    const component = computed(() => resolveComponent(currentEntry.value));
     const props = computed(() => currentEntry.value.props);
 
     function addTab(entry: TabEntry) {
@@ -114,6 +97,49 @@ export default function (
         return tabs.filter((entry) => !toValue(entry.tab.hidden));
     }
 
+    function resolveComponent(entry: TabEntry) {
+        const key = entry.tab.value;
+
+        const cached = componentCache.value.get(key);
+        if (cached) {
+            return cached;
+        }
+
+        const wrapped = markRaw(
+            defineAsyncComponent({ loader: entry.component, delay: 0, timeout: 5000 }),
+        );
+        componentCache.value.set(key, wrapped);
+
+        return wrapped;
+    }
+
+    async function preload(values?: TabMeta["value"][]) {
+        if (values?.length) {
+            const entries = values
+                .map((value) => tabs.value.get(value))
+                .filter((entry): entry is TabEntry => !!entry);
+
+            await Promise.all(
+                entries.map(async (entry) => {
+                    await entry.component();
+                    resolveComponent(entry);
+                }),
+            );
+            return;
+        }
+
+        await Promise.all(
+            [...tabs.value.values()].map(async (entry) => {
+                await entry.component();
+                resolveComponent(entry);
+            }),
+        );
+    }
+
+    function preloadTabs(values?: TabMeta["value"][]) {
+        return preload(values);
+    }
+
     onMounted(() => {
         if (options?.model) {
             syncRef(options.model, activeTab);
@@ -128,5 +154,7 @@ export default function (
         setActive,
         addTab,
         removeTab,
+        preload,
+        preloadTabs,
     };
 }

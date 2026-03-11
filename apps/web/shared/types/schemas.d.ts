@@ -10,6 +10,10 @@ declare global {
                 tooltip?: string;
             }
         }
+
+        namespace Schema {
+            type DataType = "text" | "integer" | "float" | "double" | "boolean";
+        }
     }
 }
 
