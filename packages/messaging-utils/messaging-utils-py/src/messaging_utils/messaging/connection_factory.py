@@ -208,7 +208,7 @@ class RabbitMQConnectionFactory:
 
             # Queue arguments for reliability and retry limits
             queue_arguments = {
-                "delivery-limit": 3,  # Max 3 redelivery attempts
+                "x-delivery-limit": 3,  # Max 3 redelivery attempts
                 "x-message-ttl": 3600000,  # 1 hour TTL (in milliseconds)
             }
 
