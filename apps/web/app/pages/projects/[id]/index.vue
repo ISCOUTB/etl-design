@@ -70,46 +70,44 @@
         { model: tab },
     );
 
-    onMounted(() => {
-        watch(
-            uploadedFile,
-            (file) => {
-                const hasTab = tabs.tabs.value.has(Section.value.File);
+    watch(
+        uploadedFile,
+        (file) => {
+            const hasTab = tabs.tabs.value.has(Section.value.File);
 
-                if (file && !hasTab) {
-                    tabs.addTab({
-                        tab: {
-                            label: "projects.id.sections.file.tab",
-                            value: Section.value.File,
-                            icon: FileIcon,
-                            class: cn(
-                                "relative transition-colors",
-                                "data-[state=inactive]:font-semibold data-[state=inactive]:border",
-                                "data-[state=active]:ring-2",
+            if (file && !hasTab) {
+                tabs.addTab({
+                    tab: {
+                        label: "projects.id.sections.file.tab",
+                        value: Section.value.File,
+                        icon: FileIcon,
+                        class: cn(
+                            "relative transition-colors",
+                            "data-[state=inactive]:font-semibold data-[state=inactive]:border",
+                            "data-[state=active]:ring-2",
 
-                                "data-[state=inactive]:bg-amber-100 data-[state=inactive]:text-amber-900",
-                                "data-[state=inactive]:border-amber-300",
-                                "data-[state=active]:ring-amber-300/70",
+                            "data-[state=inactive]:bg-amber-100 data-[state=inactive]:text-amber-900",
+                            "data-[state=inactive]:border-amber-300",
+                            "data-[state=active]:ring-amber-300/70",
 
-                                "dark:data-[state=inactive]:bg-amber-500/20 dark:data-[state=inactive]:text-amber-100",
-                                "dark:data-[state=inactive]:border-amber-400/40",
-                                "dark:data-[state=active]:ring-amber-400/40",
-                            ),
-                        },
-                        component: () => import("@/components/project/ProjectFileVisualizer.vue"),
-                        props: {},
-                    });
+                            "dark:data-[state=inactive]:bg-amber-500/20 dark:data-[state=inactive]:text-amber-100",
+                            "dark:data-[state=inactive]:border-amber-400/40",
+                            "dark:data-[state=active]:ring-amber-400/40",
+                        ),
+                    },
+                    component: () => import("@/components/project/ProjectFileVisualizer.vue"),
+                    props: {},
+                });
 
-                    return;
-                }
+                return;
+            }
 
-                if (!file && hasTab) {
-                    tabs.removeTab(Section.value.File);
-                }
-            },
-            { immediate: true },
-        );
-    });
+            if (!file && hasTab) {
+                tabs.removeTab(Section.value.File);
+            }
+        },
+        { immediate: true },
+    );
 </script>
 
 <template>

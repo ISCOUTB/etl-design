@@ -1,5 +1,3 @@
-import type { WatchStopHandle } from "vue";
-
 interface Args {
     title: string;
     description: string;
@@ -22,11 +20,6 @@ function toText<T extends string>(value: unknown): T | undefined {
 }
 
 export default function () {
-    const watchers = useState<Set<WatchStopHandle>>(
-        "use-route-error:watchers",
-        () => new Set<WatchStopHandle>(),
-    );
-
     const route = useRoute();
     const errorToast = useErrorToast();
 
@@ -48,7 +41,7 @@ export default function () {
     }
 
     function onMap(map: RouteErrorMap, path?: string) {
-        const stopWatcher = watch(
+        watch(
             () => route.query.error,
             (error) => {
                 const errorCode = toText<ResponseCodes.Code>(error);
@@ -70,12 +63,10 @@ export default function () {
             },
             { immediate: true },
         );
-
-        watchers.value.add(stopWatcher);
     }
 
     function onToast(path?: string) {
-        const stopWatcher = watch(
+        watch(
             () => route.query.error,
             (error) => {
                 const errorCode = toText<ResponseCodes.Code>(error);
@@ -92,18 +83,11 @@ export default function () {
             },
             { immediate: true },
         );
-
-        watchers.value.add(stopWatcher);
     }
 
     function on<T extends ResponseCodes.Code>(error: T, cb: RouteErrorHandler, path?: string) {
         onMap({ [error]: cb }, path);
     }
-
-    onUnmounted(() => {
-        watchers.value.forEach((watcher) => watcher());
-        watchers.value.clear();
-    });
 
     return {
         onMap,
