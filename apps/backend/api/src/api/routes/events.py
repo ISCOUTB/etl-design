@@ -52,7 +52,11 @@ async def task_completed(
             data={"task_id": task_id, "status": task.status.value},
         )
 
-    updated_status = models.TaskStatus.COMPLETED if status.lower() == "success" else models.TaskStatus.FAILED
+    updated_status = (
+        models.TaskStatus.COMPLETED
+        if status.lower() == "success"
+        else models.TaskStatus.FAILED
+    )
 
     try:
         # Update task status in the database

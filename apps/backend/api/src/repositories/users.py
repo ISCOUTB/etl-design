@@ -19,9 +19,7 @@ class UserRepository(BaseRepository[models.User]):
     ) -> Optional[models.User]:
         base_query = self.db.query(models.User).filter(models.User.email == email)
         if active_only:
-            base_query = base_query.filter(
-                models.User.status == models.Status.ACTIVE
-            )
+            base_query = base_query.filter(models.User.status == models.Status.ACTIVE)
 
         return base_query.first()
 
@@ -37,9 +35,7 @@ class UserRepository(BaseRepository[models.User]):
     ) -> List[models.User]:
         base_query = self.db.query(models.User)
         if active_only:
-            base_query = base_query.filter(
-                models.User.status == models.Status.ACTIVE
-            )
+            base_query = base_query.filter(models.User.status == models.Status.ACTIVE)
 
         if name:
             base_query = base_query.filter(models.User.name.ilike(f"{name}%"))
@@ -68,9 +64,7 @@ class UserRepository(BaseRepository[models.User]):
     ) -> int:
         base_query = self.db.query(models.User)
         if active_only:
-            base_query = base_query.filter(
-                models.User.status == models.Status.ACTIVE
-            )
+            base_query = base_query.filter(models.User.status == models.Status.ACTIVE)
 
         if name:
             base_query = base_query.filter(models.User.name.ilike(f"{name}%"))
