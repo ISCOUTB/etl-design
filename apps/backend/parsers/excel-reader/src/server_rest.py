@@ -10,9 +10,14 @@ from proto_utils.generated.parsers import (
     formula_parser_pb2_grpc,
     sql_builder_pb2_grpc,
 )
+from pydantic import ValidationError
 
 from src.core.config import settings
-from src.schemas import JSONSchemaRequest
+from src.schemas import (
+    ColumnDtypesSchema,
+    JSONSchemaRequest,
+    SpreadsheetDtypesSchema,
+)
 from src.services.insert import create_sql_for_insertion
 from src.services.json_schema import json_schema_to_sql_builder_payload
 from src.services.parse_formulas import generate_sql, parse_formulas_with_ddl
@@ -23,6 +28,7 @@ from src.utils.deps import (
     get_sql_builder_stub,
 )
 from src.utils.monitor_performance import monitor_performance
+from src.utils.sql import generate_extra_statements_sql, get_column_type_sql
 
 # ======== Dependency Injection ========
 
@@ -110,14 +116,58 @@ async def read_excel(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     try:
-        dtypes = json.loads(dtypes_str)
-    except json.JSONDecodeError as e:
+        dtypes_json = json.loads(dtypes_str)
+        if not isinstance(dtypes_json, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Dtypes JSON must be an object/dictionary",
+            )
+
+        # Validate the content of dtypes_json and convert it to the expected format
+        dtypes_validated: Dict[str, ColumnDtypesSchema] = {
+            sheet_name: dict(
+                map(
+                    lambda item: (
+                        str(item[0]),
+                        SpreadsheetDtypesSchema(**item[1]),
+                    ),
+                    sheet_data.items(),
+                )
+            )
+            for sheet_name, sheet_data in dtypes_json.items()
+        }
+    except json.JSONDecodeError:
         raise HTTPException(
-            status_code=400, detail=f"Invalid dtypes JSON: {str(e)}"
+            status_code=400, detail="Invalid JSON format for dtypes"
+        )
+    except ValidationError as e:
+        print(repr(e))
+        raise HTTPException(
+            status_code=400,
+            detail="Dtypes JSON does not match the expected schema",
         )
 
     if not table_name:
         table_name = ""
+
+    # Parse dtypes to use OPTIONAL, PRIMARY KEY, etc. in SQL generation
+    dtypes = {
+        sheet_name: dict(
+            map(
+                lambda col_info: (
+                    col_info[0],
+                    {
+                        "type": get_column_type_sql(col_info[1]),
+                        "extra": generate_extra_statements_sql(
+                            col_info[0], col_info[1]
+                        ),
+                    },
+                ),
+                dtypes_col.items(),
+            )
+        )
+        for sheet_name, dtypes_col in dtypes_validated.items()
+    }
 
     logger.info(f"Processing file: {filename}")
     content = parse_formulas_with_ddl(

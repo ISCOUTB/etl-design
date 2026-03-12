@@ -1,8 +1,9 @@
-from typing import Any, Dict, Optional, TypedDict
+from enum import Enum
+from typing import Any, Dict, Generic, Optional, Self, TypedDict, TypeVar
 
 from proto_utils.generated.parsers import ddl_generator_pb2, dtypes_pb2
 from proto_utils.parsers.dtypes import AST
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class CellData(TypedDict):
@@ -86,3 +87,100 @@ class JSONSchemaColumn(TypedDict):
 
 
 JSONSchemaDTypes = Dict[str, Dict[str, str]]
+
+
+NumVar = TypeVar("NumVar", int, float)
+
+
+class DtypesEnum(Enum):
+    """
+    Enum for supported data types in the spreadsheet.
+    """
+
+    STRING = "string"
+    INTEGER = "integer"
+    FLOAT = "float"
+    DOUBLE = "double"
+    BOOLEAN = "boolean"
+
+    def to_jsonschema_type(self) -> str:
+        """
+        Map the DtypesEnum to JSON Schema types.
+
+        Returns:
+            str: The corresponding JSON Schema type.
+        """
+        mapping = {
+            DtypesEnum.STRING: "string",
+            DtypesEnum.INTEGER: "number",
+            DtypesEnum.FLOAT: "number",
+            DtypesEnum.DOUBLE: "number",
+            DtypesEnum.BOOLEAN: "boolean",
+        }
+        return mapping[self]
+
+
+class NumberConstraints(BaseModel, Generic[NumVar]):
+    minimum: Optional[NumVar] = None
+    maximum: Optional[NumVar] = None
+    exclusive_minimum: bool = False
+    exclusive_maximum: bool = False
+    multiple_of: Optional[NumVar] = None
+
+
+class IntegerConstraints(NumberConstraints[int]):
+    pass
+
+
+class FloatConstraints(NumberConstraints[float]):
+    pass
+
+
+class StringConstraints(BaseModel):
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+    pattern: Optional[str] = None
+
+
+class SpreadsheetDtypesSchema(BaseModel):
+    dtype: DtypesEnum
+    unique: bool = False
+    optional: bool = True
+    primary_key: bool = False
+    constraints: Optional[NumberConstraints | StringConstraints] = None
+
+    @model_validator(mode="after")
+    def validate_constraint(self) -> Self:
+        match self.dtype:
+            case DtypesEnum.INTEGER:
+                if self.constraints and not isinstance(
+                    self.constraints, IntegerConstraints
+                ):
+                    raise ValueError(
+                        "Constraints for integer types must be of type IntegerConstraints"
+                    )
+            case DtypesEnum.FLOAT | DtypesEnum.DOUBLE:
+                if self.constraints and not isinstance(
+                    self.constraints, FloatConstraints
+                ):
+                    raise ValueError(
+                        "Constraints for float/double types must be of type FloatConstraints"
+                    )
+            case DtypesEnum.STRING:
+                if self.constraints and not isinstance(
+                    self.constraints, StringConstraints
+                ):
+                    raise ValueError(
+                        "Constraints for string types must be of type StringConstraints"
+                    )
+            case DtypesEnum.BOOLEAN:
+                if self.constraints is not None:
+                    raise ValueError(
+                        "Boolean type does not support constraints"
+                    )
+
+        return self
+
+
+ColumnName = str
+ColumnDtypesSchema = Dict[ColumnName, SpreadsheetDtypesSchema]
