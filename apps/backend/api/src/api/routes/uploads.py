@@ -210,12 +210,15 @@ async def create_table(
             raise DtypesInvalidJsonObjectException()
 
         # Validate the content of dtypes_json and convert it to the expected format
-        dtypes = dict(
-            map(
-                lambda item: (str(item[0]), SpreadsheetDtypesSchema(**item[1])),
-                dtypes_json.items(),
+        dtypes = {
+            str(sheet_name): dict(
+                map(
+                    lambda item: (str(item[0]), SpreadsheetDtypesSchema(**item[1])),
+                    sheet_json.items(),
+                )
             )
-        )
+            for sheet_name, sheet_json in dtypes_json.items()
+        }
     except json.JSONDecodeError:
         raise DtypesInvalidJsonStringException()
     except ValidationError:
@@ -256,24 +259,31 @@ async def create_table(
     # will need it to validate the data before insert it.
 
     # Create the JSON Schema for the table and save it in the database
-    required_fields = [
-        field_name for field_name, dtype in dtypes.items() if not dtype.optional
-    ]
-    properties = dict(
-        map(lambda item: (item[0], item[1].to_jsonschema_property()), dtypes.items())
-    )
-    jsonschema = {
-        "$schema": "https://json-schema.org/draft-07/schema",
-        "type": "object",
-        "required": required_fields,
-        "properties": properties,
-    }
+    save_schema_responses = {}
+    for sheet_name, sheet_data in dtypes.items():
+        required_fields = [
+            field_name for field_name, dtype in sheet_data.items() if not dtype.optional
+        ]
 
-    save_schema_response = SchemaService.save_schema(
-        import_name=f"{project_id}__{table_name}",
-        schema=jsonschema,
-        database_client=db_client,
-    )
+        properties = dict(
+            map(
+                lambda item: (item[0], item[1].to_jsonschema_property()), sheet_data.items()
+            )
+        )
+        jsonschema = {
+            "$schema": "https://json-schema.org/draft-07/schema",
+            "type": "object",
+            "required": required_fields,
+            "properties": properties,
+        }
+
+        save_schema_response = SchemaService.save_schema(
+            import_name=f"{project_id}__{sheet_name}",
+            schema=jsonschema,
+            database_client=db_client,
+        )
+
+        save_schema_responses[sheet_name] = save_schema_response
 
     # Execute the generated SQL statements to create the table in the database if requested
     if execute_sql:
@@ -291,13 +301,13 @@ async def create_table(
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
-            schema_saved=save_schema_response,
+            schema_saved=save_schema_responses,
         )
 
     return CreateTableResponse(
         message="SQL generated successfully (execution skipped)",
         sql_per_sheet=sql_per_sheet,
-        schema_saved=save_schema_response,
+        schema_saved=save_schema_responses,
     )
 
 
