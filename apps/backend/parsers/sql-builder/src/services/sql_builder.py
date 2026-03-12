@@ -56,7 +56,7 @@ def sql_builder(
 if __name__ == "__main__":
     import json
 
-    cols: Dict[str, AllASTs] = {
+    cols = {
         "col1": {"type": "number", "value": 10},
         "col2": {
             "type": "function",
@@ -93,13 +93,13 @@ if __name__ == "__main__":
     }
 
     content = sql_builder(
-        cols,
+        cols,  # type: ignore
         table_name="test_table",
         dtypes={
-            "col1": {"type": "INTEGER"},
-            "col2": {"type": "TEXT"},
+            "col1": {"type": "INTEGER", "extra": "PRIMARY KEY UNIQUE NOT NULL"},
+            "col2": {"type": "TEXT", "extra": "PRIMARY KEY UNIQUE"},  # This primary key is ignored
             "col3": {"type": "TEXT"},
-            "col4": {"type": "INTEGER"},
+            "col4": {"type": "INTEGER", "extra": "PRIMARY KEY NOT NULL"},
         },
     )
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     priorities = content["content"]
     sql_expression = ""
     for level, expressions in priorities.items():
-        for expr in expressions:
-            sql_expression += f"\n{expr['sql']}"
+        for expr in expressions["sql_content"]:
+            sql_expression += f"\n{expr}"
 
     print(sql_expression)
