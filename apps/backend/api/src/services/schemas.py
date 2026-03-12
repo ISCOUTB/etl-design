@@ -10,9 +10,24 @@ using the DatabaseClient to communicate with the MongoDB service via gRPC.
 
 from typing import Any, Dict, Literal
 
+from jsonschema import (
+    Draft3Validator,
+    Draft4Validator,
+    Draft6Validator,
+    Draft7Validator,
+    Draft201909Validator,
+    Draft202012Validator,
+    SchemaError,
+)
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
 
+from src.exceptions import (
+    InvalidJsonSchemaDraftException,
+    InvalidJsonSchemaException,
+    InvalidJsonSchemaTypeException,
+    MissingJsonSchemaDraftException,
+)
 from src.utils import utc_now_iso
 
 
@@ -35,7 +50,7 @@ class SchemaService:
         )
 
         if schema_doc["id"] == "":
-            return None        
+            return None
         return schema_doc
 
     @staticmethod
@@ -48,7 +63,7 @@ class SchemaService:
         Args:
             project_id (str): The project ID to match in the import name.
             database_client (DatabaseClient): The database client to use for fetching the schemas.
-        
+
         Returns:
             dtypes.MongoGetSchemasByImportRegexResponse: The response containing matching schemas.
         """
@@ -77,6 +92,39 @@ class SchemaService:
         return schema_doc["schema"] if schema_doc["status"] == "found" else None
 
     @staticmethod
+    def _validate_jsonschema(schema: Dict[str, Any]) -> None:
+        # Ensure the schema is of type 'object' at the root level
+        if schema.get("type", "") != "object":
+            raise InvalidJsonSchemaTypeException()
+
+        schema_value = schema.get("$schema", None)
+        if schema_value is None:
+            raise MissingJsonSchemaDraftException()
+
+        # TODO: Make this more robust to handle different URL formats and potential variations in the $schema field
+        # This is a simplified parsing logic that assumes the $schema field follows the standard format.
+        draft_version = schema_value.split("json-schema.org/", 1)[-1].split(
+            "/schema", 1
+        )[0]
+
+        validator_cls = {
+            "draft-07": Draft7Validator,
+            "draft/2019-09": Draft201909Validator,
+            "draft/2020-12": Draft202012Validator,
+            "draft-06": Draft6Validator,
+            "draft-05": Draft4Validator,  # Just in case someone uses: https://json-schema.org/draft-05
+            "draft-04": Draft4Validator,
+            "draft-03": Draft3Validator,
+        }.get(draft_version, None)
+        if validator_cls is None:
+            raise InvalidJsonSchemaDraftException()
+
+        try:
+            validator_cls.check_schema(schema)
+        except SchemaError:
+            raise InvalidJsonSchemaException()
+
+    @staticmethod
     def save_schema(
         schema: Dict[str, Any], import_name: str, database_client: DatabaseClient
     ) -> dtypes.MongoInsertOneSchemaResponse:
@@ -96,9 +144,11 @@ class SchemaService:
             dtypes.MongoInsertOneSchemaResponse: The result of the insert or update operation
                 with status ('inserted', 'no_change', 'updated', or 'error').
         """
+        SchemaService._validate_jsonschema(schema)
+
         # Extract and normalize the $schema field
         schema_key_value = schema.pop(
-            "$schema", "http://json-schema.org/draft-07/schema#"
+            "$schema", "https://json-schema.org/draft-07/schema"
         )
         schema["schema"] = schema_key_value
 

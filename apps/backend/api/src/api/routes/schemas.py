@@ -13,7 +13,6 @@ via gRPC, providing immediate responses without message queue overhead.
 from typing import Any, Dict
 
 from fastapi import APIRouter
-from jsonschema import Draft7Validator, SchemaError
 from proto_utils.database import dtypes
 
 from src import models
@@ -21,7 +20,6 @@ from src.api.deps import CurrentUser, DatabaseClientDep
 from src.exceptions import (
     AppException,
     ForbiddenException,
-    InvalidJsonSchemaException,
     SchemaNotFoundException,
     SchemaNotProvidedException,
 )
@@ -74,10 +72,6 @@ async def create_or_update_schema(
 
     import_name = f"{project_id}__{table_name}"
     try:
-        # Create and validate the schema
-        # This will raise SchemaError if invalid
-        Draft7Validator.check_schema(schema)
-
         # Save to database
         db_response = SchemaService.save_schema(
             schema=schema,
@@ -93,9 +87,6 @@ async def create_or_update_schema(
         )
 
         return response
-
-    except SchemaError:
-        raise InvalidJsonSchemaException()
     except Exception as e:
         return dtypes.ApiResponse(
             status="error",

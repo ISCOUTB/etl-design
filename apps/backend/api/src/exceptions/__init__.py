@@ -21,7 +21,10 @@ from src.exceptions.projects import (
     UserAlreadyInProjectException,
 )
 from src.exceptions.schemas import (
+    InvalidJsonSchemaDraftException,
     InvalidJsonSchemaException,
+    InvalidJsonSchemaTypeException,
+    MissingJsonSchemaDraftException,
     SchemaNotFoundException,
     SchemaNotProvidedException,
 )
@@ -66,7 +69,10 @@ __all__ = [
     "DatabaseConnectionException",
     "UserAlreadyInProjectException",
     # Schema exceptions
+    "InvalidJsonSchemaDraftException",
     "InvalidJsonSchemaException",
+    "InvalidJsonSchemaTypeException",
+    "MissingJsonSchemaDraftException",
     "SchemaNotFoundException",
     "SchemaNotProvidedException",
     # Task exceptions
