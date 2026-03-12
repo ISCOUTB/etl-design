@@ -1,4 +1,9 @@
-from src.schemas.api import PaginatedResponse
+from src.schemas.api import (
+    ColumnDtypesSchema,
+    CreateTableResponse,
+    PaginatedResponse,
+    SpreadsheetDtypesSchema,
+)
 from src.schemas.auth import SignInSchema, SignUpSchema
 from src.schemas.generic import DeleteResult, T
 from src.schemas.projects import (
@@ -32,7 +37,10 @@ from src.schemas.users import (
 
 __all__ = [
     # API Schemas
+    "ColumnDtypesSchema",
+    "CreateTableResponse",
     "PaginatedResponse",
+    "SpreadsheetDtypesSchema",
     # Auth Schemas
     "SignInSchema",
     "SignUpSchema",

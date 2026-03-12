@@ -30,6 +30,11 @@ from src.exceptions.schemas import (
 )
 from src.exceptions.tasks import TaskNotFoundException
 from src.exceptions.uploads import (
+    DtypesInvalidContentException,
+    DtypesInvalidJsonObjectException,
+    DtypesInvalidJsonStringException,
+    ExcelReaderErrorException,
+    Psycopg2ErrorException,
     UploadTaskNotFoundException,
 )
 from src.exceptions.user_project import UserProjectNotFoundException
@@ -82,5 +87,10 @@ __all__ = [
     # Base exception
     "AppException",
     # Upload exceptions
+    "DtypesInvalidJsonStringException",
+    "DtypesInvalidJsonObjectException",
+    "DtypesInvalidContentException",
+    "ExcelReaderErrorException",
+    "Psycopg2ErrorException",
     "UploadTaskNotFoundException",
 ]
