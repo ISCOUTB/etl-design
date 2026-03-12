@@ -105,6 +105,7 @@ class ProjectService:
                 host=project.db_host,  # type: ignore
                 port=project.db_port,  # type: ignore
                 db_name=project.db_name,  # type: ignore
+                query=project.db_params,  # type: ignore
             )
         except Exception:
             raise InvalidDBCredentialsException()

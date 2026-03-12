@@ -9,6 +9,7 @@ def create_postgres_uri(
     user: Optional[str] = None,
     password: Optional[str] = None,
     db_name: Optional[str] = None,
+    query: Optional[str] = None,
 ) -> str:
     """
     Create a PostgreSQL URI from the given parameters.
@@ -19,10 +20,11 @@ def create_postgres_uri(
         user (Optional[str]): The username for authentication.
         password (Optional[str]): The password for authentication.
         db_name (Optional[str]): The name of the database to connect to.
+        query (Optional[str]): Additional query parameters for the URI.
 
     Returns:
         str: A PostgreSQL URI string in the format:
-            postgresql://user:password@host:port/db_name
+            postgresql://user:password@host:port/db_name?query
     """
     if host is None:
         raise ValueError("Host is required to create a PostgreSQL URI")
@@ -46,5 +48,6 @@ def create_postgres_uri(
             host=host,
             port=port,
             path=db_name,
+            query=query,
         )
     )
