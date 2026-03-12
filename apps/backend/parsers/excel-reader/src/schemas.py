@@ -103,22 +103,6 @@ class DtypesEnum(Enum):
     DOUBLE = "double"
     BOOLEAN = "boolean"
 
-    def to_jsonschema_type(self) -> str:
-        """
-        Map the DtypesEnum to JSON Schema types.
-
-        Returns:
-            str: The corresponding JSON Schema type.
-        """
-        mapping = {
-            DtypesEnum.STRING: "string",
-            DtypesEnum.INTEGER: "number",
-            DtypesEnum.FLOAT: "number",
-            DtypesEnum.DOUBLE: "number",
-            DtypesEnum.BOOLEAN: "boolean",
-        }
-        return mapping[self]
-
 
 class NumberConstraints(BaseModel, Generic[NumVar]):
     minimum: Optional[NumVar] = None

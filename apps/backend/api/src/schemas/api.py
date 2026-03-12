@@ -64,7 +64,7 @@ class DtypesEnum(Enum):
         """
         mapping = {
             DtypesEnum.STRING: "string",
-            DtypesEnum.INTEGER: "integer",
+            DtypesEnum.INTEGER: "number",
             DtypesEnum.FLOAT: "number",
             DtypesEnum.DOUBLE: "number",
             DtypesEnum.BOOLEAN: "boolean",
