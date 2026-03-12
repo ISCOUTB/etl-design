@@ -170,6 +170,7 @@ def cell_range_maps(ast: AST, columns: Dict[str, str]) -> CellRangeAST:
 
     return {
         "type": "cell-range",
+        "sql": ", ".join(columns_range),
         "start": start_cell,
         "end": end_cell,
         "cells": range_cell,

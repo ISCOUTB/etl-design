@@ -136,6 +136,7 @@ class CellRangeAST(TypedDict):
 
     Attributes:
         type (Literal["cell-range"]): The type of the AST node, always "cell-range".
+        sql (str): The SQL representation of the cell range, typically a list of column names.
         start (str): The starting cell reference of the range (e.g., "A1").
         end (str): The ending cell reference of the range (e.g., "B2").
         cells (list[str]): A list of cell references in the range (e.g., ["A1", "A2", ...]).
@@ -145,6 +146,7 @@ class CellRangeAST(TypedDict):
     """
 
     type: Literal["cell-range"]
+    sql: str
     start: str
     end: str
     cells: list[str]
@@ -476,5 +478,5 @@ class BuildSQLResponse(TypedDict):
         error: Error message if there was a problem building the SQL (optional)
     """
 
-    content: Dict[str, BuildSQLResponseContent]
+    content: Dict[int, BuildSQLResponseContent]
     error: Optional[str]
