@@ -130,3 +130,10 @@ export const SpreadsheetDtypesSchema = z.discriminatedUnion("dtype", [
 ]);
 
 export const ColumnDtypesSchema = z.record(z.string(), SpreadsheetDtypesSchema);
+
+export const CreateTableFromJsonSchema = z.object({
+    table_name: z.string(),
+    project_id: z.string(),
+    jsonschema: z.record(z.string(), z.unknown()),
+    primary_keys: z.array(z.string()),
+});

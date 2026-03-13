@@ -346,7 +346,8 @@
                     },
                     "table_name": {
                         "title": "Table Name",
-                        "description": "Configure the name of the generated table"
+                        "description": "Configure the name of the generated table",
+                        "placeholder": "users"
                     },
                     "upload": {
                         "title": "Are you sure?",

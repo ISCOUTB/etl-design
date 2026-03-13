@@ -1,8 +1,16 @@
 <script setup lang="ts">
+    import type { z } from "zod";
     import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
     import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
+
+    interface Props {
+        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
+    }
+
+    const props = defineProps<Props>();
+    const project = computed(() => toValue(props.project));
 
     const { schema } = useProjectTabsSharedState();
 
@@ -18,8 +26,8 @@
         const bytes = new Uint8Array(await file.arrayBuffer());
         const detected = await fileTypeFromBuffer(bytes);
 
-        const ext = (detected?.ext ?? getFileExtension(file.name)).toLowerCase();
-        const mime = normalizeMime(detected?.mime ?? file.type);
+        const ext = (detected?.ext ?? SchemaUtils.File.getFileExtension(file.name)).toLowerCase();
+        const mime = SchemaUtils.File.normalizeMime(detected?.mime ?? file.type);
 
         const validExt = config.files.supportedFormats.includes(ext);
         const validMime = !mime.length || config.files.supportedMimeTypes.includes(mime);
@@ -64,6 +72,14 @@
         ),
     );
 
+    const tableName = computed<string>({
+        get: () =>
+            schema.state.value.tableName?.trim() ||
+            schema.state.value.uploadedFile?.nameWithoutExt ||
+            "",
+        set: (value) => schema.dispatch.setTableName(value),
+    });
+
     const animations = useProjectSchemaAnimations();
     const modal = useModal();
 
@@ -71,7 +87,9 @@
         modal.loadComponent({
             loader: () => import("@/components/project/ProjectSchemaUploadConfirmationModal.vue"),
             key: ModalKeys.Projects.Schema.UploadFile,
-            props: {},
+            props: {
+                project,
+            },
         });
 
         if (modal.currentModalKey.value === ModalKeys.Projects.Schema.UploadFile) {
@@ -251,6 +269,13 @@
                     <p className="mb-4 text-sm text-muted-foreground">
                         {{ $t("projects.id.sections.schema.table_name.description") }}
                     </p>
+
+                    <Input
+                        v-model="tableName"
+                        type="text"
+                        :default-value="schema.state.value.uploadedFile?.nameWithoutExt"
+                        :placeholder="$t('projects.id.sections.schema.table_name.placeholder')"
+                    />
                 </div>
 
                 <div class="mt-4 flex justify-end space-x-2">

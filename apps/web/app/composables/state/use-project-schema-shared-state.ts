@@ -1,9 +1,8 @@
+import type { ColumnConfig } from "#shared/utils/schemas/types";
 import type { z } from "zod";
 import type { Column } from "@/components/common/data-table/utils";
+import Ajv from "ajv";
 import { read, utils } from "xlsx";
-
-type ColumnConfig = z.infer<typeof SpreadsheetDtypesSchema>;
-type Dtype = z.infer<typeof DtypesEnum>;
 
 interface State {
     tableName: string | undefined;
@@ -14,55 +13,6 @@ interface State {
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
 
-function createColumnConfig(
-    dtype: Dtype = "string",
-    previous?: Partial<ColumnConfig>,
-): ColumnConfig {
-    const base = {
-        unique: previous?.unique ?? false,
-        optional: previous?.optional ?? true,
-        primary_key: previous?.primary_key ?? false,
-    };
-
-    switch (dtype) {
-        case "integer":
-            return {
-                dtype,
-                ...base,
-                constraints: previous?.dtype === "integer" ? previous.constraints : undefined,
-            };
-
-        case "float":
-            return {
-                dtype,
-                ...base,
-                constraints: previous?.dtype === "float" ? previous.constraints : undefined,
-            };
-
-        case "double":
-            return {
-                dtype,
-                ...base,
-                constraints: previous?.dtype === "double" ? previous.constraints : undefined,
-            };
-
-        case "boolean":
-            return {
-                dtype,
-                ...base,
-                constraints: undefined,
-            };
-
-        case "string":
-        default:
-            return {
-                dtype: "string",
-                ...base,
-                constraints: previous?.dtype === "string" ? previous.constraints : undefined,
-            };
-    }
-}
-
 export default function (stateKey: string) {
     const state = useState<State>(stateKey, () => ({
         tableName: undefined,
@@ -71,6 +21,7 @@ export default function (stateKey: string) {
         columnsConfig: {},
     }));
 
+    const ajv = shallowRef(new Ajv({ strict: true, allErrors: true, validateSchema: true }));
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
     const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
@@ -93,7 +44,10 @@ export default function (stateKey: string) {
                 return [];
             }
             state.value.sheetNames = wb.SheetNames;
-            return withRowId(ROW_ID, utils.sheet_to_json(sheet, { defval: "", raw: true }));
+            return SchemaUtils.withRowId(
+                ROW_ID,
+                utils.sheet_to_json(sheet, { defval: "", raw: true }),
+            );
         }
 
         const wb = read(buffer, { type: "array", cellDates: true, raw: true });
@@ -106,7 +60,23 @@ export default function (stateKey: string) {
             return [];
         }
         state.value.sheetNames = wb.SheetNames;
-        return withRowId(ROW_ID, utils.sheet_to_json(sheet, { defval: "", raw: true }));
+        return SchemaUtils.withRowId(ROW_ID, utils.sheet_to_json(sheet, { defval: "", raw: true }));
+    });
+
+    const jsonSchema = computedAsync<Schemas.Schema.JsonSchema | undefined>(async () => {
+        if (isTabular.value || !state.value.uploadedFile) {
+            return;
+        }
+
+        const payload = JSON.parse(await state.value.uploadedFile.blob.text());
+
+        return {
+            valid:
+                SchemaUtils.declaredDraft(payload) &&
+                Boolean(await ajv.value.validateSchema(payload)),
+            payload,
+            errors: ajv.value.errors,
+        };
     });
 
     const columns = computed<Column<Record<string, unknown>>[]>(() => {
@@ -128,7 +98,7 @@ export default function (stateKey: string) {
         return Object.fromEntries(
             [...keys].map((key) => [
                 key,
-                rows.map((row) => row[key]).find((v) => !isBlankCell(v)) ?? "",
+                rows.map((row) => row[key]).find((v) => !SchemaUtils.isBlankCell(v)) ?? "",
             ]),
         );
     });
@@ -145,7 +115,7 @@ export default function (stateKey: string) {
                     const columnKey = String(key);
                     const previous = state.value.columnsConfig[columnKey];
 
-                    return [columnKey, previous ?? createColumnConfig()];
+                    return [columnKey, previous ?? SchemaUtils.getColumnConfig()];
                 }),
             );
         },
@@ -180,14 +150,14 @@ export default function (stateKey: string) {
     }
 
     function patchColumnConfig(columnKey: string, patch: Partial<ColumnConfig>) {
-        const current = state.value.columnsConfig[columnKey] ?? createColumnConfig();
+        const current = state.value.columnsConfig[columnKey] ?? SchemaUtils.getColumnConfig();
 
         setColumnConfig(columnKey, { ...current, ...patch } as ColumnConfig);
     }
 
     function setColumnDataType(columnKey: string, dtype: z.infer<typeof DtypesEnum>) {
         const current = state.value.columnsConfig[columnKey];
-        setColumnConfig(columnKey, createColumnConfig(dtype, current));
+        setColumnConfig(columnKey, SchemaUtils.getColumnConfig(dtype, current));
     }
 
     function setColumnOptional(columnKey: string, optional: boolean) {
@@ -211,7 +181,7 @@ export default function (stateKey: string) {
 
     function getColumnConfigModel(columnKey: string) {
         return computed<ColumnConfig>({
-            get: () => state.value.columnsConfig[columnKey] ?? createColumnConfig(),
+            get: () => state.value.columnsConfig[columnKey] ?? SchemaUtils.getColumnConfig(),
             set: (value) => setColumnConfig(columnKey, value),
         });
     }
@@ -224,6 +194,7 @@ export default function (stateKey: string) {
             columns,
             sampleValueByColumn,
             selectedDataTypes,
+            jsonSchema,
         },
         dispatch: {
             setUploadedFile,

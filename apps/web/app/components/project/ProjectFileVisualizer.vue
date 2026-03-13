@@ -1,29 +1,5 @@
 <script setup lang="ts">
-    import Ajv from "ajv";
-
     const { schema } = useProjectTabsSharedState();
-
-    const ajv = shallowRef(new Ajv({ strict: true, allErrors: true, validateSchema: true }));
-
-    const jsonSchema = computedAsync(async () => {
-        if (schema.computed.isTabular.value || !schema.state.value.uploadedFile) {
-            return;
-        }
-
-        const payload = JSON.parse(await schema.state.value.uploadedFile.blob.text());
-        const declaredDraft7 =
-            typeof payload === "object" &&
-            payload !== null &&
-            !Array.isArray(payload) &&
-            (payload.$schema === "http://json-schema.org/draft-07/schema#" ||
-                payload.$schema === "https://json-schema.org/draft-07/schema#");
-
-        return {
-            valid: declaredDraft7 && ajv.value.validateSchema(payload),
-            payload,
-            errors: ajv.value.errors,
-        };
-    });
 </script>
 
 <template>
@@ -43,7 +19,7 @@
         </DataTable>
         <CodeBlock
             v-else
-            :content="jsonSchema?.payload"
+            :content="schema.computed.jsonSchema.value?.payload"
             :file="schema.state.value.uploadedFile?.name"
         />
     </div>

@@ -1,3 +1,5 @@
+import type { ErrorObject } from "ajv";
+
 declare global {
     namespace Schemas {
         namespace Project {
@@ -19,8 +21,12 @@ declare global {
                 type: string;
                 blob: Blob;
             }
+
+            interface JsonSchema {
+                valid: boolean;
+                errors: ErrorObject<string, Record<string, any>, unknown>[] | null | undefined;
+                payload: any;
+            }
         }
     }
 }
-
-export {};

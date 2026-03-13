@@ -1,7 +1,15 @@
 <script setup lang="ts">
+    import type { z } from "zod";
     import { Upload } from "lucide-vue-next";
 
-    const state = useProjectTabsSharedState();
+    interface Props {
+        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
+    }
+
+    const props = defineProps<Props>();
+    const project = computed(() => toValue(props.project));
+
+    const { schema } = useProjectTabsSharedState();
     const errorToast = useErrorToast();
     const api = useApi();
 
@@ -9,17 +17,17 @@
     function handleFile() {}
 
     function handleSubmit(_event: Event) {
-        if (!state.uploadedFile.value) {
+        if (!schema.state.value.uploadedFile) {
             errorToast.handle(ResponseCodesRecord.Server.Project.Schema.NoFileProvided);
             return;
         }
 
-        if (state.uploadedFile.value.type === "json") {
+        if (schema.state.value.uploadedFile.type === "json") {
             handleSchema();
             return;
         }
 
-        if (["xlsx", "xls", "csv"].includes(state.uploadedFile.value.type)) {
+        if (["xlsx", "xls", "csv"].includes(schema.state.value.uploadedFile.type)) {
             handleFile();
         }
     }

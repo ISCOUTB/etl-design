@@ -53,7 +53,9 @@
                     icon: Database,
                 },
                 component: () => import("@/components/project/ProjectSchema.vue"),
-                props: {},
+                props: {
+                    project: sharedState,
+                },
             },
             {
                 tab: {
