@@ -10,6 +10,16 @@ declare global {
                 tooltip?: string;
             }
         }
+
+        namespace Schema {
+            interface UploadedFile {
+                name: string;
+                nameWithoutExt: string;
+                size: string;
+                type: string;
+                blob: Blob;
+            }
+        }
     }
 }
 

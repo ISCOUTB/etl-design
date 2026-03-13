@@ -4,11 +4,15 @@
     import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const { uploadedFile, columns, sampleValueByColumn, getColumnDataTypeModel } =
-        useProjectTabsSharedState();
+    const { schema } = useProjectTabsSharedState();
 
     const config = useAppConfig();
-    const fileURL = useObjectUrl(() => uploadedFile.value?.blob);
+    const fileURL = useObjectUrl(() => schema.state.value.uploadedFile?.blob);
+    const shouldShowExample = computed(
+        () =>
+            !schema.state.value.uploadedFile ||
+            (schema.state.value.uploadedFile && schema.state.value.uploadedFile.type === "json"),
+    );
 
     async function processFile(file: File) {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -28,12 +32,13 @@
             return;
         }
 
-        uploadedFile.value = {
+        schema.dispatch.setUploadedFile({
             name: file.name,
+            nameWithoutExt: file.name.replace(/\.[^/.]+$/, ""),
             size: filesize(file.size),
             type: ext,
             blob: new Blob([file], { type: mime }),
-        };
+        });
     }
 
     function handleInputChange(event: Event) {
@@ -52,9 +57,9 @@
 
     const dataTypeModels = computed(() =>
         Object.fromEntries(
-            columns.value.map((column) => [
+            schema.computed.columns.value.map((column) => [
                 String(column.key),
-                getColumnDataTypeModel(String(column.key)),
+                schema.dispatch.getColumnDataTypeModel(String(column.key)),
             ]),
         ),
     );
@@ -117,7 +122,7 @@
             </div>
 
             <DropzoneArea
-                :state="uploadedFile"
+                :state="() => schema.state.value.uploadedFile"
                 :supported-formats="
                     config.files.supportedFormats.map((format) => `.${format}`).join(',')
                 "
@@ -157,7 +162,7 @@
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    @click="uploadedFile = undefined"
+                                    @click="schema.dispatch.setUploadedFile(undefined)"
                                 >
                                     <X class="size-4" />
                                 </Button>
@@ -174,9 +179,7 @@
             @enter="animations.onSchemaEnter"
             @leave="animations.onSchemaLeave"
         >
-            <ProjectSchemaExample
-                v-if="!uploadedFile || (uploadedFile && uploadedFile.type === 'json')"
-            />
+            <ProjectSchemaExample v-if="shouldShowExample" />
             <div v-else>
                 <h3 className="mb-1 text-sm font-medium text-foreground">
                     {{ $t("projects.id.sections.schema.datatype_table.title") }}
@@ -214,7 +217,7 @@
                         </TableHeader>
                         <TableBody>
                             <TableRow
-                                v-for="column in columns"
+                                v-for="column in schema.computed.columns.value"
                                 :key="column.key"
                                 class="hover:bg-amber-300/10"
                             >
@@ -225,7 +228,7 @@
                                     <span
                                         class="truncate rounded bg-muted px-2 py-0.5 font-mono text-xs"
                                     >
-                                        {{ sampleValueByColumn[column.key] }}
+                                        {{ schema.computed.sampleValueByColumn.value[column.key] }}
                                     </span>
                                 </TableCell>
                                 <TableCell class="px-4 py-2">

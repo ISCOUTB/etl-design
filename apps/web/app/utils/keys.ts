@@ -21,6 +21,7 @@ export const NuxtKeys = {
             return `project:${candidateId}:state`;
         },
         Schemas: {
+            State: (route: string) => `project:${route}:shared-state`,
             UploadFile: (route: string) => `project:${route}:upload-file`,
             SheetNames: (route: string) => `project:${route}:sheet-names`,
             Columns: (route: string) => `project:${route}:columns-definition`,

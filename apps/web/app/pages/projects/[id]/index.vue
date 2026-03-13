@@ -29,7 +29,7 @@
         }),
     });
 
-    const { Section, tab, uploadedFile } = useProjectTabsSharedState();
+    const { Section, tab, schema } = useProjectTabsSharedState();
 
     const animations = useTabsAnimations();
 
@@ -71,7 +71,7 @@
     );
 
     watch(
-        uploadedFile,
+        () => schema.state.value.uploadedFile,
         (file) => {
             const hasTab = tabs.tabs.value.has(Section.value.File);
 

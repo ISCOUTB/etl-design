@@ -1,16 +1,16 @@
 <script setup lang="ts">
     import Ajv from "ajv";
 
-    const { uploadedFile, columns, isTabular, parsedFileContent } = useProjectTabsSharedState();
+    const { schema } = useProjectTabsSharedState();
 
     const ajv = shallowRef(new Ajv({ strict: true, allErrors: true, validateSchema: true }));
 
-    const schema = computedAsync(async () => {
-        if (isTabular.value || !uploadedFile.value) {
+    const jsonSchema = computedAsync(async () => {
+        if (schema.computed.isTabular.value || !schema.state.value.uploadedFile) {
             return;
         }
 
-        const payload = JSON.parse(await uploadedFile.value.blob.text());
+        const payload = JSON.parse(await schema.state.value.uploadedFile.blob.text());
         const declaredDraft7 =
             typeof payload === "object" &&
             payload !== null &&
@@ -29,10 +29,10 @@
 <template>
     <div class="rounded-lg">
         <DataTable
-            v-if="isTabular"
+            v-if="schema.computed.isTabular"
             :index="NuxtKeys.Projects.Schemas.RowId"
-            :data="parsedFileContent"
-            :columns="columns"
+            :data="schema.computed.parsedFileContent"
+            :columns="schema.computed.columns"
         >
             <DataTableHeader />
             <TableBody>
@@ -41,7 +41,11 @@
                 </DataTableVirtualList>
             </TableBody>
         </DataTable>
-        <CodeBlock v-else :content="schema?.payload" :file="uploadedFile?.name" />
+        <CodeBlock
+            v-else
+            :content="jsonSchema?.payload"
+            :file="schema.state.value.uploadedFile?.name"
+        />
     </div>
     <section class="py-12" />
 </template>

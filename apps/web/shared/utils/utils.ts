@@ -16,3 +16,23 @@ export function getFileExtension(name: string): string {
 export function normalizeMime(mime: string | undefined): string {
     return (mime ?? "").toLowerCase().trim();
 }
+
+export function isBlankCell(value: unknown): boolean {
+    if (value === null || value === undefined) {
+        return true;
+    }
+    if (typeof value === "string") {
+        return value.trim() === "";
+    }
+    return false;
+}
+
+export function withRowId(
+    rowId: string,
+    rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+    return rows.map((row, index) => ({
+        ...row,
+        [rowId]: crypto.randomUUID() ?? `row-${index}`,
+    }));
+}
