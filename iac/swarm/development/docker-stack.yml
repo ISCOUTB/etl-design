@@ -232,11 +232,18 @@ services:
             DDL_GENERATOR_HOST: "0.0.0.0"
             DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
             DDL_GENERATOR_DEBUG: "false"
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
         networks:
             - monitoring
             - parsers
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "256m"
@@ -244,6 +251,9 @@ services:
                     memory: "512m"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=ddl-generator
+                - prometheus-port=9090
+                - prometheus-path=/metrics
 
     sql-builder:
         image: vulcan99/sql-builder:latest
@@ -251,6 +261,8 @@ services:
             SQL_BUILDER_HOST: "0.0.0.0"
             SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT}
             SQL_BUILDER_DEBUG: "false"
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
         networks:
             - monitoring
             - parsers
@@ -263,6 +275,9 @@ services:
                     memory: "512m"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=sql-builder
+                - prometheus-port=9090
+                - prometheus-path=/metrics
 
     excel-reader:
         image: vulcan99/excel-reader:latest
@@ -276,6 +291,10 @@ services:
             EXCEL_READER_HOST: "0.0.0.0"
             EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT?Variable not set}
             EXCEL_READER_DEBUG: "false"
+        depends_on:
+            - formula-parser
+            - ddl-generator
+            - sql-builder
         networks:
             - monitoring
             - parsers
@@ -305,6 +324,11 @@ services:
             - rabbitmq-data:/var/lib/rabbitmq
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "512m"
@@ -319,6 +343,24 @@ services:
 
     mongo:
         image: mongo:7.0
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "mongosh",
+                    "--quiet",
+                    "admin",
+                    "-u",
+                    "${MONGO_INITDB_ROOT_USERNAME}",
+                    "-p",
+                    "${MONGO_INITDB_ROOT_PASSWORD}",
+                    "--eval",
+                    "quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)",
+                ]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         environment:
             MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
             MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
@@ -329,6 +371,11 @@ services:
             - mongo-data:/data/db
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "512m"
@@ -341,6 +388,12 @@ services:
             - "redis-server"
             - "--requirepass"
             - "${REDIS_PASSWORD}"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         environment:
             REDIS_PASSWORD: ${REDIS_PASSWORD}
         networks:
@@ -350,6 +403,11 @@ services:
             - redis-data:/data
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "256m"
@@ -358,6 +416,16 @@ services:
 
     postgres:
         image: postgres:18
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 10s
+            retries: 5
+            start_period: 30s
+            timeout: 10s
         environment:
             POSTGRES_USER: ${POSTGRES_USER?Variable not set}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
@@ -370,11 +438,43 @@ services:
             - postgres-data:/var/lib/postgresql/data
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "256m"
                 limits:
                     memory: "512m"
+
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL?Variable not set}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD?Variable not set}
+        depends_on:
+            - postgres
+        networks:
+            - monitoring
+            - postgres
+            - traefik_proxy
+        volumes:
+            - pgadmin-data:/var/lib/pgadmin
+        deploy:
+            replicas: 1
+            resources:
+                reservations:
+                    memory: "256m"
+                limits:
+                    memory: "512m"
+            labels:
+                - "traefik.enable=true"
+                - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.pgadmin.entrypoints=websecure"
+                - "traefik.http.routers.pgadmin.tls=true"
+                - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
     database:
         image: vulcan99/etl-database:latest
@@ -414,6 +514,12 @@ services:
             SCHEMA_CACHE_TTL_SECONDS: ${SCHEMA_CACHE_TTL_SECONDS}
 
             DEFAULT_TTL_SECONDS: ${DEFAULT_TTL_SECONDS}
+
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
+        depends_on:
+            - mongo
+            - redis
         networks:
             - monitoring
             - mongo
@@ -428,6 +534,9 @@ services:
                     memory: "1024m"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=database
+                - prometheus-port=9090
+                - prometheus-path=/metrics
 
     typechecking:
         image: vulcan99/typechecking:latest
@@ -461,6 +570,11 @@ services:
             EXCEL_READER_HOST: excel-reader
             EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT}
             EXCEL_READER_TIMEOUT_SECONDS: ${EXCEL_READER_TIMEOUT_SECONDS-30}
+        depends_on:
+            - database
+            - rabbitmq
+            - excel-reader
+            - api
         healthcheck:
             test:
                 [
@@ -530,6 +644,10 @@ services:
             POSTGRES_USER: ${POSTGRES_USER?Variable not set}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
             POSTGRES_DB: ${POSTGRES_DB?Variable not set}
+        depends_on:
+            - database
+            - rabbitmq
+            - postgres
         healthcheck:
             test:
                 [
@@ -566,6 +684,7 @@ services:
 networks:
     monitoring:
         driver: overlay
+        attachable: true
     parsers:
         driver: overlay
     redis:
@@ -591,6 +710,7 @@ configs:
 volumes:
     prometheus-data:
     grafana-data:
+    pgadmin-data:
     rabbitmq-data:
     mongo-data:
     redis-data:
