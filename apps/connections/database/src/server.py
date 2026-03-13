@@ -79,7 +79,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # =================== Redis - General Purpose ===================
 
-    def RedisGetKeys(
+    async def RedisGetKeys(
         self,
         request: redis_pb2.RedisGetKeysRequest,
         context: grpc.aio.ServicerContext,
@@ -110,7 +110,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET_KEYS] Operation failed: {e}")
             raise
 
-    def RedisSet(
+    async def RedisSet(
         self,
         request: redis_pb2.RedisSetRequest,
         context: grpc.aio.ServicerContext,
@@ -146,7 +146,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_SET] Operation failed: {e}")
             raise
 
-    def RedisGet(
+    async def RedisGet(
         self,
         request: redis_pb2.RedisGetRequest,
         context: grpc.aio.ServicerContext,
@@ -178,7 +178,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET] Operation failed: {e}")
             raise
 
-    def RedisDelete(
+    async def RedisDelete(
         self,
         request: redis_pb2.RedisDeleteRequest,
         context: grpc.aio.ServicerContext,
@@ -212,7 +212,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_DELETE] Operation failed: {e}")
             raise
 
-    def RedisPing(
+    async def RedisPing(
         self,
         request: redis_pb2.RedisPingRequest,
         context: grpc.aio.ServicerContext,
@@ -244,7 +244,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # =================== Redis - Manage all cache ===================
 
-    def RedisGetCache(
+    async def RedisGetCache(
         self,
         request: redis_pb2.RedisGetCacheRequest,
         context: grpc.aio.ServicerContext,
@@ -275,7 +275,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET_CACHE] Operation failed: {e}")
             raise
 
-    def RedisClearCache(
+    async def RedisClearCache(
         self,
         request: redis_pb2.RedisClearCacheRequest,
         context: grpc.aio.ServicerContext,
@@ -307,7 +307,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # ================== Mongo - Related to schemas ==================
 
-    def MongoPing(
+    async def MongoPing(
         self,
         request: mongo_pb2.MongoPingRequest,
         context: grpc.aio.ServicerContext,
@@ -337,7 +337,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_PING] Health check failed: {e}")
             raise
 
-    def MongoGetRawSchemas(
+    async def MongoGetRawSchemas(
         self,
         request: mongo_pb2.MongoGetRawSchemasRequest,
         context: grpc.aio.ServicerContext,
@@ -371,7 +371,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_GET_RAW_SCHEMAS] Operation failed: {e}")
             raise
 
-    def MongoGetSchemasByImportRegex(
+    async def MongoGetSchemasByImportRegex(
         self,
         request: mongo_pb2.MongoGetSchemasByImportRegexRequest,
         context: grpc.aio.ServicerContext,
@@ -405,7 +405,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_GET_SCHEMAS_BY_REGEX] Operation failed: {e}")
             raise
 
-    def MongoInsertOneSchema(
+    async def MongoInsertOneSchema(
         self,
         request: mongo_pb2.MongoInsertOneSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -439,7 +439,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_INSERT_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoCountAllDocuments(
+    async def MongoCountAllDocuments(
         self,
         request: mongo_pb2.MongoCountAllDocumentsRequest,
         context: grpc.aio.ServicerContext,
@@ -469,7 +469,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_COUNT_DOCS] Operation failed: {e}")
             raise
 
-    def MongoFindJsonSchema(
+    async def MongoFindJsonSchema(
         self,
         request: mongo_pb2.MongoFindJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -504,7 +504,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_FIND_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoUpdateOneJsonSchema(
+    async def MongoUpdateOneJsonSchema(
         self,
         request: mongo_pb2.MongoUpdateOneJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -537,7 +537,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_UPDATE_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoDeleteOneJsonSchema(
+    async def MongoDeleteOneJsonSchema(
         self,
         request: mongo_pb2.MongoDeleteOneJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -571,7 +571,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_DELETE_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoDeleteImportName(
+    async def MongoDeleteImportName(
         self,
         request: mongo_pb2.MongoDeleteImportNameRequest,
         context: grpc.aio.ServicerContext,
@@ -607,7 +607,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # ================== Both - Related to task IDs ==================
 
-    def UpdateTaskId(
+    async def UpdateTaskId(
         self,
         request: database_pb2.UpdateTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -641,7 +641,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_UPDATE] Operation failed: {e}")
             raise
 
-    def GetTaskId(
+    async def GetTaskId(
         self,
         request: database_pb2.GetTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -676,7 +676,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_GET] Operation failed: {e}")
             raise
 
-    def GetTasksByImportName(
+    async def GetTasksByImportName(
         self,
         request: database_pb2.GetTasksByImportNameRequest,
         context: grpc.aio.ServicerContext,
@@ -710,7 +710,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_GET_BY_IMPORT] Operation failed: {e}")
             raise
 
-    def SetTaskId(
+    async def SetTaskId(
         self,
         request: database_pb2.SetTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -743,7 +743,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_SET] Operation failed: {e}")
             raise
 
-    def RemoveTaskId(
+    async def RemoveTaskId(
         self,
         request: database_pb2.RemoveTaskIdRequest,
         context: grpc.aio.ServicerContext,

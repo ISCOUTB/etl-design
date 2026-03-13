@@ -68,7 +68,7 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
             f"Debug Mode: {settings.DDL_GENERATOR_DEBUG}"
         )
 
-    def GenerateDDL(
+    async def GenerateDDL(
         self,
         request: ddl_generator_pb2.DDLRequest,
         context: grpc.aio.ServicerContext[Any, Any],

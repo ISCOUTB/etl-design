@@ -26,7 +26,7 @@ class SQLBuilderServicer(sql_builder_pb2_grpc.SQLBuilderServicer):
             f"Debug Mode: {settings.SQL_BUILDER_DEBUG}"
         )
 
-    def BuildSQL(
+    async def BuildSQL(
         self,
         request: sql_builder_pb2.BuildSQLRequest,
         context: grpc.aio.ServicerContext[Any, Any],
