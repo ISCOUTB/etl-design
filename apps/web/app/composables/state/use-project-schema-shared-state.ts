@@ -2,19 +2,73 @@ import type { z } from "zod";
 import type { Column } from "@/components/common/data-table/utils";
 import { read, utils } from "xlsx";
 
+type ColumnConfig = z.infer<typeof SpreadsheetDtypesSchema>;
+type Dtype = z.infer<typeof DtypesEnum>;
+
 interface State {
+    tableName: string | undefined;
     uploadedFile: Schemas.Schema.UploadedFile | undefined;
     sheetNames: string[];
-    selectedDataTypes: Record<string, z.infer<typeof DtypesEnum>>;
+    columnsConfig: Record<string, ColumnConfig>;
 }
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
 
+function createColumnConfig(
+    dtype: Dtype = "string",
+    previous?: Partial<ColumnConfig>,
+): ColumnConfig {
+    const base = {
+        unique: previous?.unique ?? false,
+        optional: previous?.optional ?? true,
+        primary_key: previous?.primary_key ?? false,
+    };
+
+    switch (dtype) {
+        case "integer":
+            return {
+                dtype,
+                ...base,
+                constraints: previous?.dtype === "integer" ? previous.constraints : undefined,
+            };
+
+        case "float":
+            return {
+                dtype,
+                ...base,
+                constraints: previous?.dtype === "float" ? previous.constraints : undefined,
+            };
+
+        case "double":
+            return {
+                dtype,
+                ...base,
+                constraints: previous?.dtype === "double" ? previous.constraints : undefined,
+            };
+
+        case "boolean":
+            return {
+                dtype,
+                ...base,
+                constraints: undefined,
+            };
+
+        case "string":
+        default:
+            return {
+                dtype: "string",
+                ...base,
+                constraints: previous?.dtype === "string" ? previous.constraints : undefined,
+            };
+    }
+}
+
 export default function (stateKey: string) {
     const state = useState<State>(stateKey, () => ({
+        tableName: undefined,
         uploadedFile: undefined,
         sheetNames: [],
-        selectedDataTypes: {},
+        columnsConfig: {},
     }));
 
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
@@ -82,31 +136,83 @@ export default function (stateKey: string) {
     watch(
         columns,
         (nextColumns) => {
-            state.value.selectedDataTypes = Object.fromEntries(
-                nextColumns.map(({ key }) => [
-                    String(key),
-                    state.value.selectedDataTypes[String(key)] ?? "string",
-                ]),
+            if (!nextColumns.length) {
+                return;
+            }
+
+            state.value.columnsConfig = Object.fromEntries(
+                nextColumns.map(({ key }) => {
+                    const columnKey = String(key);
+                    const previous = state.value.columnsConfig[columnKey];
+
+                    return [columnKey, previous ?? createColumnConfig()];
+                }),
             );
         },
         { immediate: true },
+    );
+
+    const selectedDataTypes = computed(() =>
+        Object.fromEntries(
+            Object.entries(state.value.columnsConfig).map(([columnKey, config]) => [
+                columnKey,
+                config.dtype,
+            ]),
+        ),
     );
 
     function setUploadedFile(file: Schemas.Schema.UploadedFile | undefined) {
         state.value = { ...state.value, uploadedFile: file };
     }
 
-    function setColumnDataType(columnKey: string, value: z.infer<typeof DtypesEnum>) {
-        state.value.selectedDataTypes = {
-            ...state.value.selectedDataTypes,
-            [columnKey]: value,
+    function setTableName(tableName: string) {
+        state.value = {
+            ...state.value,
+            tableName,
         };
+    }
+
+    function setColumnConfig(columnKey: string, config: ColumnConfig) {
+        state.value.columnsConfig = {
+            ...state.value.columnsConfig,
+            [columnKey]: config,
+        };
+    }
+
+    function patchColumnConfig(columnKey: string, patch: Partial<ColumnConfig>) {
+        const current = state.value.columnsConfig[columnKey] ?? createColumnConfig();
+
+        setColumnConfig(columnKey, { ...current, ...patch } as ColumnConfig);
+    }
+
+    function setColumnDataType(columnKey: string, dtype: z.infer<typeof DtypesEnum>) {
+        const current = state.value.columnsConfig[columnKey];
+        setColumnConfig(columnKey, createColumnConfig(dtype, current));
+    }
+
+    function setColumnOptional(columnKey: string, optional: boolean) {
+        patchColumnConfig(columnKey, { optional });
+    }
+
+    function setColumnUnique(columnKey: string, unique: boolean) {
+        patchColumnConfig(columnKey, { unique });
+    }
+
+    function setColumnPrimaryKey(columnKey: string, primary_key: boolean) {
+        patchColumnConfig(columnKey, { primary_key });
     }
 
     function getColumnDataTypeModel(columnKey: string) {
         return computed<z.infer<typeof DtypesEnum>>({
-            get: () => state.value.selectedDataTypes[columnKey] ?? "string",
+            get: () => state.value.columnsConfig[columnKey]?.dtype ?? "string",
             set: (value) => setColumnDataType(columnKey, value),
+        });
+    }
+
+    function getColumnConfigModel(columnKey: string) {
+        return computed<ColumnConfig>({
+            get: () => state.value.columnsConfig[columnKey] ?? createColumnConfig(),
+            set: (value) => setColumnConfig(columnKey, value),
         });
     }
 
@@ -117,11 +223,19 @@ export default function (stateKey: string) {
             parsedFileContent,
             columns,
             sampleValueByColumn,
+            selectedDataTypes,
         },
         dispatch: {
             setUploadedFile,
             setColumnDataType,
+            setTableName,
+            setColumnConfig,
+            setColumnUnique,
+            setColumnOptional,
+            setColumnPrimaryKey,
+            patchColumnConfig,
             getColumnDataTypeModel,
+            getColumnConfigModel,
         },
     };
 }

@@ -233,9 +233,10 @@
                                 </TableCell>
                                 <TableCell class="px-4 py-2">
                                     <SchemaDataTypeSelect
-                                        v-model:model-value="dataTypeModels[column.key]!.value"
+                                        v-model:model-value="
+                                            dataTypeModels[String(column.key)]!.value
+                                        "
                                         default-value="text"
-                                        @update:model-value="(payload) => console.warn(payload)"
                                     />
                                 </TableCell>
                             </TableRow>
