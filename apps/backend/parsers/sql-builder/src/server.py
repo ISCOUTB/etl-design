@@ -3,7 +3,11 @@ import signal
 
 import grpc
 from grpc._typing import Any  # type: ignore
+from prometheus_client import start_http_server
 from proto_utils.generated.parsers import sql_builder_pb2, sql_builder_pb2_grpc
+from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
+    PromAsyncServerInterceptor,
+)
 
 from src.core.config import settings
 from src.handlers.sql_builder import sql_builder_handler
@@ -56,7 +60,23 @@ async def serve() -> None:
     servicer = SQLBuilderServicer()
 
     # Create and configure server
-    server = grpc.aio.server()
+
+    # Interceptor for Prometheus metrics if enabled
+    if settings.ENABLE_PROMETHEUS_METRICS:
+        logger.info("[SERVER] Prometheus metrics enabled")
+
+        # Create prometheus metrics server
+        start_http_server(int(settings.PROMETHEUS_METRICS_PORT))
+        logger.info(
+            "[SERVER] Prometheus metrics rest server started on port "
+            f"{settings.PROMETHEUS_METRICS_PORT}"
+        )
+
+        logger.info("[SERVER] Starting gRPC server with Prometheus interceptor")
+        server = grpc.aio.server(interceptors=(PromAsyncServerInterceptor(),))
+    else:
+        server = grpc.aio.server()
+
     sql_builder_pb2_grpc.add_SQLBuilderServicer_to_server(servicer, server)
     server.add_insecure_port(settings.SQL_BUILDER_CHANNEL)
 

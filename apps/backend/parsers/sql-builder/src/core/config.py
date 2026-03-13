@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     def SQL_BUILDER_CHANNEL(self) -> str:
         return f"{self.SQL_BUILDER_HOST}:{self.SQL_BUILDER_PORT}"
 
+    ENABLE_PROMETHEUS_METRICS: bool = False
+    PROMETHEUS_METRICS_PORT: str = "9090"
+
 
 settings = Settings()
 

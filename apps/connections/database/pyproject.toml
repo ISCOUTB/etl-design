@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "proto-utils",
+    "py-async-grpc-prometheus>=0.2.0",
     "pydantic-settings>=2.10.1",
     "pymongo>=4.15.0",
     "redis>=6.4.0",

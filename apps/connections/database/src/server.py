@@ -23,11 +23,15 @@ Logging Enhancements:
 import asyncio
 
 import grpc
+from prometheus_client import start_http_server
 from proto_utils.generated.database import (
     database_pb2,
     database_pb2_grpc,
     mongo_pb2,
     redis_pb2,
+)
+from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
+    PromAsyncServerInterceptor,
 )
 
 from src.core.config import settings
@@ -797,7 +801,23 @@ async def serve() -> None:
     servicer = DatabaseServicer()
 
     # Create and configure server
-    server = grpc.aio.server()
+
+    # Interceptor for Prometheus metrics if enabled
+    if settings.ENABLE_PROMETHEUS_METRICS:
+        logger.info("[SERVER] Prometheus metrics enabled")
+
+        # Create prometheus metrics server
+        start_http_server(int(settings.PROMETHEUS_METRICS_PORT))
+        logger.info(
+            "[SERVER] Prometheus metrics rest server started on port "
+            f"{settings.PROMETHEUS_METRICS_PORT}"
+        )
+
+        logger.info("[SERVER] Starting gRPC server with Prometheus interceptor")
+        server = grpc.aio.server(interceptors=(PromAsyncServerInterceptor(),))
+    else:
+        server = grpc.aio.server()
+
     database_pb2_grpc.add_DatabaseServiceServicer_to_server(servicer, server)
     server.add_insecure_port(settings.DATABASE_CONNECTION_CHANNEL)
 

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def REDIS_URI(self) -> RedisDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="redis",
             password=self.REDIS_PASSWORD,
             host=self.REDIS_HOST,
@@ -80,6 +80,10 @@ class Settings(BaseSettings):
 
     # Default TTL configuration
     DEFAULT_TTL_SECONDS: int = 60 * 30  # 30 minutes
+
+    # Prometheus Metrics Configuration
+    ENABLE_PROMETHEUS_METRICS: bool = False
+    PROMETHEUS_METRICS_PORT: str = "9090"
 
 
 settings = Settings()

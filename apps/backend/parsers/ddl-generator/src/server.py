@@ -23,9 +23,13 @@ import signal
 
 import grpc
 from grpc._typing import Any  # type: ignore
+from prometheus_client import start_http_server
 from proto_utils.generated.parsers import (
     ddl_generator_pb2,
     ddl_generator_pb2_grpc,
+)
+from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
+    PromAsyncServerInterceptor,
 )
 
 from src.core.config import settings
@@ -98,7 +102,23 @@ async def serve() -> None:
     servicer = DDLGeneratorServicer()
 
     # Create and configure server
-    server = grpc.aio.server()
+
+    # Interceptor for Prometheus metrics if enabled
+    if settings.ENABLE_PROMETHEUS_METRICS:
+        logger.info("[SERVER] Prometheus metrics enabled")
+
+        # Create prometheus metrics server
+        start_http_server(int(settings.PROMETHEUS_METRICS_PORT))
+        logger.info(
+            "[SERVER] Prometheus metrics rest server started on port "
+            f"{settings.PROMETHEUS_METRICS_PORT}"
+        )
+
+        logger.info("[SERVER] Starting gRPC server with Prometheus interceptor")
+        server = grpc.aio.server(interceptors=(PromAsyncServerInterceptor(),))
+    else:
+        server = grpc.aio.server()
+
     ddl_generator_pb2_grpc.add_DDLGeneratorServicer_to_server(servicer, server)
     server.add_insecure_port(settings.DDL_GENERATOR_CHANNEL)
 

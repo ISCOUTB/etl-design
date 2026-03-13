@@ -176,6 +176,15 @@ wheels = [
 ]
 
 [[package]]
+name = "prometheus-client"
+version = "0.24.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/58/a794d23feb6b00fc0c72787d7e87d872a6730dd9ed7c7b3e954637d8f280/prometheus_client-0.24.1.tar.gz", hash = "sha256:7e0ced7fbbd40f7b84962d5d2ab6f17ef88a72504dcf7c0b40737b43b2a461f9", size = 85616, upload-time = "2026-01-14T15:26:26.965Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/c3/24a2f845e3917201628ecaba4f18bab4d18a337834c1df2a159ee9d22a42/prometheus_client-0.24.1-py3-none-any.whl", hash = "sha256:150db128af71a5c2482b36e588fc8a6b95e498750da4b17065947c16070f4055", size = 64057, upload-time = "2026-01-14T15:26:24.42Z" },
+]
+
+[[package]]
 name = "proto-utils"
 version = "0.1.0"
 source = { editable = "../../../../packages/proto-utils/proto-utils-py" }
@@ -203,6 +212,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/eb/2a981a13e35cda8b75b5585aaffae2eb904f8f351bdd3870769692acbd8a/protobuf-6.33.0-cp39-abi3-manylinux2014_s390x.whl", hash = "sha256:e0a1715e4f27355afd9570f3ea369735afc853a6c3951a6afe1f80d8569ad298", size = 339159, upload-time = "2025-10-15T20:39:46.186Z" },
     { url = "https://files.pythonhosted.org/packages/21/51/0b1cbad62074439b867b4e04cc09b93f6699d78fd191bed2bbb44562e077/protobuf-6.33.0-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:35be49fd3f4fefa4e6e2aacc35e8b837d6703c37a2168a55ac21e9b1bc7559ef", size = 323172, upload-time = "2025-10-15T20:39:47.465Z" },
     { url = "https://files.pythonhosted.org/packages/07/d1/0a28c21707807c6aacd5dc9c3704b2aa1effbf37adebd8caeaf68b17a636/protobuf-6.33.0-py3-none-any.whl", hash = "sha256:25c9e1963c6734448ea2d308cfa610e692b801304ba0908d7bfa564ac5132995", size = 170477, upload-time = "2025-10-15T20:39:51.311Z" },
+]
+
+[[package]]
+name = "py-async-grpc-prometheus"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "prometheus-client" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/d0/b2450efae0cce981c49432c83148e62b60f6f1973e6439a2c5be8b9398be/py_async_grpc_prometheus-0.2.0.tar.gz", hash = "sha256:37dd7cb5d8b48ebba34a184977dd4b6c505f335e9fe316e5f3b6ee3dc0f37b67", size = 13009, upload-time = "2024-11-26T15:37:34.123Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/d3/85b795b73bdb87c3d95fb95f51f4ad00c015ce61ca1a2ad090ba4d48c7c5/py_async_grpc_prometheus-0.2.0-py3-none-any.whl", hash = "sha256:007f8211e8a3c3a7492ed59eac80fcb163fe35c2e35aa282b1e7ed482bad5a25", size = 13418, upload-time = "2024-11-26T15:37:32.46Z" },
 ]
 
 [[package]]
@@ -380,6 +403,7 @@ dependencies = [
     { name = "asyncio" },
     { name = "igraph" },
     { name = "proto-utils" },
+    { name = "py-async-grpc-prometheus" },
     { name = "pydantic-settings" },
     { name = "sqlglot" },
     { name = "watchfiles" },
@@ -399,6 +423,7 @@ requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "igraph", specifier = ">=0.11.9" },
     { name = "proto-utils", editable = "../../../../packages/proto-utils/proto-utils-py" },
+    { name = "py-async-grpc-prometheus", specifier = ">=0.2.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "sqlglot", specifier = ">=26.31.0" },
     { name = "watchfiles", specifier = ">=1.1.1" },
