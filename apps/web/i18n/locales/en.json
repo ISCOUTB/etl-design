@@ -130,6 +130,9 @@
             "file_not_supported": {
                 "title": "The given file format is not supported",
                 "description": "Please provide a valid one"
+            },
+            "file_not_provided": {
+                "title": "Please provide a file before submiting"
             }
         }
     },
@@ -334,12 +337,20 @@
                             "data_type": "Data Type"
                         },
                         "datatype": {
-                            "text": "Text",
+                            "string": "Text",
                             "int": "Integer",
                             "float": "Float",
                             "double": "Double",
                             "boolean": "Boolean"
                         }
+                    },
+                    "table_name": {
+                        "title": "Table Name",
+                        "description": "Configure the name of the generated table"
+                    },
+                    "upload": {
+                        "title": "Are you sure?",
+                        "description": "Make sure you have reviewed all the settings before uploading the file."
                     }
                 },
                 "file": {

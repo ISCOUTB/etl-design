@@ -22,6 +22,7 @@ export const NuxtKeys = {
         },
         Schemas: {
             UploadFile: (route: string) => `project:${route}:upload-file`,
+            SheetNames: (route: string) => `project:${route}:sheet-names`,
             Columns: (route: string) => `project:${route}:columns-definition`,
             SelectedDataType: (route: string) => `projects:${route}:selected-data-type`,
             ExampleFormat: "project:schema:example-format",
@@ -39,6 +40,9 @@ export const ModalKeys = {
     Projects: {
         Delete: {
             ConfirmationModal: "projects:delete:confirmation-modal",
+        },
+        Schema: {
+            UploadFile: "projects:schema:upload-file",
         },
     },
 };

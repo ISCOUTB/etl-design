@@ -10,6 +10,7 @@ Required:
 
 Optional:
   -t, --tag <image:tag>     Image tag (can be repeated for multiple tags)
+  -c, --context <path>      Build context path (default: .)
   -p, --push                Push the image after building (multi-arch)
       --platform <list>     Comma-separated platforms
                             (default without --push: linux/amd64)
@@ -30,6 +31,7 @@ cd "$PROJECT_ROOT"
 
 # ── defaults ────────────────────────────────────────────────────────────────
 DOCKERFILE=""
+CONTEXT="."
 TAGS=()
 PUSH=false
 PLATFORM=""   # resolved after parsing, depends on --push
@@ -43,6 +45,8 @@ while [[ $# -gt 0 ]]; do
             DOCKERFILE="$2"; shift 2 ;;
         -t|--tag)
             TAGS+=("$2"); shift 2 ;;
+        -c|--context)
+            CONTEXT="$2"; shift 2 ;;
         -p|--push)
             PUSH=true; shift ;;
         --platform)
@@ -66,6 +70,11 @@ fi
 
 if [[ ! -f "$DOCKERFILE" ]]; then
     echo "Error: Dockerfile not found at '$DOCKERFILE'." >&2
+    exit 1
+fi
+
+if [[ ! -d "$CONTEXT" ]]; then
+    echo "Error: build context directory not found at '$CONTEXT'" >&2
     exit 1
 fi
 
@@ -108,7 +117,7 @@ else
 fi
 
 BUILD_ARGS+=("${EXTRA_ARGS[@]}")
-BUILD_ARGS+=(.)
+BUILD_ARGS+=("$CONTEXT")
 
 echo "▶ docker ${BUILD_ARGS[*]}"
 exec docker "${BUILD_ARGS[@]}"

@@ -4,13 +4,8 @@
     import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        uploadedFile,
-        columns,
-        sampleValueByColumn,
-        selectedDataTypes,
-        getColumnDataTypeModel,
-    } = useProjectTabsSharedState();
+    const { uploadedFile, columns, sampleValueByColumn, getColumnDataTypeModel } =
+        useProjectTabsSharedState();
 
     const config = useAppConfig();
     const fileURL = useObjectUrl(() => uploadedFile.value?.blob);
@@ -65,6 +60,19 @@
     );
 
     const animations = useProjectSchemaAnimations();
+    const modal = useModal();
+
+    function handleUpload(_event: Event) {
+        modal.loadComponent({
+            loader: () => import("@/components/project/ProjectSchemaUploadConfirmationModal.vue"),
+            key: ModalKeys.Projects.Schema.UploadFile,
+            props: {},
+        });
+
+        if (modal.currentModalKey.value === ModalKeys.Projects.Schema.UploadFile) {
+            modal.open.value = true;
+        }
+    }
 </script>
 
 <template>
@@ -231,17 +239,35 @@
                         </TableBody>
                     </Table>
                 </div>
+
+                <div class="mt-6">
+                    <h3 className="mb-1 text-sm font-medium text-foreground">
+                        {{ $t("projects.id.sections.schema.table_name.title") }}
+                    </h3>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                        {{ $t("projects.id.sections.schema.table_name.description") }}
+                    </p>
+                </div>
+
+                <div class="mt-4 flex justify-end space-x-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        class="cursor-pointer"
+                        @click="handleUpload"
+                    >
+                        <Upload />
+                        <span>
+                            {{ $t("projects.id.sections.schema.events.upload_file.label") }}
+                        </span>
+                    </Button>
+
+                    <Button type="button" variant="destructive" @click="$router.back()">
+                        {{ $t("common.actions.cancel") }}
+                    </Button>
+                </div>
             </div>
         </Transition>
-
-        <div class="flex justify-end">
-            <Button @click="console.warn(dataTypeModels, selectedDataTypes)">
-                <Upload />
-                <span>
-                    {{ $t("projects.id.sections.schema.events.upload_file.label") }}
-                </span>
-            </Button>
-        </div>
 
         <section class="py-6" />
     </div>

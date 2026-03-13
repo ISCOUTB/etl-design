@@ -26,6 +26,9 @@ export const ResponseCodesRecord = {
         Project: {
             NotFound: "error:project-not-found",
             CouldNotDelete: "error:could-not-delete-project",
+            Schema: {
+                NoFileProvided: "error:project:schema:no-file-provided",
+            },
         },
     },
 } as const;

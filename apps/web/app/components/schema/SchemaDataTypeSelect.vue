@@ -1,4 +1,7 @@
 <script setup lang="ts">
+    import type { DtypesEnum } from "#shared/utils/schemas/api";
+    import type z from "zod";
+
     interface Props {
         defaultValue?: string;
         modelValue?: string;
@@ -10,7 +13,7 @@
 
     interface DataType {
         label: string;
-        value: string;
+        value: z.infer<typeof DtypesEnum>;
     }
 
     const props = defineProps<Props>();
@@ -23,8 +26,8 @@
 
     const items = computed<DataType[]>(() => [
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.text"),
-            value: "text",
+            label: $t("projects.id.sections.schema.datatype_table.datatype.string"),
+            value: "string",
         },
         {
             label: $t("projects.id.sections.schema.datatype_table.datatype.int"),

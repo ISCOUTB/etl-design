@@ -81,6 +81,12 @@ export default function () {
                 };
             }
 
+            case ResponseCodesRecord.Server.Project.Schema.NoFileProvided: {
+                return {
+                    title: $t("errors.project.file_not_provided.title"),
+                };
+            }
+
             default: {
                 return {
                     title: t("errors.unknown.title"),

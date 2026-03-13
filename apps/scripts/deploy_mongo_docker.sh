@@ -2,6 +2,7 @@
 source .env
 docker run -d --name typechecking-mongo \
   -p "${MONGO_PORT}:27017" \
+  --restart unless-stopped \
   -e MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME} \
   -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD} \
   -e MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE} \

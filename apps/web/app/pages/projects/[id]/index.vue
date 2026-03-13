@@ -25,7 +25,7 @@
     useHead({
         title: $t("projects.id.title", {
             username: auth.data.value?.user.name,
-            projectName: sharedState.value.name,
+            projectName: sharedState.value?.name,
         }),
     });
 

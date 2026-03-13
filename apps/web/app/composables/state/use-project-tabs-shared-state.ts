@@ -1,3 +1,5 @@
+import type { DtypesEnum } from "#shared/utils/schemas/api";
+import type { z } from "zod";
 import type { Column } from "~/components/common/data-table/utils";
 import { read, utils } from "xlsx";
 
@@ -17,6 +19,10 @@ export default function () {
         () => undefined,
     );
     const isTabular = computed(() => uploadedFile.value?.type !== "json");
+    const sheetNames = useState<string[]>(
+        NuxtKeys.Projects.Schemas.SheetNames(route.path),
+        () => [],
+    );
     const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
         if (!isTabular.value) {
             return [];
@@ -37,6 +43,9 @@ export default function () {
             if (!sheet) {
                 return [];
             }
+
+            sheetNames.value = wb.SheetNames;
+
             return withRowId(utils.sheet_to_json(sheet, { defval: "", raw: true }));
         }
 
@@ -49,6 +58,9 @@ export default function () {
         if (!sheet) {
             return [];
         }
+
+        sheetNames.value = wb.SheetNames;
+
         return withRowId(utils.sheet_to_json(sheet, { defval: "", raw: true }));
     });
     const columns = computed(() => {
@@ -91,7 +103,7 @@ export default function () {
         return result;
     });
 
-    const selectedDataTypes = useState<Record<string, Schemas.Schema.DataType>>(
+    const selectedDataTypes = useState<Record<string, z.infer<typeof DtypesEnum>>>(
         NuxtKeys.Projects.Schemas.SelectedDataType(route.path),
         () => ({}),
     );
@@ -123,7 +135,7 @@ export default function () {
         }));
     }
 
-    function setColumnDataType(columnKey: string, value: Schemas.Schema.DataType) {
+    function setColumnDataType(columnKey: string, value: z.infer<typeof DtypesEnum>) {
         selectedDataTypes.value = {
             ...selectedDataTypes.value,
             [columnKey]: value,
@@ -143,8 +155,8 @@ export default function () {
     }
 
     function getColumnDataTypeModel(columnKey: string) {
-        return computed<Schemas.Schema.DataType>({
-            get: () => selectedDataTypes.value[columnKey] ?? "text",
+        return computed<z.infer<typeof DtypesEnum>>({
+            get: () => selectedDataTypes.value[columnKey] ?? "string",
             set: (value) => setColumnDataType(columnKey, value),
         });
     }
@@ -156,7 +168,7 @@ export default function () {
                 nextColumns.map((column) => {
                     const key = String(column.key);
 
-                    return [key, selectedDataTypes.value[key] ?? "text"];
+                    return [key, selectedDataTypes.value[key] ?? "string"];
                 }),
             );
         },
@@ -166,6 +178,7 @@ export default function () {
     return {
         uploadedFile,
         columns,
+        sheetNames,
         sampleValueByColumn,
         isTabular,
         parsedFileContent,
