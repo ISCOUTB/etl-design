@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
+# TODO: Configure a FS such as GlusterFS, CephFS. This configuration is external the cluster, and in our case, must be done
+# using an ansible playbook. For development, we can use NFS or bind mounts, but these are not recommended for production. Damn...
+
 services:
     traefik:
         image: traefik:v3.6
@@ -656,11 +659,17 @@ services:
             - traefik_proxy
         command: bash scripts/prestart.sh
         deploy:
+            mode: replicated-job
+            replicas: 1
             resources:
                 reservations:
                     memory: "768m"
                 limits:
                     memory: "1536m"
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 3
 
     api:
         image: vulcan99/etl-api:latest
