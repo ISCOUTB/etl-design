@@ -542,7 +542,7 @@ services:
         image: vulcan99/typechecking:latest
         environment:
             MINIMAL_SERVER_HOST: "0.0.0.0"
-            MINIMAL_SERVER_PORT: ${MINIMAL_SERVER_PORT?Variable not set}
+            MINIMAL_SERVER_PORT: ${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}
             MINIMAL_SERVER_DEBUG: "false"
 
             RABBITMQ_HOST: rabbitmq
@@ -579,7 +579,7 @@ services:
             test:
                 [
                     "CMD-SHELL",
-                    "curl -f http://localhost:${MINIMAL_SERVER_PORT?Variable not set}/health || exit 1",
+                    "curl -f http://localhost:${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}/health || exit 1",
                 ]
             interval: 30s
             timeout: 10s
@@ -599,10 +599,10 @@ services:
             labels:
                 - scaler.enabled=true
                 - prometheus-job=typechecking
-                - prometheus-port=${MINIMAL_SERVER_PORT?Variable not set}
+                - prometheus-port=${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}
                 - prometheus-path=/metrics
 
-    api:
+    prestart:
         image: vulcan99/etl-api:latest
         environment:
             API_V1_STR: ${API_V1_STR-/api/v1}
@@ -610,8 +610,8 @@ services:
             SERVER_HOST: "0.0.0.0"
             SERVER_PORT: ${SERVER_PORT?Variable not set}
             SERVER_DEBUG: "false"
-            SECRET_KEY: ${SECRET_KEY?Variable not set}
-            AUTH_INFO: ${AUTH_INFO?Variable not set}
+            SECRET_KEY: ${AUTH_SECRET?Variable not set}
+            AUTH_INFO: ${AUTH_SIGN?Variable not set}
 
             CREDENTIALS_SECRET_KEY: ${CREDENTIALS_SECRET_KEY?Variable not set}
             CREDENTIALS_SIGN: ${CREDENTIALS_SIGN?Variable not set}
@@ -648,6 +648,67 @@ services:
             - database
             - rabbitmq
             - postgres
+        networks:
+            - monitoring
+            - postgres
+            - grpc
+            - rabbit
+            - traefik_proxy
+        command: bash scripts/prestart.sh
+        deploy:
+            resources:
+                reservations:
+                    memory: "768m"
+                limits:
+                    memory: "1536m"
+
+    api:
+        image: vulcan99/etl-api:latest
+        environment:
+            API_V1_STR: ${API_V1_STR-/api/v1}
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web
+            SERVER_HOST: "0.0.0.0"
+            SERVER_PORT: ${SERVER_PORT?Variable not set}
+            SERVER_DEBUG: "false"
+            SECRET_KEY: ${AUTH_SECRET?Variable not set}
+            AUTH_INFO: ${AUTH_SIGN?Variable not set}
+
+            CREDENTIALS_SECRET_KEY: ${CREDENTIALS_SECRET_KEY?Variable not set}
+            CREDENTIALS_SIGN: ${CREDENTIALS_SIGN?Variable not set}
+
+            IDEMPOTENCY_TTL_DEFAULT_SECONDS: ${IDEMPOTENCY_TTL_DEFAULT_SECONDS-600}
+            IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: ${IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS-60}
+            IDEMPOTENCY_TTL_PUBLISHED_SECONDS: ${IDEMPOTENCY_TTL_PUBLISHED_SECONDS-1800}
+
+            FIRST_SUPERUSER_NAME: ${FIRST_SUPERUSER}
+            FIRST_SUPERUSER_EMAIL: ${FIRST_SUPERUSER_EMAIL}
+            FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD}
+
+            DATABASE_CONNECTION_HOST: database
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
+            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
+            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
+
+            RABBITMQ_HOST: rabbitmq
+            RABBITMQ_PORT: 5672
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
+
+            POSTGRES_HOST: postgres
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
+        depends_on:
+            - database
+            - rabbitmq
+            - postgres
+            - prestart
         healthcheck:
             test:
                 [
@@ -681,6 +742,32 @@ services:
                 - prometheus-port=${SERVER_PORT?Variable not set}
                 - prometheus-path=/api/v1/metrics
 
+    web:
+        image: vulcan99/web:latest
+        environment:
+            HOMEPAGE_URL: ${HOMEPAGE_URL?Variable not set}
+            AUTH_ORIGIN: ${AUTH_ORIGIN?Variable not set}
+            AUTH_SECRET: ${AUTH_SECRET?Variable not set}
+            AUTH_SIGN: ${AUTH_SIGN?Variable not set}
+            API_BASE_URL: http://api:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}
+        depends_on:
+            - api
+        networks:
+            - monitoring
+            - traefik_proxy
+        deploy:
+            resources:
+                reservations:
+                    memory: "512m"
+                limits:
+                    memory: "1024m"
+            labels:
+                - "traefik.enable=true"
+                - "traefik.http.routers.web.rule=Host(`web.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.web.entrypoints=websecure"
+                - "traefik.http.routers.web.tls=true"
+                - "traefik.http.services.web.loadbalancer.server.port=3000"
+
 networks:
     monitoring:
         driver: overlay
@@ -697,6 +784,7 @@ networks:
         driver: overlay
     grpc:
         driver: overlay
+        attachable: true
     traefik_proxy:
         driver: overlay
         attachable: true
