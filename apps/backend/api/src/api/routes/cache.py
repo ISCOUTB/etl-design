@@ -24,7 +24,7 @@ async def get_cache(db_client: DatabaseClientDep, current_user: CurrentUser) -> 
     if not has_permission:
         raise ForbiddenException()
 
-    response = db_client.redis_get_cache()
+    response = await db_client.redis_get_cache_async()
     return dict(map(lambda x: (x[0], json.loads(x[1])), response["cache"].items()))
 
 
@@ -44,4 +44,4 @@ async def clear_cache(
     if not has_permission:
         raise ForbiddenException()
 
-    return db_client.clear_cache()
+    return await db_client.clear_cache_async()

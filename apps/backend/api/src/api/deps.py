@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from typing import Annotated, Optional
 
 from fastapi import Depends, Header
@@ -21,7 +21,7 @@ from src.services import (
 )
 
 
-def get_db_client() -> Generator[DatabaseClient, None, None]:
+async def get_db_client() -> AsyncGenerator[DatabaseClient, None]:
     db_client = DatabaseClient(
         settings.DATABASE_CONNECTION_CHANNEL,
         max_retries=settings.DATABASE_MAX_RETRIES,
@@ -31,7 +31,7 @@ def get_db_client() -> Generator[DatabaseClient, None, None]:
     try:
         yield db_client
     finally:
-        db_client.close()
+        await db_client.aclose()
 
 
 def get_sql_db() -> Generator[Session, None, None]:

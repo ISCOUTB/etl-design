@@ -14,8 +14,8 @@ async def healthcheck(
     Healthcheck endpoint to verify that the API is running.
     This endpoint can be used by monitoring tools to check the health of the API.
     """
-    mongo_status = database_client.mongo_ping()["pong"]
-    redis_status = database_client.redis_ping()["pong"]
+    mongo_status = (await database_client.mongo_ping_async())["pong"]
+    redis_status = (await database_client.redis_ping_async())["pong"]
 
     return HealthCheckResponse(
         mongo_status=mongo_status,

@@ -224,13 +224,13 @@ class InsertionWorker:
         """Process incoming insertion task messages with idempotency guarantees.
 
         Implements robust idempotency by treating DB as the single source of truth.
-        
+
         Critical Principle:
         - `set_task_id()` creates the FIRST state record in the database
         - All subsequent `update_task_status()` calls depend on this record existing
         - If `set_task_id()` fails, EVERYTHING fails → REQUEUE
         - This is NOT cache; it's the foundation record
-        
+
         Three Error Categories:
         1. **CRITICAL Infrastructure Failures**: set_task_id/update_task_status failed
            → REQUEUE (DB is unavailable, can't proceed)
@@ -291,7 +291,12 @@ class InsertionWorker:
 
             # If currently processing, likely another worker has it or it crashed.
             # Don't requeue to avoid duplicate processing.
-            if current_status in ["processing-file", "requesting-insert-sql", "file-processed", "received-schema-update"]:
+            if current_status in [
+                "processing-file",
+                "requesting-insert-sql",
+                "file-processed",
+                "received-schema-update",
+            ]:
                 logger.info(
                     f"Task {task_id} status={current_status} (processing). "
                     "Another worker is handling it. ACK and skip (prevents duplicate work)."
@@ -302,7 +307,9 @@ class InsertionWorker:
             # --- PHASE 2: Initialize Task State if First Time (CRITICAL) ---
             # If task doesn't exist yet, create the foundation record
             if current_status is None:
-                logger.info(f"Task {task_id} first time processing, initializing state record")
+                logger.info(
+                    f"Task {task_id} first time processing, initializing state record"
+                )
                 try:
                     self.db_client.set_task_id(
                         dtypes.SetTaskIdRequest(
@@ -339,8 +346,13 @@ class InsertionWorker:
                     result = asyncio.run(
                         self._insert_data(message, db_client=self.db_client)
                     )
-                except (grpc.RpcError, httpx.ConnectError, httpx.TimeoutException,
-                        ConnectionError, TimeoutError) as infra_err:
+                except (
+                    grpc.RpcError,
+                    httpx.ConnectError,
+                    httpx.TimeoutException,
+                    ConnectionError,
+                    TimeoutError,
+                ) as infra_err:
                     # Infrastructure error during processing (DB unavailable, timeout, etc.)
                     logger.error(
                         f"Infrastructure error processing insertion {task_id}: "

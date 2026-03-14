@@ -189,13 +189,13 @@ class ResultWorker:
         """Process results messages with idempotency guarantees.
 
         Implements robust idempotency by treating DB as the single source of truth.
-        
+
         Critical Principle:
         - `set_task_id()` creates the FIRST state record in the database
         - All subsequent `update_task_status()` calls depend on this record existing
         - If `set_task_id()` fails, EVERYTHING fails → REQUEUE
         - This is NOT cache; it's the foundation record
-        
+
         Three Error Categories:
         1. **CRITICAL Infrastructure Failures**: set_task_id/update_task_status failed
            → REQUEUE (DB is unavailable, can't proceed)
@@ -301,13 +301,18 @@ class ResultWorker:
                     value="notifying",
                     data={"update_date": get_datetime_now()},
                 )
-                
+
                 # Do the actual notification work
                 asyncio.run(
                     self._notify_task_completion(task_id, message, json.loads(body))
                 )
-            except (grpc.RpcError, httpx.ConnectError, httpx.TimeoutException,
-                    ConnectionError, TimeoutError) as infra_err:
+            except (
+                grpc.RpcError,
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                ConnectionError,
+                TimeoutError,
+            ) as infra_err:
                 # Infrastructure error during notification (API/DB unavailable, timeout)
                 logger.error(
                     f"Infrastructure error notifying API for task {task_id}: "
@@ -343,9 +348,7 @@ class ResultWorker:
 
             # --- PHASE 4: Acknowledge & Complete ---
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            logger.info(
-                f"Results for task_id {task_id} processed and acknowledged."
-            )
+            logger.info(f"Results for task_id {task_id} processed and acknowledged.")
 
         except (
             grpc.RpcError,

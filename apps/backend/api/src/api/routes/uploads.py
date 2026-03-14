@@ -267,7 +267,8 @@ async def create_table(
 
         properties = dict(
             map(
-                lambda item: (item[0], item[1].to_jsonschema_property()), sheet_data.items()
+                lambda item: (item[0], item[1].to_jsonschema_property()),
+                sheet_data.items(),
             )
         )
         jsonschema = {
@@ -277,7 +278,7 @@ async def create_table(
             "properties": properties,
         }
 
-        save_schema_response = SchemaService.save_schema(
+        save_schema_response = await SchemaService.save_schema(
             import_name=f"{project_id}__{sheet_name}",
             schema=jsonschema,
             database_client=db_client,
@@ -368,7 +369,7 @@ async def create_table_from_json_schema(
     sql_per_sheet = response.json()
 
     # Create the JSON Schema for the table and save it in the database
-    save_schema_response = SchemaService.save_schema(
+    save_schema_response = await SchemaService.save_schema(
         import_name=f"{project_id}__{table_name}",
         schema=payload.jsonschema,
         database_client=db_client,

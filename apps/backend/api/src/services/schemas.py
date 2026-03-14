@@ -33,7 +33,7 @@ from src.utils import utc_now_iso
 
 class SchemaService:
     @staticmethod
-    def get_raw_schema(
+    async def get_raw_schema(
         import_name: str, database_client: DatabaseClient
     ) -> dtypes.MongoGetRawSchemasResponse | None:
         """
@@ -45,7 +45,7 @@ class SchemaService:
         Returns:
             dtypes.MongoGetRawSchemasResponse | None: The raw schema response if found, None otherwise.
         """
-        schema_doc = database_client.mongo_get_raw_schemas(
+        schema_doc = await database_client.mongo_get_raw_schemas_async(
             dtypes.MongoGetRawSchemasRequest(import_name=import_name)
         )
 
@@ -54,7 +54,7 @@ class SchemaService:
         return schema_doc
 
     @staticmethod
-    def get_schemas_by_project_id(
+    async def get_schemas_by_project_id(
         project_id: str, database_client: DatabaseClient
     ) -> dtypes.MongoGetSchemasByImportRegexResponse:
         """
@@ -67,12 +67,12 @@ class SchemaService:
         Returns:
             dtypes.MongoGetSchemasByImportRegexResponse: The response containing matching schemas.
         """
-        return database_client.mongo_get_schemas_by_import_regex(
+        return await database_client.mongo_get_schemas_by_import_regex_async(
             dtypes.MongoGetSchemasByImportRegexRequest(import_name=f"{project_id}")
         )
 
     @staticmethod
-    def get_active_schema(
+    async def get_active_schema(
         import_name: str, database_client: DatabaseClient
     ) -> dtypes.JsonSchema | None:
         """
@@ -85,7 +85,7 @@ class SchemaService:
         Returns:
             dtypes.JsonSchema | None: The active schema if found, None otherwise.
         """
-        schema_doc = database_client.mongo_find_jsonschema(
+        schema_doc = await database_client.mongo_find_jsonschema_async(
             dtypes.MongoFindJsonSchemaRequest(import_name=import_name)
         )
 
@@ -125,7 +125,7 @@ class SchemaService:
             raise InvalidJsonSchemaException()
 
     @staticmethod
-    def save_schema(
+    async def save_schema(
         schema: Dict[str, Any], import_name: str, database_client: DatabaseClient
     ) -> dtypes.MongoInsertOneSchemaResponse:
         """
@@ -167,7 +167,7 @@ class SchemaService:
             )
         )
 
-        return database_client.mongo_insert_one_schema(
+        return await database_client.mongo_insert_one_schema_async(
             dtypes.MongoInsertOneSchemaRequest(
                 import_name=import_name,
                 created_at=utc_now_iso(),
@@ -177,7 +177,7 @@ class SchemaService:
         )
 
     @staticmethod
-    def remove_schema(
+    async def remove_schema(
         import_name: str,
         database_client: DatabaseClient,
     ) -> dtypes.MongoDeleteOneJsonSchemaResponse:
@@ -199,7 +199,7 @@ class SchemaService:
                 - message (str): Description of the result
                 - extra (dict): Additional metadata
         """
-        return database_client.mongo_delete_one_jsonschema(
+        return await database_client.mongo_delete_one_jsonschema_async(
             dtypes.MongoDeleteOneJsonSchemaRequest(import_name=import_name)
         )
 

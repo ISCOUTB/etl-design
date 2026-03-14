@@ -211,7 +211,7 @@ class IdempotencyService:
 
         # Update cache (not critical, best effort)
         try:
-            db_client.set_task_id(
+            await db_client.set_task_id_async(
                 dtypes.SetTaskIdRequest(
                     task_id=task_id,
                     value=dtypes.ApiResponse(
@@ -373,7 +373,7 @@ class IdempotencyService:
 
         # Update cache (not critical, best effort)
         try:
-            db_client.set_task_id(
+            await db_client.set_task_id_async(
                 dtypes.SetTaskIdRequest(
                     task_id=task_id,
                     value=dtypes.ApiResponse(
@@ -541,7 +541,7 @@ class IdempotencyService:
 
         # Update cache (not critical, best effort)
         try:
-            db_client.set_task_id(
+            await db_client.set_task_id_async(
                 dtypes.SetTaskIdRequest(
                     task_id=task_id,
                     value=dtypes.ApiResponse(

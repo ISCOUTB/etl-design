@@ -29,7 +29,7 @@ async def get_task_status(
     if not has_permission:
         raise ForbiddenException()
 
-    cached_response = database_client.get_task_id(
+    cached_response = await database_client.get_task_id_async(
         dtypes.GetTaskIdRequest(task_id=task_id, task=task)
     )
 
@@ -68,7 +68,7 @@ async def list_tasks(
     if not has_permission:
         raise ForbiddenException()
 
-    response = database_client.get_tasks_by_import_name(
+    response = await database_client.get_tasks_by_import_name_async(
         dtypes.GetTasksByImportNameRequest(
             import_name=f"{project_id}__{table_name}", task=task
         )

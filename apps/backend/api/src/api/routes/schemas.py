@@ -73,7 +73,7 @@ async def create_or_update_schema(
     import_name = f"{project_id}__{table_name}"
     try:
         # Save to database
-        db_response = SchemaService.save_schema(
+        db_response = await SchemaService.save_schema(
             schema=schema,
             import_name=import_name,
             database_client=database_client,
@@ -129,7 +129,7 @@ async def get_raw_schema(
     import_name = f"{project_id}__{table_name}"
     try:
         # Retrieve raw schema from database
-        raw_schema = SchemaService.get_raw_schema(
+        raw_schema = await SchemaService.get_raw_schema(
             import_name=import_name,
             database_client=database_client,
         )
@@ -177,7 +177,7 @@ async def search_schemas(
 
     try:
         # Search for schemas in the database
-        search_results = SchemaService.get_schemas_by_project_id(
+        search_results = await SchemaService.get_schemas_by_project_id(
             project_id=project_id,
             database_client=database_client,
         )
@@ -227,7 +227,7 @@ async def get_schema(
     import_name = f"{project_id}__{table_name}"
     try:
         # Retrieve schema from database
-        active_schema = SchemaService.get_active_schema(
+        active_schema = await SchemaService.get_active_schema(
             import_name=import_name,
             database_client=database_client,
         )
@@ -295,7 +295,7 @@ async def delete_schema(
     import_name = f"{project_id}__{table_name}"
     try:
         # Remove schema from database
-        db_response = SchemaService.remove_schema(
+        db_response = await SchemaService.remove_schema(
             import_name=import_name,
             database_client=database_client,
         )

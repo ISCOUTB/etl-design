@@ -59,12 +59,36 @@ def check_database_client_connection(
     )
 
 
-async def check_databases_connection(
+async def check_database_client_connection_async(
     db_client: DatabaseClient,
+) -> DatabaseHealthCheckResult:
+    """Check overall database client connection health."""
+    try:
+        redis_health = (await db_client.redis_ping_async())["pong"]
+    except Exception:
+        redis_health = False
+
+    try:
+        mongo_health = (await db_client.mongo_ping_async())["pong"]
+    except Exception:
+        mongo_health = False
+
+    overall_status = "healthy" if mongo_health and redis_health else "unhealthy"
+    return DatabaseHealthCheckResult(
+        status=overall_status, mongodb=mongo_health, redis=redis_health
+    )
+
+
+async def check_databases_connection(
+    db_client: DatabaseClient, awaitable: bool = False
 ) -> OverallHealthCheckResult:
     """Check overall database connection health."""
     rabbitmq_health = await check_rabbitmq_connection()
-    database_health = check_database_client_connection(db_client)
+
+    if awaitable:
+        database_health = await check_database_client_connection_async(db_client)
+    else:
+        database_health = check_database_client_connection(db_client)
 
     overall_status = (
         "healthy"

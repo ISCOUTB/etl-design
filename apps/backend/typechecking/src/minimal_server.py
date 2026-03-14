@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, Generator
+from typing import Annotated, AsyncGenerator, Dict
 
 from fastapi import Depends, FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -18,15 +18,15 @@ app = FastAPI()
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
-def generate_new_db_client() -> Generator[DatabaseClient, None, None]:
+async def generate_db_client() -> AsyncGenerator[DatabaseClient, None]:
     db_client = get_database_client()
     try:
         yield db_client
     finally:
-        db_client.close()
+        await db_client.aclose()
 
 
-DatabaseClientDep = Annotated[DatabaseClient, Depends(generate_new_db_client)]
+DatabaseClientDep = Annotated[DatabaseClient, Depends(generate_db_client)]
 
 
 @app.get("/")
@@ -42,15 +42,13 @@ async def health_check(
 ) -> OverallHealthCheckResult:
     """Health check endpoint for service monitoring."""
     logger.debug("Health check endpoint accessed")
-    health_status = await check_databases_connection(database_client)
+    health_status = await check_databases_connection(database_client, awaitable=True)
 
     # Log health check results
     if health_status.status == "healthy":
         logger.debug("Health check passed: all systems healthy")
     else:
-        logger.warning(
-            f"Health check failed: {health_status.model_dump_json(indent=2)}"
-        )
+        logger.warning(f"Health check failed: {health_status.model_dump_json()}")
 
     return health_status
 
