@@ -5,8 +5,8 @@
     import { cn } from "~/lib/utils";
 
     interface Props {
-        content: string | undefined;
-        file?: string;
+        content: MaybeRefOrGetter<string | undefined>;
+        file?: MaybeRefOrGetter<string | undefined>;
         copyable?: boolean;
         ext?: string;
         class?: HTMLAttributes["class"];
@@ -15,7 +15,10 @@
     const props = withDefaults(defineProps<Props>(), {
         copyable: true,
     });
-    const content = computed(() => JSON.stringify(props.content ?? {}, null, 4));
+    const content = computed(() => toValue(props.content));
+    const file = computed(() => toValue(props.file));
+
+    const parsedContent = computed(() => JSON.stringify(content.value ?? {}, null, 4));
 
     const clipboard = useClipboard();
 
@@ -52,7 +55,7 @@
                         variant="outline"
                         size="icon-sm"
                         class="opacity-0 group-hover:opacity-100 transition-opacity"
-                        @click="clipboard.copy(content)"
+                        @click="clipboard.copy(parsedContent)"
                     >
                         <Copy />
                     </Button>
@@ -61,7 +64,7 @@
         </template>
 
         <div class="p-4">
-            <pre class="overflow text-xs text-muted-foreground" v-text="content" />
+            <pre class="overflow text-xs text-muted-foreground" v-text="parsedContent" />
         </div>
     </div>
 </template>

@@ -2,7 +2,7 @@
     import type { z } from "zod";
     import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
-    import { Download, FileIcon, FileJson, FileSpreadsheet, Upload, X } from "lucide-vue-next";
+    import { Download, FileIcon, FileJson, FileSpreadsheet, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
     interface Props {
@@ -72,28 +72,28 @@
         ),
     );
 
-    const tableName = computed<string>({
-        get: () =>
-            schema.state.value.tableName?.trim() ||
-            schema.state.value.uploadedFile?.nameWithoutExt ||
-            "",
-        set: (value) => schema.dispatch.setTableName(value),
-    });
-
     const animations = useProjectSchemaAnimations();
     const modal = useModal();
+    const canSubmit = computed<boolean>(() => {
+        const uploaded = schema.state.value.uploadedFile;
+        const hasFile = !!uploaded && uploaded.blob.size > 0;
+        const hasValidTableName = (schema.state.value.tableName?.trim().length ?? 0) > 0;
+
+        return hasFile && hasValidTableName;
+    });
 
     function handleUpload(_event: Event) {
-        modal.loadComponent({
+        modal.dispatch.loadComponent({
             loader: () => import("@/components/project/ProjectSchemaUploadConfirmationModal.vue"),
             key: ModalKeys.Projects.Schema.UploadFile,
+            kind: "alert-dialog",
             props: {
                 project,
             },
         });
 
-        if (modal.currentModalKey.value === ModalKeys.Projects.Schema.UploadFile) {
-            modal.open.value = true;
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadFile) {
+            modal.dispatch.setOpen(true);
         }
     }
 </script>
@@ -197,7 +197,16 @@
             @enter="animations.onSchemaEnter"
             @leave="animations.onSchemaLeave"
         >
-            <ProjectSchemaExample v-if="shouldShowExample" />
+            <div v-if="shouldShowExample">
+                <ProjectSchemaFields
+                    v-if="schema.state.value.uploadedFile"
+                    :can-submit="canSubmit"
+                    class="space-y-6"
+                    @submit="handleUpload"
+                />
+
+                <ProjectSchemaExample />
+            </div>
             <div v-else>
                 <h3 className="mb-1 text-sm font-medium text-foreground">
                     {{ $t("projects.id.sections.schema.datatype_table.title") }}
@@ -262,39 +271,11 @@
                     </Table>
                 </div>
 
-                <div class="mt-6">
-                    <h3 className="mb-1 text-sm font-medium text-foreground">
-                        {{ $t("projects.id.sections.schema.table_name.title") }}
-                    </h3>
-                    <p className="mb-4 text-sm text-muted-foreground">
-                        {{ $t("projects.id.sections.schema.table_name.description") }}
-                    </p>
-
-                    <Input
-                        v-model="tableName"
-                        type="text"
-                        :default-value="schema.state.value.uploadedFile?.nameWithoutExt"
-                        :placeholder="$t('projects.id.sections.schema.table_name.placeholder')"
-                    />
-                </div>
-
-                <div class="mt-4 flex justify-end space-x-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        class="cursor-pointer"
-                        @click="handleUpload"
-                    >
-                        <Upload />
-                        <span>
-                            {{ $t("projects.id.sections.schema.events.upload_file.label") }}
-                        </span>
-                    </Button>
-
-                    <Button type="button" variant="destructive" @click="$router.back()">
-                        {{ $t("common.actions.cancel") }}
-                    </Button>
-                </div>
+                <ProjectSchemaFields
+                    :can-submit="canSubmit"
+                    class="mt-6 space-y-6"
+                    @submit="handleUpload"
+                />
             </div>
         </Transition>
 

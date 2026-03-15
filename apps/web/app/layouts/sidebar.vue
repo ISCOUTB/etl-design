@@ -1,7 +1,3 @@
-<script setup lang="ts">
-    const modal = useModal();
-</script>
-
 <template>
     <LayoutDefault>
         <SidebarProvider>
@@ -27,17 +23,7 @@
                 </header>
 
                 <LayoutPageContainer>
-                    <Sheet
-                        v-if="modal.currentComponent && modal.open.value"
-                        v-model:open="modal.open.value"
-                    >
-                        <component
-                            :is="modal.currentComponent.value"
-                            v-if="modal.currentComponent.value"
-                            v-bind="modal.componentProps.value"
-                        />
-                    </Sheet>
-
+                    <LayoutModal />
                     <slot />
                 </LayoutPageContainer>
             </SidebarInset>

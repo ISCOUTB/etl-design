@@ -132,7 +132,7 @@ export default function (stateKey: string) {
     );
 
     function setUploadedFile(file: Schemas.Schema.UploadedFile | undefined) {
-        state.value = { ...state.value, uploadedFile: file };
+        state.value = { ...state.value, uploadedFile: file, tableName: file?.nameWithoutExt };
     }
 
     function setTableName(tableName: string) {

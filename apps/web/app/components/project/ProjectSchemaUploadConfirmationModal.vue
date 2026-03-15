@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { z } from "zod";
     import { Upload } from "lucide-vue-next";
+    import { toast } from "vue-sonner";
 
     interface Props {
         project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
@@ -11,10 +12,55 @@
 
     const { schema } = useProjectTabsSharedState();
     const errorToast = useErrorToast();
-    const api = useApi();
 
-    function handleSchema() {}
-    function handleFile() {}
+    function handleSchema() {
+        if (!schema.state.value.tableName) {
+            toast.error($t("projects.id.sections.schema.validation.table_name_not_empty"));
+            return;
+        }
+
+        if (!schema.computed.jsonSchema.value || !project.value) {
+            return;
+        }
+
+        const payload = SchemaUtils.Builder.buildJsonSchema(
+            schema.state.value.tableName,
+            project.value.id,
+            schema.computed.jsonSchema.value,
+            [],
+        );
+
+        console.warn(payload);
+    }
+
+    function handleFile() {
+        const parseResult = SchemaUtils.Builder.buildColumnsPayload(
+            schema.state.value.columnsConfig,
+        );
+
+        if (!parseResult.success || !schema.state.value.uploadedFile?.blob || !project.value) {
+            return;
+        }
+
+        if (!schema.state.value.tableName) {
+            toast.error($t("projects.id.sections.schema.validation.table_name_not_empty"));
+            return;
+        }
+
+        const dtypes = SchemaUtils.Builder.buildDtypesBySheet(
+            schema.state.value.sheetNames,
+            parseResult.data,
+        );
+
+        const formData = new FormBuilder()
+            .append("spreadsheet", schema.state.value.uploadedFile.blob)
+            .append("project_id", project.value?.id)
+            .append("table_name", schema.state.value.tableName)
+            .append("dtypes_str", JSON.stringify(dtypes))
+            .build();
+
+        console.warn(Array.from(formData.entries()));
+    }
 
     function handleSubmit(_event: Event) {
         if (!schema.state.value.uploadedFile) {

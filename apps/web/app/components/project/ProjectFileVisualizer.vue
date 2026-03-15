@@ -5,7 +5,7 @@
 <template>
     <div class="rounded-lg">
         <DataTable
-            v-if="schema.computed.isTabular"
+            v-if="schema.computed.isTabular.value"
             :index="NuxtKeys.Projects.Schemas.RowId"
             :data="schema.computed.parsedFileContent"
             :columns="schema.computed.columns"
@@ -19,8 +19,8 @@
         </DataTable>
         <CodeBlock
             v-else
-            :content="schema.computed.jsonSchema.value?.payload"
-            :file="schema.state.value.uploadedFile?.name"
+            :content="() => schema.computed.jsonSchema.value?.payload"
+            :file="() => schema.state.value.uploadedFile?.name"
         />
     </div>
     <section class="py-12" />

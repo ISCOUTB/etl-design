@@ -12,16 +12,17 @@
     const project = computed(() => toValue(props.project));
 
     function deleteProject() {
-        modal.loadComponent({
+        modal.dispatch.loadComponent({
             loader: () => import("@/components/project/ProjectDeleteConfirmationModal.vue"),
             key: ModalKeys.Projects.Delete.ConfirmationModal,
+            kind: "alert-dialog",
             props: {
                 project,
             },
         });
 
-        if (modal.currentModalKey.value === ModalKeys.Projects.Delete.ConfirmationModal) {
-            modal.open.value = true;
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Delete.ConfirmationModal) {
+            modal.dispatch.setOpen(true);
         }
     }
 </script>

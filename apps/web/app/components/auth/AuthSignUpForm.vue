@@ -22,10 +22,11 @@
     const router = useRouter();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
-        const formData = new FormData();
-        formData.append("username", values.name);
-        formData.append("email", values.email);
-        formData.append("password", values.password);
+        const formData = new FormBuilder()
+            .append("username", values.name)
+            .append("email", values.email)
+            .append("password", values.password)
+            .build();
 
         loading.value = true;
         api("/auth/sign-up", {

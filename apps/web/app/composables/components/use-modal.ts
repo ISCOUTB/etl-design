@@ -12,29 +12,32 @@ const componentRegistry = shallowRef<ModalComponent[]>([]);
 export default function () {
     const config = useAppConfig();
 
-    const currentModalKey = useState<string | undefined>("modal:current-component:key");
-    const open = useState("modal:open", () => false);
-    const componentProps = useState<object>("modal:component-props");
+    const state = useState<Components.Modal.State>("modal:state", () => ({
+        currentModalKey: undefined,
+        currentKind: "sheet",
+        open: false,
+        componentProps: {},
+    }));
 
     const currentComponent = computed(() => {
         return (
-            componentRegistry.value.find((component) => component.key === currentModalKey.value)
-                ?.component ?? null
+            componentRegistry.value.find(
+                (component) => component.key === state.value.currentModalKey,
+            )?.component ?? null
         );
     });
 
     function loadComponent<C extends Component>(
-        { loader, props, key }: Components.Modal.Args<C>,
+        { loader, props, key, kind = "sheet" }: Components.Modal.Args<C>,
         options: LoadComponentOptions = { autoOpen: true },
     ) {
         const existingEntry = componentRegistry.value.find((component) => component.key === key);
 
         if (existingEntry) {
-            currentModalKey.value = key;
-            componentProps.value = props as object;
+            setState({ currentModalKey: key, currentKind: kind, componentProps: props as object });
 
             if (options.autoOpen) {
-                open.value = true;
+                setOpen(true);
             }
 
             return;
@@ -55,19 +58,27 @@ export default function () {
             { key, component: markRaw(component) },
         ];
 
-        currentModalKey.value = key;
-        componentProps.value = props as object;
+        setState({ currentModalKey: key, currentKind: kind, componentProps: props as object });
 
         if (options.autoOpen) {
-            open.value = true;
+            setOpen(true);
         }
     }
 
+    function setOpen(open: boolean) {
+        state.value = { ...state.value, open };
+    }
+
+    function setState(patch: Partial<Components.Modal.State>) {
+        state.value = { ...state.value, ...patch };
+    }
+
     return {
-        componentProps,
-        currentModalKey: readonly(currentModalKey),
+        state,
         currentComponent,
-        loadComponent,
-        open,
+        dispatch: {
+            setOpen,
+            loadComponent,
+        },
     };
 }

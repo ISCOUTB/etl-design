@@ -33,9 +33,10 @@ export default NuxtAuthHandler({
                  * if (response.error) // do something...
                  */
 
-                const formData = new FormData();
-                formData.append("email", credentials.email);
-                formData.append("password", credentials.password);
+                const formData = new FormBuilder()
+                    .append("email", credentials.email)
+                    .append("password", credentials.password)
+                    .build();
 
                 try {
                     const response = await $fetch("/auth/sign-in", {

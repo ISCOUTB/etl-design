@@ -33,7 +33,8 @@
             "label": "Color mode",
             "light": "Light",
             "dark": "Dark",
-            "system": "System"
+            "system": "System",
+            "changed_to": "Color scheme changed to {mode}"
         },
         "locale": {
             "description": "Change Locale",
@@ -352,6 +353,9 @@
                     "upload": {
                         "title": "Are you sure?",
                         "description": "Make sure you have reviewed all the settings before uploading the file."
+                    },
+                    "validation": {
+                        "table_name_not_empty": "Table Name cannot be empty"
                     }
                 },
                 "file": {

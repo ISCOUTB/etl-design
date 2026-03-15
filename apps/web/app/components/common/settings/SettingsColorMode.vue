@@ -1,6 +1,7 @@
 <script setup lang="ts">
     import type { TooltipContentProps } from "reka-ui";
     import { Laptop, Moon, Sun } from "lucide-vue-next";
+    import { toast } from "vue-sonner";
 
     interface Props {
         contentProps?: TooltipContentProps;
@@ -42,8 +43,13 @@
     }
 
     function updateTheme() {
-        colorMode.preference = getNextMode(
-            colorMode.preference as Components.ColorModeOption["value"],
+        const nextMode = getNextMode(colorMode.preference as Components.ColorModeOption["value"]);
+
+        colorMode.preference = nextMode;
+        toast.success(
+            $t("settings.color_mode.changed_to", {
+                mode: nextMode.charAt(0).toUpperCase() + nextMode.slice(1),
+            }),
         );
     }
 
