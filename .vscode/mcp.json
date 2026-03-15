@@ -5,6 +5,10 @@
             "command": "moon",
             "cwd": "${workspaceFolder}",
             "type": "stdio"
+        },
+        "nuxt-seo": {
+            "type": "http",
+            "url": "https://nuxtseo.com/mcp"
         }
     }
 }

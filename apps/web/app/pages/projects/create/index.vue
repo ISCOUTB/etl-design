@@ -8,8 +8,16 @@
             },
         },
     });
+
+    useSeoMeta({
+        title: $t("projects.create.header.title"),
+        description: $t("projects.create.header.description"),
+    });
 </script>
 
 <template>
-    <ProjectCreateForm class="mx-auto w-full max-w-5xl" />
+    <div>
+        <ProjectCreateForm class="mx-auto w-full max-w-5xl" />
+        <div class="my-6" />
+    </div>
 </template>

@@ -14,6 +14,11 @@
         },
     });
 
+    useSeoMeta({
+        title: $t("projects.id.fallback_title"),
+        ogType: "website",
+    });
+
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
@@ -78,7 +83,7 @@
             const hasTab = tabs.tabs.value.has(Section.value.File);
 
             if (file && !hasTab) {
-                tabs.addTab({
+                tabs.dispatch.addTab({
                     tab: {
                         label: "projects.id.sections.file.tab",
                         value: Section.value.File,
@@ -105,14 +110,14 @@
             }
 
             if (!file && hasTab) {
-                tabs.removeTab(Section.value.File);
+                tabs.dispatch.removeTab(Section.value.File);
             }
         },
         { immediate: true },
     );
 
     onMounted(() => {
-        tabs.preloadTabs([Section.value.Schema, Section.value.Settings]);
+        tabs.dispatch.preloadTabs([Section.value.Schema, Section.value.Settings]);
     });
 </script>
 
@@ -132,7 +137,7 @@
                     :key="entry.tab.value"
                     :value="entry.tab.value"
                     :class="entry.tab.class"
-                    @click="tabs.setActive(entry.tab.value)"
+                    @click="tabs.dispatch.setActive(entry.tab.value)"
                 >
                     <component :is="entry.tab.icon" v-if="entry.tab.icon" />
                     <span>
@@ -156,5 +161,7 @@
                 </TabsContent>
             </Transition>
         </Tabs>
+
+        <div class="my-24" />
     </div>
 </template>

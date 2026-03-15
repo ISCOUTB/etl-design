@@ -9,6 +9,11 @@
         },
     });
 
+    useSeoMeta({
+        title: $t("layouts.title"),
+        ogType: "website",
+    });
+
     const routeError = useRouteError();
     onMounted(() => {
         routeError.onToast();

@@ -161,10 +161,12 @@ export default function (
         component: readonly(component),
         props: readonly(props),
         activeTab: readonly(activeTab),
-        setActive,
-        addTab,
-        removeTab,
-        preload,
-        preloadTabs,
+        dispatch: {
+            setActive,
+            addTab,
+            removeTab,
+            preload,
+            preloadTabs,
+        },
     };
 }

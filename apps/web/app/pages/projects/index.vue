@@ -24,6 +24,14 @@
         },
     });
 
+    useSeoMeta({
+        title: $t("projects.view.title"),
+        description: $t("projects.view.header.description"),
+        ogTitle: $t("projects.view.title"),
+        ogDescription: $t("projects.view.header.description"),
+        ogType: "website",
+    });
+
     const { $localeRoute } = useNuxtApp();
     const errorToast = useErrorToast();
     const config = useAppConfig();
@@ -94,7 +102,7 @@
                         return;
                     }
 
-                    modal.loadComponent({
+                    modal.dispatch.loadComponent({
                         loader: () =>
                             import("@/components/project/ProjectDeleteConfirmationModal.vue"),
                         key: ModalKeys.Projects.Delete.ConfirmationModal,
@@ -104,9 +112,10 @@
                     });
 
                     if (
-                        modal.currentModalKey.value === ModalKeys.Projects.Delete.ConfirmationModal
+                        modal.state.value.currentModalKey ===
+                        ModalKeys.Projects.Delete.ConfirmationModal
                     ) {
-                        modal.open.value = true;
+                        modal.dispatch.setOpen(true);
                     }
                 },
             },

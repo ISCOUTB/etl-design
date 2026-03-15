@@ -121,7 +121,7 @@
     }
 
     ::view-transition-new(root) {
-        animation: circle-in 1000ms;
+        animation: circle-in 1250ms;
     }
 
     @keyframes circle-in {

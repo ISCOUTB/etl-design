@@ -13,6 +13,7 @@ tasks:
             cache: false
 
     build:
-        command: npx
+        command: pnpm
         args:
-            - tsup
+            - dlx
+            - tsup@latest

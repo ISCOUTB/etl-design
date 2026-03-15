@@ -18,15 +18,17 @@ tasks:
             cache: false
 
     nuxt:
-        command: npx
+        command: pnpm
         args:
+            - dlx
             - nuxt@latest
         toolchains: node
         preset: server
 
     shadcn:
-        command: npx
+        command: pnpm
         args:
+            - dlx
             - shadcn-vue@latest
         toolchains: node
 

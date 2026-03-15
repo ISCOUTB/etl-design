@@ -8,6 +8,12 @@
             },
         },
     });
+
+    useSeoMeta({
+        title: $t("auth.sing_up.title"),
+        description: $t("auth.sign_up.subtitle"),
+        ogType: "website",
+    });
 </script>
 
 <template>

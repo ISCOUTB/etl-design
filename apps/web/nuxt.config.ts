@@ -29,6 +29,7 @@ export default defineNuxtConfig({
         "@vueuse/nuxt",
         "@sidebase/nuxt-auth",
         "@vee-validate/nuxt",
+        "@nuxtjs/seo",
         "shadcn-nuxt",
     ],
     imports: {
@@ -165,6 +166,21 @@ export default defineNuxtConfig({
             FieldArray: "VeeFieldArray",
             Form: "VeeForm",
             ErrorMessage: "VeeErrorMessage",
+        },
+    },
+    sitemap: {
+        exclude: ["/test/**", "/auth/**"],
+        zeroRuntime: true,
+    },
+
+    $production: {
+        site: {
+            indexable: true,
+        },
+        nitro: {
+            prerender: {
+                routes: ["/robots.txt", "/sitemap.xml"],
+            },
         },
     },
 

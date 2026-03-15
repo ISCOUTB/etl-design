@@ -9,6 +9,10 @@
         middleware: ["development-only"],
     });
 
+    useSeoMeta({
+        robots: "noindex, nofollow",
+    });
+
     const columns: Column<z.infer<typeof ResponseProjectSchema>>[] = [
         { key: "id", label: "ID" },
         { key: "name", label: "Name" },

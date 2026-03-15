@@ -1,10 +1,10 @@
 projects:
-    - "."
-    - "iac"
+    - .
+    - iac
     - "apps/**/moon.yml"
     - "packages/**/moon.yml"
     - "tools/**/moon.yml"
 
 vcs:
-    defaultBranch: "main"
-    provider: "github"
+    defaultBranch: main
+    provider: github

@@ -9,6 +9,3 @@
 node_modules
 .actrc
 
-# moon
-.moon/cache
-.moon/docker

@@ -12,6 +12,10 @@
         },
     });
 
+    useSeoMeta({
+        ogType: "website",
+    });
+
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
@@ -21,5 +25,8 @@
 </script>
 
 <template>
-    <ProjectUpdateForm :project="sharedState" class="mx-auto w-full max-w-2xl" />
+    <div>
+        <ProjectUpdateForm :project="sharedState" class="mx-auto w-full max-w-2xl" />
+        <div class="my-6" />
+    </div>
 </template>

@@ -8,6 +8,12 @@
             },
         },
     });
+
+    useSeoMeta({
+        title: $t("auth.signin.title"),
+        description: $t("auth.sign_in.subtitle"),
+        ogType: "website",
+    });
 </script>
 
 <template>
