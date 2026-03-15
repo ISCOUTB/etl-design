@@ -19,6 +19,8 @@ from pydantic import AmqpDsn, computed_field
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from messaging_utils.core.constants import RABBITMQ_QUEUE_TYPE
+
 load_dotenv()
 
 
@@ -111,6 +113,11 @@ class Settings(BaseSettings):
     RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION: str = "insertion.request"
     RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS: str = "validation.request"
     RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS: str = "results.publish"
+
+    # Extra parameters for each queue
+    RABBITMQ_QUEUE_TYPE_INSERTION: str = RABBITMQ_QUEUE_TYPE
+    RABBITMQ_QUEUE_TYPE_VALIDATIONS: str = RABBITMQ_QUEUE_TYPE
+    RABBITMQ_QUEUE_TYPE_RESULTS: str = RABBITMQ_QUEUE_TYPE
 
 
 settings = Settings()  # type: ignore

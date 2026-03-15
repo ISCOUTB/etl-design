@@ -18,6 +18,10 @@ import pika.channel
 from pika.adapters.blocking_connection import BlockingChannel
 
 from messaging_utils.core.connection_params import messaging_params
+from messaging_utils.core.constants import (
+    RABBITMQ_DELIVARY_LIMIT,
+    RABBITMQ_MESSAGE_TTL_MS,
+)
 from messaging_utils.schemas.connection import (
     AllConnectionParams,
     ConnectionParams,
@@ -193,8 +197,8 @@ class RabbitMQConnectionFactory:
             - Queues: validation, schema, and results queues (all durable)
             - Bindings: Appropriate routing key bindings for message routing
             - Queue arguments:
-                - x-delivery-limit: Maximum redelivery attempts (3)
-                - x-message-ttl: Message time-to-live in milliseconds (1 hour)
+                - x-message-ttl: Message time-to-live in milliseconds
+                - x-delivery-limit: Only for quorum queues
 
         Raises:
             Exception: If exchange/queue declaration or binding fails.
@@ -206,14 +210,22 @@ class RabbitMQConnectionFactory:
                 durable=cls._exchange_info["durable"],
             )
 
-            # Queue arguments for reliability and retry limits
-            queue_arguments = {
-                "x-delivery-limit": 3,  # Max 3 redelivery attempts
-                "x-message-ttl": 3600000,  # 1 hour TTL (in milliseconds)
-            }
-
             # Declare queues with arguments
             for queue in cls._exchange_info["queues"]:
+                queue_type = queue.get("queue_type", "classic")
+
+                queue_arguments: Dict[str, int | str] = {
+                    "x-message-ttl": queue.get(
+                        "message_ttl_ms", RABBITMQ_MESSAGE_TTL_MS
+                    )
+                }
+
+                if queue_type == "quorum":
+                    queue_arguments["x-queue-type"] = "quorum"
+                    queue_arguments["x-delivery-limit"] = queue.get(
+                        "delivery_limit", RABBITMQ_DELIVARY_LIMIT
+                    )
+
                 channel.queue_declare(
                     queue=queue["queue"],
                     durable=queue["durable"],

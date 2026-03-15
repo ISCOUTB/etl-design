@@ -15,7 +15,14 @@ gRPC endpoint.
 """
 
 from messaging_utils.core.config import settings
-from messaging_utils.core.constants import RABBITMQ_EXCHANGE_TYPE
+from messaging_utils.core.constants import (
+    RABBITMQ_DELIVARY_LIMIT,
+    RABBITMQ_DURABLE_EXCHANGE,
+    RABBITMQ_DURABLE_QUEUES,
+    RABBITMQ_EXCHANGE_TYPE,
+    RABBITMQ_MESSAGE_TTL_MS,
+    RABBITMQ_QUEUE_TYPE,
+)
 from messaging_utils.schemas.connection import (
     AllConnectionParams,
     ExchangeInfo,
@@ -31,26 +38,35 @@ messaging_params = AllConnectionParams(
     virtual_host=settings.RABBITMQ_VHOST,
     exchange=ExchangeInfo(
         exchange=settings.RABBITMQ_EXCHANGE,
-        durable=True,
+        durable=RABBITMQ_DURABLE_EXCHANGE,
         type=RABBITMQ_EXCHANGE_TYPE,
         queues=[
             # Schema message queue configuration
             QueueInfo(
                 queue=settings.RABBITMQ_QUEUE_INSERTION,
                 routing_key=settings.RABBITMQ_ROUTING_KEY_INSERTION,
-                durable=True,
+                durable=RABBITMQ_DURABLE_QUEUES,
+                queue_type=RABBITMQ_QUEUE_TYPE,
+                delivery_limit=RABBITMQ_DELIVARY_LIMIT,
+                message_ttl_ms=RABBITMQ_MESSAGE_TTL_MS,
             ),
             # Validation message queue configuration
             QueueInfo(
                 queue=settings.RABBITMQ_QUEUE_VALIDATIONS,
                 routing_key=settings.RABBITMQ_ROUTING_KEY_VALIDATIONS,
-                durable=True,
+                durable=RABBITMQ_DURABLE_QUEUES,
+                queue_type=RABBITMQ_QUEUE_TYPE,
+                delivery_limit=RABBITMQ_DELIVARY_LIMIT,
+                message_ttl_ms=RABBITMQ_MESSAGE_TTL_MS,
             ),
             # Results queue configuration
             QueueInfo(
                 queue=settings.RABBITMQ_QUEUE_RESULTS,
                 routing_key=settings.RABBITMQ_ROUTING_KEY_RESULTS,
-                durable=True,
+                durable=RABBITMQ_DURABLE_QUEUES,
+                queue_type=RABBITMQ_QUEUE_TYPE,
+                delivery_limit=RABBITMQ_DELIVARY_LIMIT,
+                message_ttl_ms=RABBITMQ_MESSAGE_TTL_MS,
             ),
         ],
     ),
