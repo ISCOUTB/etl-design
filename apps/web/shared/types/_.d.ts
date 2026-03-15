@@ -33,6 +33,8 @@ declare global {
     type MakeRefs<T extends object> = {
         [P in keyof T]: Ref<T[P]>;
     };
+
+    type Branded<T, Brand> = T & { __brand: Brand };
 }
 
 export {};

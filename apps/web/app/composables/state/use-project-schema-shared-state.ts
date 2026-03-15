@@ -25,7 +25,7 @@ export default function (stateKey: string) {
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
     const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
-        if (!isTabular.value) {
+        if (!isTabular.value || !state.value.uploadedFile) {
             return [];
         }
 

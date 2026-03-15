@@ -12,6 +12,7 @@ export interface TabMeta {
 export interface TabEntry {
     tab: TabMeta;
     component: Components.ComponentLoader<Component>;
+    loadingComponent?: Component;
     props: Record<string, unknown>;
 }
 
@@ -39,7 +40,7 @@ export default function (
             return candidate;
         }
 
-        return firstTabValue;
+        return firstTabValue.value;
     });
 
     const componentCache = shallowRef(new Map<TabMeta["value"], Raw<Component>>());
@@ -50,13 +51,7 @@ export default function (
             return found;
         }
 
-        const fallback =
-            tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry);
-        if (fallback) {
-            activeTab.value = fallback?.tab.value;
-        }
-
-        return fallback;
+        return tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry);
     });
 
     const component = computed(() => resolveComponent(currentEntry.value));
@@ -106,7 +101,12 @@ export default function (
         }
 
         const wrapped = markRaw(
-            defineAsyncComponent({ loader: entry.component, delay: 0, timeout: 5000 }),
+            defineAsyncComponent({
+                loader: entry.component,
+                delay: 0,
+                timeout: 10_000,
+                loadingComponent: entry.loadingComponent,
+            }),
         );
         componentCache.value.set(key, wrapped);
 
@@ -140,9 +140,19 @@ export default function (
         return preload(values);
     }
 
+    watch(
+        currentEntry,
+        (entry) => {
+            if (entry && entry.tab.value !== activeTab.value) {
+                activeTab.value = entry.tab.value;
+            }
+        },
+        { immediate: true },
+    );
+
     onMounted(() => {
         if (options?.model) {
-            syncRef(options.model, activeTab);
+            syncRef(options.model, activeTab, { direction: "ltr" });
         }
     });
 
