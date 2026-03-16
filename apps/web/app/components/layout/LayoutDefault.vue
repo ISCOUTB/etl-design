@@ -15,6 +15,7 @@
         link: head.value.link,
         meta: head.value.meta,
         title: title.value,
+        titleTemplate: "%s",
     }));
 </script>
 

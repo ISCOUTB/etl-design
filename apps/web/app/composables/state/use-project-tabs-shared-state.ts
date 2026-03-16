@@ -7,6 +7,7 @@ export default function () {
     const Section = computed<Tabs.Project.ProjectSections>(() => ({
         General: t("projects.id.sections.general_information.tab"),
         Schema: t("projects.id.sections.schema.tab"),
+        Tables: t("projects.id.sections.tables.tab"),
         Settings: t("projects.id.sections.settings.tab"),
         File: t("projects.id.sections.file.tab"),
     }));

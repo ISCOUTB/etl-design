@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Database, FileIcon, Info, Settings } from "lucide-vue-next";
+    import { Database, FileIcon, Info, Settings, Table } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     definePageMeta({
@@ -34,12 +34,27 @@
         }),
     });
 
+    const errorToast = useErrorToast();
+
+    const { data: _schemas } = useApiFetch(`/schemas/search/${projectId.value}`, {
+        method: "GET",
+    });
+    const schemas = computed<z.infer<typeof MongoGetSchemasResponse>>(() => {
+        const parseResult = MongoGetSchemasResponse.safeParse(_schemas.value);
+        if (!parseResult.success) {
+            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
+            return { schemas: [] };
+        }
+
+        return parseResult.data;
+    });
+
     const { Section, tab, schema } = useProjectTabsSharedState();
 
     const animations = useTabsAnimations();
 
     const tabs = useTabsManager(
-        [
+        () => [
             {
                 tab: {
                     label: "projects.id.sections.general_information.tab",
@@ -64,6 +79,16 @@
             },
             {
                 tab: {
+                    label: "projects.id.sections.tables.tab",
+                    value: Section.value.Tables,
+                    icon: Table,
+                    hidden: () => !schemas.value.schemas.length,
+                },
+                component: () => import("@/components/project/ProjectSchemaExample.vue"),
+                props: {},
+            },
+            {
+                tab: {
                     label: "projects.id.sections.settings.tab",
                     value: Section.value.Settings,
                     icon: Settings,
@@ -80,7 +105,9 @@
     watch(
         () => schema.state.value.uploadedFile,
         (file) => {
-            const hasTab = tabs.tabs.value.has(Section.value.File);
+            const hasTab = tabs.filteredTabs.value.some(
+                (entry) => entry.tab.value === Section.value.File,
+            );
 
             if (file && !hasTab) {
                 tabs.dispatch.addTab({
@@ -117,7 +144,7 @@
     );
 
     onMounted(() => {
-        tabs.dispatch.preloadTabs([Section.value.Schema, Section.value.Settings]);
+        tabs.dispatch.preload([Section.value.Schema, Section.value.Settings]);
     });
 </script>
 
@@ -133,7 +160,7 @@
         <Tabs v-model="tab" :default-value="Section.General">
             <TabsList>
                 <TabsTrigger
-                    v-for="entry in tabs.tabs.value.values()"
+                    v-for="entry in tabs.filteredTabs.value"
                     :key="entry.tab.value"
                     :value="entry.tab.value"
                     :class="entry.tab.class"

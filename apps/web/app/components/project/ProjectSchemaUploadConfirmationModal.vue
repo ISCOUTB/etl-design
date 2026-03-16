@@ -9,6 +9,7 @@
 
     const props = defineProps<Props>();
     const project = computed(() => toValue(props.project));
+    const events = useAppEvents<AppEvents.Events>();
 
     const { schema } = useProjectTabsSharedState();
     const errorToast = useErrorToast();
@@ -73,7 +74,18 @@
             method: "POST",
             body: formData,
         })
-            .then((response) => console.log(response))
+            .then(() => {
+                toast.success($t("projects.id.sections.schema.events.table_created.title"), {
+                    description: $t(
+                        "projects.id.sections.schema.events.table_created.description",
+                        {
+                            tab: $t("projects.id.sections.tables.tab"),
+                        },
+                    ),
+                });
+
+                events.emit("event:schema:table-created", undefined);
+            })
             .catch((error) => errorToast.handleServer(error));
     }
 

@@ -12,6 +12,8 @@
     const props = defineProps<Props>();
     const project = computed(() => toValue(props.project));
 
+    const events = useAppEvents();
+
     const { schema } = useProjectTabsSharedState();
 
     const config = useAppConfig();
@@ -97,6 +99,12 @@
             modal.dispatch.setOpen(true);
         }
     }
+
+    onMounted(() => {
+        events.on("event:schema:table-created", () => {
+            schema.dispatch.setUploadedFile(undefined);
+        });
+    });
 </script>
 
 <template>

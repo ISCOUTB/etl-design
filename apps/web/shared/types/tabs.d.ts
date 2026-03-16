@@ -4,6 +4,7 @@ declare global {
             interface ProjectSections {
                 General: string;
                 Schema: string;
+                Tables: string;
                 Settings: string;
                 File: string;
             }

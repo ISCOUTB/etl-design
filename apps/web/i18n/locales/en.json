@@ -327,6 +327,10 @@
                     "events": {
                         "upload_file": {
                             "label": "Upload File"
+                        },
+                        "table_created": {
+                            "title": "Table Created Succesfully",
+                            "description": "You can review it in the {tab} tab"
                         }
                     },
                     "datatype_table": {
@@ -357,6 +361,9 @@
                     "validation": {
                         "table_name_not_empty": "Table Name cannot be empty"
                     }
+                },
+                "tables": {
+                    "tab": "Tables"
                 },
                 "file": {
                     "tab": "File"

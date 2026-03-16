@@ -27,35 +27,45 @@ export default function (
     options?: UseTabsManagerOptions,
 ) {
     const route = useRoute();
-    const initial = toValue(initialTabs);
-    const filteredTabs = computed(() => filterTabs(initial));
-
-    const tabs = shallowRef(new Map(filteredTabs.value.map((entry) => [entry.tab.value, entry])));
-    const firstTabValue = computed(() => filteredTabs.value[0]?.tab.value ?? initial[0].tab.value);
-
     const stateKey = options?.key ?? `use-tabs-manager:${route.path}`;
-    const activeTab = useState<string>(stateKey, () => {
+    const componentCache = shallowRef(new Map<TabMeta["value"], Raw<Component>>());
+
+    const initial = computed(() => toValue(initialTabs));
+
+    const tabs = shallowRef(
+        new Map<TabMeta["value"], TabEntry>(initial.value.map((entry) => [entry.tab.value, entry])),
+    );
+    const filteredTabs = computed(() =>
+        Array.from(tabs.value.values()).filter((entry) => !toValue(entry.tab.hidden)),
+    );
+
+    const firstTabValue = computed(() => filteredTabs.value[0]?.tab.value ?? "");
+
+    const activeTab = useState<TabMeta["value"]>(`${stateKey}:active-tab`, () => {
         const candidate = options?.initialActive;
-        if (candidate && tabs.value.has(candidate)) {
+        if (candidate && filteredTabs.value.some((entry) => entry.tab.value === candidate)) {
             return candidate;
         }
 
         return firstTabValue.value;
     });
-
-    const componentCache = shallowRef(new Map<TabMeta["value"], Raw<Component>>());
-
     const currentEntry = computed(() => {
-        const found = tabs.value.get(activeTab.value);
+        const found = filteredTabs.value.find((entry) => entry.tab.value === activeTab.value);
         if (found) {
             return found;
         }
 
-        return tabs.value.get(firstTabValue.value) ?? ([...tabs.value.values()][0] as TabEntry);
+        return filteredTabs.value[0];
     });
 
-    const component = computed(() => resolveComponent(currentEntry.value));
-    const props = computed(() => currentEntry.value.props);
+    const component = computed(() => {
+        if (!currentEntry.value) {
+            return;
+        }
+
+        return resolveComponent(currentEntry.value);
+    });
+    const props = computed(() => currentEntry.value?.props ?? {});
 
     function addTab(entry: TabEntry) {
         const next = new Map(tabs.value);
@@ -70,26 +80,17 @@ export default function (
     }
 
     function setActive(tabValue: TabMeta["value"]) {
-        const targetTab = tabs.value.get(tabValue);
+        const targetTab = filteredTabs.value.find((entry) => entry.tab.value === tabValue);
         if (!targetTab) {
             return;
         }
 
-        const previous = tabs.value.get(activeTab.value);
-        if (!previous) {
-            return;
-        }
-
+        const previous = filteredTabs.value.find((entry) => entry.tab.value === activeTab.value);
         activeTab.value = targetTab.tab.value;
 
-        const atomic = toValue(previous.tab.atomic);
-        if (atomic) {
+        if (previous && toValue(previous.tab.atomic)) {
             removeTab(previous.tab.value);
         }
-    }
-
-    function filterTabs(tabs: [TabEntry, ...TabEntry[]]) {
-        return tabs.filter((entry) => !toValue(entry.tab.hidden));
     }
 
     function resolveComponent(entry: TabEntry) {
@@ -129,44 +130,60 @@ export default function (
         }
 
         await Promise.all(
-            [...tabs.value.values()].map(async (entry) => {
+            tabs.value.values().map(async (entry) => {
                 await entry.component();
                 resolveComponent(entry);
             }),
         );
     }
 
-    function preloadTabs(values?: TabMeta["value"][]) {
-        return preload(values);
-    }
+    watch(
+        initial,
+        (nextInitial) => {
+            const dynamicTabs = Array.from(tabs.value.values()).filter(
+                (entry) =>
+                    !nextInitial.some((baseEntry) => baseEntry.tab.value === entry.tab.value),
+            );
+
+            tabs.value = new Map([
+                ...nextInitial.map((entry) => [entry.tab.value, entry] as [string, TabEntry]),
+                ...dynamicTabs.map((entry) => [entry.tab.value, entry] as [string, TabEntry]),
+            ]);
+        },
+        { immediate: true },
+    );
 
     watch(
-        currentEntry,
-        (entry) => {
-            if (entry && entry.tab.value !== activeTab.value) {
-                activeTab.value = entry.tab.value;
+        filteredTabs,
+        (visible) => {
+            if (!visible.length) {
+                activeTab.value = "";
+                return;
+            }
+
+            const exists = visible.some((entry) => entry.tab.value === activeTab.value);
+            if (!exists) {
+                activeTab.value = visible[0]!.tab.value;
             }
         },
         { immediate: true },
     );
 
-    onMounted(() => {
-        if (options?.model) {
-            syncRef(options.model, activeTab, { direction: "ltr" });
-        }
-    });
+    if (options?.model) {
+        syncRef(options.model, activeTab, { direction: "ltr", immediate: true });
+    }
 
     return {
         tabs: readonly(tabs),
+        filteredTabs: readonly(filteredTabs),
         component: readonly(component),
         props: readonly(props),
         activeTab: readonly(activeTab),
         dispatch: {
+            preload,
             setActive,
             addTab,
             removeTab,
-            preload,
-            preloadTabs,
         },
     };
 }
