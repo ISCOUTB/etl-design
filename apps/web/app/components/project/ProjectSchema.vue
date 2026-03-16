@@ -45,6 +45,7 @@
             nameWithoutExt: file.name.replace(/\.[^/.]+$/, ""),
             size: filesize(file.size),
             type: ext,
+            file,
             blob: new Blob([file], { type: mime }),
         });
     }

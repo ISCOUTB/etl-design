@@ -1,6 +1,5 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { FetchError } from "ofetch";
 
     interface Props {
         project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
@@ -39,17 +38,7 @@
             await refreshNuxtData(NuxtKeys.Projects.Search);
             await navigateTo($localeRoute({ name: "projects" }));
         } catch (error) {
-            console.warn(error);
-
-            if (error instanceof FetchError) {
-                const parsedError = ApiErrorSchema.safeParse(error.data);
-                if (!parsedError.success) {
-                    errorToast.handle(ResponseCodesRecord.Server.UnknownError);
-                    return;
-                }
-
-                errorToast.handle(parsedError.data.error);
-            }
+            errorToast.handleServer(error);
         }
     }
 </script>

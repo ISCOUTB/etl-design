@@ -2,6 +2,7 @@ import type { ExternalToast } from "vue-sonner";
 import { ResponseCodesRecord } from "#shared/utils/response-codes";
 import { ApiErrorSchema } from "#shared/utils/schemas/api";
 import { toast } from "vue-sonner";
+import { FetchError } from "ofetch";
 
 interface ErrorCodeDefaults {
     title: string;
@@ -135,7 +136,22 @@ export default function () {
         show(merged);
     }
 
+    function handleServer(error: unknown) {
+        if (error instanceof FetchError) {
+            const parsedError = ApiErrorSchema.safeParse(error.data);
+            console.warn(parsedError);
+            if (!parsedError.success) {
+                handle(ResponseCodesRecord.Server.UnknownError);
+
+                return;
+            }
+
+            handle(parsedError.data.error);
+        }
+    }
+
     return {
         handle,
+        handleServer,
     };
 }

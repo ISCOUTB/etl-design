@@ -12,6 +12,7 @@
 
     const { schema } = useProjectTabsSharedState();
     const errorToast = useErrorToast();
+    const api = useApi();
 
     function handleSchema() {
         if (!schema.state.value.tableName) {
@@ -30,7 +31,12 @@
             [],
         );
 
-        console.warn(payload);
+        api("/uploads/table-json", {
+            method: "POST",
+            body: payload,
+        })
+            .then((response) => console.warn(response))
+            .catch((error) => errorToast.handleServer(error));
     }
 
     function handleFile() {
@@ -53,13 +59,22 @@
         );
 
         const formData = new FormBuilder()
-            .append("spreadsheet", schema.state.value.uploadedFile.blob)
+            .append(
+                "spreadsheet",
+                schema.state.value.uploadedFile.file,
+                schema.state.value.uploadedFile.file.name,
+            )
             .append("project_id", project.value?.id)
             .append("table_name", schema.state.value.tableName)
             .append("dtypes_str", JSON.stringify(dtypes))
             .build();
 
-        console.warn(Array.from(formData.entries()));
+        api("/uploads/table-excel", {
+            method: "POST",
+            body: formData,
+        })
+            .then((response) => console.log(response))
+            .catch((error) => errorToast.handleServer(error));
     }
 
     function handleSubmit(_event: Event) {

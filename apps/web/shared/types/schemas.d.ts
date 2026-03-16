@@ -19,6 +19,7 @@ declare global {
                 nameWithoutExt: string;
                 size: string;
                 type: string;
+                file: File;
                 blob: Blob;
             }
 

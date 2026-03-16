@@ -46,6 +46,7 @@ tasks:
         deps:
             - formula-parser:build
         toolchains: node
+        preset: server
 
     client-run:
         command: node

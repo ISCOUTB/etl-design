@@ -8,6 +8,7 @@ tasks:
         args:
             - --filter
             - "@sloth/tools-eslint"
+        toolchains: node
         options:
             runFromWorkspaceRoot: true
             cache: false
@@ -15,5 +16,6 @@ tasks:
     build:
         command: pnpm
         args:
-            - dlx
-            - tsup@latest
+            - exec
+            - tsup
+        toolchains: node

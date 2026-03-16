@@ -70,18 +70,7 @@
                     $localeRoute({ name: "projects-id", params: { id: parsedResponse.data.id } }),
                 );
             })
-            .catch((error) => {
-                if (error instanceof FetchError) {
-                    const parsedError = ApiErrorSchema.safeParse(error);
-                    if (!parsedError.success) {
-                        errorToast.handle(ResponseCodesRecord.Server.UnknownError);
-
-                        return;
-                    }
-
-                    errorToast.handle(parsedError.data.error);
-                }
-            })
+            .catch((error) => errorToast.handleServer(error))
             .finally(() => (loading.value = false));
     });
 </script>

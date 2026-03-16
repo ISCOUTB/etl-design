@@ -20,8 +20,8 @@ tasks:
     nuxt:
         command: pnpm
         args:
-            - dlx
-            - nuxt@latest
+            - exec
+            - nuxt
         toolchains: node
         preset: server
 

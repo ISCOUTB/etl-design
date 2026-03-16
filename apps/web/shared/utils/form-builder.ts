@@ -7,9 +7,13 @@ export class FormBuilder {
         this.#form = new FormData();
     }
 
-    append(key: string, value: AcceptedValue) {
+    append(key: string, value: string): this;
+    append(key: string, value: number): this;
+    append(key: string, value: Blob, filename?: string): this;
+    append(key: string, value: AcceptedValue, filename?: string): this;
+    append(key: string, value: AcceptedValue, filename?: string): this {
         if (value instanceof Blob) {
-            this.#form.append(key, value);
+            this.#form.append(key, value, filename);
             return this;
         }
 
@@ -21,7 +25,7 @@ export class FormBuilder {
         key: string,
         value: AcceptedValue | undefined | null,
         condition: (value: AcceptedValue | undefined | null) => value is AcceptedValue,
-    ) {
+    ): this {
         const shouldAdd = condition(value);
         if (shouldAdd) {
             return this.append(key, value);
@@ -30,7 +34,7 @@ export class FormBuilder {
         return this;
     }
 
-    build() {
+    build(): FormData {
         return this.#form;
     }
 }

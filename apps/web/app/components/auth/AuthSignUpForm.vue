@@ -53,18 +53,7 @@
                     }),
                 );
             })
-            .catch((error) => {
-                if (error instanceof FetchError) {
-                    const parsedError = ApiErrorSchema.safeParse(error.data);
-                    if (!parsedError.success) {
-                        errorToast.handle(ResponseCodesRecord.Server.UnknownError);
-
-                        return;
-                    }
-
-                    errorToast.handle(parsedError.data.error);
-                }
-            })
+            .catch((error) => errorToast.handleServer(error))
             .finally(() => (loading.value = false));
     });
 </script>
@@ -148,12 +137,12 @@
 
             <FieldDescription>
                 {{ $t("auth.sign_up.has_account") }}
-                <NuxtLink
-                    :to="$localeRoute({ name: 'auth-sign-in' })"
+                <NuxtLinkLocale
+                    :to="{ name: 'auth-sign-in' }"
                     class="font-medium text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
                 >
                     {{ $t("auth.sign_up.sign_in_link") }}
-                </NuxtLink>
+                </NuxtLinkLocale>
             </FieldDescription>
         </FieldGroup>
     </form>
