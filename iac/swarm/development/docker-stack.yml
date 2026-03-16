@@ -3,6 +3,13 @@
 # TODO: Configure a FS such as GlusterFS, CephFS. This configuration is external the cluster, and in our case, must be done
 # using an ansible playbook. For development, we can use NFS or bind mounts, but these are not recommended for production. Damn...
 
+# FIXME: the web service is not communicating properly with the API. I'm still debugging it but I'm done for today.
+# For now, when trying to sign up from the web, it fails and the error sometimes is:
+# "CORS Failed" or "NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_SECURITY,MOZILLA_PKIX_ERROR_SELF_SIGNED_CERT)"
+# The second one makes sense because Traefik is using a self-signed certificate for the *.swarm.${DOMAIN} domain.
+# The first one is weird because I have CORS_ORIGINS set to https://web.swarm.${DOMAIN} in the API and the web,
+# but maybe it's not working properly. I'll investigate more tomorrow.
+
 services:
     traefik:
         image: traefik:v3.6
@@ -352,11 +359,6 @@ services:
                     "CMD",
                     "mongosh",
                     "--quiet",
-                    "admin",
-                    "-u",
-                    "${MONGO_INITDB_ROOT_USERNAME}",
-                    "-p",
-                    "${MONGO_INITDB_ROOT_PASSWORD}",
                     "--eval",
                     "quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)",
                 ]
@@ -648,8 +650,6 @@ services:
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
             POSTGRES_DB: ${POSTGRES_DB?Variable not set}
         depends_on:
-            - database
-            - rabbitmq
             - postgres
         networks:
             - monitoring
@@ -675,7 +675,7 @@ services:
         image: vulcan99/etl-api:latest
         environment:
             API_V1_STR: ${API_V1_STR-/api/v1}
-            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web,https://web.swarm.${DOMAIN}
             SERVER_HOST: "0.0.0.0"
             SERVER_PORT: ${SERVER_PORT?Variable not set}
             SERVER_DEBUG: "false"
@@ -754,11 +754,11 @@ services:
     web:
         image: vulcan99/web:latest
         environment:
-            HOMEPAGE_URL: ${HOMEPAGE_URL?Variable not set}
-            AUTH_ORIGIN: ${AUTH_ORIGIN?Variable not set}
-            AUTH_SECRET: ${AUTH_SECRET?Variable not set}
-            AUTH_SIGN: ${AUTH_SIGN?Variable not set}
-            API_BASE_URL: http://api:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}
+            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
+            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            API_BASE_URL: https://api.swarm.${DOMAIN}${API_V1_STR-/api/v1}
+            NUXT_PUBLIC_API_BASE: https://api.swarm.${DOMAIN}${API_V1_STR-/api/v1}
+            NUXT_PUBLIC_HOME_PAGE_URL: https://web.swarm.${DOMAIN}
         depends_on:
             - api
         networks:
@@ -781,22 +781,66 @@ networks:
     monitoring:
         driver: overlay
         attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.10.0/24
+
     parsers:
         driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.11.0/24
+
     redis:
         driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.12.0/24
+
     postgres:
         driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.13.0/24
+
     mongo:
         driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.14.0/24
+
     rabbit:
         driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.15.0/24
+
     grpc:
         driver: overlay
         attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.16.0/24
+
     traefik_proxy:
         driver: overlay
         attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.17.0/24
 
 configs:
     grafana_datasources:
