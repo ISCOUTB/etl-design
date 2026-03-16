@@ -19,6 +19,7 @@ Example:
 
 import asyncio
 import json
+import socket
 import time
 from io import BytesIO
 
@@ -41,6 +42,7 @@ from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
+from src.core.events import failure_event
 from src.handlers.validation import (
     get_validation_summary,
     validate_file_against_schema,
@@ -164,6 +166,7 @@ class ValidationWorker:
                 AMQPConnectionError,
                 AMQPChannelError,
                 ChannelClosedByBroker,
+                socket.gaierror,
             ) as e:
                 elapsed_time = time.perf_counter() - t0
                 if elapsed_time >= self.threshold:
@@ -174,10 +177,11 @@ class ValidationWorker:
                     attempts = 0
                     current_delay = self.retry_delay
 
-                if attempts < self.max_retries:
+                attempt_number = attempts + 1
+                if attempt_number < self.max_retries:
                     logger.warning(
                         f"Validation worker connection error (attempt "
-                        f"{attempts + 1}/{self.max_retries}): {repr(e)}. "
+                        f"{attempt_number}/{self.max_retries}): {repr(e)}. "
                         f"Retrying in {current_delay}s..."
                     )
                     time.sleep(current_delay)
@@ -191,6 +195,7 @@ class ValidationWorker:
                         "Exiting. Orchestrator should restart this worker."
                     )
                     self.stop_consuming()
+                    failure_event.set()  # Signal failure to main thread
                     raise SystemExit(1) from e
 
                 attempts += 1
@@ -203,6 +208,8 @@ class ValidationWorker:
             except Exception as e:
                 logger.error(f"Error starting validation worker: {repr(e)}")
                 self.stop_consuming()
+
+                failure_event.set()  # Signal failure to main thread
                 raise SystemExit(1) from e
 
         self.stop_consuming()
@@ -219,9 +226,6 @@ class ValidationWorker:
         """
         try:
             logger.info("Stopping validation worker...")
-
-            if self.db_client:
-                self.db_client.close()
 
             if self.channel and self.channel.is_open:
                 self.channel.stop_consuming()

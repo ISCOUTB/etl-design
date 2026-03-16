@@ -18,6 +18,7 @@ Example:
 
 import asyncio
 import json
+import socket
 import time
 
 import grpc
@@ -39,6 +40,7 @@ from proto_utils.database import dtypes
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
+from src.core.events import failure_event
 from src.schemas.workers import InsertionResult
 from src.utils import create_component_logger, get_datetime_now
 from src.workers.utils import get_task_status, update_task_status
@@ -154,6 +156,7 @@ class InsertionWorker:
                 AMQPConnectionError,
                 AMQPChannelError,
                 ChannelClosedByBroker,
+                socket.gaierror,
             ) as e:
                 elapsed_time = time.perf_counter() - t0
                 if elapsed_time >= self.threshold:
@@ -164,10 +167,11 @@ class InsertionWorker:
                     attempts = 0
                     current_delay = self.retry_delay
 
-                if attempts < self.max_retries:
+                attempt_number = attempts + 1
+                if attempt_number < self.max_retries:
                     logger.warning(
                         f"Schema worker connection error (attempt "
-                        f"{attempts + 1}/{self.max_retries}): {repr(e)}. "
+                        f"{attempt_number}/{self.max_retries}): {repr(e)}. "
                         f"Retrying in {current_delay}s..."
                     )
                     time.sleep(current_delay)
@@ -181,6 +185,7 @@ class InsertionWorker:
                         "Exiting. Orchestrator should restart this worker."
                     )
                     self.stop_consuming()
+                    failure_event.set()  # Signal failure to main thread
                     raise SystemExit(1) from e
 
                 attempts += 1
@@ -193,6 +198,7 @@ class InsertionWorker:
             except Exception as e:
                 logger.error(f"Error starting schema worker: {repr(e)}")
                 self.stop_consuming()
+                failure_event.set()  # Signal failure to main thread
                 raise SystemExit(1) from e
 
         self.stop_consuming()
@@ -209,9 +215,6 @@ class InsertionWorker:
         """
         try:
             logger.info("Stopping schema Worker...")
-
-            if self.db_client:
-                self.db_client.close()
 
             if self.channel and self.channel.is_open:
                 self.channel.stop_consuming()

@@ -1,6 +1,6 @@
 from typing import Annotated, AsyncGenerator, Dict
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.core.config import settings
@@ -49,6 +49,7 @@ async def health_check(
         logger.debug("Health check passed: all systems healthy")
     else:
         logger.warning(f"Health check failed: {health_status.model_dump_json()}")
+        raise HTTPException(status_code=503, detail="Service is unhealthy")
 
     return health_status
 

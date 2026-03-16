@@ -26,6 +26,7 @@ Example:
 """
 
 import asyncio
+import os
 import signal
 import sys
 import threading
@@ -36,6 +37,7 @@ from messaging_utils.messaging.connection_factory import (
 )
 
 from src.core.config import settings
+from src.core.events import failure_event
 from src.utils import create_component_logger
 from src.workers.insertion import InsertionWorker
 from src.workers.results import ResultWorker
@@ -123,7 +125,7 @@ class WorkerManager:
             logger.info("All workers started successfully")
 
             # Keep main thread alive
-            while self.workers_running:
+            while self.workers_running and not failure_event.is_set():
                 await asyncio.sleep(0.5)
 
         except KeyboardInterrupt:
@@ -144,7 +146,12 @@ class WorkerManager:
         try:
             self.validation_worker.start_consuming()
         except Exception as e:
-            logger.error(f"Validation worker error: {e}")
+            logger.critical(
+                "Validation worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
 
     def _run_schema_worker(self):
         """Run schema worker.
@@ -160,7 +167,12 @@ class WorkerManager:
         try:
             self.schema_worker.start_consuming()
         except Exception as e:
-            logger.error(f"Schema worker error: {e}")
+            logger.critical(
+                "Schema worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
 
     def _run_result_worker(self):
         """Run result worker.
@@ -176,7 +188,12 @@ class WorkerManager:
         try:
             self.result_worker.start_consuming()
         except Exception as e:
-            logger.error(f"Result worker error: {e}")
+            logger.critical(
+                "Result worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
 
     def stop_workers(self):
         """Stop all workers gracefully.
