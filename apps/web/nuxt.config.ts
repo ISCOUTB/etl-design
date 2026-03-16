@@ -1,5 +1,6 @@
 import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
+import Sonda from "sonda/nuxt";
 
 export default defineNuxtConfig({
     compatibilityDate: "2025-07-15",
@@ -20,6 +21,10 @@ export default defineNuxtConfig({
             tailwindcss(),
         ],
     },
+    sourcemap: {
+        client: true,
+        server: true,
+    },
     modules: [
         "@nuxt/eslint",
         "@vite-pwa/nuxt",
@@ -31,6 +36,7 @@ export default defineNuxtConfig({
         "@vee-validate/nuxt",
         "@nuxtjs/seo",
         "shadcn-nuxt",
+        Sonda({ server: true, open: false, filename: "sonda_[env]", gzip: true }),
     ],
     imports: {
         dirs: [
