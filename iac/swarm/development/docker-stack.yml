@@ -488,6 +488,7 @@ services:
             MONGO_PORT: 27017
             MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME?Variable not set}
             MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD?Variable not set}
+            MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE-admin}
             MONGO_DB: ${MONGO_DB}
             MONGO_SCHEMAS_COLLECTION: ${MONGO_SCHEMAS_COLLECTION?Variable not set}
             MONGO_TASKS_COLLECTION: ${MONGO_TASKS_COLLECTION?Variable not set}
@@ -746,6 +747,11 @@ services:
                 - "traefik.http.routers.api.rule=Host(`api.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.api.entrypoints=websecure"
                 - "traefik.http.routers.api.tls=true"
+                - "traefik.http.routers.api-web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`${API_V1_STR-/api/v1}`)"
+                - "traefik.http.routers.api-web.entrypoints=websecure"
+                - "traefik.http.routers.api-web.tls=true"
+                - "traefik.http.routers.api-web.priority=100"
+                - "traefik.http.routers.api-web.service=api@swarm"
                 - "traefik.http.services.api.loadbalancer.server.port=${SERVER_PORT?Variable not set}"
                 - prometheus-job=api
                 - prometheus-port=${SERVER_PORT?Variable not set}
@@ -756,8 +762,8 @@ services:
         environment:
             HOMEPAGE_URL: https://web.swarm.${DOMAIN}
             AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
-            API_BASE_URL: https://api.swarm.${DOMAIN}${API_V1_STR-/api/v1}
-            NUXT_PUBLIC_API_BASE: https://api.swarm.${DOMAIN}${API_V1_STR-/api/v1}
+            API_BASE_URL: ${API_V1_STR-/api/v1}
+            NUXT_PUBLIC_API_BASE: ${API_V1_STR-/api/v1}
             NUXT_PUBLIC_HOME_PAGE_URL: https://web.swarm.${DOMAIN}
         depends_on:
             - api

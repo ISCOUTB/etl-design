@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     MONGO_PORT: int
     MONGO_INITDB_ROOT_USERNAME: str | None = None
     MONGO_INITDB_ROOT_PASSWORD: str | None = None
+    MONGO_AUTH_SOURCE: str = "admin"
     MONGO_DB: str
     MONGO_SCHEMAS_COLLECTION: str
     MONGO_TASKS_COLLECTION: str
@@ -27,13 +28,17 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def MONGO_URI(self) -> MongoDsn:
-        return MultiHostUrl.build(
-            scheme="mongodb",
-            username=self.MONGO_INITDB_ROOT_USERNAME,
-            password=self.MONGO_INITDB_ROOT_PASSWORD,
-            host=self.MONGO_HOST,
-            port=self.MONGO_PORT,
+    def MONGO_URI(self) -> str:
+        credentials = ""
+        if self.MONGO_INITDB_ROOT_USERNAME and self.MONGO_INITDB_ROOT_PASSWORD:
+            credentials = (
+                f"{self.MONGO_INITDB_ROOT_USERNAME}:"
+                f"{self.MONGO_INITDB_ROOT_PASSWORD}@"
+            )
+
+        return (
+            f"mongodb://{credentials}{self.MONGO_HOST}:{self.MONGO_PORT}/"
+            f"?authSource={self.MONGO_AUTH_SOURCE}"
         )
 
     # Redis Configuration
