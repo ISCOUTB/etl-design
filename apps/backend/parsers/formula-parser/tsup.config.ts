@@ -13,7 +13,7 @@ export default defineConfig(() => {
     const isProduction = process.env.NODE_ENV === "production";
 
     return {
-        entry: ["src/server.ts"],
+        entry: ["src/server.ts", "src/cli.ts"],
         outDir: "dist",
         format: ["cjs"],
         clean: true,
