@@ -138,15 +138,28 @@ export const CreateTableFromJsonSchema = z.object({
     primary_keys: z.array(z.string()),
 });
 
+export const JsonSchema = z.object({
+    schema: z.string(),
+    type: z.literal("object"),
+    required: z.array(z.string()),
+    properties: z.record(
+        z.string(),
+        z.object({
+            type: DtypesEnum,
+            extra: z.record(z.string(), z.unknown()),
+        }),
+    ),
+});
+
 export const MongoRawSchema = z.object({
     id: z.string(),
     import_name: z.string(),
-    created_at: z.string(),
-    active_schema: z.record(z.string(), z.unknown()),
+    created_at: z.iso.datetime({ offset: true }),
+    active_schema: JsonSchema,
     schemas_releases: z.array(
         z.object({
             created_at: z.string(),
-            schema: z.record(z.string(), z.unknown()),
+            schema: JsonSchema,
         }),
     ),
 });

@@ -2,7 +2,10 @@ export default function () {
     const { t } = useI18n();
 
     const route = useRoute();
-    const schema = useProjectSchemaSharedState(NuxtKeys.Projects.Schemas.State(route.path));
+    const projectId = useRouteParams("id");
+
+    const schema = useProjectSchemaSharedState(NuxtKeys.Projects.Schemas.SchemaState(route.path));
+    const tables = useProjectTables(() => projectId.value?.toString());
 
     const Section = computed<Tabs.Project.ProjectSections>(() => ({
         General: t("projects.id.sections.general_information.tab"),
@@ -29,5 +32,6 @@ export default function () {
         tab,
         Section,
         schema,
+        tables,
     };
 }

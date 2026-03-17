@@ -34,21 +34,6 @@
         }),
     });
 
-    const errorToast = useErrorToast();
-
-    const { data: _schemas } = useApiFetch(`/schemas/search/${projectId.value}`, {
-        method: "GET",
-    });
-    const schemas = computed<z.infer<typeof MongoGetSchemasResponse>>(() => {
-        const parseResult = MongoGetSchemasResponse.safeParse(_schemas.value);
-        if (!parseResult.success) {
-            errorToast.handle(ResponseCodesRecord.Server.BadPayload);
-            return { schemas: [] };
-        }
-
-        return parseResult.data;
-    });
-
     const { Section, tab, schema } = useProjectTabsSharedState();
 
     const animations = useTabsAnimations();
@@ -82,9 +67,8 @@
                     label: "projects.id.sections.tables.tab",
                     value: Section.value.Tables,
                     icon: Table,
-                    hidden: () => !schemas.value.schemas.length,
                 },
-                component: () => import("@/components/project/ProjectSchemaExample.vue"),
+                component: () => import("@/components/project/ProjectTables.vue"),
                 props: {},
             },
             {

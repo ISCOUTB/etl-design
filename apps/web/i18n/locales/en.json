@@ -11,6 +11,7 @@
         },
         "actions": {
             "cancel": "Cancel",
+            "go_back": "Go Back",
             "save_changes": "Save Changes"
         },
         "pagination": {

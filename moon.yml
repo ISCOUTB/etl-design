@@ -2,11 +2,47 @@ project:
     name: etl-design
     description: project root
 
+id: source
+
 tasks:
-    test:
+    run-parsers:
         command: noop
         deps:
-            - formula-parser:test
-            - ddl-generator:test
-            - sql-builder:test
-            - excel-reader:test
+            - formula-parser:run
+            - ddl-generator:run
+            - sql-builder:run
+            - excel-reader:run
+        preset: server
+
+    deploy-mongo:
+        command: sh
+        args:
+            - scripts/deploy_mongo_docker.sh
+
+    deploy-postgres:
+        command: sh
+        args:
+            - scripts/deploy_postgres_docker.sh
+
+    deploy-rabbit:
+        command: sh
+        args:
+            - scripts/deploy_rabbitmq_docker.sh
+
+    deploy-redis:
+        command: sh
+        args:
+            - scripts/deploy_redis_docker.sh
+
+    development:
+        command: noop
+        deps:
+            - source:run-parsers
+            - source:deploy-mongo
+            - source:deploy-redis
+            - database:run
+            - api:run
+            - web:dev
+        preset: server
+        options:
+            runDepsInParallel: true

@@ -16,10 +16,7 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     css: ["~/assets/css/tailwind.css"],
     vite: {
-        plugins: [
-            // @ts-expect-error "https://github.com/nuxt/nuxt/issues/34306"
-            tailwindcss(),
-        ],
+        plugins: [tailwindcss()],
     },
     sourcemap: {
         client: true,
@@ -36,6 +33,7 @@ export default defineNuxtConfig({
         "@vee-validate/nuxt",
         "@nuxtjs/seo",
         "shadcn-nuxt",
+        "@artmizu/nuxt-prometheus",
         Sonda({ server: true, open: false, filename: "sonda_[env]", gzip: true }),
     ],
     imports: {

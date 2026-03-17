@@ -31,8 +31,7 @@
                         :class="
                             cn(
                                 'line-clamp-2',
-                                !project.description &&
-                                    'text-yellow-700 dark:text-yellow-400/70 italic font-medium',
+                                !project.description && 'text-muted-foreground italic',
                             )
                         "
                     >

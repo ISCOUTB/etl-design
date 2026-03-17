@@ -165,7 +165,7 @@
 </script>
 
 <template>
-    <div class="mx-auto w-full max-w-5xl flex flex-col grow">
+    <div class="mx-auto w-full max-w-5xl flex flex-col grow bg-red-500">
         <TooltipProvider>
             <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>

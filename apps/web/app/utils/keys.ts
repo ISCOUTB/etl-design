@@ -21,11 +21,14 @@ export const NuxtKeys = {
             return `project:${candidateId}:state`;
         },
         Schemas: {
-            State: (route: string) => `project:${route}:shared-state`,
-            UploadFile: (route: string) => `project:${route}:upload-file`,
-            SheetNames: (route: string) => `project:${route}:sheet-names`,
-            Columns: (route: string) => `project:${route}:columns-definition`,
-            SelectedDataType: (route: string) => `projects:${route}:selected-data-type`,
+            SchemaState: (route: string) => `project:${route}:shared-state`,
+            TablesState: (projectId: z.infer<typeof ResponseProjectSchema>["id"] | undefined) => {
+                if (!projectId) {
+                    return "project:tables";
+                }
+
+                return `project:${projectId}:tables`;
+            },
             ExampleFormat: "project:schema:example-format",
             RowId: "__rowId",
         },
