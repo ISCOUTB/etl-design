@@ -3,13 +3,6 @@
 # TODO: Configure a FS such as GlusterFS, CephFS. This configuration is external the cluster, and in our case, must be done
 # using an ansible playbook. For development, we can use NFS or bind mounts, but these are not recommended for production. Damn...
 
-# FIXME: the web service is not communicating properly with the API. I'm still debugging it but I'm done for today.
-# For now, when trying to sign up from the web, it fails and the error sometimes is:
-# "CORS Failed" or "NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_SECURITY,MOZILLA_PKIX_ERROR_SELF_SIGNED_CERT)"
-# The second one makes sense because Traefik is using a self-signed certificate for the *.swarm.${DOMAIN} domain.
-# The first one is weird because I have CORS_ORIGINS set to https://web.swarm.${DOMAIN} in the API and the web,
-# but maybe it's not working properly. I'll investigate more tomorrow.
-
 services:
     traefik:
         image: traefik:v3.6
@@ -64,7 +57,7 @@ services:
             - "--providers.swarm.exposedbydefault=false"
 
             # Specify the default network for Traefik to connect to services
-            - "--providers.swarm.network=traefik_traefik_proxy"
+            - "--providers.swarm.network=dev_traefik_proxy"
 
             # API & Dashboard
             - "--api.dashboard=true" # Enable the dashboard
