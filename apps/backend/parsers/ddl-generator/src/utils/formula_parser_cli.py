@@ -14,15 +14,18 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, TypedDict
+from pprint import pprint
+from typing import Any, Dict, List, TypedDict
+
+from src.services.ddl_generator import generate_ddl
 
 
 class FormulaParseResult(TypedDict):
     """Result structure from formula-parser CLI"""
 
     formula: str
-    tokens: list[dict] | None
-    ast: dict[str, Any] | None
+    tokens: List[Dict] | None
+    ast: Dict[str, Any] | None
     error: str
     success: bool
 
@@ -125,7 +128,7 @@ def parse_formula(formula: str) -> FormulaParseResult:
         ) from e
 
 
-def get_ast(formula: str) -> dict[str, Any]:
+def get_ast(formula: str) -> Dict[str, Any]:
     """
     Parse a formula and return only the AST.
 
@@ -135,7 +138,7 @@ def get_ast(formula: str) -> dict[str, Any]:
         formula: Excel formula string
 
     Returns:
-        dict: The Abstract Syntax Tree
+        Dict: The Abstract Syntax Tree
 
     Raises:
         FormulaParserError: If parsing fails
@@ -148,13 +151,45 @@ def get_ast(formula: str) -> dict[str, Any]:
     return result["ast"]
 
 
+def parse_column_mappings(mappings_str: str) -> Dict[str, str]:
+    """
+    Parse column mappings from a string format.
+
+    Args:
+        mappings_str: String in the format "A=col1&B=col2&..."
+
+    Returns:
+        Dict: Mapping of Excel columns to SQL column names
+    """
+    mappings = {}
+    for pair in mappings_str.split("&"):
+        if "=" in pair:
+            excel_col, sql_col = pair.split("=", 1)
+            mappings[excel_col.strip()] = sql_col.strip()
+    return mappings
+
+
 if __name__ == "__main__":
     # Simple test when run as a script
     if len(sys.argv) < 2:
-        print("Usage: python formula_parser_cli.py '<formula>'")
+        print("Usage: python formula_parser_cli.py '<formula>' '<cellName=columnName&...>'")
         print("Example: python formula_parser_cli.py '=SUM(A1:A10)'")
         sys.exit(1)
 
     formula = sys.argv[1]
+    columns = parse_column_mappings(sys.argv[2]) if len(sys.argv) > 2 else {}
     result = parse_formula(formula)
-    print(json.dumps(result, indent=2))
+    pprint(result)
+
+    if result["ast"] is None or not result["success"] or len(sys.argv) <= 2:
+        sys.exit(0)
+
+    print("\nGenerated AST:")
+    pprint(result["ast"])
+
+    print("\nGenerated SQL from AST:")
+    try:
+        sql_result = generate_ddl({"ast": result["ast"], "columns": columns})  # type: ignore
+        pprint(sql_result)
+    except Exception as e:
+        print(f"Error generating SQL: {e}")
