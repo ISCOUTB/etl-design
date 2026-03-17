@@ -16,10 +16,9 @@ tasks:
         command: uv
         args:
             - run
+            - -m
             - pytest
             - -v
-            - -n
-            - auto
             - --cov=src
             - --cov-report=term-missing
             - --cov-report=html

@@ -74,12 +74,21 @@ def binary_maps(ast: AST, columns: Dict[str, str]) -> BinaryExpressionAST:
     left = MAPS[ast["left"]["type"]](ast["left"], columns)
     right = MAPS[ast["right"]["type"]](ast["right"], columns)
 
+    match ast["operator"]:
+        # Handle null-safe equality and inequality to prevent NULL comparisons from becoming UNKNOWN in SQL.
+        case "<>":
+            operator_sql = "IS DISTINCT FROM"
+        case "=":
+            operator_sql = "IS NOT DISTINCT FROM"
+        case _:
+            operator_sql = ast["operator"]
+
     return {
         "type": "binary-expression",
         "operator": ast["operator"],
         "left": left,
         "right": right,
-        "sql": f"({left['sql']}) {ast['operator']} ({right['sql']})",
+        "sql": f"({left['sql']}) {operator_sql} ({right['sql']})",
     }
 
 
