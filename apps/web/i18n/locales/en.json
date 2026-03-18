@@ -380,7 +380,7 @@
                     "card": {
                         "n_columns": "{length} columns",
                         "required_column": "required",
-                        "modal": {
+                        "selected_schema": {
                             "description": "JSON Schema validation definition"
                         },
                         "actions": {

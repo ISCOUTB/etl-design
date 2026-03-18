@@ -1,3 +1,4 @@
+/* eslint-disable style/indent-binary-ops */
 /* eslint-disable style/indent */
 declare global {
     namespace AppEvents {
@@ -11,7 +12,8 @@ declare global {
             | {
                   key: "event:projects:change-tab";
                   payload: { value: string };
-              };
+              }
+            | { key: "event:projects:table:change-view"; payload: { value: string } };
 
         type EventKey = Events["key"];
 

@@ -22,6 +22,10 @@ export const NuxtKeys = {
         },
         Schemas: {
             SchemaState: (route: string) => `project:${route}:shared-state`,
+            ExampleFormat: "project:schema:example-format",
+            RowId: "__rowId",
+        },
+        Tables: {
             TablesState: (projectId: z.infer<typeof ResponseProjectSchema>["id"] | undefined) => {
                 if (!projectId) {
                     return "project:tables";
@@ -29,12 +33,17 @@ export const NuxtKeys = {
 
                 return `project:${projectId}:tables`;
             },
-            ExampleFormat: "project:schema:example-format",
-            RowId: "__rowId",
-        },
-        Tables: {
             CollapsibleState: (table: z.infer<typeof MongoRawSchema>) =>
                 `project:table:${table.id}:collapsible:open`,
+            RawSchemas: (projectId: z.infer<typeof ResponseProjectSchema>["id"] | undefined) => {
+                if (!projectId) {
+                    return "project:raw-schemas";
+                }
+
+                return `project:${projectId}:raw-schemas`;
+            },
+            View: (route: string) => `project:tables:${route}:view`,
+            TabsManager: (route: string) => `project:tables:${route}:tabs-manager`,
         },
     },
     Components: {
