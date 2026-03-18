@@ -1,12 +1,9 @@
 project:
     name: sql-builder
     description: |
-        A Python gRPC service that constructs complete 
-        SQL statements from individual DDL expressions and 
-        column metadata. This service is responsible for 
-        assembling final CREATE TABLE and INSERT statements 
-        by managing dependencies and execution order of 
-        SQL expressions.
+        A Python gRPC service that constructs SQL DDL statements from individual
+        DDL expressions and column metadata. This service assembles CREATE TABLE
+        and dependency-ordered ALTER TABLE statements for generated columns.
 
 layer: application
 
@@ -17,6 +14,7 @@ tasks:
         command: uv
         args:
             - run
+            - -m
             - pytest
             - -v
             - -n

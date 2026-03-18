@@ -1,7 +1,7 @@
 [project]
 name = "sql-builder"
 version = "0.1.0"
-description = "A Python gRPC service that constructs complete SQL statements from individual DDL expressions and column metadata. This service is responsible for assembling final CREATE TABLE and INSERT statements by managing dependencies and execution order of SQL expressions."
+description = "A Python gRPC service that constructs SQL DDL statements from individual DDL expressions and column metadata. This service assembles CREATE TABLE and dependency-ordered ALTER TABLE statements for generated columns."
 readme = "README.md"
 requires-python = "==3.12.10"
 dependencies = [
@@ -22,6 +22,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
+    "pytest-asyncio>=1.3.0",
     "ruff>=0.15.6",
 ]
 
@@ -29,6 +30,7 @@ dev = [
 pythonpath = [
     "src"
 ]
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 80
