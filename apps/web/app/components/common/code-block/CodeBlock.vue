@@ -1,18 +1,18 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="TContent">
     import type { HTMLAttributes } from "vue";
-    import { Copy } from "lucide-vue-next";
+    import { Check, Copy } from "lucide-vue-next";
     import { toast } from "vue-sonner";
     import { cn } from "~/lib/utils";
 
-    interface Props {
-        content: MaybeRefOrGetter<string | undefined>;
+    interface Props<T> {
+        content: MaybeRefOrGetter<T | string | undefined>;
         file?: MaybeRefOrGetter<string | undefined>;
         copyable?: boolean;
         ext?: string;
         class?: HTMLAttributes["class"];
     }
 
-    const props = withDefaults(defineProps<Props>(), {
+    const props = withDefaults(defineProps<Props<TContent>>(), {
         copyable: true,
     });
     const content = computed(() => toValue(props.content));
@@ -21,6 +21,12 @@
     const parsedContent = computed(() => JSON.stringify(content.value ?? {}, null, 4));
 
     const clipboard = useClipboard();
+    const animations = useClipboardAnimations();
+
+    function handleCopy(event: MouseEvent) {
+        clipboard.copy(parsedContent.value);
+        animations.animateButtonClick(event);
+    }
 
     onMounted(() => {
         whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
@@ -55,9 +61,17 @@
                         variant="outline"
                         size="icon-sm"
                         class="opacity-0 group-hover:opacity-100 transition-opacity"
-                        @click="clipboard.copy(parsedContent)"
+                        @click="handleCopy"
                     >
-                        <Copy />
+                        <Transition
+                            :css="false"
+                            mode="out-in"
+                            @enter="animations.onIconEnter"
+                            @leave="animations.onIconLeave"
+                        >
+                            <Check v-if="clipboard.copied.value" />
+                            <Copy v-else />
+                        </Transition>
                     </Button>
                 </template>
             </div>

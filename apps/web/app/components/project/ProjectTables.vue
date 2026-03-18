@@ -1,8 +1,41 @@
 <script setup lang="ts">
-    import { Search, Table2 } from "lucide-vue-next";
+    import type { z } from "zod";
+    import { Eye, Search, Table2 } from "lucide-vue-next";
 
     const events = useAppEvents();
     const { tables, Section } = useProjectTabsSharedState();
+    const modal = useModal();
+
+    const dropdownItems = computed<
+        Components.GenericDropdown.Item<z.infer<typeof MongoRawSchema>>[][]
+    >(() => [
+        [
+            {
+                label: "projects.id.sections.tables.card.actions.view_schema",
+                icon: Eye,
+                action: (context) => {
+                    if (!context) {
+                        return;
+                    }
+
+                    modal.dispatch.loadComponent({
+                        loader: () => import("@/components/project/ProjectTableSchemaView.vue"),
+                        key: ModalKeys.Projects.Tables.ViewSchema,
+                        kind: "dialog",
+                        props: {
+                            schema: context,
+                        },
+                    });
+
+                    if (
+                        modal.state.value.currentModalKey === ModalKeys.Projects.Tables.ViewSchema
+                    ) {
+                        modal.dispatch.setOpen(true);
+                    }
+                },
+            },
+        ],
+    ]);
 </script>
 
 <template>
@@ -40,7 +73,7 @@
                 class="flex flex-col space-y-4"
             >
                 <template #item="{ $item }">
-                    <ProjectTableCard :table="$item" />
+                    <ProjectTableCard :table="$item" :dropdown-items="dropdownItems" />
                 </template>
             </PaginationRoot>
         </template>

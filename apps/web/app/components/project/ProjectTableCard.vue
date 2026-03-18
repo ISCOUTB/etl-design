@@ -1,10 +1,13 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { ChevronsUpDown, MoreVertical, Table2 } from "lucide-vue-next";
+    import { ChevronRight, MoreVertical, Table2 } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
         table: MaybeRefOrGetter<z.infer<typeof MongoRawSchema>>;
+        dropdownItems: MaybeRefOrGetter<
+            Components.GenericDropdown.Item<z.infer<typeof MongoRawSchema>>[][]
+        >;
     }
 
     const props = defineProps<Props>();
@@ -62,14 +65,22 @@
                         </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                        <CollapsibleTrigger as-child>
+                        <CollapsibleTrigger as-child class="data-[state=open]:rotate-90">
                             <Button variant="ghost" size="icon">
-                                <ChevronsUpDown class="size-4" />
+                                <ChevronRight class="size-4" />
                             </Button>
                         </CollapsibleTrigger>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical class="size-4" />
-                        </Button>
+                        <DropdownMenuRoot
+                            :items="dropdownItems"
+                            :context="table"
+                            :content-props="{ align: 'end' }"
+                        >
+                            <template #trigger>
+                                <Button variant="ghost" size="icon">
+                                    <MoreVertical class="size-4" />
+                                </Button>
+                            </template>
+                        </DropdownMenuRoot>
                     </ItemActions>
                 </Item>
             </CardHeader>

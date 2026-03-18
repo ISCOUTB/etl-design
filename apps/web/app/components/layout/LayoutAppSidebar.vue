@@ -5,7 +5,7 @@
     import { useSidebar } from "@/components/ui/sidebar";
 
     const props = withDefaults(defineProps<SidebarProps>(), {
-        variant: "inset",
+        variant: "floating",
     });
 
     const { $localeRoute } = useNuxtApp();

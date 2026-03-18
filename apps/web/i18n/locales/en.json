@@ -379,7 +379,13 @@
                     },
                     "card": {
                         "n_columns": "{length} columns",
-                        "required_column": "required"
+                        "required_column": "required",
+                        "modal": {
+                            "description": "JSON Schema validation definition"
+                        },
+                        "actions": {
+                            "view_schema": "View schema"
+                        }
                     }
                 },
                 "file": {

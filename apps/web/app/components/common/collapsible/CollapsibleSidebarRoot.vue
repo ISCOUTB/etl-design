@@ -20,10 +20,16 @@
     const collapsibleItems = computed(() =>
         filterCollapsibleItems(collapsible.value.collapsibleItems),
     );
+
+    const open = useState(
+        NuxtKeys.Sidebar.OpenCollapsible(collapsible.value),
+        () => collapsible.value.defaultActive,
+    );
+    const animations = useCollapsibleAnimations();
 </script>
 
 <template>
-    <Collapsible as-child :default-open="collapsible.defaultActive" class="group/collapsible">
+    <Collapsible v-model:open="open" as-child class="group/collapsible">
         <SidebarMenuItem>
             <SidebarMenuButton :tooltip="$t(collapsible.label)">
                 <component :is="collapsible.icon" v-if="collapsible.icon" />
@@ -38,33 +44,35 @@
                     </SidebarMenuAction>
                 </CollapsibleTrigger>
 
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        <SidebarMenuSubItem
-                            v-for="subItem in collapsibleItems"
-                            :key="`${collapsible.collapsibleItems.length.toString(32)}-${
-                                subItem.label
-                            }`"
-                        >
-                            <SidebarMenuSubButton
-                                :as-child="!!subItem.to"
-                                class="cursor-pointer select-none"
-                                @click="subItem.action"
+                <Transition :css="false" @enter="animations.onEnter" @leave="animations.onLeave">
+                    <CollapsibleContent v-if="open" force-mount>
+                        <SidebarMenuSub>
+                            <SidebarMenuSubItem
+                                v-for="subItem in collapsibleItems"
+                                :key="`${collapsible.collapsibleItems.length.toString(32)}-${
+                                    subItem.label
+                                }`"
                             >
-                                <template v-if="subItem.to">
-                                    <NuxtLink :to="subItem.to()">
+                                <SidebarMenuSubButton
+                                    :as-child="!!subItem.to"
+                                    class="cursor-pointer select-none"
+                                    @click="subItem.action"
+                                >
+                                    <template v-if="subItem.to">
+                                        <NuxtLink :to="subItem.to()">
+                                            <component :is="subItem.icon" class="mr-2 h-4 w-4" />
+                                            <span>{{ $t(subItem.label) }}</span>
+                                        </NuxtLink>
+                                    </template>
+                                    <template v-else>
                                         <component :is="subItem.icon" class="mr-2 h-4 w-4" />
                                         <span>{{ $t(subItem.label) }}</span>
-                                    </NuxtLink>
-                                </template>
-                                <template v-else>
-                                    <component :is="subItem.icon" class="mr-2 h-4 w-4" />
-                                    <span>{{ $t(subItem.label) }}</span>
-                                </template>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                </CollapsibleContent>
+                                    </template>
+                                </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </Transition>
             </template>
         </SidebarMenuItem>
     </Collapsible>

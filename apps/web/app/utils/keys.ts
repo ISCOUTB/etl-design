@@ -42,6 +42,10 @@ export const NuxtKeys = {
             Sorting: (route: string) => `data-table:sorting-state:${route}`,
         },
     },
+    Sidebar: {
+        OpenCollapsible: (group: Components.Sidebar.GroupCollapsibleKind) =>
+            `sidebar:${group.kind}:${group.label}`,
+    },
 };
 
 export const ModalKeys = {
@@ -51,6 +55,9 @@ export const ModalKeys = {
         },
         Schema: {
             UploadFile: "projects:schema:upload-file",
+        },
+        Tables: {
+            ViewSchema: "projects:tables:view-schema",
         },
     },
 };
