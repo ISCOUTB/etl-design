@@ -12,9 +12,18 @@ on:
 
 jobs:
   api-tests:
-    # API uses PostgreSQL database, so...
-    # TODO: configure postgres service
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: api_db
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,6 +32,9 @@ jobs:
         with:
           service_name: "api"
           env_example_file: "apps/backend/api/.env.example"
+          postgres_username: "admin"
+          postgres_password: "admin"
+          postgres_db: "api_db"
       - name: Build Docker Image
         uses: ./.github/actions/build-docker-image
         with:

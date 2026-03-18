@@ -28,6 +28,18 @@ inputs:
     description: "Redis host"
     required: false
     default: ""
+  postgres_username:
+    description: "PostgreSQL username"
+    required: false
+    default: ""
+  postgres_password:
+    description: "PostgreSQL password"
+    required: false
+    default: ""
+  postgres_db:
+    description: "PostgreSQL database name"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -68,6 +80,15 @@ runs:
         fi
         if [ -n "${{ inputs.redis_host }}" ]; then
           sed -i "s/^REDIS_HOST=.*/REDIS_HOST=${{ inputs.redis_host }}/" "$ENV_EXAMPLE_FILE"
+        fi
+        if [ -n "${{ inputs.postgres_username }}" ]; then
+          sed -i "s/^POSTGRES_USER=.*/POSTGRES_USER=${{ inputs.postgres_username }}/" "$ENV_EXAMPLE_FILE"
+        fi
+        if [ -n "${{ inputs.postgres_password }}" ]; then
+          sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ inputs.postgres_password }}/" "$ENV_EXAMPLE_FILE"
+        fi
+        if [ -n "${{ inputs.postgres_db }}" ]; then
+          sed -i "s/^POSTGRES_DB=.*/POSTGRES_DB=${{ inputs.postgres_db }}/" "$ENV_EXAMPLE_FILE"
         fi
 
         cp "$ENV_EXAMPLE_FILE" "$(dirname "$ENV_EXAMPLE_FILE")/.env"
