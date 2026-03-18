@@ -1,29 +1,20 @@
-name: CI Staging - Master Orchestrator
+name: CI Production - Master Orchestrator
 on:
   push:
     branches:
-      - staging
+      - main
     paths:
       - apps/**
       - packages/**
-      - .github/workflows/ci-*-staging.yml
-      - .github/workflows/ci-staging-master.yml
+      - .github/workflows/cd-*-production.yml
+      - .github/workflows/cd-production-master.yml
       - .github/actions/build-docker-image/**
-      - .github/actions/create-version-tag/**
+      - .github/actions/create-production-version/**
       - .github/actions/update-docker-stack/**
   workflow_dispatch:
     inputs:
-      bump_type:
-        description: "Version bump type"
-        required: true
-        type: choice
-        options:
-          - auto
-          - minor
-          - major
-        default: "auto"
-      custom_version:
-        description: "Custom version (optional, e.g., 2.00-rc)"
+      staging_version:
+        description: "Staging version to promote (optional, e.g., 2.00-rc). Leave empty to use latest"
         required: false
         type: string
       dry_run:
@@ -34,7 +25,7 @@ on:
 
 # Prevent multiple simultaneous orchestrations
 concurrency:
-  group: staging-orchestrator-${{ github.ref }}
+  group: production-orchestrator-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -42,7 +33,7 @@ permissions:
   actions: write # to allow tagging commits that modify workflows
 
 jobs:
-  # Step 1: Create a single global version tag
+  # Step 1: Create a single global production version tag
   create-version:
     runs-on: ubuntu-latest
     outputs:
@@ -52,13 +43,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create Global Version Tag
+      - name: Create Global Production Version
         id: version
-        uses: ./.github/actions/create-version-tag
+        uses: ./.github/actions/create-production-version
         with:
-          bump_type: ${{ inputs.bump_type || 'auto' }}
-          custom_version: ${{ inputs.custom_version || '' }}
-          suffix: "rc"
+          staging_version: ${{ inputs.staging_version || '' }}
           dry_run: ${{ inputs.dry_run || 'false' }}
 
       - name: Verify version output
@@ -113,46 +102,46 @@ jobs:
             api:
               - 'apps/backend/api/**'
               - 'packages/messaging-utils/messaging-utils-py/**'
-              - '.github/workflows/ci-api-staging.yml'
+              - '.github/workflows/cd-api-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             database:
               - 'apps/connections/database/**'
               - 'packages/proto/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-database-staging.yml'
+              - '.github/workflows/cd-database-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             typechecking:
               - 'apps/backend/typechecking/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-typechecking-staging.yml'
+              - '.github/workflows/cd-typechecking-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             ddl-generator:
               - 'apps/backend/parsers/ddl-generator/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-ddl-generator-staging.yml'
+              - '.github/workflows/cd-ddl-generator-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             excel-reader:
               - 'apps/backend/parsers/excel-reader/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-excel-reader-staging.yml'
+              - '.github/workflows/cd-excel-reader-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             formula-parser:
               - 'apps/backend/parsers/formula-parser/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-formula-parser-staging.yml'
+              - '.github/workflows/cd-formula-parser-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
             sql-builder:
               - 'apps/backend/parsers/sql-builder/**'
               - 'packages/proto-utils/proto-utils-py/**'
-              - '.github/workflows/ci-sql-builder-staging.yml'
+              - '.github/workflows/cd-sql-builder-production.yml'
               - '.github/actions/build-docker-image/**'
-              - '.github/actions/create-version-tag/**'
+              - '.github/actions/create-production-version/**'
 
   # Step 3: Debug detection results
   debug-detection:
@@ -177,7 +166,7 @@ jobs:
   deploy-api:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.api == 'true'
-    uses: ./.github/workflows/ci-api-staging.yml
+    uses: ./.github/workflows/cd-api-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -185,7 +174,7 @@ jobs:
   deploy-database:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.database == 'true'
-    uses: ./.github/workflows/ci-database-staging.yml
+    uses: ./.github/workflows/cd-database-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -193,7 +182,7 @@ jobs:
   deploy-typechecking:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.typechecking == 'true'
-    uses: ./.github/workflows/ci-typechecking-staging.yml
+    uses: ./.github/workflows/cd-typechecking-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -201,7 +190,7 @@ jobs:
   deploy-ddl-generator:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.ddl-generator == 'true'
-    uses: ./.github/workflows/ci-ddl-generator-staging.yml
+    uses: ./.github/workflows/cd-ddl-generator-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -209,7 +198,7 @@ jobs:
   deploy-excel-reader:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.excel-reader == 'true'
-    uses: ./.github/workflows/ci-excel-reader-staging.yml
+    uses: ./.github/workflows/cd-excel-reader-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -217,7 +206,7 @@ jobs:
   deploy-formula-parser:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.formula-parser == 'true'
-    uses: ./.github/workflows/ci-formula-parser-staging.yml
+    uses: ./.github/workflows/cd-formula-parser-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -225,7 +214,7 @@ jobs:
   deploy-sql-builder:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.sql-builder == 'true'
-    uses: ./.github/workflows/ci-sql-builder-staging.yml
+    uses: ./.github/workflows/cd-sql-builder-production.yml
     with:
       version_tag: ${{ needs.create-version.outputs.version }}
     secrets: inherit
@@ -273,7 +262,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           VERSION: ${{ needs.create-version.outputs.version }}
         run: |
-          STACK_FILE="iac/swarm/staging/docker-stack.yml"
+          STACK_FILE="iac/swarm/production/docker-stack.yml"
           UPDATED=false
 
           echo "=== Applying docker-stack updates ==="
@@ -351,10 +340,10 @@ jobs:
           git status
 
           # Add only docker-stack.yml files
-          git add iac/swarm/staging/docker-stack.yml
+          git add iac/swarm/production/docker-stack.yml
 
           # Commit with version info
-          git commit -m "chore(staging): update docker stack images to version ${{ needs.create-version.outputs.version }}" \
+          git commit -m "chore(production): update docker stack images to version ${{ needs.create-version.outputs.version }}" \
                      -m "Updated services:" \
                      -m "- API: ${{ needs.deploy-api.result == 'success' && '✓' || '✗' }}" \
                      -m "- Database: ${{ needs.deploy-database.result == 'success' && '✓' || '✗' }}" \
@@ -363,7 +352,6 @@ jobs:
                      -m "- Excel Reader: ${{ needs.deploy-excel-reader.result == 'success' && '✓' || '✗' }}" \
                      -m "- Formula Parser: ${{ needs.deploy-formula-parser.result == 'success' && '✓' || '✗' }}" \
                      -m "- SQL Builder: ${{ needs.deploy-sql-builder.result == 'success' && '✓' || '✗' }}"
-                     -m "[skip ci]"
 
           # Push changes
           git push origin ${{ github.ref_name }}
