@@ -1,8 +1,9 @@
 export default function () {
     const { $gsap } = useNuxtApp();
+    const utils = useAnimationsUtils();
 
     function onSchemaEnter(element: Element, done: () => void) {
-        if (!(element instanceof HTMLElement)) {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -28,7 +29,7 @@ export default function () {
     }
 
     function onSchemaLeave(element: Element, done: () => void) {
-        if (!(element instanceof HTMLElement)) {
+        if (utils.noAnimations.value) {
             done();
             return;
         }

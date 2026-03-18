@@ -1,9 +1,9 @@
 export default function () {
     const { $gsap } = useNuxtApp();
-    const preferredMotion = usePreferredReducedMotion();
+    const utils = useAnimationsUtils();
 
     function onUploadStateEnter(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -24,7 +24,7 @@ export default function () {
     }
 
     function onUploadStateLeave(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -40,7 +40,7 @@ export default function () {
     }
 
     function animateDropzoneHover(element: Element | undefined | null, isOver: boolean) {
-        if (preferredMotion.value === "reduce" || !element) {
+        if (utils.noAnimations.value || !element) {
             return;
         }
 

@@ -1,9 +1,9 @@
 export default function () {
     const { $gsap } = useNuxtApp();
-    const preferredMotion = usePreferredReducedMotion();
+    const utils = useAnimationsUtils();
 
     function onStateEnter(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -16,7 +16,7 @@ export default function () {
     }
 
     function onStateLeave(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -31,7 +31,7 @@ export default function () {
     }
 
     function onItemEnter(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }
@@ -44,7 +44,7 @@ export default function () {
     }
 
     function onItemLeave(element: Element, done: () => void) {
-        if (preferredMotion.value === "reduce") {
+        if (utils.noAnimations.value) {
             done();
             return;
         }

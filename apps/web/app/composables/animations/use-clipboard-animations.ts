@@ -1,7 +1,13 @@
 export default function () {
     const { $gsap } = useNuxtApp();
+    const utils = useAnimationsUtils();
 
     function onIconEnter(el: Element, done: () => void) {
+        if (utils.noAnimations.value) {
+            done();
+            return;
+        }
+
         $gsap.fromTo(
             el,
             { scale: 0.6, opacity: 0, rotate: -15 },
@@ -17,6 +23,11 @@ export default function () {
     }
 
     function onIconLeave(el: Element, done: () => void) {
+        if (utils.noAnimations.value) {
+            done();
+            return;
+        }
+
         $gsap.to(el, {
             scale: 0.6,
             opacity: 0,
@@ -27,6 +38,10 @@ export default function () {
     }
 
     function animateButtonClick(event: MouseEvent) {
+        if (utils.noAnimations.value) {
+            return;
+        }
+
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
             return;
