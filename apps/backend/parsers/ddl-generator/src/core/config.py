@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     @property
     def DDL_GENERATOR_CHANNEL(self) -> str:
         return f"{self.DDL_GENERATOR_HOST}:{self.DDL_GENERATOR_PORT}"
-    
+
     ENABLE_PROMETHEUS_METRICS: bool = False
     PROMETHEUS_METRICS_PORT: str = "9090"
 

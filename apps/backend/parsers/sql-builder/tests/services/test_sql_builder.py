@@ -153,7 +153,7 @@ class TestSqlBuilderOrchestrator:
         # Content should be a dict with int keys
         assert isinstance(response["content"], dict)
         assert 0 in response["content"]
-        
+
         # Each level should contain BuildSQLResponseContent with sql_content
         level_content = response["content"][0]
         assert "sql_content" in level_content
@@ -280,8 +280,7 @@ class TestSqlBuilderOrchestrator:
             for i in range(num_cols)
         }
         dtypes = {
-            f"col{i}": {"type": "INTEGER", "extra": ""}
-            for i in range(num_cols)
+            f"col{i}": {"type": "INTEGER", "extra": ""} for i in range(num_cols)
         }
 
         response = sql_builder(cols, dtypes, "test_table")

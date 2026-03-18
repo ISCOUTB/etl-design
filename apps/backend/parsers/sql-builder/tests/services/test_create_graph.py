@@ -1,6 +1,5 @@
 """Tests for dependency graph creation in src/services/create_graph.py"""
 
-import pytest
 
 from src.services.create_graph import create_dependency_graph
 
@@ -13,9 +12,9 @@ class TestCreateDependencyGraph:
         cols = {
             "col1": {"type": "number", "value": 10},
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         assert "col1" in graph.vs["name"]
         assert len(graph.es) == 0  # No edges
 
@@ -26,9 +25,9 @@ class TestCreateDependencyGraph:
             "col2": {"type": "number", "value": 20},
             "col3": {"type": "text", "value": "hello"},
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         assert set(graph.vs["name"]) == {"col1", "col2", "col3"}
         assert len(graph.es) == 0  # No edges
 
@@ -45,9 +44,9 @@ class TestCreateDependencyGraph:
                 "sql": "col1",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         assert set(graph.vs["name"]) == {"col1", "col2"}
         # col2 depends on col1, so edge col2→col1
         edges = [(e.source, e.target) for e in graph.es]
@@ -70,11 +69,12 @@ class TestCreateDependencyGraph:
                 "sql": "(col1 + col2 + col3)",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert ("col4", "col1") in edges_names
         assert ("col4", "col2") in edges_names
@@ -104,11 +104,12 @@ class TestCreateDependencyGraph:
                 "sql": "(col1) + (col2)",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert ("col3", "col1") in edges_names
         assert ("col3", "col2") in edges_names
@@ -129,11 +130,12 @@ class TestCreateDependencyGraph:
                 "sql": "-(col1)",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert ("col2", "col1") in edges_names
         assert len(edges_names) == 1
@@ -173,11 +175,12 @@ class TestCreateDependencyGraph:
                 "sql": "CASE WHEN (col1) > (col2) THEN col3 ELSE 0 END",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         # col4 should depend on col1, col2, col3
         assert ("col4", "col1") in edges_names
@@ -202,11 +205,12 @@ class TestCreateDependencyGraph:
                 "sql": "col2",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert ("col2", "col1") in edges_names
         assert ("col3", "col2") in edges_names
@@ -242,11 +246,12 @@ class TestCreateDependencyGraph:
                 "sql": "(col_b) + (col_c)",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert ("col_b", "col_a") in edges_names
         assert ("col_c", "col_a") in edges_names
@@ -268,21 +273,22 @@ class TestCreateDependencyGraph:
                 "sql": "CASE WHEN TRUE THEN 10 ELSE 20 END",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         # col2 has no cell references, so no edge
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         assert len(edges_names) == 0
 
     def test_empty_columns(self):
         # Excel input: Empty columns dict
         cols = {}
-        
+
         graph = create_dependency_graph(cols)
-        
+
         assert len(graph.vs) == 0
         assert len(graph.es) == 0
 
@@ -324,11 +330,12 @@ class TestCreateDependencyGraph:
                 "sql": "((col1) + (col2)) * ((col3) - (1))",
             },
         }
-        
+
         graph = create_dependency_graph(cols)
-        
+
         edges_names = [
-            (graph.vs[s]["name"], graph.vs[t]["name"]) for s, t in [(e.source, e.target) for e in graph.es]
+            (graph.vs[s]["name"], graph.vs[t]["name"])
+            for s, t in [(e.source, e.target) for e in graph.es]
         ]
         # col4 should depend on col1, col2, col3
         assert ("col4", "col1") in edges_names

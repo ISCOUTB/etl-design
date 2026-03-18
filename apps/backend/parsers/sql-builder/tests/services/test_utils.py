@@ -19,7 +19,7 @@ class TestOutgoingConnections:
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
         g.add_edge("B", "A")  # B → A, so A has no outgoing edges
-        
+
         assert get_outgoing_connections(g, "A") == 0
 
     def test_node_with_single_outgoing_connection(self):
@@ -27,7 +27,7 @@ class TestOutgoingConnections:
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
         g.add_edge("A", "B")
-        
+
         assert get_outgoing_connections(g, "A") == 1
 
     def test_node_with_multiple_outgoing_connections(self):
@@ -36,14 +36,14 @@ class TestOutgoingConnections:
         g.add_vertices(["A", "B", "C"])
         g.add_edge("C", "A")
         g.add_edge("C", "B")
-        
+
         assert get_outgoing_connections(g, "C") == 2
 
     def test_nonexistent_node_returns_zero(self):
         # Excel input: Node doesn't exist
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
-        
+
         assert get_outgoing_connections(g, "X") == 0
 
 
@@ -55,7 +55,7 @@ class TestIncomingConnections:
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
         g.add_edge("A", "B")  # A → B, so A has no incoming edges
-        
+
         assert get_incoming_connections(g, "A") == 0
 
     def test_node_with_single_incoming_connection(self):
@@ -63,7 +63,7 @@ class TestIncomingConnections:
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
         g.add_edge("A", "B")
-        
+
         assert get_incoming_connections(g, "B") == 1
 
     def test_node_with_multiple_incoming_connections(self):
@@ -72,14 +72,14 @@ class TestIncomingConnections:
         g.add_vertices(["A", "B", "C"])
         g.add_edge("B", "A")
         g.add_edge("C", "A")
-        
+
         assert get_incoming_connections(g, "A") == 2
 
     def test_nonexistent_node_returns_zero(self):
         # Excel input: Node doesn't exist
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
-        
+
         assert get_incoming_connections(g, "X") == 0
 
 
@@ -90,7 +90,7 @@ class TestHasCyclicDependencies:
         # Excel input: Single independent node
         g = Graph(directed=True)
         g.add_vertices(["A"])
-        
+
         assert has_cyclic_dependencies(g) is False
 
     def test_acyclic_linear_chain(self):
@@ -99,7 +99,7 @@ class TestHasCyclicDependencies:
         g.add_vertices(["A", "B", "C"])
         g.add_edge("A", "B")
         g.add_edge("B", "C")
-        
+
         assert has_cyclic_dependencies(g) is False
 
     def test_acyclic_diamond_pattern(self):
@@ -110,7 +110,7 @@ class TestHasCyclicDependencies:
         g.add_edge("C", "A")
         g.add_edge("D", "B")
         g.add_edge("D", "C")
-        
+
         assert has_cyclic_dependencies(g) is False
 
     def test_cyclic_self_loop(self):
@@ -118,7 +118,7 @@ class TestHasCyclicDependencies:
         g = Graph(directed=True)
         g.add_vertices(["A"])
         g.add_edge("A", "A")
-        
+
         assert has_cyclic_dependencies(g) is True
 
     def test_cyclic_two_node_loop(self):
@@ -127,7 +127,7 @@ class TestHasCyclicDependencies:
         g.add_vertices(["A", "B"])
         g.add_edge("A", "B")
         g.add_edge("B", "A")
-        
+
         assert has_cyclic_dependencies(g) is True
 
     def test_cyclic_three_node_loop(self):
@@ -137,20 +137,20 @@ class TestHasCyclicDependencies:
         g.add_edge("A", "B")
         g.add_edge("B", "C")
         g.add_edge("C", "A")
-        
+
         assert has_cyclic_dependencies(g) is True
 
     def test_acyclic_empty_graph(self):
         # Excel input: Empty graph
         g = Graph(directed=True)
-        
+
         assert has_cyclic_dependencies(g) is False
 
     def test_acyclic_no_edges(self):
         # Excel input: All independent nodes
         g = Graph(directed=True)
         g.add_vertices(["A", "B", "C", "D"])
-        
+
         assert has_cyclic_dependencies(g) is False
 
 
@@ -161,7 +161,7 @@ class TestGetPriorityLevel:
         # Excel input: A (no dependencies)
         g = Graph(directed=True)
         g.add_vertices(["A"])
-        
+
         assert get_priority_level(g, "A") == 0
 
     def test_linear_chain_priorities(self):
@@ -172,7 +172,7 @@ class TestGetPriorityLevel:
         g.add_vertices(["A", "B", "C"])
         g.add_edge("B", "A")
         g.add_edge("C", "B")
-        
+
         assert get_priority_level(g, "A") == 0
         assert get_priority_level(g, "B") == 1
         assert get_priority_level(g, "C") == 2
@@ -188,7 +188,7 @@ class TestGetPriorityLevel:
         g.add_edge("C", "A")
         g.add_edge("D", "B")
         g.add_edge("D", "C")
-        
+
         assert get_priority_level(g, "A") == 0
         assert get_priority_level(g, "B") == 1
         assert get_priority_level(g, "C") == 1
@@ -211,7 +211,7 @@ class TestGetPriorityLevel:
         g.add_edge("C", "B")
         g.add_edge("D", "A")
         g.add_edge("E", "D")
-        
+
         assert get_priority_level(g, "A") == 0
         assert get_priority_level(g, "B") == 1
         assert get_priority_level(g, "C") == 2
@@ -223,7 +223,7 @@ class TestGetPriorityLevel:
         g = Graph(directed=True)
         g.add_vertices(["A", "B"])
         g.add_edge("B", "A")
-        
+
         assert get_priority_level(g, "X") == 0
 
     def test_cyclic_graph_raises_error(self):
@@ -232,7 +232,7 @@ class TestGetPriorityLevel:
         g.add_vertices(["A", "B"])
         g.add_edge("A", "B")
         g.add_edge("B", "A")
-        
+
         with pytest.raises(ValueError, match="not a directed acyclic graph"):
             get_priority_level(g, "A")
 
@@ -244,7 +244,7 @@ class TestGetPriorityLevel:
         g.add_edge("C", "B")
         g.add_edge("D", "C")
         g.add_edge("E", "D")
-        
+
         assert get_priority_level(g, "E") == 4
         assert get_priority_level(g, "D") == 3
         assert get_priority_level(g, "C") == 2
@@ -260,7 +260,7 @@ class TestGetPriorityLevel:
         g.add_edge("C", "A")
         g.add_edge("E", "D")
         g.add_edge("F", "D")
-        
+
         assert get_priority_level(g, "A") == 0
         assert get_priority_level(g, "D") == 0
         assert get_priority_level(g, "B") == 1
@@ -273,5 +273,5 @@ class TestGetPriorityLevel:
         # Excel input: All independent nodes A, B, C
         g = Graph(directed=True)
         g.add_vertices(["A", "B", "C"])
-        
+
         assert get_priority_level(g, node) == 0

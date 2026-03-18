@@ -66,7 +66,9 @@ async def test_generate_ddl_servicer_returns_handler_response(monkeypatch):
     def fake_generate_ddl_handler(request):
         return expected
 
-    monkeypatch.setattr(ddl_server, "generate_ddl_handler", fake_generate_ddl_handler)
+    monkeypatch.setattr(
+        ddl_server, "generate_ddl_handler", fake_generate_ddl_handler
+    )
 
     servicer = ddl_server.DDLGeneratorServicer()
     response = await servicer.GenerateDDL(FakeRequest(), FakeContext())
@@ -79,7 +81,9 @@ async def test_generate_ddl_servicer_reraises_handler_errors(monkeypatch):
     def fake_generate_ddl_handler(request):
         raise RuntimeError("handler failed")
 
-    monkeypatch.setattr(ddl_server, "generate_ddl_handler", fake_generate_ddl_handler)
+    monkeypatch.setattr(
+        ddl_server, "generate_ddl_handler", fake_generate_ddl_handler
+    )
 
     servicer = ddl_server.DDLGeneratorServicer()
 
@@ -124,7 +128,9 @@ def test_main_reraises_unexpected_exceptions(monkeypatch):
         raise ValueError("fatal")
 
     monkeypatch.setattr(ddl_server.asyncio, "run", fake_run)
-    monkeypatch.setattr(ddl_server.logger, "error", lambda msg: logs.append(msg))
+    monkeypatch.setattr(
+        ddl_server.logger, "error", lambda msg: logs.append(msg)
+    )
 
     with pytest.raises(ValueError, match="fatal"):
         ddl_server.main()
@@ -163,7 +169,9 @@ async def test_serve_without_metrics_starts_and_stops_server(monkeypatch):
         lambda *args, **kwargs: fake_server,
     )
     monkeypatch.setattr(ddl_server.asyncio, "Event", lambda: fake_event)
-    monkeypatch.setattr(ddl_server.asyncio, "get_running_loop", lambda: fake_loop)
+    monkeypatch.setattr(
+        ddl_server.asyncio, "get_running_loop", lambda: fake_loop
+    )
     monkeypatch.setattr(
         ddl_server.ddl_generator_pb2_grpc,
         "add_DDLGeneratorServicer_to_server",
@@ -180,7 +188,9 @@ async def test_serve_without_metrics_starts_and_stops_server(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_serve_with_metrics_uses_interceptor_and_prometheus_server(monkeypatch):
+async def test_serve_with_metrics_uses_interceptor_and_prometheus_server(
+    monkeypatch,
+):
     fake_server = FakeGrpcServer()
     fake_loop = FakeLoop(trigger_on_register=True)
     fake_event = FakeEvent()
@@ -223,10 +233,14 @@ async def test_serve_with_metrics_uses_interceptor_and_prometheus_server(monkeyp
         return fake_server
 
     monkeypatch.setattr(ddl_server, "start_http_server", fake_http_server)
-    monkeypatch.setattr(ddl_server, "PromAsyncServerInterceptor", fake_interceptor)
+    monkeypatch.setattr(
+        ddl_server, "PromAsyncServerInterceptor", fake_interceptor
+    )
     monkeypatch.setattr(ddl_server.grpc.aio, "server", fake_grpc_server)
     monkeypatch.setattr(ddl_server.asyncio, "Event", lambda: fake_event)
-    monkeypatch.setattr(ddl_server.asyncio, "get_running_loop", lambda: fake_loop)
+    monkeypatch.setattr(
+        ddl_server.asyncio, "get_running_loop", lambda: fake_loop
+    )
     monkeypatch.setattr(
         ddl_server.ddl_generator_pb2_grpc,
         "add_DDLGeneratorServicer_to_server",

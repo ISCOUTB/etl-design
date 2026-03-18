@@ -1,6 +1,5 @@
 """Tests for SQL building logic in src/services/builder.py"""
 
-import pytest
 
 from src.services.builder import build_sql, remove_primary_key_clause
 from src.services.create_graph import create_dependency_graph
@@ -104,7 +103,9 @@ class TestBuildSql:
         # Level 1: col2
         assert 1 in result
         alter_sql = result[1][0]["sql"]
-        assert "ALTER TABLE test_table ADD COLUMN IF NOT EXISTS col2" in alter_sql
+        assert (
+            "ALTER TABLE test_table ADD COLUMN IF NOT EXISTS col2" in alter_sql
+        )
         assert "GENERATED ALWAYS AS" in alter_sql
         assert result[1][0]["columns"] == ["col2"]
 
@@ -211,7 +212,10 @@ class TestBuildSql:
         result = build_sql(cols, graph, dtypes, "composite_key_table")
 
         create_sql = result[0][0]["sql"]
-        assert "CONSTRAINT composite_key_table_pk PRIMARY KEY (col1, col2)" in create_sql
+        assert (
+            "CONSTRAINT composite_key_table_pk PRIMARY KEY (col1, col2)"
+            in create_sql
+        )
 
     def test_primary_key_only_in_level_zero(self):
         # Excel input: col1 (level 0), col2=col1 (level 1) both marked as PRIMARY KEY
@@ -318,8 +322,16 @@ class TestBuildSql:
                     {
                         "type": "binary-expression",
                         "operator": ">",
-                        "left": {"type": "cell", "column": "col1", "sql": "col1"},
-                        "right": {"type": "cell", "column": "col2", "sql": "col2"},
+                        "left": {
+                            "type": "cell",
+                            "column": "col1",
+                            "sql": "col1",
+                        },
+                        "right": {
+                            "type": "cell",
+                            "column": "col2",
+                            "sql": "col2",
+                        },
                         "sql": "(col1) > (col2)",
                     },
                     {"type": "cell", "column": "col1", "sql": "col1"},
@@ -345,7 +357,10 @@ class TestBuildSql:
 
         assert 2 in result
         assert result[2][0]["columns"] == ["col3"]
-        assert "CASE WHEN (col1) > (col2) THEN col1 ELSE col2 END" in result[2][0]["sql"]
+        assert (
+            "CASE WHEN (col1) > (col2) THEN col1 ELSE col2 END"
+            in result[2][0]["sql"]
+        )
 
     def test_no_empty_levels_in_result(self):
         # Excel input: col1, col2=col1, col3=col1 (no level 1.5, just 0 and 1)

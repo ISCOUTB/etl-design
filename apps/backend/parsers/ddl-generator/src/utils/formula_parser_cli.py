@@ -50,9 +50,7 @@ def _get_formula_parser_cli_path() -> Path:
     ddl_gen_root = Path(__file__).parents[3]
 
     # Navigate to formula-parser
-    cli_path = (
-        ddl_gen_root / "formula-parser" / "dist" / "cli.cjs"
-    )
+    cli_path = ddl_gen_root / "formula-parser" / "dist" / "cli.cjs"
 
     if not cli_path.exists():
         raise FileNotFoundError(
@@ -172,7 +170,9 @@ def parse_column_mappings(mappings_str: str) -> Dict[str, str]:
 if __name__ == "__main__":
     # Simple test when run as a script
     if len(sys.argv) < 2:
-        print("Usage: python formula_parser_cli.py '<formula>' '<cellName=columnName&...>'")
+        print(
+            "Usage: python formula_parser_cli.py '<formula>' '<cellName=columnName&...>'"
+        )
         print("Example: python formula_parser_cli.py '=SUM(A1:A10)'")
         sys.exit(1)
 

@@ -97,7 +97,10 @@ if __name__ == "__main__":
         table_name="test_table",
         dtypes={
             "col1": {"type": "INTEGER", "extra": "PRIMARY KEY UNIQUE NOT NULL"},
-            "col2": {"type": "TEXT", "extra": "PRIMARY KEY UNIQUE"},  # This primary key is ignored
+            "col2": {
+                "type": "TEXT",
+                "extra": "PRIMARY KEY UNIQUE",
+            },  # This primary key is ignored
             "col3": {"type": "TEXT"},
             "col4": {"type": "INTEGER", "extra": "PRIMARY KEY NOT NULL"},
         },

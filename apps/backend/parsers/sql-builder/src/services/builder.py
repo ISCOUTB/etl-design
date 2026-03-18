@@ -89,10 +89,7 @@ def build_sql(
     priorities_levels = list(set(priorities.values()))
     sql_expressions = {
         **sql_expressions,
-        **{
-            level: []
-            for level, _ in enumerate(priorities_levels, start=1)
-        },
+        **{level: [] for level, _ in enumerate(priorities_levels, start=1)},
     }
 
     # Fill the information of the other levels
@@ -109,10 +106,7 @@ def build_sql(
             f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
             f"{col} {dtypes[col]['type']} {extra_statements} ".strip()
         )
-        sql_expression += (
-            f" GENERATED ALWAYS AS ({cols[col]['sql']}) "
-            f"STORED"
-        )
+        sql_expression += f" GENERATED ALWAYS AS ({cols[col]['sql']}) STORED"
         sql_expressions[level].append(
             SQLResponseSQLContent(
                 sql=f"{sql_expression.strip()};", columns=[col]

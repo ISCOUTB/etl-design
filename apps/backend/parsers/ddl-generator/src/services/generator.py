@@ -259,7 +259,11 @@ def number_maps(ast: AST, _) -> NumberAST:
     if ast["type"] != "number":
         raise ValueError("AST must be of type 'number'")
 
-    return {"type": "number", "value": float(ast["value"]), "sql": str(ast["value"])}
+    return {
+        "type": "number",
+        "value": float(ast["value"]),
+        "sql": str(ast["value"]),
+    }
 
 
 def logical_maps(ast: AST, _) -> CellAST:
