@@ -32,6 +32,10 @@ export const NuxtKeys = {
             ExampleFormat: "project:schema:example-format",
             RowId: "__rowId",
         },
+        Tables: {
+            CollapsibleState: (table: z.infer<typeof MongoRawSchema>) =>
+                `project:table:${table.id}:collapsible:open`,
+        },
     },
     Components: {
         DataTable: {

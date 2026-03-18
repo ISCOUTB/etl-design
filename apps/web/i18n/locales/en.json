@@ -364,7 +364,23 @@
                     }
                 },
                 "tables": {
-                    "tab": "Tables"
+                    "tab": "Tables",
+                    "header": {
+                        "title": "Tables",
+                        "description": "{length} Table(s) in this project"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "No Tables Found"
+                        },
+                        "events": {
+                            "create_new": "Create a new one"
+                        }
+                    },
+                    "card": {
+                        "n_columns": "{length} columns",
+                        "required_column": "required"
+                    }
                 },
                 "file": {
                     "tab": "File"

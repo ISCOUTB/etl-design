@@ -1,3 +1,4 @@
+/* eslint-disable style/indent */
 declare global {
     namespace AppEvents {
         interface BusEvent {
@@ -6,8 +7,11 @@ declare global {
         }
 
         type Events =
-            | { key: "event:dummy"; payload: undefined }
-            | { key: "event:schema:table-created"; payload: undefined };
+            | { key: "event:schema:table-created"; payload: undefined }
+            | {
+                  key: "event:projects:change-tab";
+                  payload: { value: string };
+              };
 
         type EventKey = Events["key"];
 

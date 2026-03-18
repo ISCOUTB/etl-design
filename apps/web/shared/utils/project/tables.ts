@@ -19,9 +19,11 @@ const typeColorMap: Record<Dtype, string> = {
 
 export const TableUtils = {
     getTableName(importName: string): string {
-        const parts = importName.split("__");
-        if (parts.length > 1) {
-            return parts.slice(1).join(" / ");
+        const separator = "__";
+        const firstIndex = importName.indexOf(separator);
+
+        if (firstIndex !== -1) {
+            return importName.substring(firstIndex + separator.length);
         }
 
         return importName;

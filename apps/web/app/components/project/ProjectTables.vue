@@ -1,16 +1,23 @@
 <script setup lang="ts">
     import { Search, Table2 } from "lucide-vue-next";
 
-    const { tables } = useProjectTabsSharedState();
+    const events = useAppEvents();
+    const { tables, Section } = useProjectTabsSharedState();
 </script>
 
 <template>
     <div class="flex flex-col w-full grow gap-8">
         <div class="flex flex-col gap-4">
             <div class="space-y-0.5">
-                <h2 class="text-lg font-medium text-foreground">Tables</h2>
+                <h2 class="text-lg font-medium text-foreground">
+                    {{ $t("projects.id.sections.tables.header.title") }}
+                </h2>
                 <p class="text-sm text-muted-foreground">
-                    {{ tables.state.tableSchemas.value.schemas.length }} Table(s) in this project
+                    {{
+                        $t("projects.id.sections.tables.header.description", {
+                            length: tables.state.tableSchemas.value.schemas.length,
+                        })
+                    }}
                 </p>
             </div>
             <div>
@@ -24,7 +31,18 @@
         </div>
 
         <template v-if="tables.state.tableSchemas.value.schemas.length > 0">
-            <div class="flex flex-col space-y-4">Table Card goes brrrr...</div>
+            <PaginationRoot
+                :items="tables.state.tableSchemas.value.schemas"
+                index="id"
+                :page="1"
+                :page-size="10"
+                :total-pages="1"
+                class="flex flex-col space-y-4"
+            >
+                <template #item="{ $item }">
+                    <ProjectTableCard :table="$item" />
+                </template>
+            </PaginationRoot>
         </template>
         <template v-else>
             <Empty class="flex flex-col items-center justify-between">
@@ -32,11 +50,20 @@
                     <EmptyMedia>
                         <Table2 class="size-6 text-muted-foreground" />
                     </EmptyMedia>
-                    <EmptyTitle> No Tables Found </EmptyTitle>
+                    <EmptyTitle>
+                        {{ $t("projects.id.sections.tables.empty.header.title") }}
+                    </EmptyTitle>
                 </EmptyHeader>
                 <EmptyContent>
                     <div class="flex space-x-2">
-                        <Button class="cursor-pointer"> Create a new one </Button>
+                        <Button
+                            class="cursor-pointer"
+                            @click="
+                                events.emit('event:projects:change-tab', { value: Section.Schema })
+                            "
+                        >
+                            {{ $t("projects.id.sections.tables.empty.events.create_new") }}
+                        </Button>
                         <Button variant="outline" @click="$router.back()">
                             {{ $t("common.actions.go_back") }}
                         </Button>

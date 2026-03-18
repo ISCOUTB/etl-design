@@ -170,7 +170,7 @@ export default function (
     );
 
     if (options?.model) {
-        syncRef(options.model, activeTab, { direction: "ltr", immediate: true });
+        syncRef(options.model, activeTab, { immediate: true });
     }
 
     return {

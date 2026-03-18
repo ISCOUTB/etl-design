@@ -127,8 +127,12 @@
         { immediate: true },
     );
 
+    const events = useAppEvents();
+
     onMounted(() => {
         tabs.dispatch.preload([Section.value.Schema, Section.value.Settings]);
+
+        events.on("event:projects:change-tab", ({ value }) => tabs.dispatch.setActive(value));
     });
 </script>
 
