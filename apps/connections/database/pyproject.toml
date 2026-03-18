@@ -7,9 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "proto-utils",
     "py-async-grpc-prometheus>=0.2.0",
-    "pydantic-settings>=2.10.1",
-    "pymongo>=4.15.0",
-    "redis>=6.4.0",
+    "pydantic-settings>=2.13.1",
+    "pymongo>=4.16.0",
+    "redis>=7.3.0",
     "watchfiles>=1.1.1",
 ]
 
@@ -18,11 +18,11 @@ proto-utils = { path = "../../../packages/proto-utils/proto-utils-py", editable 
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
+    "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.13.0",
+    "ruff>=0.15.6",
 ]
 
 [tool.pytest.ini_options]

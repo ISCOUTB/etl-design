@@ -80,8 +80,8 @@ class MongoHandler(BaseHandler):
         self,
         request: mongo_pb2.MongoGetSchemasByImportRegexRequest,
     ) -> mongo_pb2.MongoGetSchemasByImportRegexResponse:
-        deserialized_request = MongoSerde.deserialize_get_schemas_by_import_regex_request(
-            request
+        deserialized_request = (
+            MongoSerde.deserialize_get_schemas_by_import_regex_request(request)
         )
 
         service_response = self._execute_with_retry(
@@ -91,7 +91,9 @@ class MongoHandler(BaseHandler):
         if service_response is None:
             return mongo_pb2.MongoGetSchemasByImportRegexResponse(schemas=[])
 
-        return MongoSerde.serialize_get_schemas_by_import_regex_response(service_response)
+        return MongoSerde.serialize_get_schemas_by_import_regex_response(
+            service_response
+        )
 
     def insert_one_schema(
         self,

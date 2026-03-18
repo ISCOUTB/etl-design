@@ -123,19 +123,19 @@ dev = [
 requires-dist = [
     { name = "proto-utils", editable = "../../../packages/proto-utils/proto-utils-py" },
     { name = "py-async-grpc-prometheus", specifier = ">=0.2.0" },
-    { name = "pydantic-settings", specifier = ">=2.10.1" },
-    { name = "pymongo", specifier = ">=4.15.0" },
-    { name = "redis", specifier = ">=6.4.0" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
+    { name = "pymongo", specifier = ">=4.16.0" },
+    { name = "redis", specifier = ">=7.3.0" },
     { name = "watchfiles", specifier = ">=1.1.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-sugar", specifier = ">=1.1.1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.13.0" },
+    { name = "ruff", specifier = ">=0.15.6" },
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from pydantic import MongoDsn, RedisDsn, computed_field
+from pydantic import RedisDsn, computed_field
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,8 +32,7 @@ class Settings(BaseSettings):
         credentials = ""
         if self.MONGO_INITDB_ROOT_USERNAME and self.MONGO_INITDB_ROOT_PASSWORD:
             credentials = (
-                f"{self.MONGO_INITDB_ROOT_USERNAME}:"
-                f"{self.MONGO_INITDB_ROOT_PASSWORD}@"
+                f"{self.MONGO_INITDB_ROOT_USERNAME}:{self.MONGO_INITDB_ROOT_PASSWORD}@"
             )
 
         return (

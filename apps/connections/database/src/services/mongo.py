@@ -174,7 +174,9 @@ class MongoSchemasService:
         """
         try:
             regex_pattern = f".*{request['import_name']}.*"
-            schema_docs = mongo_schemas_connection.find({"import_name": {"$regex": regex_pattern}})
+            schema_docs = mongo_schemas_connection.find(
+                {"import_name": {"$regex": regex_pattern}}
+            )
             schemas = []
             for schema_doc in schema_docs:
                 schemas.append(
@@ -185,9 +187,11 @@ class MongoSchemasService:
                         active_schema=schema_doc.get("active_schema", {}),
                         schemas_releases=list(
                             map(
-                                lambda release: dtypes.MongoGetRawSchemasResponseSchemaRelease(
-                                    created_at=str(release.get("created_at", "")),
-                                    schema=release.get("schema", {}),
+                                lambda release: (
+                                    dtypes.MongoGetRawSchemasResponseSchemaRelease(
+                                        created_at=str(release.get("created_at", "")),
+                                        schema=release.get("schema", {}),
+                                    )
                                 ),
                                 schema_doc.get("schemas_releases", []),
                             )
