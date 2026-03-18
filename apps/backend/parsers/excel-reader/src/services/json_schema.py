@@ -76,7 +76,9 @@ def _build_extra_constraints(
         constraints.append("UNIQUE")
 
     if "default" in property_schema:
-        constraints.append(f"DEFAULT {_sql_literal(property_schema['default'])}")
+        constraints.append(
+            f"DEFAULT {_sql_literal(property_schema['default'])}"
+        )
 
     return " ".join(constraints)
 
@@ -114,11 +116,15 @@ def json_schema_to_sql_builder_payload(
 
     schema_type = schema.get("type", "object")
     if schema_type != "object":
-        raise ValueError("Only JSON schemas with root type 'object' are supported")
+        raise ValueError(
+            "Only JSON schemas with root type 'object' are supported"
+        )
 
     properties = schema.get("properties")
     if not isinstance(properties, dict) or not properties:
-        raise ValueError("JSON schema must define a non-empty 'properties' object")
+        raise ValueError(
+            "JSON schema must define a non-empty 'properties' object"
+        )
 
     required_properties = schema.get("required", [])
     if not isinstance(required_properties, list):

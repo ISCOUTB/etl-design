@@ -82,7 +82,9 @@ def test_read_json_returns_excel_like_response(monkeypatch):
     def _fake_generate_sql(_stub, _cols, _dtypes, table_name):
         return f"CREATE TABLE IF NOT EXISTS {table_name} (...);"
 
-    app.dependency_overrides[get_sql_builder_stub] = lambda: _FakeSQLBuilderStub()
+    app.dependency_overrides[get_sql_builder_stub] = lambda: (
+        _FakeSQLBuilderStub()
+    )
     monkeypatch.setattr("src.server_rest.generate_sql", _fake_generate_sql)
 
     client = TestClient(app)
@@ -110,7 +112,9 @@ def test_read_json_returns_excel_like_response(monkeypatch):
 
 
 def test_read_json_returns_400_for_invalid_schema(monkeypatch):
-    app.dependency_overrides[get_sql_builder_stub] = lambda: _FakeSQLBuilderStub()
+    app.dependency_overrides[get_sql_builder_stub] = lambda: (
+        _FakeSQLBuilderStub()
+    )
     monkeypatch.setattr(
         "src.server_rest.generate_sql",
         lambda *_: "this should not run",
