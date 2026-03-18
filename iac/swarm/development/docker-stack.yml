@@ -68,6 +68,8 @@ services:
             - "--accesslog=true" # Enable Access Logs
             - "--metrics.prometheus=true" # Enable Prometheus metrics
             - "--metrics.prometheus.entrypoint=metrics"
+            - "--tracing.servicename=traefik"
+            - "--tracing.otlp.http.endpoint=http://alloy:4318/v1/traces"
 
         deploy:
             mode: replicated
@@ -112,6 +114,7 @@ services:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
             - "--storage.tsdb.retention.time=3d"
+            - "--web.enable-remote-write-receiver"
         networks:
             - monitoring
             - traefik_proxy
@@ -136,13 +139,12 @@ services:
             - traefik_proxy
         environment:
             GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD?Variable not set}
-            GF_INSTALL_PLUGINS: "grafana-piechart-panel"
         volumes:
             - grafana-data:/var/lib/grafana
         configs:
-            - source: grafana_datasources
+            - source: grafana_datasources_v5
               target: /etc/grafana/provisioning/datasources/datasources.yml
-            - source: grafana_dashboards_provider
+            - source: grafana_dashboards_provider_v2
               target: /etc/grafana/provisioning/dashboards/dashboards.yml
         deploy:
             labels:
@@ -150,6 +152,59 @@ services:
                 - "traefik.http.routers.grafana.rule=Host(`grafana.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.grafana.entrypoints=websecure"
                 - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+    tempo:
+        image: grafana/tempo:2.7.1
+        command:
+            - "-config.file=/etc/tempo.yml"
+        networks:
+            - monitoring
+        volumes:
+            - tempo-data:/var/tempo
+        configs:
+            - source: tempo_config
+              target: /etc/tempo.yml
+        deploy:
+            placement:
+                constraints:
+                    - node.role == manager
+            resources:
+                reservations:
+                    memory: "256m"
+                limits:
+                    memory: "512m"
+            labels:
+                - prometheus-job=tempo
+                - prometheus-port=3200
+                - prometheus-path=/metrics
+
+    alloy:
+        image: grafana/alloy:latest
+        command:
+            - "run"
+            - "/etc/alloy/config.alloy"
+            - "--server.http.listen-addr=0.0.0.0:12345"
+            - "--storage.path=/var/lib/alloy/data"
+        networks:
+            - monitoring
+        configs:
+            - source: alloy_config
+              target: /etc/alloy/config.alloy
+        volumes:
+            - alloy-data:/var/lib/alloy
+        deploy:
+            placement:
+                constraints:
+                    - node.role == manager
+            resources:
+                reservations:
+                    memory: "128m"
+                limits:
+                    memory: "256m"
+            labels:
+                - prometheus-job=alloy
+                - prometheus-port=12345
+                - prometheus-path=/metrics
 
     cadvisor:
         image: gcr.io/cadvisor/cadvisor:latest
@@ -842,10 +897,14 @@ networks:
                 - subnet: 10.210.17.0/24
 
 configs:
-    grafana_datasources:
+    grafana_datasources_v5:
         file: ./grafana/provisioning/datasources/datasources.yml
-    grafana_dashboards_provider:
+    grafana_dashboards_provider_v2:
         file: ./grafana/provisioning/dashboards/dashboards.yml
+    tempo_config:
+        file: ./tempo/tempo.yml
+    alloy_config:
+        file: ./alloy/config.alloy
 
 volumes:
     prometheus-data:
@@ -855,4 +914,6 @@ volumes:
     mongo-data:
     redis-data:
     postgres-data:
+    tempo-data:
+    alloy-data:
     traefik-public-certificates:
