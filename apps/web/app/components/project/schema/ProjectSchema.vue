@@ -87,7 +87,7 @@
 
     function handleUpload(_event: Event) {
         modal.dispatch.loadComponent({
-            loader: () => import("@/components/project/ProjectSchemaUploadConfirmationModal.vue"),
+            loader: () => import("~/components/project/schema/ProjectSchemaUploadConfirmationModal.vue"),
             key: ModalKeys.Projects.Schema.UploadFile,
             kind: "alert-dialog",
             props: {

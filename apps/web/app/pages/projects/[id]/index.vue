@@ -46,7 +46,8 @@
                     value: Section.value.General,
                     icon: Info,
                 },
-                component: () => import("@/components/project/ProjectGeneralInformation.vue"),
+                component: () =>
+                    import("~/components/project/general/ProjectGeneralInformation.vue"),
                 props: {
                     project: sharedState,
                 },
@@ -57,7 +58,7 @@
                     value: Section.value.Schema,
                     icon: Database,
                 },
-                component: () => import("@/components/project/ProjectSchema.vue"),
+                component: () => import("~/components/project/schema/ProjectSchema.vue"),
                 props: {
                     project: sharedState,
                 },
@@ -68,7 +69,7 @@
                     value: Section.value.Tables,
                     icon: Table,
                 },
-                component: () => import("@/components/project/ProjectTables.vue"),
+                component: () => import("~/components/project/tables/ProjectTables.vue"),
                 props: {},
             },
             {

@@ -23,7 +23,7 @@
                     label: "",
                     value: "view",
                 },
-                component: () => import("@/components/project/ProjectTableSchemaView.vue"),
+                component: () => import("~/components/project/tables/ProjectTablesSchemaView.vue"),
                 props: {
                     schema: tables.state.value.selectedSchema,
                 },

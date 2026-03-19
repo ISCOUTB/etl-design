@@ -65,7 +65,7 @@
             class="flex flex-col space-y-4"
         >
             <template #item="{ $item }">
-                <ProjectTableCard :table="$item" :dropdown-items="dropdownItems" />
+                <ProjectTablesCard :table="$item" :dropdown-items="dropdownItems" />
             </template>
         </PaginationRoot>
     </template>
