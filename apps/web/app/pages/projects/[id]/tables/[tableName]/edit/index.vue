@@ -1,8 +1,14 @@
 <script setup lang="ts">
     import { ArrowLeft, Plus, RotateCcw, Save, Trash2 } from "lucide-vue-next";
 
+    interface ColumnDefinition {
+        name: string;
+        type: Dtype;
+        extra: Record<string, unknown>;
+    }
+
     definePageMeta({
-        title: "projects.id.tables.edit.title",
+        title: "projects.id.tables.edit.header.title",
         layout: "sidebar",
         middleware: ["table-validation", "internal-callback-url"],
         i18n: {
@@ -13,7 +19,7 @@
     });
 
     useSeoMeta({
-        title: $t("projects.id.tables.edit.title"),
+        title: $t("projects.id.tables.edit.header.title"),
         ogType: "website",
     });
 
@@ -34,16 +40,27 @@
     const KEY = NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value);
     const sharedState = useState<MongoRaw>(KEY);
 
+    const initialValues = {
+        tableName: tableName.value,
+        columns: Object.entries(sharedState.value.active_schema.properties).map<ColumnDefinition>(
+            ([name, def]) => ({
+                name,
+                ...def,
+            }),
+        ),
+    };
+
     const { EditTableSchema } = useEditTableSchema();
-    const { meta, handleSubmit, resetField } = useForm({
+    const { meta, handleSubmit, resetField, setFieldValue, resetForm } = useForm({
         validationSchema: toTypedSchema(EditTableSchema.value),
-        initialValues: {
-            tableName: tableName.value,
-            columns: Object.entries(sharedState.value.active_schema.properties).map(
-                ([name, def]) => ({ name, ...def }),
-            ),
-        },
+        initialValues,
     });
+    const { fields, push, remove } = useFieldArray<ColumnDefinition>("columns");
+    const columnsDirty = computed(
+        () =>
+            JSON.stringify(fields.value.map((field) => field.value)) ===
+            JSON.stringify(initialValues.columns),
+    );
 
     const onSubmit = handleSubmit((values) => {
         console.warn(values);
@@ -65,13 +82,20 @@
 
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h1 class="text-2xl font-semibold text-foreground">Edit Table</h1>
+                        <h1 class="text-2xl font-semibold text-foreground">
+                            {{ $t("projects.id.tables.edit.header.title") }}
+                        </h1>
                         <p class="mt-1 text-sm text-muted-foreground">
-                            Modify the schema definition for this table
+                            {{ $t("projects.id.tables.edit.header.description") }}
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <Button type="button" variant="outline" :disabled="!meta.dirty">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="!meta.dirty"
+                            @click="resetForm"
+                        >
                             {{ $t("common.actions.reset") }}
                         </Button>
                         <Button type="submit" :disabled="!meta.dirty || !meta.valid">
@@ -84,12 +108,16 @@
 
             <Card>
                 <CardHeader>
-                    <CardTitle class="text-base"> Project Information </CardTitle>
+                    <CardTitle class="text-base">
+                        {{ $t("projects.id.tables.edit.project_information") }}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <VeeField v-slot="{ field, errors }" name="tableName">
                         <Field :data-invalid="!!errors.length">
-                            <FieldLabel for="tableName"> Table Name </FieldLabel>
+                            <FieldLabel for="tableName">
+                                {{ $t("projects.id.tables.edit.fields.table_name") }}
+                            </FieldLabel>
                             <InputGroup>
                                 <InputGroupInput
                                     id="tableName"
@@ -109,7 +137,13 @@
                                     </InputGroupButton>
                                 </InputGroupAddon>
                             </InputGroup>
-                            <FieldDescription> ID: {{ sharedState.id }} </FieldDescription>
+                            <FieldDescription>
+                                {{
+                                    $t("projects.id.tables.edit.fields.table_id", {
+                                        id: sharedState.id,
+                                    })
+                                }}
+                            </FieldDescription>
                             <FieldError v-if="errors.length" :errors="errors" />
                         </Field>
                     </VeeField>
@@ -117,12 +151,12 @@
             </Card>
 
             <Card>
-                <VeeFieldArray v-slot="{ fields, push, remove }" name="columns">
+                <VeeFieldArray name="columns">
                     <CardHeader>
                         <CardTitle>
                             <div class="flex items-center justify-between">
                                 <CardTitle class="text-base">
-                                    Columns
+                                    {{ $t("projects.id.tables.edit.columns.title") }}
                                     <Badge variant="secondary" class="ml-2 font-normal">
                                         {{ fields.length }}
                                     </Badge>
@@ -132,10 +166,11 @@
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        @click="resetField('columns')"
+                                        :disabled="columnsDirty"
+                                        @click="setFieldValue('columns', initialValues.columns)"
                                     >
                                         <RotateCcw class="size-4" />
-                                        {{ $t("common.actions.reset") }}
+                                        {{ $t("projects.id.tables.edit.buttons.reset") }}
                                     </Button>
                                     <Button
                                         type="button"
@@ -148,11 +183,12 @@
                                                         'projects.id.sections.tables.default_table_name',
                                                     ),
                                                     type: 'string',
+                                                    extra: {},
                                                 })
                                         "
                                     >
                                         <Plus class="size-4" />
-                                        Add Column
+                                        {{ $t("projects.id.tables.edit.columns.add") }}
                                     </Button>
                                 </div>
                             </div>
@@ -162,19 +198,23 @@
                         <div class="flex flex-col gap-3">
                             <template v-if="fields.length">
                                 <div
-                                    class="grid grid-cols-12 gap-3 px-3 text-xs font-medium text-muted-foreground"
+                                    class="grid grid-cols-4 lg:grid-cols-12 gap-3 px-3 text-xs font-medium text-muted-foreground"
                                 >
-                                    <div class="col-span-5">Column Name</div>
-                                    <div class="col-span-6">Column Type</div>
+                                    <div class="col-span-1 lg:col-span-5">
+                                        {{ $t("projects.id.tables.edit.columns.name") }}
+                                    </div>
+                                    <div class="col-span-2 lg:col-span-6">
+                                        {{ $t("projects.id.tables.edit.columns.type") }}
+                                    </div>
                                     <div class="col-span-1" />
                                 </div>
 
                                 <div
                                     v-for="(column, index) in fields"
                                     :key="column.key"
-                                    class="grid grid-cols-12 items-start gap-3 bg-card"
+                                    class="grid grid-cols-4 lg:grid-cols-12 items-start gap-3 bg-card"
                                 >
-                                    <div class="col-span-5">
+                                    <div class="col-span-1 lg:col-span-5">
                                         <VeeField
                                             v-slot="{ field, errors }"
                                             :name="`columns[${index}].name`"
@@ -191,7 +231,7 @@
                                             </Field>
                                         </VeeField>
                                     </div>
-                                    <div class="col-span-6">
+                                    <div class="col-span-2 lg:col-span-6">
                                         <VeeField
                                             v-slot="{ field, errors }"
                                             :name="`columns[${index}].type`"

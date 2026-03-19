@@ -399,7 +399,25 @@
             },
             "tables": {
                 "edit": {
-                    "title": "Edit Table",
+                    "header": {
+                        "title": "Edit Table",
+                        "description": "Modify the schema definition for this table"
+                    },
+                    "project_information": "Project Information",
+                    "fields": {
+                        "table_name": "Table Name",
+                        "table_id": "ID: {id}"
+                    },
+                    "columns": {
+                        "title": "Columns",
+                        "add": "Add Column",
+                        "name": "Column Name",
+                        "type": "Column Type"
+                    },
+                    "buttons": {
+                        "reset": "Reset",
+                        "save": "Save Changes"
+                    },
                     "validation": {
                         "table_name_format": "Format is not valid",
                         "column_name_format": "Invalid Column Name",

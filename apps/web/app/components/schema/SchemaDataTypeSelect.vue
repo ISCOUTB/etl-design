@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { DtypesEnum } from "#shared/utils/schemas/api";
-    import type { HTMLAttributes } from "vue";
+    import type { Component, HTMLAttributes } from "vue";
     import type z from "zod";
     import { cn } from "~/lib/utils";
 
@@ -27,6 +27,15 @@
         defaultValue: props.defaultValue,
     });
 
+    const [DefineTemplate, ReuseTemplate] = createReusableTemplate<{ icon: Component }>();
+
+    const typeColorMap: Record<Dtype, string> = {
+        string: "text-emerald-600 bg-emerald-500/10",
+        integer: "text-blue-600 bg-blue-500/10",
+        float: "text-blue-600 bg-blue-500/10",
+        double: "text-blue-600 bg-blue-500/10",
+        boolean: "text-amber-600 bg-amber-500/10",
+    };
     const items = computed<DataType[]>(() => [
         {
             label: $t("projects.id.sections.schema.datatype_table.datatype.string"),
@@ -52,14 +61,30 @@
 </script>
 
 <template>
+    <DefineTemplate v-slot="{ icon }">
+        <div class="flex size-6 items-center justify-center rounded">
+            <component :is="icon" class="size-3.5" />
+        </div>
+    </DefineTemplate>
+
     <Select v-model:model-value="model">
         <SelectTrigger :class="cn('w-48', props.class)">
-            <SelectValue
-                :placeholder="$t('projects.id.sections.schema.datatype_table.header.data_type')"
-            />
+            <div class="flex items-center space-x-2">
+                <ReuseTemplate
+                    :icon="TableUtils.getIcon((model || 'string') as Dtype)"
+                    :class="typeColorMap[(model || 'string') as Dtype]"
+                />
+                <SelectValue
+                    :placeholder="$t('projects.id.sections.schema.datatype_table.header.data_type')"
+                />
+            </div>
         </SelectTrigger>
         <SelectContent>
             <SelectItem v-for="item in items" :key="item.value" :value="item.value">
+                <ReuseTemplate
+                    :icon="TableUtils.getIcon(item.value)"
+                    :class="typeColorMap[item.value]"
+                />
                 {{ item.label }}
             </SelectItem>
         </SelectContent>
