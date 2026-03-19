@@ -12,6 +12,7 @@
         "actions": {
             "cancel": "Cancel",
             "go_back": "Go Back",
+            "remove": "Remove",
             "reset": "Reset",
             "save_changes": "Save Changes"
         },
@@ -389,7 +390,8 @@
                             "edit": "Edit",
                             "delete": "Delete"
                         }
-                    }
+                    },
+                    "default_table_name": "column_name"
                 },
                 "file": {
                     "tab": "File"

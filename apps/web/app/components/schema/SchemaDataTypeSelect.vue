@@ -1,10 +1,13 @@
 <script setup lang="ts">
     import type { DtypesEnum } from "#shared/utils/schemas/api";
+    import type { HTMLAttributes } from "vue";
     import type z from "zod";
+    import { cn } from "~/lib/utils";
 
     interface Props {
         defaultValue?: string;
         modelValue?: string;
+        class?: HTMLAttributes["class"];
     }
 
     interface Emits {
@@ -50,7 +53,7 @@
 
 <template>
     <Select v-model:model-value="model">
-        <SelectTrigger class="w-48">
+        <SelectTrigger :class="cn('w-48', props.class)">
             <SelectValue
                 :placeholder="$t('projects.id.sections.schema.datatype_table.header.data_type')"
             />
