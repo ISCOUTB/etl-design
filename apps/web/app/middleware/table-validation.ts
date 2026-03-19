@@ -5,8 +5,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const { $localePath } = useNuxtApp();
 
     const projectId = to.params.id?.toString();
+    const tableName = to.params.tableName?.toString();
 
-    if (!projectId) {
+    if (!projectId || !tableName) {
         return navigateTo($localePath({ name: "index" }));
     }
 
@@ -14,21 +15,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
         return navigateTo($localePath({ name: "auth-sign-in" }));
     }
 
-    const KEY = NuxtKeys.Projects.SharedState(projectId);
-    const sharedState = useState<ResponseProject | undefined>(KEY);
+    const KEY = NuxtKeys.Projects.Tables.SharedState(projectId, tableName);
+    const sharedState = useState<MongoRaw | undefined>(KEY);
 
     const api = useApi();
     try {
-        const response = await api(`/projects/id/${projectId}`);
-        const parsedResponse = ResponseProjectSchema.safeParse(response);
+        const response = await api(`/schemas/${projectId}/raw`, {
+            method: "GET",
+            query: {
+                table_name: tableName,
+            },
+        });
+        const parsedResponse = MongoRawSchema.safeParse(response);
 
         if (!parsedResponse.success) {
-            return navigateTo(
-                $localePath({
-                    name: "index",
-                    query: { error: ResponseCodesRecord.Server.BadPayload },
-                }),
-            );
+            return navigateTo($localePath({ name: "projects-id", params: { id: projectId } }));
         }
 
         sharedState.value = parsedResponse.data;

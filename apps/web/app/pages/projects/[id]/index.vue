@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    import type { z } from "zod";
     import { Database, FileIcon, Info, Settings, Table } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
@@ -24,7 +23,7 @@
     setI18nParams({ en: { id: projectId.value } });
 
     const KEY = NuxtKeys.Projects.SharedState(projectId.value?.toString());
-    const sharedState = useState<z.infer<typeof ResponseProjectSchema>>(KEY);
+    const sharedState = useState<ResponseProject>(KEY);
 
     const auth = useAuth();
     useHead({

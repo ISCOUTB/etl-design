@@ -34,10 +34,10 @@
                     }
 
                     return $localeRoute({
-                        name: "projects-id-tables-tableId-edit",
+                        name: "projects-id-tables-tableName-edit",
                         params: {
                             id: projectId.value,
-                            tableId: context.id,
+                            tableName: TableUtils.getTableName(context.import_name),
                         },
                         query: { callbackUrl: route.path },
                     });

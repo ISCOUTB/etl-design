@@ -8,6 +8,26 @@ function $<T>(context: T | undefined, defaultValue: string, value: (value: T) =>
     return value(context);
 }
 
+function $$<A, B>(
+    a: A | undefined,
+    b: B | undefined,
+    defaults: {
+        none: string;
+        onlyA: (a: A) => string;
+        both: (a: A, b: B) => string;
+    },
+) {
+    if (!a) {
+        return defaults.none;
+    }
+
+    if (!b) {
+        return defaults.onlyA(a);
+    }
+
+    return defaults.both(a, b);
+}
+
 export const NuxtKeys = {
     Projects: {
         Id: "projects:id",
@@ -33,6 +53,35 @@ export const NuxtKeys = {
             View: (projectId: ResponseProject["id"] | undefined) =>
                 $(projectId, "project:tables:view", (value) => `project:${value}:tables:view`),
             TabsManager: (route: string) => `project:tables:${route}:tabs-manager`,
+            SharedState: (
+                projectId: ResponseProject["id"] | undefined,
+                tableName: MongoRaw["import_name"] | undefined,
+            ) =>
+                $$(projectId, tableName, {
+                    none: "project:tables:shared-state",
+                    onlyA: (id) => `project:${id}:tables:shared-state`,
+                    both: (id, name) => `project:${id}:tables:${name}:shared-state`,
+                }),
+        },
+        Edit: {
+            TableName: (
+                projectId: ResponseProject["id"] | undefined,
+                tableName: MongoRaw["import_name"] | undefined,
+            ) =>
+                $$(projectId, tableName, {
+                    none: "project:tables:edit:table-name",
+                    onlyA: (id) => `project:${id}:tables:edit:table-name`,
+                    both: (id, name) => `project:${id}:tables:${name}:edit:table-name`,
+                }),
+            ColumnState: (
+                projectId: ResponseProject["id"] | undefined,
+                tableName: MongoRaw["import_name"] | undefined,
+            ) =>
+                $$(projectId, tableName, {
+                    none: "project:tables:edit:columns",
+                    onlyA: (id) => `project:${id}:tables:edit:columns`,
+                    both: (id, name) => `project:${id}:tables:${name}:edit:columns`,
+                }),
         },
     },
     Components: {
@@ -43,6 +92,9 @@ export const NuxtKeys = {
     Sidebar: {
         OpenCollapsible: (group: Components.Sidebar.GroupCollapsibleKind) =>
             `sidebar:${group.kind}:${group.label}`,
+    },
+    Params: {
+        NoDefaultValue: "keys:params:default-value",
     },
 } as const;
 

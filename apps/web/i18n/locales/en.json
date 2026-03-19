@@ -12,6 +12,7 @@
         "actions": {
             "cancel": "Cancel",
             "go_back": "Go Back",
+            "reset": "Reset",
             "save_changes": "Save Changes"
         },
         "pagination": {
@@ -392,6 +393,17 @@
                 },
                 "file": {
                     "tab": "File"
+                }
+            },
+            "tables": {
+                "edit": {
+                    "title": "Edit Table",
+                    "validation": {
+                        "table_name_format": "Format is not valid",
+                        "column_name_format": "Invalid Column Name",
+                        "invalid_type": "Unsopported Type",
+                        "min_columns": "At least {min} columns is required"
+                    }
                 }
             }
         },

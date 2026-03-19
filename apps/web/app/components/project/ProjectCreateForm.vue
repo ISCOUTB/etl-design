@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import { ResponseCodesRecord } from "#shared/utils/response-codes";
-    import { ApiErrorSchema, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import {
         AlignLeft,
         CirclePlus,
@@ -12,7 +10,6 @@
         Server,
         User,
     } from "lucide-vue-next";
-    import { FetchError } from "ofetch";
     import { toast } from "vue-sonner";
 
     const { CreateProjectSchema } = useCreateProjectSchema();
