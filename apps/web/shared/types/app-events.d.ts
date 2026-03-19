@@ -13,7 +13,10 @@ declare global {
                   key: "event:projects:change-tab";
                   payload: { value: string };
               }
-            | { key: "event:projects:table:change-view"; payload: { value: string } };
+            | {
+                  key: "event:projects:table:change-view";
+                  payload: { value: "overview" | "view" };
+              };
 
         type EventKey = Events["key"];
 

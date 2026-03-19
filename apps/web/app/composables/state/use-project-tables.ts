@@ -5,12 +5,12 @@ interface State {
     selectedSchema: z.infer<typeof MongoRawSchema> | undefined;
 }
 
-export default function (projectId: MaybeRefOrGetter<string | undefined>) {
+export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | undefined>) {
     const errorToast = useErrorToast();
 
     const id = computed(() => toValue(projectId));
 
-    const state = useState<State>(NuxtKeys.Projects.Tables.TablesState(id.value), () => ({
+    const state = useState<State>(NuxtKeys.Projects.Tables.TableState(id.value), () => ({
         tableSchemas: [],
         selectedSchema: undefined,
     }));

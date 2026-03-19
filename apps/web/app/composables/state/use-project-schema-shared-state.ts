@@ -1,4 +1,4 @@
-import type { ColumnConfig } from "#shared/utils/schemas/types";
+import type { ColumnConfig, ResponseProject } from "#shared/utils/schemas/types";
 import type { z } from "zod";
 import type { Column } from "@/components/common/data-table/utils";
 import Ajv from "ajv";
@@ -13,8 +13,10 @@ interface State {
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
 
-export default function (stateKey: string) {
-    const state = useState<State>(stateKey, () => ({
+export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | undefined>) {
+    const id = computed(() => toValue(projectId));
+
+    const state = useState<State>(NuxtKeys.Projects.Schemas.SchemaState(id.value), () => ({
         tableName: undefined,
         uploadedFile: undefined,
         sheetNames: [],

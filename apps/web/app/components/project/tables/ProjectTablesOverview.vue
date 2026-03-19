@@ -1,8 +1,11 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Eye, Table2 } from "lucide-vue-next";
+    import { Edit, Eye, Table2, Trash2 } from "lucide-vue-next";
 
-    const { tables, Section } = useProjectTabsSharedState();
+    const { $localeRoute } = useNuxtApp();
+    const route = useRoute();
+
+    const { tables, Section, projectId } = useProjectTabsSharedState();
 
     const events = useAppEvents();
 
@@ -11,7 +14,7 @@
     >(() => [
         [
             {
-                label: "projects.id.sections.tables.card.actions.view_schema",
+                label: "projects.id.sections.tables.card.dropdown.view_schema",
                 icon: Eye,
                 action: (context) => {
                     if (!context) {
@@ -21,6 +24,31 @@
                     tables.dispatch.setSelectedSchema(context);
                     events.emit("event:projects:table:change-view", { value: "view" });
                 },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.edit",
+                icon: Edit,
+                to: (context) => {
+                    if (!context) {
+                        return;
+                    }
+
+                    return $localeRoute({
+                        name: "projects-id-tables-tableId-edit",
+                        params: {
+                            id: projectId.value,
+                            tableId: context.id,
+                        },
+                        query: { callbackUrl: route.path },
+                    });
+                },
+            },
+        ],
+        [
+            {
+                label: "projects.id.sections.tables.card.dropdown.delete",
+                icon: Trash2,
+                action: (context) => console.warn(context),
             },
         ],
     ]);

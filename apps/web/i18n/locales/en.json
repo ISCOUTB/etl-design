@@ -383,8 +383,10 @@
                         "selected_schema": {
                             "description": "JSON Schema validation definition"
                         },
-                        "actions": {
-                            "view_schema": "View schema"
+                        "dropdown": {
+                            "view_schema": "View",
+                            "edit": "Edit",
+                            "delete": "Delete"
                         }
                     }
                 },
