@@ -3,7 +3,6 @@ from proto_utils.parsers.ddl_generator_serde import DDLGeneratorSerde
 from proto_utils.parsers.dtypes import DDLRequest
 from proto_utils.parsers.dtypes_serde import DTypesSerde
 
-from src.core.config import settings
 from src.services import ddl_generator
 from src.utils.logger import logger
 
@@ -38,8 +37,7 @@ def generate_ddl_handler(
         output = ddl_generator.generate_ddl(input_data)
 
         # Log output info
-        if settings.DDL_GENERATOR_DEBUG:
-            logger.debug(f"[HANDLER] Generated DDL output: {output}")
+        logger.debug(f"[HANDLER] Generated DDL output: {output}")
 
         # Serialize response
         response = DDLGeneratorSerde.serialize_ddl_response(output)

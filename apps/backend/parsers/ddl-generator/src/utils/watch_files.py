@@ -3,10 +3,12 @@ from typing import Callable
 
 from watchfiles import PythonFilter, arun_process
 
+from src.utils.logger import logger
+
 
 async def callback(changes):
     await asyncio.sleep(0.1)
-    print("changes detected:", changes)
+    logger.debug("changes detected:", changes)
 
 
 async def main_debug(main_function: Callable[[], None]) -> None:
