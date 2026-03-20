@@ -1,10 +1,20 @@
 <script setup lang="ts">
-    import "vue-sonner/style.css";
-
+    const { $gsap } = useNuxtApp();
     const { finalizePendingLocaleChange } = useI18n();
+    const utils = useAnimationsUtils();
 
-    async function onBeforeEnter() {
+    async function onBeforeEnter(element: Element) {
         await finalizePendingLocaleChange();
+
+        if (utils.noAnimations.value) {
+            return;
+        }
+
+        $gsap.fromTo(element, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+    }
+
+    function onLeave(element: Element, done: () => void) {
+        $gsap.to(element, { opacity: 0, duration: 0.3, onComplete: done });
     }
 </script>
 
@@ -12,19 +22,8 @@
     <div>
         <NuxtLayout>
             <NuxtLoadingIndicator />
-            <NuxtPage :transition="{ name: 'my', mode: 'out-in', onBeforeEnter }" />
-            <Toaster />
+            <NuxtPage :transition="{ css: false, mode: 'out-in', onBeforeEnter, onLeave }" />
+            <Toaster rich-colors />
         </NuxtLayout>
     </div>
 </template>
-
-<style>
-    .my-enter-active,
-    .my-leave-active {
-        transition: opacity 0.3s;
-    }
-    .my-enter,
-    .my-leave-active {
-        opacity: 0;
-    }
-</style>

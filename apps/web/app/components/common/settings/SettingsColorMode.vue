@@ -11,6 +11,7 @@
 
     const button = useTemplateRef("button");
     const colorMode = useColorMode();
+    const utils = useAnimationsUtils();
 
     const modes: Components.ColorModeOption[] = [
         {
@@ -54,7 +55,7 @@
     }
 
     function updateColorMode() {
-        if (!document.startViewTransition) {
+        if (!document.startViewTransition || utils.noAnimations.value) {
             updateTheme();
             return;
         }

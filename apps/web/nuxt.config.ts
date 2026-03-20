@@ -34,6 +34,7 @@ export default defineNuxtConfig({
         "@nuxtjs/seo",
         "shadcn-nuxt",
         "@artmizu/nuxt-prometheus",
+        "vue-sonner/nuxt",
         Sonda({ server: true, open: false, filename: "sonda_[env]", gzip: true }),
     ],
     imports: {
