@@ -1,13 +1,14 @@
 import logging
 import logging.handlers
 from pathlib import Path
+from typing import Any, Dict
 
 from opentelemetry import trace
 from pythonjsonlogger import jsonlogger
 
 from src.core.config import settings
 
-# Ensure logs directory exists for file handlers
+# Ensure logs directory exists
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 
@@ -48,34 +49,7 @@ class OTelContextFilter(logging.Filter):
 
 
 def setup_logger() -> logging.Logger:
-    """Configure and return the main application logger.
-
-    Sets up a comprehensive logging system with multiple handlers for different
-    log levels and output destinations. The logger configuration includes:
-
-    - Rotating file handler for general application logs
-    - Daily rotating handler for day-based log organization
-    - Error-specific handler for critical issue tracking
-    - Console handler for real-time monitoring
-
-    Log levels are configured based on the debug setting:
-    - DEBUG mode: All log levels (DEBUG and above)
-    - Production mode: INFO level and above (shows INFO, WARNING, ERROR, CRITICAL)
-
-    Returns:
-        logging.Logger: Configured logger instance with all handlers attached
-
-    Handler Configuration:
-        - Rotating Handler: 10MB max size, 5 backup files, DEBUG level
-        - Daily Handler: Midnight rotation, 30 days retention, INFO level
-        - Error Handler: ERROR level only, persistent file
-        - Console Handler: INFO level and above, simplified formatting
-
-    Note:
-        The logger's propagate setting is disabled to prevent duplicate
-        messages from parent loggers.
-    """
-    console_log_format = "[%(levelname)s] [server] [excel-reader] %(message)s"
+    console_log_format = "[%(levelname)s] [server] [API] %(message)s"
     json_format = (
         "%(asctime)s %(levelname)s %(name)s %(message)s "
         "%(service_name)s %(service_version)s %(environment)s "
@@ -85,12 +59,12 @@ def setup_logger() -> logging.Logger:
 
     console_formatter = (
         jsonlogger.JsonFormatter(json_format)  # type: ignore
-        if not settings.EXCEL_READER_DEBUG
+        if not settings.SERVER_DEBUG
         else logging.Formatter(console_log_format)
     )
 
     # Create main logger instance
-    logger = logging.getLogger("ExcelReaderServer")
+    logger = logging.getLogger("API")
 
     # Adjust log level based on debug configuration
     logger.setLevel(logging.DEBUG)
@@ -98,15 +72,15 @@ def setup_logger() -> logging.Logger:
     # Clear any existing handlers to prevent duplication
     logger.handlers.clear()
 
-    if settings.EXCEL_READER_DEBUG:
+    if settings.SERVER_DEBUG:
         # File formatter with timestamp and detailed context
         file_formatter = logging.Formatter(
-            "[%(asctime)s] [%(levelname)s] [server] [excel-reader] %(message)s"
+            "[%(asctime)s] [%(levelname)s] [server] [API] %(message)s"
         )
 
         # Rotating File Handler - Size-based rotation for main logs
         rotating_handler = logging.handlers.RotatingFileHandler(
-            log_dir / "excelreader_server.log",
+            log_dir / "api_server.log",
             maxBytes=10 * 1024 * 1024,  # 10MB per file
             backupCount=5,  # Keep 5 backup files
             encoding="utf-8",
@@ -116,7 +90,7 @@ def setup_logger() -> logging.Logger:
 
         # Daily Rotating Handler - Time-based rotation for daily logs
         daily_handler = logging.handlers.TimedRotatingFileHandler(
-            log_dir / "excelreader_server_daily.log",
+            log_dir / "api_server_daily.log",
             when="midnight",  # Rotate at midnight
             interval=1,  # Every day
             backupCount=30,  # Keep 30 days of logs
@@ -127,7 +101,7 @@ def setup_logger() -> logging.Logger:
 
         # Error File Handler - Dedicated error logging
         error_handler = logging.FileHandler(
-            log_dir / "excelreader_server_errors.log", encoding="utf-8"
+            log_dir / "api_server_errors.log", encoding="utf-8"
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
@@ -145,9 +119,9 @@ def setup_logger() -> logging.Logger:
     logger.addHandler(console_handler)
 
     otel_filter = OTelContextFilter(
-        service_name="excel-reader-server",
+        service_name="api-server",
         service_version="1.0.0",
-        environment="debug" if settings.EXCEL_READER_DEBUG else "production",
+        environment="debug" if settings.SERVER_DEBUG else "production",
     )
     logger.addFilter(otel_filter)
 
@@ -159,44 +133,70 @@ def setup_logger() -> logging.Logger:
 # Global logger instance for application-wide use
 logger = setup_logger()
 
-
 _uvicorn_base_handlers = ["default"]
 _uvicorn_access_handlers = ["access"]
-_root_handlers = ["default", "access"]
+_root_handlers = ["default"]
+_sqlalchemy_handlers = []
+_pika_handlers = []
 
-if settings.EXCEL_READER_DEBUG:
+if settings.SERVER_DEBUG:
     _uvicorn_base_handlers.extend(["file", "daily", "error"])
     _root_handlers.extend(["file", "daily", "error"])
+    _sqlalchemy_handlers.extend(["file", "error"])
+    _pika_handlers.extend(["file", "error"])
+
     formatters_config = {
         "default": {
-            "format": "[%(levelname)s] [server] [excel-reader] %(message)s",
+            "()": "uvicorn.logging.DefaultFormatter",
+            "fmt": "%(levelprefix)s %(message)s",
+            "use_colors": None,
         },
         "access": {
-            "format": "[%(levelname)s] [server] [excel-reader] %(message)s",
+            "()": "uvicorn.logging.AccessFormatter",
+            "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
         },
         "file": {
-            "format": "[%(asctime)s] [%(levelname)s] [server] [excel-reader] %(message)s",
+            "format": "[%(asctime)s] [%(levelname)s] [server] [API] %(name)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "access_file": {
+            "()": "uvicorn.logging.AccessFormatter",
+            "fmt": '[%(asctime)s] [%(levelname)s] [server] [API] [access] %(client_addr)s - "%(request_line)s" %(status_code)s',
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     }
+    # File handlers for persistent logging
     extra_handlers_config = {
         "file": {
+            "formatter": "file",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": str(log_dir / "excelreader_server.log"),
+            "filename": str(log_dir / "api_server.log"),
             "maxBytes": 10 * 1024 * 1024,  # 10MB
             "backupCount": 5,
             "encoding": "utf-8",
         },
         "daily": {
+            "formatter": "file",
             "class": "logging.handlers.TimedRotatingFileHandler",
-            "filename": str(log_dir / "excelreader_server_daily.log"),
+            "filename": str(log_dir / "api_server_daily.log"),
             "when": "midnight",
             "interval": 1,
             "backupCount": 30,
             "encoding": "utf-8",
         },
         "error": {
+            "formatter": "file",
             "class": "logging.FileHandler",
-            "filename": str(log_dir / "excelreader_server_errors.log"),
+            "filename": str(log_dir / "api_server_errors.log"),
+            "encoding": "utf-8",
+            "level": "ERROR",
+        },
+        "access_file": {
+            "formatter": "access_file",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(log_dir / "api_access.log"),
+            "maxBytes": 10 * 1024 * 1024,  # 10MB
+            "backupCount": 5,
             "encoding": "utf-8",
         },
     }
@@ -213,14 +213,14 @@ else:
     }
     extra_handlers_config = {}
 
-LOGGING_CONFIG = {  # type: ignore
+LOGGING_CONFIG: Dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": formatters_config,
     "handlers": {
         "default": {
-            "class": "logging.StreamHandler",
             "formatter": "default",
+            "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
         },
         "access": {
@@ -229,10 +229,6 @@ LOGGING_CONFIG = {  # type: ignore
             "stream": "ext://sys.stdout",
         },
         **extra_handlers_config,
-    },
-    "root": {
-        "level": "INFO",
-        "handlers": _root_handlers,
     },
     "loggers": {
         "uvicorn": {
@@ -250,8 +246,31 @@ LOGGING_CONFIG = {  # type: ignore
             "level": "INFO",
             "propagate": False,
         },
+        # Add custom loggers for your API components
+        "API": {
+            "handlers": _root_handlers,
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Silence noisy third-party loggers
+        "sqlalchemy.engine": {
+            "handlers": _sqlalchemy_handlers,
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "sqlalchemy.pool": {
+            "handlers": _sqlalchemy_handlers,
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "pika": {
+            "handlers": _pika_handlers,
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+    "root": {
+        "level": "INFO",
+        "handlers": _root_handlers,
     },
 }
-
-if __name__ == "__main__":
-    pass

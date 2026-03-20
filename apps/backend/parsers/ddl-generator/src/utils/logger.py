@@ -107,10 +107,7 @@ def setup_logger() -> logging.Logger:
     logger = logging.getLogger("DDLGeneratorServer")
 
     # Adjust log level based on debug configuration
-    if settings.DDL_GENERATOR_DEBUG:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Clear any existing handlers to prevent duplication
     logger.handlers.clear()
@@ -161,7 +158,7 @@ def setup_logger() -> logging.Logger:
         "%(asctime)s %(levelname)s %(name)s %(message)s "
         "%(service_name)s %(service_version)s %(environment)s "
         "%(trace_id)s %(span_id)s %(trace_flags)s "
-        "%(module)s %(funcName)s %(lineno)d"
+        "%(module)s %(funcName)s"
     )
 
     console_formatter = (
@@ -193,6 +190,3 @@ def setup_logger() -> logging.Logger:
 
 # Global logger instance for application-wide use
 logger = setup_logger()
-
-# Log initialization message to confirm logger setup
-logger.info("[INIT] Logger initialized successfully")
