@@ -40,6 +40,7 @@ from src.handlers.mongo_handler import MongoHandler
 from src.handlers.redis_handler import RedisHandler
 from src.handlers.tasks_handler import DatabaseTasksHandler
 from src.utils.logger import logger
+from src.utils.trace_context import decorate_grpc_methods, with_grpc_trace_context
 from src.utils.watch_files import main_debug
 
 
@@ -775,6 +776,42 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
         except Exception as e:
             logger.error(f"[TASKS_REMOVE] Operation failed: {e}")
             raise
+
+
+_TRACE_CONTEXT_DECORATOR = with_grpc_trace_context(
+    logger=logger,
+    enabled=settings.DB_TRACE_CONTEXT_ENABLED,
+    log_headers=settings.DB_TRACE_CONTEXT_LOG_HEADERS,
+    debug_enabled=settings.DATABASE_CONNECTION_DEBUG,
+)
+
+DatabaseServicer = decorate_grpc_methods(
+    DatabaseServicer,
+    [
+        "RedisGetKeys",
+        "RedisSet",
+        "RedisGet",
+        "RedisDelete",
+        "RedisPing",
+        "RedisGetCache",
+        "RedisClearCache",
+        "MongoPing",
+        "MongoGetRawSchemas",
+        "MongoGetSchemasByImportRegex",
+        "MongoInsertOneSchema",
+        "MongoCountAllDocuments",
+        "MongoFindJsonSchema",
+        "MongoUpdateOneJsonSchema",
+        "MongoDeleteOneJsonSchema",
+        "MongoDeleteImportName",
+        "UpdateTaskId",
+        "GetTaskId",
+        "GetTasksByImportName",
+        "SetTaskId",
+        "RemoveTaskId",
+    ],
+    _TRACE_CONTEXT_DECORATOR,
+)
 
 
 async def serve() -> None:

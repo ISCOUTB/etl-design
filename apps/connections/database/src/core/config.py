@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     ENABLE_PROMETHEUS_METRICS: bool = False
     PROMETHEUS_METRICS_PORT: str = "9090"
 
+    # Inbound Trace Context Configuration
+    DB_TRACE_CONTEXT_ENABLED: bool = True
+    DB_TRACE_CONTEXT_LOG_HEADERS: bool = False
+
+    # Service Metadata for Logs/OTel
+    OTEL_SERVICE_NAME: str = "database-server"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+
 
 settings = Settings()
 

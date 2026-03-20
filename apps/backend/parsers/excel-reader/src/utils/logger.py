@@ -145,8 +145,8 @@ def setup_logger() -> logging.Logger:
     logger.addHandler(console_handler)
 
     otel_filter = OTelContextFilter(
-        service_name="excel-reader-server",
-        service_version="1.0.0",
+        service_name=settings.OTEL_SERVICE_NAME,
+        service_version=settings.OTEL_SERVICE_VERSION,
         environment="debug" if settings.EXCEL_READER_DEBUG else "production",
     )
     logger.addFilter(otel_filter)

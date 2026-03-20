@@ -165,8 +165,6 @@ def setup_logger() -> logging.Logger:
         else logging.Formatter(console_log_format)
     )
 
-    print(f"Console log format: {console_log_format}")
-
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)  # Set explicit level for console
     console_handler.setFormatter(console_formatter)
@@ -176,8 +174,8 @@ def setup_logger() -> logging.Logger:
 
     # Add OpenTelemetry context filter to all handlers for enhanced observability
     otel_filter = OTelContextFilter(
-        service_name="sql-builder-server",
-        service_version="1.0.0",
+        service_name=settings.OTEL_SERVICE_NAME,
+        service_version=settings.OTEL_SERVICE_VERSION,
         environment="debug" if settings.SQL_BUILDER_DEBUG else "production",
     )
     logger.addFilter(otel_filter)

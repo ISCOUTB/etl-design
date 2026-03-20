@@ -35,6 +35,11 @@ from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
 from src.core.config import settings
 from src.handlers.ddl_generator import generate_ddl_handler
 from src.utils.logger import logger
+from src.utils.trace_context import (
+    attach_trace_context,
+    detach_trace_context,
+    extract_trace_headers_from_context,
+)
 from src.utils.watch_files import main_debug
 
 
@@ -73,6 +78,24 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
         request: ddl_generator_pb2.DDLRequest,
         context: grpc.aio.ServicerContext[Any, Any],
     ) -> ddl_generator_pb2.DDLResponse:
+        trace_context_token = None
+        inbound_trace_headers: dict[str, str] = {}
+
+        if settings.DDL_TRACE_CONTEXT_ENABLED:
+            inbound_trace_headers = extract_trace_headers_from_context(context)
+            trace_context_token = attach_trace_context(inbound_trace_headers)
+
+        if (
+            settings.DDL_TRACE_CONTEXT_LOG_HEADERS
+            and settings.DDL_GENERATOR_DEBUG
+            and inbound_trace_headers
+        ):
+            logger.info(
+                "[TRACE_CONTEXT] Inbound gRPC trace headers received - "
+                f"traceparent: {inbound_trace_headers.get('traceparent')}, "
+                f"tracestate: {inbound_trace_headers.get('tracestate')}"
+            )
+
         column_count = len(request.columns)
         ast_type = request.ast.type if request.HasField("ast") else "NO_AST"
 
@@ -94,6 +117,9 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
         except Exception as e:
             logger.error(f"[DDL_GENERATE] Operation failed: {e}")
             raise
+        finally:
+            if trace_context_token is not None:
+                detach_trace_context(trace_context_token)
 
 
 async def serve() -> None:

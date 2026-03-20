@@ -2,8 +2,10 @@
 import json
 from typing import Annotated, Dict
 
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from opentelemetry import context as otel_context
+from opentelemetry.propagate import extract
 from prometheus_fastapi_instrumentator import Instrumentator
 from proto_utils.generated.parsers import (
     ddl_generator_pb2_grpc,
@@ -50,6 +52,16 @@ SQLBuilderDep = Annotated[
 # ======== Server ========
 
 app = FastAPI()
+
+
+@app.middleware("http")
+async def propagate_trace_context(request: Request, call_next):
+    extracted_context = extract(dict(request.headers))
+    token = otel_context.attach(extracted_context)
+    try:
+        return await call_next(request)
+    finally:
+        otel_context.detach(token)
 
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
