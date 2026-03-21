@@ -1,8 +1,8 @@
 import type { ExternalToast } from "vue-sonner";
 import { ResponseCodesRecord } from "#shared/utils/response-codes";
 import { ApiErrorSchema } from "#shared/utils/schemas/api";
-import { toast } from "vue-sonner";
 import { FetchError } from "ofetch";
+import { toast } from "vue-sonner";
 
 interface ErrorCodeDefaults {
     title: string;
@@ -137,6 +137,10 @@ export default function () {
     }
 
     function handleServer(error: unknown) {
+        if (!error) {
+            return;
+        }
+
         if (error instanceof FetchError) {
             const parsedError = ApiErrorSchema.safeParse(error.data);
             console.warn(parsedError);

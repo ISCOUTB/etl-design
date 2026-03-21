@@ -9,21 +9,7 @@ export function useApi() {
         onRequest({ options }) {
             const accessToken = auth.data.value?.accessToken;
             if (accessToken) {
-                const headers: HeadersInit = {};
-
-                if (options.headers instanceof Headers) {
-                    options.headers.forEach((value, key) => (headers[key] = value));
-                }
-
-                if (typeof options.headers === "object") {
-                    Object.entries(options.headers).forEach(
-                        ([key, value]) => (headers[key] = value),
-                    );
-                }
-
-                headers.Authorization = `Bearer ${accessToken}`;
-
-                options.headers = new Headers(headers);
+                options.headers.set("Authorization", `Bearer ${accessToken}`);
             }
         },
         onResponseError(payload) {
