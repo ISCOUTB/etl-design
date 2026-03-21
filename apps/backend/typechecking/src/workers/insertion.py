@@ -30,6 +30,8 @@ from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
 from messaging_utils.schemas import InsertionMessage
+from opentelemetry import context as otel_context
+from opentelemetry.propagate import extract
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
@@ -262,12 +264,22 @@ class InsertionWorker:
             - Skips completed tasks (status in [success, error, published, completed])
             - Does NOT requeue when already processing (prevents duplicate work)
         """
-        task_id = None
-        try:
-            message = InsertionMessage(**json.loads(body.decode()))
-            task_id = message["id"]
-            task = message.get("task", "sample_insertion")
+        message = InsertionMessage(**json.loads(body.decode()))
+        task_id = message["id"]
+        task = message.get("task", "sample_insertion")
+        traceparent = message.get("traceparent")
+        tracestate = message.get("tracestate")
+        baggage = message.get("baggage")
+        extracted_context = extract(
+            {
+                "traceparent": traceparent,
+                "tracestate": tracestate,
+                "baggage": baggage,
+            }
+        )
+        token = otel_context.attach(extracted_context)
 
+        try:
             # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
             try:
                 current_status = get_task_status(
@@ -295,6 +307,7 @@ class InsertionWorker:
             # If currently processing, likely another worker has it or it crashed.
             # Don't requeue to avoid duplicate processing.
             if current_status in [
+                "received",
                 "processing-file",
                 "requesting-insert-sql",
                 "file-processed",
@@ -466,6 +479,9 @@ class InsertionWorker:
             )
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
+        finally:
+            otel_context.detach(token)
+
     async def _insert_data(
         self, message: InsertionMessage, db_client: DatabaseClient
     ) -> InsertionResult:
@@ -527,7 +543,14 @@ class InsertionWorker:
                 task=self.TASK,
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
-            return InsertionResult(task_id=task_id, results={}, status="failed")
+            return InsertionResult(
+                task_id=task_id,
+                results={},
+                status="failed",
+                traceparent=message.get("traceparent"),
+                tracestate=message.get("tracestate"),
+                baggage=message.get("baggage"),
+            )
 
         try:
             with psycopg.connect(message["db_uri"]) as conn:
@@ -546,10 +569,22 @@ class InsertionWorker:
                 data={"error": str(e), "update_date": get_datetime_now()},
             )
             return InsertionResult(
-                task_id=task_id, results=sql_per_sheet, status="failed"
+                task_id=task_id,
+                results=sql_per_sheet,
+                status="failed",
+                traceparent=message.get("traceparent"),
+                tracestate=message.get("tracestate"),
+                baggage=message.get("baggage"),
             )
 
-        return InsertionResult(task_id=task_id, results=sql_per_sheet, status="success")
+        return InsertionResult(
+            task_id=task_id,
+            results=sql_per_sheet,
+            status="success",
+            traceparent=message.get("traceparent"),
+            tracestate=message.get("tracestate"),
+            baggage=message.get("baggage"),
+        )
 
     def _publish_result(
         self, task_id: str, result: InsertionResult, db_client: DatabaseClient

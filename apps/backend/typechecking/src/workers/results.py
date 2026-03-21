@@ -11,6 +11,8 @@ from messaging_utils.core.config import settings as mq_settings
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
+from opentelemetry import context as otel_context
+from opentelemetry.propagate import extract
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
@@ -225,12 +227,21 @@ class ResultWorker:
             - Skips already completed tasks (status = "completed")
             - Does NOT requeue when already notifying (prevents duplicate API calls)
         """
-        task_id = None
+        message = ResultsMessage(**json.loads(body))
+        task_id = message["task_id"]
+        traceparent = message.get("traceparent")
+        tracestate = message.get("tracestate")
+        baggage = message.get("baggage")
+        extracted_context = extract(
+            {
+                "traceparent": traceparent,
+                "tracestate": tracestate,
+                "baggage": baggage,
+            }
+        )
+        token = otel_context.attach(extracted_context)
+        logger.info(f"Processing results for task_id: {task_id}")
         try:
-            message = ResultsMessage(**json.loads(body))
-            task_id = message["task_id"]
-            logger.info(f"Processing results for task_id: {task_id}")
-
             # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
             try:
                 current_status = get_task_status(
@@ -375,6 +386,9 @@ class ResultWorker:
                 "ACK to prevent message from stuck indefinitely."
             )
             ch.basic_ack(delivery_tag=method.delivery_tag)
+
+        finally:
+            otel_context.detach(token)
 
     async def _notify_task_completion(
         self,

@@ -20,18 +20,19 @@ def get_task_status(
 
     Returns:
         Optional[str]: The current status of the task, or None if not found.
+        
+    Raises:
+        grpc.RpcError, ConnectionError, TimeoutError: Infrastructure failures propagate
+            so callers can differentiate "not found" from "DB unavailable".
     """
-    try:
-        response = database_client.get_task_id(
-            dtypes.GetTaskIdRequest(task_id=task_id, task=task)
-        )
+    response = database_client.get_task_id(
+        dtypes.GetTaskIdRequest(task_id=task_id, task=task)
+    )
 
-        if response["found"] and response["value"]:
-            return response["value"]["status"]
-    except Exception:
-        pass
-
-    return None
+    if response["found"] and response["value"]:
+        return response["value"]["status"]
+    
+    return None  # task not found (normal case)
 
 
 def update_task_status(

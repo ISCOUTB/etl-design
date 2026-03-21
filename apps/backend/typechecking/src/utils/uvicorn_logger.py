@@ -1,20 +1,60 @@
 """Uvicorn logging configuration for minimal HTTP server.
 
-This module provides logging configuration for Uvicorn that integrates with
-the existing typechecking logging system. It ensures consistent log formatting
-and proper routing of Uvicorn's logs to the same handlers used by workers.
+This module keeps Uvicorn/FastAPI logging aligned with the component logger:
+- Minimal debug mode: human-readable console + file handlers (component and consolidated)
+- Production mode: JSON console output only
 """
 
 from pathlib import Path
+from typing import Any, Dict
+
+from src.core.config import settings
 
 # Ensure logs directory exists
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
+_uvicorn_base_handlers = ["default"]
+_uvicorn_access_handlers = ["access"]
+_root_handlers = ["default"]
+_minimal_server_handlers = ["default"]
+
+if settings.MINIMAL_SERVER_DEBUG:
+    _uvicorn_base_handlers.extend(
+        [
+            "file",
+            "daily",
+            "error",
+            "consolidated_file",
+            "consolidated_daily",
+            "consolidated_error",
+        ]
+    )
+    _uvicorn_access_handlers.extend(
+        ["file", "daily", "consolidated_file", "consolidated_daily"]
+    )
+    _root_handlers.extend(
+        [
+            "file",
+            "daily",
+            "error",
+            "consolidated_file",
+            "consolidated_daily",
+            "consolidated_error",
+        ]
+    )
+    _minimal_server_handlers.extend(
+        [
+            "file",
+            "daily",
+            "error",
+            "consolidated_file",
+            "consolidated_daily",
+            "consolidated_error",
+        ]
+    )
+
+    formatters_config = {
         "default": {
             "format": "[%(levelname)s] [server] [Typechecking] [http-server] %(message)s",
         },
@@ -24,24 +64,14 @@ LOGGING_CONFIG = {
         "file": {
             "format": "[%(asctime)s] [%(levelname)s] [server] [Typechecking] [http-server] %(message)s",
         },
-    },
-    "handlers": {
-        "default": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-            "stream": "ext://sys.stderr",
-        },
-        "access": {
-            "formatter": "access",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",
-        },
+    }
+    extra_handlers_config = {
         # Component-specific file handlers
         "file": {
             "formatter": "file",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": str(log_dir / "typechecking_http-server.log"),
-            "maxBytes": 10 * 1024 * 1024,  # 10MB
+            "maxBytes": 10 * 1024 * 1024,
             "backupCount": 5,
             "encoding": "utf-8",
         },
@@ -86,71 +116,66 @@ LOGGING_CONFIG = {
             "encoding": "utf-8",
             "level": "ERROR",
         },
-    },
-    "root": {
-        "level": "INFO",
-        "handlers": [
-            "default",
-            "access",
-            "file",
-            "daily",
-            "error",
-            "consolidated_file",
-            "consolidated_daily",
-            "consolidated_error",
-        ],
+    }
+else:
+    formatters_config = {
+        "default": {
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(funcName)s",
+        },
+        "access": {
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(client_addr)s %(request_line)s %(status_code)s",
+        },
+    }
+    extra_handlers_config = {}
+
+LOGGING_CONFIG: Dict[str, Any] = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": formatters_config,
+    "handlers": {
+        "default": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "stream": "ext://sys.stderr",
+        },
+        "access": {
+            "class": "logging.StreamHandler",
+            "formatter": "access",
+            "stream": "ext://sys.stdout",
+        },
+        **extra_handlers_config,
     },
     "loggers": {
         "uvicorn": {
-            "handlers": [
-                "default",
-                "file",
-                "daily",
-                "error",
-                "consolidated_file",
-                "consolidated_daily",
-                "consolidated_error",
-            ],
+            "handlers": _uvicorn_base_handlers,
             "level": "INFO",
             "propagate": False,
         },
         "uvicorn.error": {
-            "handlers": [
-                "default",
-                "file",
-                "daily",
-                "error",
-                "consolidated_file",
-                "consolidated_daily",
-                "consolidated_error",
-            ],
+            "handlers": _uvicorn_base_handlers,
             "level": "INFO",
             "propagate": False,
         },
         "uvicorn.access": {
-            "handlers": [
-                "access",
-                "file",
-                "daily",
-                "consolidated_file",
-                "consolidated_daily",
-            ],
+            "handlers": _uvicorn_access_handlers,
             "level": "INFO",
             "propagate": False,
         },
-        # FastAPI application logger
         "src.minimal_server": {
-            "handlers": [
-                "default",
-                "file",
-                "daily",
-                "error",
-                "consolidated_file",
-                "consolidated_daily",
-                "consolidated_error",
-            ],
+            "handlers": _minimal_server_handlers,
             "level": "INFO",
             "propagate": False,
         },
+        "pika": {
+            "handlers": _root_handlers,
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+    "root": {
+        "level": "INFO",
+        "handlers": _root_handlers,
     },
 }

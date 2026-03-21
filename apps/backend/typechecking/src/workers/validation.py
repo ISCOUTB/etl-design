@@ -31,6 +31,8 @@ from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
 from messaging_utils.schemas import InsertionMessage, ValidationMessage
+from opentelemetry import context as otel_context
+from opentelemetry.propagate import extract
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
@@ -273,12 +275,21 @@ class ValidationWorker:
             - Skips completed tasks (status in [success, error, published, completed])
             - Does NOT requeue when already processing (prevents duplicate work)
         """
-        task_id = None
+        message = ValidationMessage(**json.loads(body.decode()))
+        task_id = message["id"]
+        task = message.get("task", "sample_validation")
+        traceparent = message.get("traceparent")
+        tracestate = message.get("tracestate")
+        baggage = message.get("baggage")
+        extracted_context = extract(
+            {
+                "traceparent": traceparent,
+                "tracestate": tracestate,
+                "baggage": baggage,
+            }
+        )
+        token = otel_context.attach(extracted_context)
         try:
-            message = ValidationMessage(**json.loads(body.decode()))
-            task_id = message["id"]
-            task = message.get("task", "sample_validation")
-
             # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
             try:
                 current_status = get_task_status(
@@ -309,6 +320,8 @@ class ValidationWorker:
                 "processing",
                 "validating-file",
                 "received-sample-validation",
+                "received",
+                "processing-file",
             ]:
                 logger.info(
                     f"Task {task_id} status={current_status} (processing/received). "
@@ -469,6 +482,9 @@ class ValidationWorker:
                                     db_uri=db_uri,
                                     table_name=message["table_name"],
                                     idempotency_key=message["idempotency_key"],
+                                    traceparent=traceparent,
+                                    tracestate=tracestate,
+                                    baggage=baggage,
                                 )
                             ),
                         )
@@ -508,6 +524,8 @@ class ValidationWorker:
                 "ACK to prevent message from stuck indefinitely."
             )
             ch.basic_ack(delivery_tag=method.delivery_tag)
+        finally:
+            otel_context.detach(token)
 
     async def _validate_data(
         self, message: ValidationMessage, db_client: DatabaseClient
@@ -591,6 +609,9 @@ class ValidationWorker:
             task_id=task_id,
             status=summary["status"],
             results=summary,
+            traceparent=message.get("traceparent"),
+            tracestate=message.get("tracestate"),
+            baggage=message.get("baggage"),
         )
 
     def _publish_result(
