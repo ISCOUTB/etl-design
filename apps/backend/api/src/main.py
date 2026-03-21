@@ -61,10 +61,7 @@ app.add_exception_handler(grpc.RpcError, grpc_exception_handler)
 app.add_exception_handler(AMQPError, rabbitmq_exception_handler)
 app.add_exception_handler(AppException, app_exception_handler)
 
-# Add logging middleware at the end to ensure it captures all logs from other middlewares and routes.
-# only applies when it's not in debug mode, since in debug mode the logs will be duplicated
-if not settings.SERVER_DEBUG:
-    app.add_middleware(LogsMiddleware)
+app.add_middleware(LogsMiddleware)
 
 if __name__ == "__main__":
     import uvicorn
