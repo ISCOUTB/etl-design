@@ -10,12 +10,10 @@ via gRPC, providing immediate responses without message queue overhead.
 # TODO: This can be improved by adding more detailed error handling, logging, better response
 # schemas, and a bunch of things, but I'll keep it simple for now to focus on core functionality
 
-from typing import Any, Dict
-
 from fastapi import APIRouter
 from proto_utils.database import dtypes
 
-from src import models
+from src import models, schemas
 from src.api.deps import CurrentUser, DatabaseClientDep
 from src.exceptions import (
     AppException,
@@ -34,7 +32,7 @@ async def create_or_update_schema(
     database_client: DatabaseClientDep,
     project_id: str,
     table_name: str,
-    schema: Dict[str, Any],
+    schema: schemas.JsonSchemaRequest,
 ) -> dtypes.ApiResponse:
     """
     Create or update a schema.
@@ -74,7 +72,7 @@ async def create_or_update_schema(
     try:
         # Save to database
         db_response = await SchemaService.save_schema(
-            schema=schema,
+            orig_schema=schema,
             import_name=import_name,
             database_client=database_client,
         )
@@ -101,7 +99,7 @@ async def get_raw_schema(
     database_client: DatabaseClientDep,
     project_id: str,
     table_name: str,
-) -> dtypes.MongoGetRawSchemasResponse:
+) -> schemas.MongoSchemasResponse:
     """
     Retrieve the raw schema document for a given import name.
 
@@ -114,7 +112,7 @@ async def get_raw_schema(
         table_name: The name of the table associated with the schema
             (used to construct import_name).
     Returns:
-        dtypes.MongoGetRawSchemasResponse
+        schemas.MongoSchemasResponse
     """
     has_permission = PermissionService.has_permission(
         user=current_user,
@@ -147,7 +145,7 @@ async def search_schemas(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
     project_id: str,
-) -> dtypes.MongoGetSchemasByImportRegexResponse:
+) -> schemas.MongoGetSchemasByImportResponse:
     """
     Search for schemas matching the given criteria.
 
@@ -159,7 +157,7 @@ async def search_schemas(
         project_id: Unique identifier for the project to search within.
         table_name: The name of the table to filter schemas by.
     Returns:
-        dtypes.MongoGetSchemasByImportRegexResponse
+        schemas.MongoGetSchemasByImportResponse
     """
     has_permission = PermissionService.has_permission(
         user=current_user,
@@ -188,7 +186,7 @@ async def get_schema(
     database_client: DatabaseClientDep,
     project_id: str,
     table_name: str,
-) -> dtypes.JsonSchema:
+) -> schemas.JsonSchemaRequest:
     """
     Retrieve the active schema for a given import name.
 

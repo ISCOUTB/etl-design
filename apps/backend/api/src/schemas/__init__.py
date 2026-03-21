@@ -1,6 +1,5 @@
 from src.schemas.api import (
     ColumnDtypesSchema,
-    CreateTableResponse,
     OpenTelemetryTraceHeaders,
     PaginatedResponse,
     SpreadsheetDtypesSchema,
@@ -12,6 +11,13 @@ from src.schemas.projects import (
     CreateProjectSchema,
     ResponseProjectSchema,
     UpdateProjectSchema,
+)
+from src.schemas.schemas import (
+    CreateTableResponse,
+    JsonSchemaRequest,
+    MongoGetSchemasByImportResponse,
+    MongoSchemasResponse,
+    MongoSchemasResponseSchemaRelease,
 )
 from src.schemas.token import TokenPayload
 from src.schemas.uploads import (
@@ -39,7 +45,6 @@ from src.schemas.users import (
 __all__ = [
     # API Schemas
     "ColumnDtypesSchema",
-    "CreateTableResponse",
     "OpenTelemetryTraceHeaders",
     "PaginatedResponse",
     "SpreadsheetDtypesSchema",
@@ -49,6 +54,12 @@ __all__ = [
     # Generic Schemas
     "DeleteResult",
     "T",
+    # Schemas Schemas
+    "CreateTableResponse",
+    "JsonSchemaRequest",
+    "MongoGetSchemasByImportResponse",
+    "MongoSchemasResponse",
+    "MongoSchemasResponseSchemaRelease",
     # User Schemas
     "BaseUserSchema",
     "CreateUserSchema",

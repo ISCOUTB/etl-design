@@ -8,7 +8,7 @@ The handlers manage JSON schema validation, creation, storage, and retrieval
 using the DatabaseClient to communicate with the MongoDB service via gRPC.
 """
 
-from typing import Any, Dict, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from jsonschema import (
     Draft3Validator,
@@ -22,6 +22,7 @@ from jsonschema import (
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
 
+from src import schemas
 from src.exceptions import (
     InvalidJsonSchemaDraftException,
     InvalidJsonSchemaException,
@@ -33,9 +34,70 @@ from src.utils import utc_now_iso
 
 class SchemaService:
     @staticmethod
+    def parse_raw_schema_to_api(
+        raw_schema: dtypes.JsonSchema,
+    ) -> schemas.JsonSchemaRequest:
+        """
+        Convert a raw schema from the database format to the API response format.
+
+        This function transforms the raw schema document retrieved from the database
+        into the format expected by the API clients, including restructuring properties
+        and ensuring the $schema field is included.
+
+        Args:
+            raw_schema (dtypes.JsonSchema): The raw schema document from the database.
+        Returns:
+            schemas.JsonSchemaRequest: The schema formatted for API responses.
+        """
+        # Start with the base structure
+        api_schema: schemas.JsonSchemaRequest = {
+            "$schema": raw_schema.get(
+                "schema", "https://json-schema.org/draft-07/schema"
+            ),
+            "type": "object",  # Assuming root type is always object for our use case
+            "properties": {},
+            "required": raw_schema.get("required", []),
+        }
+
+        # Transform properties back to API format
+        for prop_name, prop_info in raw_schema.get("properties", {}).items():
+            api_schema["properties"][prop_name] = {
+                "type": prop_info.get(
+                    "type", "string"
+                ),  # Default to string if type is missing
+                **prop_info.get("extra", {}),  # Include any extra properties
+            }
+
+        return api_schema
+
+    @staticmethod
+    def parse_get_raw_schema(
+        schema_doc: dtypes.MongoGetRawSchemasResponse,
+    ) -> schemas.MongoSchemasResponse:
+        return schemas.MongoSchemasResponse(
+            id=schema_doc["id"],
+            import_name=schema_doc["import_name"],
+            created_at=schema_doc["created_at"],
+            active_schema=SchemaService.parse_raw_schema_to_api(
+                raw_schema=schema_doc["active_schema"]
+            ),
+            schemas_releases=list(
+                map(
+                    lambda release: schemas.MongoSchemasResponseSchemaRelease(
+                        created_at=release["created_at"],
+                        schema=SchemaService.parse_raw_schema_to_api(
+                            raw_schema=release["schema"]
+                        ),
+                    ),
+                    schema_doc.get("schemas_releases", []),
+                )
+            ),
+        )
+
+    @staticmethod
     async def get_raw_schema(
         import_name: str, database_client: DatabaseClient
-    ) -> dtypes.MongoGetRawSchemasResponse | None:
+    ) -> Optional[schemas.MongoSchemasResponse]:
         """
         Fetch the raw JSON schema for a given import name.
 
@@ -43,7 +105,7 @@ class SchemaService:
             import_name (str): The name of the import to fetch the schema for.
             database_client (DatabaseClient): The database client to use for fetching the schema.
         Returns:
-            dtypes.MongoGetRawSchemasResponse | None: The raw schema response if found, None otherwise.
+            schemas.MongoSchemasResponse | None: The raw schema response if found, None otherwise.
         """
         schema_doc = await database_client.mongo_get_raw_schemas_async(
             dtypes.MongoGetRawSchemasRequest(import_name=import_name)
@@ -51,12 +113,12 @@ class SchemaService:
 
         if schema_doc["id"] == "":
             return None
-        return schema_doc
+        return SchemaService.parse_get_raw_schema(schema_doc)
 
     @staticmethod
     async def get_schemas_by_project_id(
         project_id: str, database_client: DatabaseClient
-    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+    ) -> schemas.MongoGetSchemasByImportResponse:
         """
         Fetch schemas that match a given regular expression.
 
@@ -65,16 +127,22 @@ class SchemaService:
             database_client (DatabaseClient): The database client to use for fetching the schemas.
 
         Returns:
-            dtypes.MongoGetSchemasByImportRegexResponse: The response containing matching schemas.
+            schemas.MongoGetSchemasByImportResponse: The response containing matching schemas.
         """
-        return await database_client.mongo_get_schemas_by_import_regex_async(
+        response = await database_client.mongo_get_schemas_by_import_regex_async(
             dtypes.MongoGetSchemasByImportRegexRequest(import_name=f"{project_id}")
+        )
+
+        return schemas.MongoGetSchemasByImportResponse(
+            schemas=list(
+                map(SchemaService.parse_get_raw_schema, response.get("schemas", []))
+            )
         )
 
     @staticmethod
     async def get_active_schema(
         import_name: str, database_client: DatabaseClient
-    ) -> dtypes.JsonSchema | None:
+    ) -> Optional[schemas.JsonSchemaRequest]:
         """
         Get the active schema for a given import name.
 
@@ -83,16 +151,20 @@ class SchemaService:
             database_client (DatabaseClient): The database client to use for fetching the schema.
 
         Returns:
-            dtypes.JsonSchema | None: The active schema if found, None otherwise.
+            schemas.JsonSchemaRequest | None: The active schema if found, None otherwise.
         """
         schema_doc = await database_client.mongo_find_jsonschema_async(
             dtypes.MongoFindJsonSchemaRequest(import_name=import_name)
         )
 
-        return schema_doc["schema"] if schema_doc["status"] == "found" else None
+        # return schema_doc["schema"] if schema_doc["status"] == "found" else None
+        if schema_doc["status"] != "found" or schema_doc.get("schema", None) is None:
+            return None
+
+        return SchemaService.parse_raw_schema_to_api(raw_schema=schema_doc["schema"])  # type: ignore
 
     @staticmethod
-    def _validate_jsonschema(schema: Dict[str, Any]) -> None:
+    def _validate_jsonschema(schema: schemas.JsonSchemaRequest) -> None:
         # Ensure the schema is of type 'object' at the root level
         if schema.get("type", "") != "object":
             raise InvalidJsonSchemaTypeException()
@@ -126,7 +198,9 @@ class SchemaService:
 
     @staticmethod
     async def save_schema(
-        schema: Dict[str, Any], import_name: str, database_client: DatabaseClient
+        orig_schema: schemas.JsonSchemaRequest,
+        import_name: str,
+        database_client: DatabaseClient,
     ) -> dtypes.MongoInsertOneSchemaResponse:
         """
         Save the schema to the MongoDB collection.
@@ -144,12 +218,15 @@ class SchemaService:
             dtypes.MongoInsertOneSchemaResponse: The result of the insert or update operation
                 with status ('inserted', 'no_change', 'updated', or 'error').
         """
-        SchemaService._validate_jsonschema(schema)
+        SchemaService._validate_jsonschema(orig_schema)
 
         # Extract and normalize the $schema field
-        schema_key_value = schema.pop(
+        schema_key_value = orig_schema.pop(
             "$schema", "https://json-schema.org/draft-07/schema"
         )
+
+        # Create a copy to avoid mutating the original input
+        schema: Dict[str, Any] = dict(orig_schema.copy())
         schema["schema"] = schema_key_value
 
         # Transform properties to storage format

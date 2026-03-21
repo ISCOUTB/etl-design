@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any, Dict, Generic, List, Optional, Self, TypedDict, TypeVar
 
-from proto_utils.database import dtypes
 from pydantic import BaseModel, model_validator
 
 T = TypeVar("T")
@@ -29,23 +28,6 @@ class PaginatedResponse(BaseModel, Generic[T]):
     has_next: bool
     has_prev: bool
     items: List[T]
-
-
-class CreateTableResponse(BaseModel):
-    """
-    Base model for create responses.
-
-    Attributes:
-        message (str): A message indicating the result of the operation.
-        sql_per_sheet (Dict[str, str]): A dictionary mapping sheet names to their corresponding SQL
-            statements.
-        schema_saved (Dict[str, dtypes.MongoInsertOneSchemaResponse]): A dictionary mapping sheet
-            names to their corresponding schema save responses.
-    """
-
-    message: str
-    sql_per_sheet: Dict[str, str]
-    schema_saved: Dict[str, dtypes.MongoInsertOneSchemaResponse]
 
 
 class DtypesEnum(Enum):
