@@ -38,6 +38,7 @@ tasks:
         command: noop
         deps:
             - source:run-parsers
+            - source:deploy-postgres
             - source:deploy-mongo
             - source:deploy-redis
             - database:run
