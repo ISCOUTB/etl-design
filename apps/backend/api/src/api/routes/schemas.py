@@ -85,15 +85,14 @@ async def create_or_update_schema(
             operation="save",
             import_name=import_name,
         )
+        if response["code"] == 500:
+            raise AppException(message=response["message"])
 
         return response
+    except AppException:
+        raise
     except Exception as e:
-        return dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to save schema: {str(e)}",
-            data={"import_name": import_name},
-        )
+        raise AppException(message=f"Failed to save schema: {repr(e)}") from e
 
 
 @router.get("/{project_id}/raw")
@@ -135,10 +134,6 @@ async def get_raw_schema(
         )
     except Exception as e:
         raise AppException() from e
-
-    from pprint import pprint
-
-    pprint(raw_schema)
 
     # Raise AppException for 404 to match FastAPI conventions
     if raw_schema is None:
@@ -187,13 +182,13 @@ async def search_schemas(
     return search_results
 
 
-@router.get("/{project_id}", response_model=dtypes.ApiResponse)
+@router.get("/{project_id}")
 async def get_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
     project_id: str,
     table_name: str,
-) -> dtypes.ApiResponse:
+) -> dtypes.JsonSchema:
     """
     Retrieve the active schema for a given import name.
 
@@ -232,26 +227,13 @@ async def get_schema(
             database_client=database_client,
         )
     except Exception as e:
-        return dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to retrieve schema: {str(e)}",
-            data={"import_name": import_name},
-        )
+        raise AppException(message=f"Failed to retrieve schema: {repr(e)}") from e
 
     # Raise AppException for 404 to match FastAPI conventions
     if active_schema is None:
         raise SchemaNotFoundException()
 
-    return dtypes.ApiResponse(
-        status="success",
-        code=200,
-        message=f"Schema '{import_name}' retrieved successfully",
-        data={
-            "import_name": import_name,
-            "schema": str(active_schema),
-        },
-    )
+    return active_schema
 
 
 @router.delete("/{project_id}")
@@ -299,20 +281,15 @@ async def delete_schema(
             import_name=import_name,
             database_client=database_client,
         )
-
-        # Map database response to API response
-        response = SchemaService.map_db_response_to_api(
-            db_response=db_response,
-            operation="remove",
-            import_name=import_name,
-        )
     except Exception as e:
-        return dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to remove schema: {str(e)}",
-            data={"import_name": import_name},
-        )
+        raise AppException(message=f"Failed to remove schema: {repr(e)}") from e
+
+    # Map database response to API response
+    response = SchemaService.map_db_response_to_api(
+        db_response=db_response,
+        operation="remove",
+        import_name=import_name,
+    )
 
     # Raise AppException for 404 to match FastAPI conventions
     if response["code"] == 404:
