@@ -131,13 +131,6 @@ export const SpreadsheetDtypesSchema = z.discriminatedUnion("dtype", [
 
 export const ColumnDtypesSchema = z.record(z.string(), SpreadsheetDtypesSchema);
 
-export const CreateTableFromJsonSchema = z.object({
-    table_name: z.string(),
-    project_id: z.string(),
-    jsonschema: z.record(z.string(), z.unknown()),
-    primary_keys: z.array(z.string()),
-});
-
 export const JsonSchema = z.object({
     schema: z.string(),
     type: z.literal("object"),
@@ -149,6 +142,13 @@ export const JsonSchema = z.object({
             extra: z.record(z.string(), z.unknown()),
         }),
     ),
+});
+
+export const CreateTableFromJsonSchema = z.object({
+    table_name: z.string(),
+    project_id: z.string(),
+    jsonschema: JsonSchema,
+    primary_keys: z.array(z.string()),
 });
 
 export const MongoRawSchema = z.object({

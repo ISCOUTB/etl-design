@@ -225,7 +225,7 @@
                     {{ $t("projects.id.sections.schema.datatype_table.description") }}
                 </p>
 
-                <div class="rounded-lg border border-amber-300/70 overflow-hidden">
+                <div class="rounded-lg border overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow class="hover:bg-amber-300/30">
@@ -250,6 +250,9 @@
                                         )
                                     }}
                                 </TableHead>
+                                <TableHead> Primary </TableHead>
+                                <TableHead> Unique </TableHead>
+                                <TableHead> Optional </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -274,6 +277,56 @@
                                             dataTypeModels[String(column.key)]!.value
                                         "
                                         default-value="text"
+                                    />
+                                </TableCell>
+                                <TableCell class="px-4 py-2">
+                                    <Checkbox
+                                        :disabled="
+                                            Object.entries(schema.state.value.columnsConfig).some(
+                                                ([k, v]) => v.primary_key && k !== column.key,
+                                            )
+                                        "
+                                        :model-value="
+                                            schema.state.value.columnsConfig?.[column.key]
+                                                ?.primary_key ?? false
+                                        "
+                                        @update:model-value="
+                                            (value) => {
+                                                schema.dispatch.patchColumnConfig(column.key, {
+                                                    primary_key: !!value,
+                                                });
+                                            }
+                                        "
+                                    />
+                                </TableCell>
+                                <TableCell class="px-4 py-2">
+                                    <Checkbox
+                                        :model-value="
+                                            schema.state.value.columnsConfig?.[column.key]
+                                                ?.unique ?? false
+                                        "
+                                        @update:model-value="
+                                            (value) => {
+                                                schema.dispatch.patchColumnConfig(column.key, {
+                                                    unique: !!value,
+                                                });
+                                            }
+                                        "
+                                    />
+                                </TableCell>
+                                <TableCell class="px-4 py-2">
+                                    <Checkbox
+                                        :model-value="
+                                            schema.state.value.columnsConfig?.[column.key]
+                                                ?.optional ?? false
+                                        "
+                                        @update:model-value="
+                                            (value) => {
+                                                schema.dispatch.patchColumnConfig(column.key, {
+                                                    optional: !!value,
+                                                });
+                                            }
+                                        "
                                     />
                                 </TableCell>
                             </TableRow>

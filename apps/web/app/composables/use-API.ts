@@ -26,6 +26,11 @@ export function useApi() {
                 options.headers = new Headers(headers);
             }
         },
+        onResponseError(payload) {
+            if (import.meta.dev) {
+                console.error(payload);
+            }
+        },
     });
 }
 
