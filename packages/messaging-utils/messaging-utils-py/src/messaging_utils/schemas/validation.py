@@ -19,3 +19,7 @@ class ValidationMessage(TypedDict):
     insert_overwrite: Optional[bool]
     insert_db_uri: Optional[str]
     idempotency_key: Optional[str]
+    # W3C Trace Context headers for distributed tracing
+    traceparent: Optional[str]
+    tracestate: Optional[str]
+    baggage: Optional[str]

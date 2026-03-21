@@ -18,6 +18,9 @@ class InsertionMessage(TypedDict):
     overwrite (bool): A flag indicating whether to overwrite to existing data (True) or append (False).
     db_uri (str): The URI for connecting to the database where the data should be inserted.
     idempotency_key (Optional[str]): A unique key for ensuring idempotent processing of the insertion request.
+    traceparent (Optional[str]): W3C Trace Context traceparent header for distributed tracing.
+    tracestate (Optional[str]): W3C Trace Context tracestate header for distributed tracing.
+    baggage (Optional[str]): Baggage header for distributed context propagation.
     """
 
     id: str
@@ -31,3 +34,7 @@ class InsertionMessage(TypedDict):
     overwrite: bool
     db_uri: str
     idempotency_key: Optional[str]
+    # W3C Trace Context headers for distributed tracing
+    traceparent: Optional[str]
+    tracestate: Optional[str]
+    baggage: Optional[str]

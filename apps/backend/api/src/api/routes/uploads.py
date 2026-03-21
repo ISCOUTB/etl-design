@@ -8,7 +8,7 @@ from typing import Annotated, Dict
 
 import httpx
 import psycopg2
-from fastapi import APIRouter, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile
 from proto_utils.database import dtypes
 from pydantic import ValidationError
 
@@ -57,6 +57,7 @@ def _execute_sql_per_sheet(
 
 @router.post("/validate")
 async def validate(
+    request: Request,
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
@@ -78,6 +79,10 @@ async def validate(
         raise ForbiddenException()
 
     try:
+        trace_headers = {}
+        if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
+            trace_headers = request.state.trace_headers
+        
         response = await idempotency_service.validate_task(
             db_client=database_client,
             publisher=publisher,
@@ -85,6 +90,7 @@ async def validate(
             user_id=current_user.id,
             project_id=project_id,
             table_name=table_name,
+            trace_headers=trace_headers,
         )
         return response
     except Exception:
@@ -94,6 +100,7 @@ async def validate(
 
 @router.post("/insert")
 async def insert(
+    request: Request,
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
@@ -121,6 +128,10 @@ async def insert(
     db_uri = project_service.get_project_db_uri(project_id)
 
     try:
+        trace_headers = {}
+        if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
+            trace_headers = request.state.trace_headers
+        
         response = await idempotency_service.insert_task(
             db_client=database_client,
             publisher=publisher,
@@ -130,6 +141,7 @@ async def insert(
             table_name=table_name,
             db_uri=db_uri,
             overwrite=overwrite,
+            trace_headers=trace_headers,
         )
         return response
     except Exception:
@@ -139,6 +151,7 @@ async def insert(
 
 @router.post("/process")
 async def process(
+    request: Request,
     current_user: CurrentUser,
     publisher: PublisherDep,
     database_client: DatabaseClientDep,
@@ -165,6 +178,10 @@ async def process(
     db_uri = project_service.get_project_db_uri(project_id)
 
     try:
+        trace_headers = {}
+        if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
+            trace_headers = request.state.trace_headers
+        
         response = await idempotency_service.process_task(
             db_client=database_client,
             publisher=publisher,
@@ -174,6 +191,7 @@ async def process(
             table_name=table_name,
             db_uri=db_uri,
             overwrite=overwrite,
+            trace_headers=trace_headers,
         )
         return response
     except Exception:
@@ -186,6 +204,7 @@ async def process(
 # multiple sheets, and even the dependency between them
 @router.post("/table-excel")
 async def create_table(
+    request: Request,
     current_user: CurrentUser,
     project_service: ProjectServiceDep,
     db_client: DatabaseClientDep,
@@ -225,6 +244,19 @@ async def create_table(
         raise DtypesInvalidContentException()
 
     fill_spaces = "_"
+    
+    # Extract trace headers from request state (set by LogsMiddleware)
+    headers = {}
+    if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
+        trace_headers = request.state.trace_headers
+        # Only include headers that have values
+        if trace_headers.get("traceparent"):
+            headers["traceparent"] = trace_headers["traceparent"]
+        if trace_headers.get("tracestate"):
+            headers["tracestate"] = trace_headers["tracestate"]
+        if trace_headers.get("baggage"):
+            headers["baggage"] = trace_headers["baggage"]
+    
     response = await HTTPX_CLIENT.post(
         f"{settings.EXCEL_READER_URL}/parser/excel",
         files={
@@ -239,6 +271,7 @@ async def create_table(
             "dtypes_str": dtypes_str,
         },
         params={"fill_spaces": fill_spaces, "limit": 5},
+        headers=headers,
     )
 
     if response.is_error:

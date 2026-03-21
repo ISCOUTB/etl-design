@@ -4,6 +4,7 @@ import time
 from typing import Any, Awaitable, Callable, Optional, TypeVar
 
 import grpc
+from opentelemetry.propagate import inject
 from proto_utils.database import dtypes
 from proto_utils.database.database_serde import DatabaseSerde
 from proto_utils.database.mongo_serde import MongoSerde
@@ -31,12 +32,14 @@ class DatabaseClient:
         logger: Optional[logging.Logger] = None,
         retryable_status_codes: Optional[set[grpc.StatusCode]] = None,
         rpc_timeout: Optional[float] = None,
+        trace_context_enabled: bool = False,
     ) -> None:
         self._channel_address = channel_address
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.backoff = backoff
         self.rpc_timeout = rpc_timeout
+        self.trace_context_enabled = trace_context_enabled
 
         if logger is None:
             logger = logging.getLogger(__name__)
@@ -55,10 +58,24 @@ class DatabaseClient:
 
         self._initialize_sync_channel()
 
-    def _rpc_kwargs(self) -> dict[str, float]:
-        if self.rpc_timeout is None:
-            return {}
-        return {"timeout": self.rpc_timeout}
+    def _trace_metadata(self) -> list[tuple[str, str]]:
+        if not self.trace_context_enabled:
+            return []
+
+        carrier: dict[str, str] = {}
+        inject(carrier)
+        return [(key, value) for key, value in carrier.items() if value]
+
+    def _rpc_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+        if self.rpc_timeout is not None:
+            kwargs["timeout"] = self.rpc_timeout
+
+        trace_metadata = self._trace_metadata()
+        if trace_metadata:
+            kwargs["metadata"] = trace_metadata
+
+        return kwargs
 
     def _is_retryable_rpc_error(self, error: grpc.RpcError) -> bool:
         return error.code() in self.retryable_status_codes

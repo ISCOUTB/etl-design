@@ -27,6 +27,7 @@ async def get_db_client() -> AsyncGenerator[DatabaseClient, None]:
         max_retries=settings.DATABASE_MAX_RETRIES,
         retry_delay=settings.DATABASE_RETRY_DELAY_SECONDS,
         backoff=settings.DATABASE_BACKOFF_MULTIPLIER,
+        trace_context_enabled=settings.DATABASE_TRACE_CONTEXT_ENABLED,
     )
     try:
         yield db_client

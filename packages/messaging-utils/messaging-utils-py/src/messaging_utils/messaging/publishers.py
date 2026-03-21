@@ -220,6 +220,9 @@ class Publisher:
         insert_db_uri: Optional[str] = None,
         task_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        traceparent: Optional[str] = None,
+        tracestate: Optional[str] = None,
+        baggage: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -245,6 +248,9 @@ class Publisher:
                 operation and specifies the database URI for the insertion.
             task_id (Optional[str]): Optional unique task ID (UUID) for tracking the validation request. If not provided, a new UUID will be generated.
             idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the validation request.
+            traceparent (Optional[str]): W3C Trace Context traceparent header for distributed tracing.
+            tracestate (Optional[str]): W3C Trace Context tracestate header for distributed tracing.
+            baggage (Optional[str]): Baggage header for distributed context propagation.
             kwargs (str): Additional key-value pairs to include in the message.
 
         Returns:
@@ -257,6 +263,9 @@ class Publisher:
             - file_data: Hexadecimal-encoded file content
             - project_id: Schema identifier for validation
             - metadata: Additional processing metadata
+            - traceparent: W3C Trace Context traceparent header
+            - tracestate: W3C Trace Context tracestate header
+            - baggage: Baggage header for context propagation
 
         Raises:
             Exception: If message publishing fails due to connection issues
@@ -279,21 +288,32 @@ class Publisher:
                 # actually, it is already str, but for type clarity
                 task_id = str(uuid7())
 
-            message = ValidationMessage(
-                id=task_id,
-                task=task,
-                file_data=file_data.hex(),
-                project_id=project_id,
-                table_name=table_name,
-                metadata=metadata,
-                date=datetime.now().isoformat(),
-                extra=kwargs,
-                insert=insert,
-                insert_table_name=insert_table_name,
-                insert_overwrite=insert_overwrite,
-                insert_db_uri=insert_db_uri,
-                idempotency_key=idempotency_key,
-            )
+            # Build base message
+            message_data: dict = {
+                "id": task_id,
+                "task": task,
+                "file_data": file_data.hex(),
+                "project_id": project_id,
+                "table_name": table_name,
+                "metadata": metadata,
+                "date": datetime.now().isoformat(),
+                "extra": kwargs,
+                "insert": insert,
+                "insert_table_name": insert_table_name,
+                "insert_overwrite": insert_overwrite,
+                "insert_db_uri": insert_db_uri,
+                "idempotency_key": idempotency_key,
+            }
+            
+            # Add trace context headers only if provided
+            if traceparent:
+                message_data["traceparent"] = traceparent
+            if tracestate:
+                message_data["tracestate"] = tracestate
+            if baggage:
+                message_data["baggage"] = baggage
+            
+            message = ValidationMessage(**message_data)  # type: ignore
 
             self._channel.basic_publish(
                 exchange=self.exchange_info["exchange"],
@@ -325,6 +345,9 @@ class Publisher:
         overwrite: bool = False,
         task_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        traceparent: Optional[str] = None,
+        tracestate: Optional[str] = None,
+        baggage: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish an insertion request message to the RabbitMQ exchange.
@@ -347,6 +370,9 @@ class Publisher:
             db_uri (str): The URI for connecting to the database where the data should be inserted.
             task_id (Optional[str]): Optional unique task ID (UUID) for tracking the insertion request. If not provided, a new UUID will be generated.
             idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the insertion request.
+            traceparent (Optional[str]): W3C Trace Context traceparent header for distributed tracing.
+            tracestate (Optional[str]): W3C Trace Context tracestate header for distributed tracing.
+            baggage (Optional[str]): Baggage header for distributed context propagation.
             kwargs (str): Additional key-value pairs to include in the message.
         """
 
@@ -368,6 +394,9 @@ class Publisher:
                 overwrite=overwrite,
                 db_uri=db_uri,
                 idempotency_key=idempotency_key,
+                traceparent=traceparent,
+                tracestate=tracestate,
+                baggage=baggage,
             )
 
             self._channel.basic_publish(

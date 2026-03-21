@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Generic, Optional, Self, TypeVar
+from typing import Any, Dict, Generic, Optional, Self, TypedDict, TypeVar
 
 from proto_utils.database import dtypes
 from pydantic import BaseModel, model_validator
@@ -187,3 +187,9 @@ class SpreadsheetDtypesSchema(BaseModel):
 
 ColumnName = str
 ColumnDtypesSchema = Dict[ColumnName, SpreadsheetDtypesSchema]
+
+
+class OpenTelemetryTraceHeaders(TypedDict, total=False):
+    traceparent: Optional[str]
+    tracestate: Optional[str]
+    baggage: Optional[str]

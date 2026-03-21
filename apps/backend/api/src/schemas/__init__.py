@@ -1,6 +1,7 @@
 from src.schemas.api import (
     ColumnDtypesSchema,
     CreateTableResponse,
+    OpenTelemetryTraceHeaders,
     PaginatedResponse,
     SpreadsheetDtypesSchema,
 )
@@ -39,6 +40,7 @@ __all__ = [
     # API Schemas
     "ColumnDtypesSchema",
     "CreateTableResponse",
+    "OpenTelemetryTraceHeaders",
     "PaginatedResponse",
     "SpreadsheetDtypesSchema",
     # Auth Schemas

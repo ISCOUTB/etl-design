@@ -83,6 +83,7 @@ class IdempotencyService:
         user_id: str,
         project_id: str,
         table_name: str,
+        trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
         file_content = await spreadsheet_file.read()
         if not file_content:
@@ -177,6 +178,11 @@ class IdempotencyService:
                 seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
+            # Prepare trace headers (empty dict if not provided)
+            trace_context: schemas.OpenTelemetryTraceHeaders = (
+                trace_headers if trace_headers is not None else {}
+            )
+
             # Publish in RabbitMQ
             publisher.publish_validation_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
@@ -187,6 +193,9 @@ class IdempotencyService:
                 task="sample_validation",
                 task_id=task_id,
                 idempotency_key=idempotency_key,
+                traceparent=trace_context.get("traceparent"),
+                tracestate=trace_context.get("tracestate"),
+                baggage=trace_context.get("baggage"),
             )
 
             self.upload_repository.db.commit()
@@ -246,6 +255,7 @@ class IdempotencyService:
         table_name: str,
         db_uri: str,
         overwrite: bool = False,
+        trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
         file_content = await spreadsheet_file.read()
         if not file_content:
@@ -337,6 +347,11 @@ class IdempotencyService:
                 seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
+            # Prepare trace headers (empty dict if not provided)
+            trace_context: schemas.OpenTelemetryTraceHeaders = (
+                trace_headers if trace_headers is not None else {}
+            )
+
             # Publish in RabbitMQ
             publisher.publish_insertion_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_INSERTION,
@@ -349,6 +364,9 @@ class IdempotencyService:
                 db_uri=db_uri,
                 task_id=task_id,
                 idempotency_key=idempotency_key,
+                traceparent=trace_context.get("traceparent"),
+                tracestate=trace_context.get("tracestate"),
+                baggage=trace_context.get("baggage"),
             )
 
             self.upload_repository.db.commit()
@@ -408,6 +426,7 @@ class IdempotencyService:
         table_name: str,
         db_uri: str,
         overwrite: bool = False,
+        trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
         file_content = await spreadsheet_file.read()
         if not file_content:
@@ -498,6 +517,11 @@ class IdempotencyService:
                 seconds=settings.IDEMPOTENCY_TTL_PUBLISHED_SECONDS
             )
 
+            # Prepare trace headers (empty dict if not provided)
+            trace_context: schemas.OpenTelemetryTraceHeaders = (
+                trace_headers if trace_headers is not None else {}
+            )
+
             # Publish in RabbitMQ
             publisher.publish_validation_request(
                 routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
@@ -511,6 +535,9 @@ class IdempotencyService:
                 insert_db_uri=db_uri,
                 task_id=task_id,
                 idempotency_key=idempotency_key,
+                traceparent=trace_context.get("traceparent"),
+                tracestate=trace_context.get("tracestate"),
+                baggage=trace_context.get("baggage"),
             )
 
             self.upload_repository.db.commit()

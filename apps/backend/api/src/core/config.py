@@ -109,6 +109,7 @@ class Settings(BaseSettings):
     DATABASE_MAX_RETRIES: int = 5
     DATABASE_RETRY_DELAY_SECONDS: float = 1.0
     DATABASE_BACKOFF_MULTIPLIER: float = 2.0
+    DATABASE_TRACE_CONTEXT_ENABLED: bool = True
 
     @computed_field
     @property
