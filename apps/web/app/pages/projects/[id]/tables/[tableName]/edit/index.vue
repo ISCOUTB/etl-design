@@ -62,8 +62,33 @@
             JSON.stringify(initialValues.columns),
     );
 
+    const router = useRouter();
+    const errorToast = useErrorToast();
+    const api = useApi();
+    const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
-        console.warn(values);
+        loading.value = true;
+        api(`/schemas/${projectId.value}`, {
+            method: "POST",
+            query: {
+                table_name: values.tableName,
+            },
+            body: {
+                $schema: sharedState.value.active_schema.schema,
+                type: sharedState.value.active_schema.type,
+                required: values.columns.map((column) => column.name),
+                properties: Object.fromEntries(
+                    values.columns.map(({ name, ...def }) => [name, { ...def }]),
+                ),
+            },
+        })
+            .then(async () => {
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(projectId.value));
+                clearNuxtData(KEY);
+
+                router.push(callbackUrl.value);
+            })
+            .catch((error) => errorToast.handleServer(error));
     });
 </script>
 
@@ -113,7 +138,7 @@
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <VeeField v-slot="{ field, errors }" name="tableName">
+                    <VeeField v-slot="{ field, errors, meta: fieldMeta }" name="tableName">
                         <Field :data-invalid="!!errors.length">
                             <FieldLabel for="tableName">
                                 {{ $t("projects.id.tables.edit.fields.table_name") }}
@@ -121,12 +146,13 @@
                             <InputGroup>
                                 <InputGroupInput
                                     id="tableName"
+                                    disabled
                                     v-bind="field"
                                     :model-value="field.value"
                                     :aria-invalid="!!errors.length"
                                     class="font-mono"
                                 />
-                                <InputGroupAddon v-if="meta.dirty" align="inline-end">
+                                <InputGroupAddon v-if="fieldMeta.dirty" align="inline-end">
                                     <InputGroupButton
                                         variant="ghost"
                                         size="icon-xs"

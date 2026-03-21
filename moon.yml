@@ -18,21 +18,29 @@ tasks:
         command: sh
         args:
             - scripts/deploy_mongo_docker.sh
+        options:
+            cache: false
 
     deploy-postgres:
         command: sh
         args:
             - scripts/deploy_postgres_docker.sh
+        options:
+            cache: false
 
     deploy-rabbit:
         command: sh
         args:
             - scripts/deploy_rabbitmq_docker.sh
+        options:
+            cache: false
 
     deploy-redis:
         command: sh
         args:
             - scripts/deploy_redis_docker.sh
+        options:
+            cache: false
 
     development:
         command: noop
