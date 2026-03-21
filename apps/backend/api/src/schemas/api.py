@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Generic, Optional, Self, TypedDict, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Self, TypedDict, TypeVar
 
 from proto_utils.database import dtypes
 from pydantic import BaseModel, model_validator
@@ -19,7 +19,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
         total_pages (int): The total number of pages available.
         has_next (bool): Indicates if there is a next page.
         has_prev (bool): Indicates if there is a previous page.
-        items (list[T]): The list of items on the current page.
+        items (List[T]): The list of items on the current page.
     """
 
     total: int
@@ -28,7 +28,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total_pages: int
     has_next: bool
     has_prev: bool
-    items: list[T]
+    items: List[T]
 
 
 class CreateTableResponse(BaseModel):

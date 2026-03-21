@@ -19,7 +19,9 @@ def _metadata_key_value(item: Any) -> tuple[str, str] | None:
     return None
 
 
-def extract_trace_headers_from_context(context: grpc.aio.ServicerContext) -> dict[str, str]:
+def extract_trace_headers_from_context(
+    context: grpc.aio.ServicerContext,
+) -> dict[str, str]:
     headers: dict[str, str] = {}
 
     for item in context.invocation_metadata() or ():
@@ -79,7 +81,9 @@ def with_grpc_trace_context(
     return decorator
 
 
-def decorate_grpc_methods(cls: type, method_names: list[str], decorator: Callable) -> type:
+def decorate_grpc_methods(
+    cls: type, method_names: list[str], decorator: Callable
+) -> type:
     for method_name in method_names:
         method = getattr(cls, method_name)
         setattr(cls, method_name, decorator(method))

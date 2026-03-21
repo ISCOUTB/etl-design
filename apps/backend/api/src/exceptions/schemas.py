@@ -28,9 +28,7 @@ class MissingJsonSchemaDraftException(AppException):
 class InvalidJsonSchemaDraftException(AppException):
     error_code = "error:schema:invalid-draft"
     status_code = 400
-    message = (
-        "Unsupported JSON schema draft version specified in '$schema' field."
-    )
+    message = "Unsupported JSON schema draft version specified in '$schema' field."
 
 
 class SchemaNotFoundException(AppException):

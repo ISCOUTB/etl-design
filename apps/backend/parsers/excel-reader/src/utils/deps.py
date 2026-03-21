@@ -56,7 +56,9 @@ class TraceContextClientInterceptor(
         updated_details = self._inject_metadata(client_call_details)
         return continuation(updated_details, request)
 
-    def intercept_unary_stream(self, continuation, client_call_details, request):
+    def intercept_unary_stream(
+        self, continuation, client_call_details, request
+    ):
         updated_details = self._inject_metadata(client_call_details)
         return continuation(updated_details, request)
 

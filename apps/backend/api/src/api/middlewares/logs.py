@@ -13,7 +13,7 @@ class LogsMiddleware(BaseHTTPMiddleware):
         # Extract trace context from incoming HTTP headers (W3C format)
         extracted_context = extract(dict(request.headers))
         token = otel_context.attach(extracted_context)
-        
+
         # Store trace headers in request state for downstream use (excel-reader, RabbitMQ)
         request.state.trace_headers = {
             "traceparent": request.headers.get("traceparent", ""),

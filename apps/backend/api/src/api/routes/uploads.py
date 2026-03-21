@@ -82,7 +82,7 @@ async def validate(
         trace_headers = {}
         if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
             trace_headers = request.state.trace_headers
-        
+
         response = await idempotency_service.validate_task(
             db_client=database_client,
             publisher=publisher,
@@ -131,7 +131,7 @@ async def insert(
         trace_headers = {}
         if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
             trace_headers = request.state.trace_headers
-        
+
         response = await idempotency_service.insert_task(
             db_client=database_client,
             publisher=publisher,
@@ -181,7 +181,7 @@ async def process(
         trace_headers = {}
         if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
             trace_headers = request.state.trace_headers
-        
+
         response = await idempotency_service.process_task(
             db_client=database_client,
             publisher=publisher,
@@ -244,7 +244,7 @@ async def create_table(
         raise DtypesInvalidContentException()
 
     fill_spaces = "_"
-    
+
     # Extract trace headers from request state (set by LogsMiddleware)
     headers = {}
     if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
@@ -256,7 +256,7 @@ async def create_table(
             headers["tracestate"] = trace_headers["tracestate"]
         if trace_headers.get("baggage"):
             headers["baggage"] = trace_headers["baggage"]
-    
+
     response = await HTTPX_CLIENT.post(
         f"{settings.EXCEL_READER_URL}/parser/excel",
         files={

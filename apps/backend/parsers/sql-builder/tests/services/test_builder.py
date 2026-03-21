@@ -1,6 +1,5 @@
 """Tests for SQL building logic in src/services/builder.py"""
 
-
 from src.services.builder import build_sql, remove_primary_key_clause
 from src.services.create_graph import create_dependency_graph
 

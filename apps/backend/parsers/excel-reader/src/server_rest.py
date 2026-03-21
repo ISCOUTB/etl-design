@@ -63,6 +63,7 @@ async def propagate_trace_context(request: Request, call_next):
     finally:
         otel_context.detach(token)
 
+
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 app.add_middleware(

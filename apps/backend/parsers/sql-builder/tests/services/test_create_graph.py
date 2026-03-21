@@ -1,6 +1,5 @@
 """Tests for dependency graph creation in src/services/create_graph.py"""
 
-
 from src.services.create_graph import create_dependency_graph
 
 
