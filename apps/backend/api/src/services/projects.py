@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+import psycopg2
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -8,6 +9,7 @@ from src.core.config import settings
 from src.core.security import decrypt_aegis256, encrypt_aegis256
 from src.exceptions import (
     AppException,
+    CouldNotConnectToDatabaseException,
     InvalidDBCredentialsException,
     ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
@@ -91,7 +93,7 @@ class ProjectService:
         self.repository.db.expunge(project)
         return ParserService.parse_project(project)
 
-    def get_project_db_uri(self, project_id: str) -> str:
+    def get_project_db_uri(self, project_id: str, ping: bool = False) -> str:
         encrypted_project = self.repository.get_project_by_id(project_id)
         if encrypted_project is None:
             raise ProjectNotFoundException()
@@ -99,7 +101,7 @@ class ProjectService:
         project = self.__decrypt_db_credentials(encrypted_project)
         self.repository.db.expunge(project)
         try:
-            return create_postgres_uri(
+            uri = create_postgres_uri(
                 user=project.db_user,  # type: ignore
                 password=project.db_password,  # type: ignore
                 host=project.db_host,  # type: ignore
@@ -109,6 +111,18 @@ class ProjectService:
             )
         except Exception:
             raise InvalidDBCredentialsException()
+
+        if ping:
+            if not uri:
+                raise InvalidDBCredentialsException()
+
+            try:
+                conn = psycopg2.connect(uri)
+                conn.close()
+            except psycopg2.OperationalError:
+                raise CouldNotConnectToDatabaseException()
+
+        return uri
 
     def search_projects(
         self,

@@ -12,6 +12,7 @@ from src.exceptions.auth import (
 )
 from src.exceptions.base import AppException
 from src.exceptions.projects import (
+    CouldNotConnectToDatabaseException,
     DatabaseConnectionException,
     InvalidDBCredentialsException,
     InvalidProjectDataException,
@@ -66,6 +67,7 @@ __all__ = [
     "UserInactiveException",
     "UserHasActiveProjectsException",
     # Project exceptions
+    "CouldNotConnectToDatabaseException",
     "ProjectNotFoundException",
     "ProjectHasActiveUsersException",
     "ProjectAlreadyExistsException",

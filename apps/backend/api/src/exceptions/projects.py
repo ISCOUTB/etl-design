@@ -37,6 +37,12 @@ class InvalidDBCredentialsException(AppException):
     message = "Invalid database credentials provided"
 
 
+class CouldNotConnectToDatabaseException(AppException):
+    status_code = 503
+    error_code = "error:could-not-connect-to-database"
+    message = "Could not connect to the database with the provided credentials"
+
+
 class UserAlreadyInProjectException(AppException):
     status_code = 400
     error_code = "error:user-already-in-project"

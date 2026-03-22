@@ -223,6 +223,8 @@ async def create_table(
     if not has_permission:
         raise ForbiddenException()
 
+    db_uri = project_service.get_project_db_uri(project_id, ping=execute_sql)
+
     try:
         dtypes_json = json.loads(dtypes_str)
         if not isinstance(dtypes_json, dict):
@@ -313,7 +315,7 @@ async def create_table(
 
         save_schema_response = await SchemaService.save_schema(
             import_name=f"{project_id}__{sheet_name}",
-            schema=jsonschema,
+            orig_schema=jsonschema,
             database_client=db_client,
         )
 
@@ -322,14 +324,13 @@ async def create_table(
     # Execute the generated SQL statements to create the table in the database if requested
     if execute_sql:
         try:
-            uri = project_service.get_project_db_uri(project_id)
-            _execute_sql_per_sheet(uri=uri, sql_per_sheet=sql_per_sheet)
+            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         except InvalidDBCredentialsException:
             raise
         except psycopg2.OperationalError as e:
             raise Psycopg2ErrorException(
                 message="An error occurred while processing the database operation.\n"
-                f"Error details: {str(e)}\nSQL attempted: {sql_per_sheet}"
+                f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
             )
 
         return CreateTableResponse(
@@ -373,6 +374,8 @@ async def create_table_from_json_schema(
     if not has_permission:
         raise ForbiddenException()
 
+    db_uri = project_service.get_project_db_uri(project_id, ping=execute_sql)
+
     try:
         response = await HTTPX_CLIENT.post(
             f"{settings.EXCEL_READER_URL}/parser/json",
@@ -404,14 +407,13 @@ async def create_table_from_json_schema(
     # Create the JSON Schema for the table and save it in the database
     save_schema_response = await SchemaService.save_schema(
         import_name=f"{project_id}__{table_name}",
-        schema=payload.jsonschema,
+        orig_schema=payload.jsonschema,
         database_client=db_client,
     )
 
     if execute_sql:
         try:
-            uri = project_service.get_project_db_uri(project_id)
-            _execute_sql_per_sheet(uri=uri, sql_per_sheet=sql_per_sheet)
+            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         except InvalidDBCredentialsException:
             raise
         except Exception as e:
@@ -423,11 +425,11 @@ async def create_table_from_json_schema(
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
-            schema_saved=save_schema_response,
+            schema_saved={"Sheet1": save_schema_response},
         )
 
     return CreateTableResponse(
         message="SQL generated successfully (execution skipped)",
         sql_per_sheet=sql_per_sheet,
-        schema_saved=save_schema_response,
+        schema_saved={"Sheet1": save_schema_response},
     )

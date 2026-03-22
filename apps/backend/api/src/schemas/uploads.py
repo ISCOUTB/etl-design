@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from messaging_utils.schemas import Metadata
 from pydantic import BaseModel, Field
 
 from src.models import TaskStatus
+from src.schemas.schemas import JsonSchemaRequest
 
 
 class CreateTableFromJsonSchemaRequest(BaseModel):
@@ -12,7 +13,7 @@ class CreateTableFromJsonSchemaRequest(BaseModel):
 
     table_name: str
     project_id: str
-    jsonschema: Dict[str, Any]
+    jsonschema: JsonSchemaRequest
     primary_keys: List[str] = Field(default_factory=list)
 
 
