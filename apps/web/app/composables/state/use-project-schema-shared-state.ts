@@ -1,7 +1,7 @@
 import type { ColumnConfig, ResponseProject } from "#shared/utils/schemas/types";
 import type { z } from "zod";
 import type { Column } from "@/components/common/data-table/utils";
-import Ajv from "ajv";
+import { JsonSchema } from "#shared/utils/schemas/api";
 import { read, utils } from "xlsx";
 
 interface State {
@@ -23,7 +23,6 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         columnsConfig: {},
     }));
 
-    const ajv = shallowRef(new Ajv({ strict: true, allErrors: true, validateSchema: true }));
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
     const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
@@ -65,20 +64,19 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         return SchemaUtils.withRowId(ROW_ID, utils.sheet_to_json(sheet, { defval: "", raw: true }));
     });
 
-    const jsonSchema = computedAsync<Schemas.Schema.JsonSchema | undefined>(async () => {
+    const jsonSchema = computedAsync<z.infer<typeof JsonSchema> | undefined>(async () => {
         if (isTabular.value || !state.value.uploadedFile) {
             return;
         }
 
-        const payload = JSON.parse(await state.value.uploadedFile.blob.text());
+        const fileContent = await state.value.uploadedFile.blob.text();
+        const parseResult = JsonSchema.safeParse(JSON.parse(fileContent));
+        if (!parseResult.success) {
+            console.warn("Invalid JSON schema format");
+            return;
+        }
 
-        return {
-            valid:
-                SchemaUtils.declaredDraft(payload) &&
-                Boolean(await ajv.value.validateSchema(payload)),
-            payload,
-            errors: ajv.value.errors,
-        };
+        return parseResult.data;
     });
 
     const columns = computed<Column<Record<string, unknown>>[]>(() => {

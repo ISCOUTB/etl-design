@@ -56,6 +56,10 @@
         key: NuxtKeys.Projects.Search,
     });
     const data = computed(() => {
+        if (!_data.value) {
+            return;
+        }
+
         const parsed = Response.safeParse(_data.value);
         if (!parsed.success) {
             errorToast.handle(ResponseCodesRecord.Server.BadPayload);

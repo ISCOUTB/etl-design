@@ -291,11 +291,11 @@
                                                 ?.primary_key ?? false
                                         "
                                         @update:model-value="
-                                            (value) => {
-                                                schema.dispatch.patchColumnConfig(column.key, {
-                                                    primary_key: !!value,
-                                                });
-                                            }
+                                            (value) =>
+                                                schema.dispatch.setColumnPrimaryKey(
+                                                    column.key,
+                                                    !!value,
+                                                )
                                         "
                                     />
                                 </TableCell>
@@ -306,11 +306,8 @@
                                                 ?.unique ?? false
                                         "
                                         @update:model-value="
-                                            (value) => {
-                                                schema.dispatch.patchColumnConfig(column.key, {
-                                                    unique: !!value,
-                                                });
-                                            }
+                                            (value) =>
+                                                schema.dispatch.setColumnUnique(column.key, !!value)
                                         "
                                     />
                                 </TableCell>
@@ -321,11 +318,11 @@
                                                 ?.optional ?? false
                                         "
                                         @update:model-value="
-                                            (value) => {
-                                                schema.dispatch.patchColumnConfig(column.key, {
-                                                    optional: !!value,
-                                                });
-                                            }
+                                            (value) =>
+                                                schema.dispatch.setColumnOptional(
+                                                    column.key,
+                                                    !!value,
+                                                )
                                         "
                                     />
                                 </TableCell>

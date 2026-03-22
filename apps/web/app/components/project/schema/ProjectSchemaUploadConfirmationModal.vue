@@ -36,7 +36,20 @@
             method: "POST",
             body: payload,
         })
-            .then((response) => console.warn(response))
+            .then(async () => {
+                if (project.value) {
+                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+                }
+
+                toast.success($t("projects.id.sections.schema.events.table_created.title"), {
+                    description: $t(
+                        "projects.id.sections.schema.events.table_created.description",
+                        {
+                            tab: $t("projects.id.sections.tables.tab"),
+                        },
+                    ),
+                });
+            })
             .catch((error) => errorToast.handleServer(error));
     }
 
@@ -74,7 +87,11 @@
             method: "POST",
             body: formData,
         })
-            .then(() => {
+            .then(async () => {
+                if (project.value) {
+                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+                }
+
                 toast.success($t("projects.id.sections.schema.events.table_created.title"), {
                     description: $t(
                         "projects.id.sections.schema.events.table_created.description",

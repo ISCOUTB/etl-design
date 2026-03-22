@@ -1,16 +1,17 @@
 {
-    "active_schema": {
-        "properties": {
-            "age": { "minimum": 0, "type": "integer" },
-            "col1-updated": { "type": "string" },
-            "is_adult": { "type": "boolean" },
-            "name": { "type": "string" }
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "properties": {
+        "age": {
+            "minimum": 0,
+            "type": "integer"
         },
-        "required": ["name", "age", "is_adult", "col1-updated"],
-        "schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object"
+        "is_adult": {
+            "type": "boolean"
+        },
+        "name": {
+            "type": "string"
+        }
     },
-    "created_at": "iso_date_format",
-    "project_name": "your_project_name",
-    "schemas_releases": []
+    "required": ["name", "age", "is_adult"],
+    "type": "object"
 }

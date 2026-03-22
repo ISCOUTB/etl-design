@@ -57,7 +57,7 @@
                     value: Section.value.Schema,
                     icon: Database,
                 },
-                component: () => import("~/components/project/schema/ProjectSchema.vue"),
+                component: () => import("@/components/project/schema/ProjectSchema.vue"),
                 props: {
                     project: sharedState,
                 },

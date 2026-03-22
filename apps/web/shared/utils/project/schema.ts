@@ -1,9 +1,11 @@
+import type { JsonSchema } from "#shared/utils/schemas/api";
 import type {
     ColumnConfig,
     ColumnDtype,
     CreateTableFromJson,
     Dtype,
 } from "#shared/utils/schemas/types";
+import type { z } from "zod";
 import { ColumnDtypesSchema } from "#shared/utils/schemas/api";
 
 export const SchemaUtils = {
@@ -33,22 +35,6 @@ export const SchemaUtils = {
             ...row,
             [rowId]: crypto.randomUUID() ?? `row-${index}`,
         }));
-    },
-
-    declaredDraft(
-        payload: unknown,
-        drafts: string[] = [
-            "http://json-schema.org/draft-07/schema#",
-            "https://json-schema.org/draft-07/schema#",
-        ],
-    ) {
-        return (
-            typeof payload === "object" &&
-            payload !== null &&
-            !Array.isArray(payload) &&
-            "$schema" in payload &&
-            drafts.includes(String(payload.$schema))
-        );
     },
 
     normalizeColumnConfig(config: ColumnConfig, previous?: Partial<ColumnConfig>): ColumnConfig {
@@ -99,7 +85,13 @@ export const SchemaUtils = {
 
     getColumnConfig(dtype: Dtype = "string", previous?: Partial<ColumnConfig>) {
         return SchemaUtils.normalizeColumnConfig(
-            { optional: false, unique: false, primary_key: false, constraints: undefined, dtype },
+            {
+                optional: previous?.optional ?? false,
+                unique: previous?.unique ?? false,
+                primary_key: previous?.primary_key ?? false,
+                constraints: undefined,
+                dtype,
+            } as ColumnConfig,
             previous,
         );
     },
@@ -123,13 +115,13 @@ export const SchemaUtils = {
         buildJsonSchema(
             tableName: string,
             projectId: string,
-            schema: Schemas.Schema.JsonSchema,
+            schema: z.infer<typeof JsonSchema>,
             primaryKeys: string[],
         ): CreateTableFromJson {
             return {
                 table_name: tableName,
                 project_id: projectId,
-                jsonschema: schema.payload,
+                jsonschema: schema,
                 primary_keys: primaryKeys,
             };
         },

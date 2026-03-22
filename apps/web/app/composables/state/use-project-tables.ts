@@ -15,7 +15,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         selectedSchema: undefined,
     }));
 
-    const { data: _schemas } = useApiFetch(`/schemas/search/${id.value}`, {
+    const { data: _schemas } = useApiFetch(() => `/schemas/search/${id.value}`, {
         method: "GET",
         key: NuxtKeys.Projects.Tables.RawSchemas(id.value),
     });
@@ -31,6 +31,10 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
     watch(
         _schemas,
         (schemas) => {
+            if (!schemas) {
+                return;
+            }
+
             const parseResult = MongoGetSchemasResponse.safeParse(schemas);
             if (!parseResult.success) {
                 errorToast.handle(ResponseCodesRecord.Server.BadPayload);
