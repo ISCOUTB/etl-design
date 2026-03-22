@@ -1,4 +1,4 @@
-name: CI Staging - Master Orchestrator
+name: CD Staging - Master Orchestrator
 on:
   push:
     branches:
@@ -92,6 +92,7 @@ jobs:
   detect-services:
     runs-on: ubuntu-latest
     outputs:
+      web: ${{ steps.changes.outputs.web }}
       api: ${{ steps.changes.outputs.api }}
       database: ${{ steps.changes.outputs.database }}
       typechecking: ${{ steps.changes.outputs.typechecking }}
@@ -110,9 +111,20 @@ jobs:
         with:
           base: ${{ github.event.before }} # Compare against previous commit
           filters: |
+            web:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tools/tsconfig/**'
+              - 'tools/eslint/**'
+              - '.github/workflows/cd-web-staging.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-version-tag/**'
             api:
               - 'apps/backend/api/**'
               - 'packages/messaging-utils/messaging-utils-py/**'
+              - 'packages/proto-utils/proto-utils-py/**'
               - '.github/workflows/cd-api-staging.yml'
               - '.github/actions/build-docker-image/**'
               - '.github/actions/create-version-tag/**'
@@ -143,7 +155,12 @@ jobs:
               - '.github/actions/create-version-tag/**'
             formula-parser:
               - 'apps/backend/parsers/formula-parser/**'
-              - 'packages/proto-utils/proto-utils-py/**'
+              - 'packages/proto-utils/proto-utils-js/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tools/tsconfig/**'
+              - 'tools/eslint/**'
               - '.github/workflows/cd-formula-parser-staging.yml'
               - '.github/actions/build-docker-image/**'
               - '.github/actions/create-version-tag/**'
@@ -162,6 +179,7 @@ jobs:
       - name: Show detection results
         run: |
           echo "=== CHANGED SERVICES ==="
+          echo WEB: ${{ needs.detect-services.outputs.web }}
           echo "API: ${{ needs.detect-services.outputs.api }}"
           echo "Database: ${{ needs.detect-services.outputs.database }}"
           echo "Typechecking: ${{ needs.detect-services.outputs.typechecking }}"
@@ -174,6 +192,14 @@ jobs:
           echo "Version: '${{ needs.create-version.outputs.version }}'"
 
   # Step 4: Call individual service workflows (only if service changed)
+  deploy-web:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.web == 'true'
+    uses: ./.github/workflows/cd-web-staging.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
   deploy-api:
     needs: [create-version, detect-services, debug-version, debug-detection]
     if: needs.detect-services.outputs.api == 'true'
