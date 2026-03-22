@@ -1,4 +1,7 @@
-// OTLP traces collector for Docker Swarm services.
+// ============================================================================
+// SECTION 1: OTLP TRACES (GRPC + HTTP) → TEMPO
+// ============================================================================
+
 otelcol.receiver.otlp "default" {
   grpc {
     endpoint = "0.0.0.0:4317"
@@ -24,3 +27,105 @@ otelcol.exporter.otlphttp "tempo" {
     endpoint = "http://tempo:4318"
   }
 }
+
+// ============================================================================
+// SECTION 2: DOCKER LOGS → LOKI
+// ============================================================================
+
+// Discover Docker containers running on this Swarm node
+discovery.docker "swarm" {
+  host       = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+}
+
+// Relabel to extract service name and other useful labels
+discovery.relabel "docker" {
+  targets = discovery.docker.swarm.targets
+
+  // Keep only container labels we care about
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_task_id"]
+    target_label  = "task_id"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "container_id"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+
+  // Extract node hostname
+  rule {
+    source_labels = ["__meta_docker_host"]
+    target_label  = "node"
+  }
+}
+
+// Read logs from Docker containers
+loki.source.docker "main" {
+  host           = "unix:///var/run/docker.sock"
+  targets        = discovery.relabel.docker.output
+  relabel_rules  = discovery.relabel.docker.rules
+  forward_to     = [loki.process.parse_json.receiver]
+}
+
+// Parse JSON logs and extract trace context
+loki.process "parse_json" {
+  // Try JSON first. If a line is plain text, extraction fields stay empty,
+  // but the original line is still forwarded to Loki.
+  stage.json {
+    expressions = {
+      // Common JSON log keys used across services
+      timestamp       = "timestamp",
+      asctime         = "asctime",
+      level           = "level",
+      levelname       = "levelname",
+      message         = "message",
+      name            = "name",
+      module          = "module",
+      funcName        = "funcName",
+
+      // OTel and service metadata
+      trace_id        = "trace_id",
+      span_id         = "span_id",
+      trace_flags     = "trace_flags",
+      service_name    = "service_name",
+      service_version = "service_version",
+      environment     = "environment",
+    }
+  }
+
+  // Keep labels intentionally low-cardinality.
+  stage.labels {
+    values = {
+      service_name = "service_name",
+      environment  = "environment",
+      trace_id     = "trace_id",
+      span_id      = "span_id",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Send logs to Loki
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
