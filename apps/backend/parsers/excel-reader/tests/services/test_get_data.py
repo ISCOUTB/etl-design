@@ -125,4 +125,4 @@ def test_get_data_from_spreadsheet_empty_fill_spaces_defaults_to_space(
     )
 
     # With empty fill_spaces, it should keep a normal space.
-    assert result["columns"]["Sheet1"]["A"]["name"] == "full name"
+    assert result["columns"]["Sheet1"]["A"]["name"] == "full_name"

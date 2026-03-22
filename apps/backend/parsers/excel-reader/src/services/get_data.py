@@ -7,6 +7,7 @@ from src.services.utils import (
     extract_cell_data,
     open_file_from_bytes,
 )
+from src.utils.formatting import standardize_string
 from src.utils.monitor_performance import monitor_performance
 
 logging.basicConfig(level=logging.INFO)
@@ -56,7 +57,10 @@ def get_data_from_spreadsheet(
                 lambda x: (
                     x[0],
                     schemas.ColumnMetadata(
-                        name=str(x[1][0]["value"]).replace(" ", fill_spaces),
+                        name=standardize_string(
+                            str(x[1][0]["value"]),
+                            fill_spaces=fill_spaces,
+                        ),
                         is_formula=any(cell["is_formula"] for cell in x[1][1:]),
                     ),
                 ),

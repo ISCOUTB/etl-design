@@ -29,6 +29,7 @@ from src.utils.deps import (
     get_formula_parser_stub,
     get_sql_builder_stub,
 )
+from src.utils.formatting import standardize_string
 from src.utils.monitor_performance import monitor_performance
 from src.utils.sql import generate_extra_statements_sql, get_column_type_sql
 
@@ -141,7 +142,9 @@ async def read_excel(
             sheet_name: dict(
                 map(
                     lambda item: (
-                        str(item[0]),
+                        standardize_string(
+                            str(item[0]), fill_spaces=fill_spaces
+                        ),
                         SpreadsheetDtypesSchema(**item[1]),
                     ),
                     sheet_data.items(),
