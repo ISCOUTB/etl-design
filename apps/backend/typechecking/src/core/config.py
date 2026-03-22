@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     def DATABASE_CONNECTION_CHANNEL(self) -> str:
         return f"{self.DATABASE_CONNECTION_HOST}:{self.DATABASE_CONNECTION_PORT}"
 
-    OTEL_SERVICE_NAME: str = "TypecheckingServer"
+    OTEL_SERVICE_NAME: str = "typechecking-server"
     OTEL_SERVICE_VERSION: str = "1.0.0"
 
 

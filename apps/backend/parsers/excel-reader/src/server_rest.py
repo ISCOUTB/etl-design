@@ -5,6 +5,7 @@ from typing import Annotated, Dict
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.propagate import extract
 from prometheus_fastapi_instrumentator import Instrumentator
 from proto_utils.generated.parsers import (
@@ -12,6 +13,7 @@ from proto_utils.generated.parsers import (
     formula_parser_pb2_grpc,
     sql_builder_pb2_grpc,
 )
+from proto_utils.telemetry import configure_otel_tracing
 from pydantic import ValidationError
 
 from src.core.config import settings
@@ -32,6 +34,14 @@ from src.utils.deps import (
 from src.utils.formatting import standardize_string
 from src.utils.monitor_performance import monitor_performance
 from src.utils.sql import generate_extra_statements_sql, get_column_type_sql
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.EXCEL_READER_DEBUG else "production",
+)
+
+tracer = trace.get_tracer("excel_reader.http")
 
 # ======== Dependency Injection ========
 
@@ -60,7 +70,12 @@ async def propagate_trace_context(request: Request, call_next):
     extracted_context = extract(dict(request.headers))
     token = otel_context.attach(extracted_context)
     try:
-        return await call_next(request)
+        with tracer.start_as_current_span("http.request") as span:
+            span.set_attribute("http.method", request.method)
+            span.set_attribute("http.route", request.url.path)
+            response = await call_next(request)
+            span.set_attribute("http.status_code", response.status_code)
+            return response
     finally:
         otel_context.detach(token)
 

@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pika.exceptions import AMQPError
 from prometheus_fastapi_instrumentator import Instrumentator
+from proto_utils.telemetry import configure_otel_tracing
 
 from src.api.exceptions import (
     app_exception_handler,
@@ -17,6 +18,12 @@ from src.api.middlewares import LogsMiddleware
 from src.core.config import settings
 from src.exceptions import AppException
 from src.utils.logger import LOGGING_CONFIG
+
+configure_otel_tracing(
+    service_name="api-server",
+    service_version="1.0.0",
+    environment="debug" if settings.SERVER_DEBUG else "production",
+)
 
 
 @asynccontextmanager

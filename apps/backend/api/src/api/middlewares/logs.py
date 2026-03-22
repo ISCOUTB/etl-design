@@ -1,11 +1,14 @@
 from time import perf_counter
 
-from fastapi import Request, Response
+from fastapi import Request
 from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.propagate import extract
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.utils import logger
+
+tracer = trace.get_tracer("api.middleware.logs")
 
 
 class LogsMiddleware(BaseHTTPMiddleware):
@@ -22,29 +25,36 @@ class LogsMiddleware(BaseHTTPMiddleware):
         }
 
         try:
-            start_time = perf_counter()
-            logger.info(
-                "request.started",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "query": str(request.url.query),
-                    "client": request.client.host if request.client else None,
-                },
-            )
+            with tracer.start_as_current_span("http.request") as span:
+                span.set_attribute("http.method", request.method)
+                span.set_attribute("http.route", request.url.path)
 
-            response: Response = await call_next(request)
-            duration_ms = round((perf_counter() - start_time) * 1000, 2)
-            logger.info(
-                "request.completed",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status_code": response.status_code,
-                    "duration_ms": duration_ms,
-                },
-            )
+                start_time = perf_counter()
+                logger.info(
+                    "request.started",
+                    extra={
+                        "method": request.method,
+                        "path": request.url.path,
+                        "query": str(request.url.query),
+                        "client": request.client.host if request.client else None,
+                    },
+                )
 
-            return response
+                response = await call_next(request)
+                duration_ms = round((perf_counter() - start_time) * 1000, 2)
+                span.set_attribute("http.status_code", response.status_code)
+                span.set_attribute("http.response.duration_ms", duration_ms)
+
+                logger.info(
+                    "request.completed",
+                    extra={
+                        "method": request.method,
+                        "path": request.url.path,
+                        "status_code": response.status_code,
+                        "duration_ms": duration_ms,
+                    },
+                )
+
+                return response
         finally:
             otel_context.detach(token)

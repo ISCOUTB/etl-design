@@ -31,6 +31,7 @@ from messaging_utils.messaging.connection_factory import (
 )
 from messaging_utils.schemas import InsertionMessage
 from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.propagate import extract
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
@@ -49,6 +50,7 @@ from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [insertion] prefix
 logger = create_component_logger("insertion")
+tracer = trace.get_tracer("typechecking.insertion")
 
 
 class InsertionWorker:
@@ -278,6 +280,12 @@ class InsertionWorker:
             }
         )
         token = otel_context.attach(extracted_context)
+        span_cm = tracer.start_as_current_span("worker.insertion.process")
+        span = span_cm.__enter__()
+        span.set_attribute("messaging.system", "rabbitmq")
+        span.set_attribute("messaging.operation", "process")
+        span.set_attribute("task.id", task_id)
+        span.set_attribute("task.type", task)
 
         try:
             # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
@@ -480,6 +488,7 @@ class InsertionWorker:
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
         finally:
+            span_cm.__exit__(None, None, None)
             otel_context.detach(token)
 
     async def _insert_data(

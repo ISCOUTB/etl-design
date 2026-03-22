@@ -35,6 +35,7 @@ from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
+from proto_utils.telemetry import configure_otel_tracing
 
 from src.core.config import settings
 from src.core.events import failure_event
@@ -42,6 +43,12 @@ from src.utils import create_component_logger
 from src.workers.insertion import InsertionWorker
 from src.workers.results import ResultWorker
 from src.workers.validation import ValidationWorker
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.MINIMAL_SERVER_DEBUG else "production",
+)
 
 # Create logger with [main] prefix
 logger = create_component_logger("main")

@@ -13,6 +13,7 @@ dependencies = [
     "py-async-grpc-prometheus>=0.2.0",
     "opentelemetry-instrumentation-grpc>=0.61b0",
     "opentelemetry-sdk>=1.40.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.40.0",
     "python-json-logger>=4.0.0",
 ]
 

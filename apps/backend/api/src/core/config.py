@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     CREDENTIALS_SECRET_KEY: str
     CREDENTIALS_SIGN: str
 
+    # OTel Configuration
+    OTEL_SERVICE_NAME: str = "api-server"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+
     # For pending status
     IDEMPOTENCY_TTL_DEFAULT_SECONDS: int = 60 * 10  # 10 minutes
     IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: int = 60 * 1  # 1 minute

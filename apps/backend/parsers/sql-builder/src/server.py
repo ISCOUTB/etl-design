@@ -3,8 +3,10 @@ import signal
 
 import grpc
 from grpc._typing import Any  # type: ignore
+from opentelemetry import trace
 from prometheus_client import start_http_server
 from proto_utils.generated.parsers import sql_builder_pb2, sql_builder_pb2_grpc
+from proto_utils.telemetry import configure_otel_tracing
 from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
     PromAsyncServerInterceptor,
 )
@@ -18,6 +20,13 @@ from src.utils.trace_context import (
     extract_trace_headers_from_context,
 )
 from src.utils.watch_files import main_debug
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.SQL_BUILDER_DEBUG else "production",
+)
+tracer = trace.get_tracer("sql_builder.grpc")
 
 
 class SQLBuilderServicer(sql_builder_pb2_grpc.SQLBuilderServicer):
@@ -63,7 +72,11 @@ class SQLBuilderServicer(sql_builder_pb2_grpc.SQLBuilderServicer):
         )
 
         try:
-            response = sql_builder_handler(request)
+            with tracer.start_as_current_span("grpc.BuildSQL") as span:
+                span.set_attribute("rpc.system", "grpc")
+                span.set_attribute("rpc.method", "BuildSQL")
+                span.set_attribute("sql.column_count", column_count)
+                response = sql_builder_handler(request)
             content_levels = len(response.content)
 
             logger.info(

@@ -32,6 +32,7 @@ from messaging_utils.messaging.connection_factory import (
 )
 from messaging_utils.schemas import InsertionMessage, ValidationMessage
 from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.propagate import extract
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
@@ -55,6 +56,7 @@ from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [validation] prefix
 logger = create_component_logger("validation")
+tracer = trace.get_tracer("typechecking.validation")
 
 
 class ValidationWorker:
@@ -289,6 +291,12 @@ class ValidationWorker:
             }
         )
         token = otel_context.attach(extracted_context)
+        span_cm = tracer.start_as_current_span("worker.validation.process")
+        span = span_cm.__enter__()
+        span.set_attribute("messaging.system", "rabbitmq")
+        span.set_attribute("messaging.operation", "process")
+        span.set_attribute("task.id", task_id)
+        span.set_attribute("task.type", task)
         try:
             # --- PHASE 1: Idempotency Check (consult DB as source of truth) ---
             try:
@@ -525,6 +533,7 @@ class ValidationWorker:
             )
             ch.basic_ack(delivery_tag=method.delivery_tag)
         finally:
+            span_cm.__exit__(None, None, None)
             otel_context.detach(token)
 
     async def _validate_data(

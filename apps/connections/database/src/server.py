@@ -30,6 +30,7 @@ from proto_utils.generated.database import (
     mongo_pb2,
     redis_pb2,
 )
+from proto_utils.telemetry import configure_otel_tracing
 from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
     PromAsyncServerInterceptor,
 )
@@ -42,6 +43,12 @@ from src.handlers.tasks_handler import DatabaseTasksHandler
 from src.utils.logger import logger
 from src.utils.trace_context import decorate_grpc_methods, with_grpc_trace_context
 from src.utils.watch_files import main_debug
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.DATABASE_CONNECTION_DEBUG else "production",
+)
 
 
 class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):

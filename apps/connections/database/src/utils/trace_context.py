@@ -4,9 +4,11 @@ from typing import Any
 
 import grpc
 from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.propagate import extract
 
 _TRACE_HEADER_KEYS = {"traceparent", "tracestate", "baggage"}
+tracer = trace.get_tracer("database.grpc")
 
 
 def _metadata_key_value(item: Any) -> tuple[str, str] | None:
@@ -71,7 +73,10 @@ def with_grpc_trace_context(
                 )
 
             try:
-                return await func(self, request, context, *args, **kwargs)
+                with tracer.start_as_current_span(f"grpc.{func.__name__}") as span:
+                    span.set_attribute("rpc.system", "grpc")
+                    span.set_attribute("rpc.method", func.__name__)
+                    return await func(self, request, context, *args, **kwargs)
             finally:
                 if trace_context_token is not None:
                     detach_trace_context(trace_context_token)
