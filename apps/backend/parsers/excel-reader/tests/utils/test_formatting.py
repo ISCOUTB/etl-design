@@ -6,7 +6,10 @@ def test_standardize_string_removes_special_chars_and_lowercases():
 
 
 def test_standardize_string_uses_fill_spaces_parameter():
-    assert standardize_string("My  Column Name", fill_spaces="--") == "my_column_name"
+    assert (
+        standardize_string("My  Column Name", fill_spaces="--")
+        == "my_column_name"
+    )
 
 
 def test_standardize_string_prefixes_when_starts_with_digit():

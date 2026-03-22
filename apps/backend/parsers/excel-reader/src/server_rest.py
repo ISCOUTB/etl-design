@@ -81,6 +81,7 @@ app.add_middleware(
 async def read_json(
     sql_builder_stub: SQLBuilderDep,
     payload: JSONSchemaRequest,
+    fill_spaces: str = " ",
 ) -> Dict[str, str]:
     if settings.EXCEL_READER_DEBUG:
         logger.debug(f"Received JSON schema for table: {payload.table_name}")
@@ -93,6 +94,7 @@ async def read_json(
         cols, dtypes = json_schema_to_sql_builder_payload(
             payload.jsonschema,
             payload.primary_keys,
+            fill_spaces=fill_spaces,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

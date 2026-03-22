@@ -3,6 +3,7 @@ from typing import Any, Dict, Iterable, Tuple
 from proto_utils.generated.parsers import ddl_generator_pb2, dtypes_pb2
 
 from src import schemas
+from src.utils.formatting import standardize_string
 
 
 def _sql_literal(value: Any) -> str:
@@ -83,7 +84,9 @@ def _build_extra_constraints(
     return " ".join(constraints)
 
 
-def _normalize_primary_keys(primary_keys: list[str] | None) -> set[str]:
+def _normalize_primary_keys(
+    primary_keys: list[str] | None, fill_spaces: str
+) -> set[str]:
     if primary_keys is None:
         return set()
 
@@ -91,7 +94,9 @@ def _normalize_primary_keys(primary_keys: list[str] | None) -> set[str]:
     for key in primary_keys:
         if not isinstance(key, str) or not key.strip():
             raise ValueError("'primary_keys' values must be non-empty strings")
-        normalized_keys.add(key.strip())
+        normalized_keys.add(
+            standardize_string(key.strip(), fill_spaces=fill_spaces)
+        )
 
     return normalized_keys
 
@@ -110,6 +115,7 @@ def _append_constraint(extra: str, constraint: str) -> str:
 def json_schema_to_sql_builder_payload(
     schema: Dict[str, Any],
     primary_keys: list[str] | None = None,
+    fill_spaces: str = " ",
 ) -> tuple[Dict[str, ddl_generator_pb2.DDLResponse], schemas.JSONSchemaDTypes]:
     if not isinstance(schema, dict):
         raise ValueError("'jsonschema' must be a JSON object")
@@ -130,16 +136,18 @@ def json_schema_to_sql_builder_payload(
     if not isinstance(required_properties, list):
         raise ValueError("'required' must be an array of property names")
 
-    normalized_primary_keys = _normalize_primary_keys(primary_keys)
-    for primary_key in normalized_primary_keys:
-        if primary_key not in properties:
-            raise ValueError(
-                f"Primary key column '{primary_key}' must exist in 'properties'"
-            )
+    normalized_required_properties: set[str] = set()
+    for required_property in required_properties:
+        if (
+            not isinstance(required_property, str)
+            or not required_property.strip()
+        ):
+            raise ValueError("'required' values must be non-empty strings")
+        normalized_required_properties.add(
+            standardize_string(required_property, fill_spaces=fill_spaces)
+        )
 
-    cols: Dict[str, ddl_generator_pb2.DDLResponse] = {}
-    dtypes: schemas.JSONSchemaDTypes = {}
-
+    normalized_properties: Dict[str, Dict[str, Any]] = {}
     for property_name, property_schema in properties.items():
         if not isinstance(property_name, str) or not property_name.strip():
             raise ValueError("Property names must be non-empty strings")
@@ -149,13 +157,35 @@ def json_schema_to_sql_builder_payload(
                 f"Invalid schema for property '{property_name}': expected an object"
             )
 
+        normalized_property_name = standardize_string(
+            property_name, fill_spaces=fill_spaces
+        )
+        if normalized_property_name in normalized_properties:
+            raise ValueError(
+                "Property names collapse to the same standardized identifier: "
+                f"'{normalized_property_name}'"
+            )
+
+        normalized_properties[normalized_property_name] = property_schema
+
+    normalized_primary_keys = _normalize_primary_keys(primary_keys, fill_spaces)
+    for primary_key in normalized_primary_keys:
+        if primary_key not in normalized_properties:
+            raise ValueError(
+                f"Primary key column '{primary_key}' must exist in 'properties'"
+            )
+
+    cols: Dict[str, ddl_generator_pb2.DDLResponse] = {}
+    dtypes: schemas.JSONSchemaDTypes = {}
+
+    for property_name, property_schema in normalized_properties.items():
         json_type, allows_null = _resolve_json_type(property_schema.get("type"))
         sql_type, ast_type = _map_schema_type_to_sql(json_type, property_schema)
 
         extra = _build_extra_constraints(
             property_name=property_name,
             property_schema=property_schema,
-            required_properties=required_properties,
+            required_properties=normalized_required_properties,
             allows_null=allows_null,
         )
 

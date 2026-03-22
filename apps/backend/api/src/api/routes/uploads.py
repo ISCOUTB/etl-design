@@ -348,6 +348,7 @@ async def create_table(
 
 @router.post("/table-json")
 async def create_table_from_json_schema(
+    request: Request,
     current_user: CurrentUser,
     db_client: DatabaseClientDep,
     project_service: ProjectServiceDep,
@@ -375,6 +376,19 @@ async def create_table_from_json_schema(
         raise ForbiddenException()
 
     db_uri = project_service.get_project_db_uri(project_id, ping=execute_sql)
+    fill_spaces = "_"
+
+    # Extract trace headers from request state (set by LogsMiddleware)
+    headers = {}
+    if hasattr(request, "state") and hasattr(request.state, "trace_headers"):
+        trace_headers = request.state.trace_headers
+        # Only include headers that have values
+        if trace_headers.get("traceparent"):
+            headers["traceparent"] = trace_headers["traceparent"]
+        if trace_headers.get("tracestate"):
+            headers["tracestate"] = trace_headers["tracestate"]
+        if trace_headers.get("baggage"):
+            headers["baggage"] = trace_headers["baggage"]
 
     try:
         response = await HTTPX_CLIENT.post(
@@ -384,6 +398,8 @@ async def create_table_from_json_schema(
                 "jsonschema": payload.jsonschema,
                 "primary_keys": payload.primary_keys,
             },
+            params={"fill_spaces": fill_spaces},
+            headers=headers,
         )
     except Exception as e:
         raise HTTPException(

@@ -60,6 +60,44 @@ def test_json_schema_to_sql_builder_payload_supports_request_primary_keys():
     assert "PRIMARY KEY" in dtypes["id"]["extra"]
 
 
+def test_json_schema_to_sql_builder_payload_normalizes_property_names():
+    cols, dtypes = json_schema_to_sql_builder_payload(
+        {
+            "type": "object",
+            "required": ["NOMBRE COMPLETO"],
+            "properties": {
+                "NOMBRE COMPLETO": {"type": "string", "maxLength": 100},
+                "Edad#": {"type": "integer"},
+            },
+        },
+        primary_keys=["Edad#"],
+        fill_spaces="_",
+    )
+
+    assert set(dtypes.keys()) == {"nombre_completo", "edad"}
+    assert set(cols.keys()) == {"nombre_completo", "edad"}
+    assert "NOT NULL" in dtypes["nombre_completo"]["extra"]
+    assert "PRIMARY KEY" in dtypes["edad"]["extra"]
+
+
+def test_json_schema_to_sql_builder_payload_detects_name_collisions():
+    try:
+        json_schema_to_sql_builder_payload(
+            {
+                "type": "object",
+                "properties": {
+                    "Nombre Completo": {"type": "string"},
+                    "Nombre  Completo": {"type": "string"},
+                },
+            }
+        )
+    except ValueError as exc:
+        assert "collapse to the same standardized identifier" in str(exc)
+        return
+
+    assert False, "Expected ValueError when standardized names collide"
+
+
 def test_json_schema_to_sql_builder_payload_validates_request_primary_keys():
     try:
         json_schema_to_sql_builder_payload(
