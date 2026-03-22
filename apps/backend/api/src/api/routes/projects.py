@@ -99,15 +99,14 @@ async def create_project(
 
     response = project_service.create_project(project_data)
 
-    # If a regular user creates a project, automatically add them as the owner of the project
-    if current_user.role == models.UserRole.USER:
-        user_project_service.add_user_to_project(
-            schemas.CreateUserProjectSchema(
-                user_id=current_user.id,
-                project_id=response.id,
-                role=models.UserProjectType.OWNER,
-            )
+    # The creator of the project is automatically added as an owner of the project.
+    user_project_service.add_user_to_project(
+        schemas.CreateUserProjectSchema(
+            user_id=current_user.id,
+            project_id=response.id,
+            role=models.UserProjectType.OWNER,
         )
+    )
 
     return response
 

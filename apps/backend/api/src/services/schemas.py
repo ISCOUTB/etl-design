@@ -8,7 +8,7 @@ The handlers manage JSON schema validation, creation, storage, and retrieval
 using the DatabaseClient to communicate with the MongoDB service via gRPC.
 """
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from jsonschema import (
     Draft3Validator,
