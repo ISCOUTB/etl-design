@@ -35,8 +35,11 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
                 return;
             }
 
+            console.warn(schemas);
+
             const parseResult = MongoGetSchemasResponse.safeParse(schemas);
             if (!parseResult.success) {
+                console.warn(parseResult.error);
                 errorToast.handle(ResponseCodesRecord.Server.BadPayload);
                 return;
             }

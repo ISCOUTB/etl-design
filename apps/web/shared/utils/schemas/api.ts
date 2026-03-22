@@ -149,7 +149,17 @@ export const JsonSchema = z.preprocess(
         $schema: z.string(),
         type: z.literal("object"),
         required: z.array(z.string()),
-        properties: z.record(z.string(), z.record(z.string(), z.unknown())),
+        properties: z.record(
+            z.string(),
+            z
+                .object({
+                    type: DtypesEnum,
+                    unique: z.coerce.boolean().optional(),
+                    optional: z.coerce.boolean().optional(),
+                    primary_key: z.coerce.boolean().optional(),
+                })
+                .catchall(z.unknown()),
+        ),
     }),
 );
 

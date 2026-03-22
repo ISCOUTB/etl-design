@@ -25,7 +25,9 @@ export default function () {
                         type: z.enum(DtypesEnum.enum, {
                             error: "projects.id.tables.edit.validation.invalid_type",
                         }),
-                        extra: z.record(z.string(), z.unknown()),
+                        optional: z.boolean(),
+                        unique: z.boolean(),
+                        primary_key: z.boolean(),
                     }),
                 )
                 .min(1, t("projects.id.tables.edit.validation.min_columns", { min: 1 })),

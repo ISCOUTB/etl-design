@@ -4,7 +4,9 @@
     interface ColumnDefinition {
         name: string;
         type: Dtype;
-        extra: Record<string, unknown>;
+        unique: boolean;
+        optional: boolean;
+        primary_key: boolean;
     }
 
     definePageMeta({
@@ -45,7 +47,10 @@
         columns: Object.entries(sharedState.value.active_schema.properties).map<ColumnDefinition>(
             ([name, def]) => ({
                 name,
-                ...def,
+                type: def.type || "string",
+                optional: !!def.optional || false,
+                unique: !!def.unique || false,
+                primary_key: !!def.primary_key || false,
             }),
         ),
     };
@@ -68,17 +73,20 @@
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         loading.value = true;
+
         api(`/schemas/${projectId.value}`, {
             method: "POST",
             query: {
                 table_name: values.tableName,
             },
             body: {
-                $schema: sharedState.value.active_schema.schema,
+                $schema: sharedState.value.active_schema.$schema,
                 type: sharedState.value.active_schema.type,
-                required: values.columns.map((column) => column.name),
+                required: values.columns
+                    .filter((column) => !column.optional)
+                    .map((column) => column.name),
                 properties: Object.fromEntries(
-                    values.columns.map(({ name, ...def }) => [name, { ...def }]),
+                    values.columns.map(({ name, ...options }) => [name, options]),
                 ),
             },
         })
@@ -88,7 +96,8 @@
 
                 router.push(callbackUrl.value);
             })
-            .catch((error) => errorToast.handleServer(error));
+            .catch((error) => errorToast.handleServer(error))
+            .finally(() => (loading.value = false));
     });
 </script>
 
@@ -209,7 +218,9 @@
                                                         'projects.id.sections.tables.default_table_name',
                                                     ),
                                                     type: 'string',
-                                                    extra: {},
+                                                    optional: false,
+                                                    primary_key: false,
+                                                    unique: false,
                                                 })
                                         "
                                     >
@@ -226,11 +237,18 @@
                                 <div
                                     class="grid grid-cols-4 lg:grid-cols-12 gap-3 px-3 text-xs font-medium text-muted-foreground"
                                 >
-                                    <div class="col-span-1 lg:col-span-5">
+                                    <div class="col-span-1 lg:col-span-4">
                                         {{ $t("projects.id.tables.edit.columns.name") }}
                                     </div>
-                                    <div class="col-span-2 lg:col-span-6">
+                                    <div class="col-span-2 lg:col-span-4">
                                         {{ $t("projects.id.tables.edit.columns.type") }}
+                                    </div>
+                                    <div class="hidden lg:block col-span-1 text-center">
+                                        Primary
+                                    </div>
+                                    <div class="hidden lg:block col-span-1 text-center">Unique</div>
+                                    <div class="hidden lg:block col-span-1 text-center">
+                                        Optional
                                     </div>
                                     <div class="col-span-1" />
                                 </div>
@@ -240,7 +258,7 @@
                                     :key="column.key"
                                     class="grid grid-cols-4 lg:grid-cols-12 items-start gap-3 bg-card"
                                 >
-                                    <div class="col-span-1 lg:col-span-5">
+                                    <div class="col-span-1 lg:col-span-4">
                                         <VeeField
                                             v-slot="{ field, errors }"
                                             :name="`columns[${index}].name`"
@@ -257,7 +275,7 @@
                                             </Field>
                                         </VeeField>
                                     </div>
-                                    <div class="col-span-2 lg:col-span-6">
+                                    <div class="col-span-2 lg:col-span-4">
                                         <VeeField
                                             v-slot="{ field, errors }"
                                             :name="`columns[${index}].type`"
@@ -271,7 +289,61 @@
                                             </Field>
                                         </VeeField>
                                     </div>
-                                    <div class="col-span-1 flex justify-end">
+                                    <div
+                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                    >
+                                        <VeeField
+                                            v-slot="{ handleChange, value }"
+                                            :name="`columns[${index}].primary_key`"
+                                            type="checkbox"
+                                            :value="true"
+                                            :unchecked-value="false"
+                                        >
+                                            <Checkbox
+                                                :disabled="
+                                                    fields.some(
+                                                        (f, i) =>
+                                                            i !== index && f.value.primary_key,
+                                                    )
+                                                "
+                                                :model-value="value === true || value === 'true'"
+                                                @update:model-value="handleChange"
+                                            />
+                                        </VeeField>
+                                    </div>
+                                    <div
+                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                    >
+                                        <VeeField
+                                            v-slot="{ handleChange, value }"
+                                            :name="`columns[${index}].unique`"
+                                            type="checkbox"
+                                            :value="true"
+                                            :unchecked-value="false"
+                                        >
+                                            <Checkbox
+                                                :model-value="value === true || value === 'true'"
+                                                @update:model-value="handleChange"
+                                            />
+                                        </VeeField>
+                                    </div>
+                                    <div
+                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                    >
+                                        <VeeField
+                                            v-slot="{ handleChange, value }"
+                                            :name="`columns[${index}].optional`"
+                                            type="checkbox"
+                                            :value="true"
+                                            :unchecked-value="false"
+                                        >
+                                            <Checkbox
+                                                :model-value="value === true || value === 'true'"
+                                                @update:model-value="handleChange"
+                                            />
+                                        </VeeField>
+                                    </div>
+                                    <div class="col-span-1 flex justify-end pt-2">
                                         <Button
                                             variant="destructive"
                                             size="icon"

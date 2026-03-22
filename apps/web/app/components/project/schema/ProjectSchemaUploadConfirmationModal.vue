@@ -49,6 +49,8 @@
                         },
                     ),
                 });
+
+                events.emit("event:schema:table-created", undefined);
             })
             .catch((error) => errorToast.handleServer(error));
     }
