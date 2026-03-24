@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 import psycopg2
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src import models, schemas
@@ -11,7 +10,6 @@ from src.exceptions import (
     AppException,
     CouldNotConnectToDatabaseException,
     InvalidDBCredentialsException,
-    ProjectAlreadyExistsException,
     ProjectHasActiveUsersException,
     ProjectNotFoundException,
 )
@@ -151,13 +149,6 @@ class ProjectService:
             self.repository.db.flush()  # Ensure project ID is generated before encryption
             project = self.__encrypt_db_credentials(project, project_data)
             self.repository.db.commit()
-        except IntegrityError as e:
-            self.repository.db.rollback()
-            # Handle unique constraint violation for project name
-            if "uq_project_name" in str(e.orig):
-                raise ProjectAlreadyExistsException()
-            else:
-                raise AppException() from e
         except Exception as e:
             self.repository.db.rollback()
             raise AppException() from e
@@ -189,13 +180,6 @@ class ProjectService:
             )
 
             self.repository.db.commit()
-        except IntegrityError as e:
-            self.repository.db.rollback()
-            # Handle unique constraint violation for project name
-            if "uq_project_name" in str(e.orig):
-                raise ProjectAlreadyExistsException()
-            else:
-                raise AppException() from e
         except Exception as e:
             self.repository.db.rollback()
             raise AppException() from e

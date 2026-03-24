@@ -7,7 +7,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
-    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import relationship
@@ -22,7 +21,6 @@ class Project(BaseModel):
     __tablename__ = "project"
     __table_args__ = (
         Index("idx_project_name", "name"),
-        UniqueConstraint("name", name="uq_project_name"),
         {"schema": "public"},
     )
 

@@ -47,7 +47,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("name", name="uq_project_name"),
         schema="public",
     )
     op.create_index(

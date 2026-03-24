@@ -7,12 +7,6 @@ class ProjectNotFoundException(AppException):
     message = "Project not found"
 
 
-class ProjectAlreadyExistsException(AppException):
-    status_code = 409
-    error_code = "error:project-already-exists"
-    message = "Project with the given name already exists"
-
-
 class ProjectHasActiveUsersException(AppException):
     status_code = 400
     error_code = "error:project-has-active-users"
