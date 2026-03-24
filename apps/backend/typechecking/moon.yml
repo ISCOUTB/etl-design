@@ -18,7 +18,6 @@ tasks:
         args:
             - run
             - pytest
-            - -v
             - -n
             - auto
             - --cov=src
