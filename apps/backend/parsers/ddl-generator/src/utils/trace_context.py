@@ -22,7 +22,11 @@ def extract_trace_headers_from_context(
 ) -> dict[str, str]:
     headers: dict[str, str] = {}
 
-    for item in context.invocation_metadata() or ():
+    metadata_getter = getattr(context, "invocation_metadata", None)
+    if not callable(metadata_getter):
+        return headers
+
+    for item in metadata_getter() or ():
         pair = _metadata_key_value(item)
         if pair is None:
             continue
