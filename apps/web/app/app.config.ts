@@ -28,5 +28,6 @@ export default defineAppConfig({
             "application/vnd.ms-excel",
             "text/csv",
         ],
+        delimiter: ",",
     },
 });

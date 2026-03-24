@@ -362,7 +362,9 @@
                         "description": "Make sure you have reviewed all the settings before uploading the file."
                     },
                     "validation": {
-                        "table_name_not_empty": "Table Name cannot be empty"
+                        "table_name_not_empty": "Table Name cannot be empty",
+                        "delimiter": "File delimiter is not valid. Please use {delimiter}.",
+                        "comma": "comma"
                     }
                 },
                 "tables": {

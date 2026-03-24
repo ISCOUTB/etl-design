@@ -10,7 +10,7 @@
     });
 
     useSeoMeta({
-        title: $t("auth.signin.title"),
+        title: $t("auth.sign_in.title"),
         description: $t("auth.sign_in.subtitle"),
         ogType: "website",
     });

@@ -2,7 +2,14 @@
     import type { z } from "zod";
     import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
-    import { Download, FileIcon, FileJson, FileSpreadsheet, X } from "lucide-vue-next";
+    import {
+        Download,
+        FileIcon,
+        FileJson,
+        FileSpreadsheet,
+        TriangleAlert,
+        X,
+    } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
     interface Props {
@@ -81,8 +88,9 @@
         const uploaded = schema.state.value.uploadedFile;
         const hasFile = !!uploaded && uploaded.blob.size > 0;
         const hasValidTableName = (schema.state.value.tableName?.trim().length ?? 0) > 0;
+        const hasWarnings = schema.state.value.warnings.length > 0;
 
-        return hasFile && hasValidTableName;
+        return hasFile && hasValidTableName && !hasWarnings;
     });
 
     function handleUpload(_event: Event) {
@@ -218,7 +226,24 @@
                 <ProjectSchemaExample />
             </div>
             <div v-else>
-                <h3 className="mb-1 text-sm font-medium text-foreground">
+                <template v-if="schema.state.value.warnings.length">
+                    <Alert variant="destructive">
+                        <TriangleAlert />
+                        <AlertTitle>Warnings</AlertTitle>
+                        <AlertDescription>
+                            <ul class="list-inside list-disc space-y-1">
+                                <li
+                                    v-for="warning in schema.state.value.warnings"
+                                    :key="warning.key"
+                                >
+                                    {{ $t(warning.message) }}
+                                </li>
+                            </ul>
+                        </AlertDescription>
+                    </Alert>
+                </template>
+
+                <h3 className="mt-6 mb-1 text-sm font-medium text-foreground">
                     {{ $t("projects.id.sections.schema.datatype_table.title") }}
                 </h3>
                 <p className="mb-4 text-sm text-muted-foreground">

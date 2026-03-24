@@ -17,6 +17,21 @@ export default defineNuxtConfig({
     css: ["~/assets/css/tailwind.css"],
     vite: {
         plugins: [tailwindcss()],
+        optimizeDeps: {
+            include: [
+                "zod",
+                "xlsx",
+                "lucide-vue-next",
+                "reka-ui",
+                "gsap",
+                "gsap/all",
+                "clsx",
+                "tailwind-merge",
+                "file-type",
+                "uuid",
+                "ajv",
+            ],
+        },
     },
     sourcemap: {
         client: true,

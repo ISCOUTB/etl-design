@@ -9,11 +9,15 @@ interface State {
     uploadedFile: Schemas.Schema.UploadedFile | undefined;
     sheetNames: string[];
     columnsConfig: Record<string, ColumnConfig>;
+    warnings: { key: string; message: string }[];
 }
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
 
 export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | undefined>) {
+    const config = useAppConfig();
+    const { t } = useI18n();
+
     const id = computed(() => toValue(projectId));
 
     const state = useState<State>(NuxtKeys.Projects.Schemas.SchemaState(id.value), () => ({
@@ -21,21 +25,59 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         uploadedFile: undefined,
         sheetNames: [],
         columnsConfig: {},
+        warnings: [],
     }));
 
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
-    const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
-        if (!isTabular.value || !state.value.uploadedFile) {
-            return [];
-        }
+    const parsedFileContent = computedAsync<Record<string, unknown>[] | undefined>(async () => {
+        try {
+            if (!isTabular.value || !state.value.uploadedFile) {
+                return [];
+            }
 
-        const { uploadedFile } = state.value;
-        const buffer = await uploadedFile?.blob.arrayBuffer();
+            const { uploadedFile } = state.value;
+            const buffer = await uploadedFile?.blob.arrayBuffer();
 
-        if (uploadedFile?.type === "csv") {
-            const text = new TextDecoder().decode(buffer);
-            const wb = read(text, { type: "string", cellDates: true, raw: true });
+            if (uploadedFile?.type === "csv") {
+                const text = new TextDecoder().decode(buffer);
+
+                const wb = read(text, {
+                    type: "string",
+                    cellDates: true,
+                    raw: true,
+                });
+
+                const firstSheet = wb.SheetNames[0];
+                if (!firstSheet) {
+                    return [];
+                }
+                const sheet = wb.Sheets[firstSheet];
+                if (!sheet) {
+                    return [];
+                }
+
+                const firstLine = text.split("\n")[0] ?? "";
+                if (config.files.delimiter && firstLine.split(config.files.delimiter).length) {
+                    setWarnings([
+                        ...state.value.warnings,
+                        {
+                            key: "warning:invalid-delimiter",
+                            message: t("projects.id.sections.schema.validation.delimiter", {
+                                delimiter: t("projects.id.sections.schema.validation.comma"),
+                            }),
+                        },
+                    ]);
+                }
+
+                state.value.sheetNames = wb.SheetNames;
+                return SchemaUtils.withRowId(
+                    ROW_ID,
+                    utils.sheet_to_json(sheet, { defval: "", raw: true }),
+                );
+            }
+
+            const wb = read(buffer, { type: "array", cellDates: true, raw: true });
             const firstSheet = wb.SheetNames[0];
             if (!firstSheet) {
                 return [];
@@ -49,19 +91,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
                 ROW_ID,
                 utils.sheet_to_json(sheet, { defval: "", raw: true }),
             );
-        }
-
-        const wb = read(buffer, { type: "array", cellDates: true, raw: true });
-        const firstSheet = wb.SheetNames[0];
-        if (!firstSheet) {
-            return [];
-        }
-        const sheet = wb.Sheets[firstSheet];
-        if (!sheet) {
-            return [];
-        }
-        state.value.sheetNames = wb.SheetNames;
-        return SchemaUtils.withRowId(ROW_ID, utils.sheet_to_json(sheet, { defval: "", raw: true }));
+        } catch {}
     });
 
     const jsonSchema = computedAsync<z.infer<typeof JsonSchema> | undefined>(async () => {
@@ -80,6 +110,10 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
     });
 
     const columns = computed<Column<Record<string, unknown>>[]>(() => {
+        if (!parsedFileContent.value) {
+            return [];
+        }
+
         const firstRow = parsedFileContent.value?.[0];
         if (!firstRow) {
             return [];
@@ -90,6 +124,10 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
     });
 
     const sampleValueByColumn = computed<Record<string, unknown>>(() => {
+        if (!parsedFileContent.value) {
+            return {};
+        }
+
         const rows = parsedFileContent.value;
         if (!rows?.length) {
             return {};
@@ -139,6 +177,17 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         state.value = {
             ...state.value,
             tableName,
+        };
+    }
+
+    function setWarnings(warnings: State["warnings"]) {
+        const unique = Array.from(
+            new Map(warnings.map((warning) => [warning.key, warning])).values(),
+        );
+
+        state.value = {
+            ...state.value,
+            warnings: unique,
         };
     }
 
