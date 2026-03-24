@@ -120,11 +120,11 @@ if settings.MINIMAL_SERVER_DEBUG:
 else:
     formatters_config = {
         "default": {
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "class": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(funcName)s",
         },
         "access": {
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "class": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(client_addr)s %(request_line)s %(status_code)s",
         },
     }

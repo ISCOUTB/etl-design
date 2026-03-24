@@ -3,7 +3,7 @@ import logging.handlers
 from pathlib import Path
 
 from opentelemetry import trace
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json
 
 from src.core.config import settings
 
@@ -84,7 +84,7 @@ def setup_logger() -> logging.Logger:
     )
 
     console_formatter = (
-        jsonlogger.JsonFormatter(json_format)  # type: ignore
+        json.JsonFormatter(json_format)  # type: ignore
         if not settings.EXCEL_READER_DEBUG
         else logging.Formatter(console_log_format)
     )
@@ -203,11 +203,11 @@ if settings.EXCEL_READER_DEBUG:
 else:
     formatters_config = {
         "default": {
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "class": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(funcName)s",
         },
         "access": {
-            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "class": "pythonjsonlogger.json.JsonFormatter",
             "format": "%(asctime)s %(levelname)s %(name)s %(client_addr)s %(request_line)s %(status_code)s",
         },
     }

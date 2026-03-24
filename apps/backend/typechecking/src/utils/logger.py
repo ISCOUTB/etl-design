@@ -3,7 +3,7 @@ import logging.handlers
 from pathlib import Path
 
 from opentelemetry import trace
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json
 
 from src.core.config import settings
 
@@ -152,7 +152,7 @@ def create_component_logger(component_name: str) -> logging.Logger:
     )
 
     console_formatter = (
-        jsonlogger.JsonFormatter(json_format)  # type: ignore
+        json.JsonFormatter(json_format)  # type: ignore
         if not settings.MINIMAL_SERVER_DEBUG
         else logging.Formatter(console_log_format)
     )
