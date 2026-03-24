@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.schemas.healthcheck import (
+    DatabaseHealthCheckResult,
+    RabbitMQHealthCheckResult,
+)
 from src.services.healthcheck import (
     check_database_client_connection,
     check_database_client_connection_async,
     check_databases_connection,
     check_rabbitmq_connection,
-)
-from src.schemas.healthcheck import (
-    DatabaseHealthCheckResult,
-    RabbitMQHealthCheckResult,
 )
 
 

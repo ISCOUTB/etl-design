@@ -29,7 +29,9 @@ def mock_db_client():
 @pytest.fixture
 def validation_worker(mock_db_client):
     """Create ValidationWorker with mocked DB client."""
-    with patch("src.workers.validation.get_database_client", return_value=mock_db_client):
+    with patch(
+        "src.workers.validation.get_database_client", return_value=mock_db_client
+    ):
         return ValidationWorker(
             max_retries=5,
             retry_delay=2.0,
@@ -188,11 +190,13 @@ class TestProcessValidationRequest:
             "insert_overwrite": True,
             "insert_db_uri": "mongodb://localhost:27017/db",
         }
-        validation_worker._validate_data = AsyncMock(return_value={
-            "task_id": "task_123",
-            "status": "success",
-            "results": {"status": "success"},
-        })
+        validation_worker._validate_data = AsyncMock(
+            return_value={
+                "task_id": "task_123",
+                "status": "success",
+                "results": {"status": "success"},
+            }
+        )
         validation_worker._publish_result = MagicMock()
         validation_worker.channel = MagicMock()
 
@@ -262,7 +266,10 @@ class TestValidateData:
         assert "success" in called_statuses
 
     @pytest.mark.asyncio
-    @patch("src.workers.validation.get_validation_summary", return_value={"status": "success"})
+    @patch(
+        "src.workers.validation.get_validation_summary",
+        return_value={"status": "success"},
+    )
     @patch("src.workers.validation.validate_file_against_schema")
     async def test_validate_data_converts_hex_file_content(
         self,

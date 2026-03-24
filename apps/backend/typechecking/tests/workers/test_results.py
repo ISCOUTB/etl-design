@@ -98,7 +98,9 @@ class TestResultQueueWorker:
 
         mock_channel.basic_ack.assert_called_once_with(delivery_tag="delivery_result_3")
 
-    def test_results_infrastructure_error_requeues(self, result_worker, sample_results_message):
+    def test_results_infrastructure_error_requeues(
+        self, result_worker, sample_results_message
+    ):
         result_worker._notify_task_completion = AsyncMock(
             side_effect=ConnectionError("api down")
         )

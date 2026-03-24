@@ -24,7 +24,9 @@ def mock_db_client():
 
 @pytest.fixture
 def insertion_worker(mock_db_client):
-    with patch("src.workers.insertion.get_database_client", return_value=mock_db_client):
+    with patch(
+        "src.workers.insertion.get_database_client", return_value=mock_db_client
+    ):
         return InsertionWorker(
             max_retries=5,
             retry_delay=2.0,
@@ -107,7 +109,9 @@ class TestInsertionQueueWorker:
     def test_process_insertion_infra_error_requeues(
         self, insertion_worker, sample_insertion_message
     ):
-        insertion_worker._insert_data = AsyncMock(side_effect=ConnectionError("db down"))
+        insertion_worker._insert_data = AsyncMock(
+            side_effect=ConnectionError("db down")
+        )
 
         mock_channel = MagicMock()
         mock_method = MagicMock(delivery_tag="delivery_insert_3")
@@ -123,7 +127,9 @@ class TestInsertionQueueWorker:
             delivery_tag="delivery_insert_3", requeue=True
         )
 
-    def test_unknown_insertion_task_is_ackd(self, insertion_worker, sample_insertion_message):
+    def test_unknown_insertion_task_is_ackd(
+        self, insertion_worker, sample_insertion_message
+    ):
         body = {**sample_insertion_message, "task": "unknown"}
         mock_channel = MagicMock()
         mock_method = MagicMock(delivery_tag="delivery_insert_4")
@@ -219,7 +225,9 @@ class TestInsertionDataFlow:
         assert mock_cursor.execute.call_count == 2
         mock_conn.commit.assert_called_once()
 
-        called_statuses = [c.kwargs.get("value") for c in mock_update_status.call_args_list]
+        called_statuses = [
+            c.kwargs.get("value") for c in mock_update_status.call_args_list
+        ]
         assert "processing-file" in called_statuses
         assert "requesting-insert-sql" in called_statuses
         assert "file-processed" in called_statuses
@@ -254,7 +262,9 @@ class TestInsertionDataFlow:
         assert result["status"] == "failed"
         assert result["results"] == {}
 
-        called_statuses = [c.kwargs.get("value") for c in mock_update_status.call_args_list]
+        called_statuses = [
+            c.kwargs.get("value") for c in mock_update_status.call_args_list
+        ]
         assert "failed-processing-file" in called_statuses
 
     @pytest.mark.asyncio
@@ -291,5 +301,7 @@ class TestInsertionDataFlow:
         assert result["status"] == "failed"
         assert result["results"] == sql_per_sheet
 
-        called_statuses = [c.kwargs.get("value") for c in mock_update_status.call_args_list]
+        called_statuses = [
+            c.kwargs.get("value") for c in mock_update_status.call_args_list
+        ]
         assert "failed-inserting-data" in called_statuses

@@ -41,7 +41,9 @@ class TestGetActiveSchema:
 
     def test_get_active_schema_propagates_database_error(self):
         mock_db_client = MagicMock()
-        mock_db_client.mongo_find_jsonschema.side_effect = RuntimeError("db unavailable")
+        mock_db_client.mongo_find_jsonschema.side_effect = RuntimeError(
+            "db unavailable"
+        )
 
         try:
             get_active_schema("project_a__customers", mock_db_client)
