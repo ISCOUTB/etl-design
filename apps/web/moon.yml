@@ -24,8 +24,6 @@ tasks:
             - nuxt
         toolchains: node
         preset: server
-        env:
-            NODE_OPTIONS: "--max-old-space-size=8192"
 
     dev:
         command: pnpm
@@ -35,6 +33,18 @@ tasks:
             - dev
         toolchains: node
         preset: server
+
+    build:
+        command: pnpm
+        args:
+            - exec
+            - nuxt
+            - build
+        toolchains: node
+        options:
+            cache: false
+        env:
+            NODE_OPTIONS: "--max-old-space-size=4096"
 
     shadcn:
         command: pnpm

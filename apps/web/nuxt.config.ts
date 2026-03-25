@@ -32,6 +32,11 @@ export default defineNuxtConfig({
                 "ajv",
             ],
         },
+        server: {
+            hmr: {
+                overlay: false,
+            },
+        },
     },
     sourcemap: {
         client: true,

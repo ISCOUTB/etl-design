@@ -33,7 +33,7 @@ RUN --mount=type=cache,target=/app/.pnpm \
 
 
 # BUILD TASK
-RUN moon run web:nuxt -- build 
+RUN moon run web:build
 
 FROM gcr.io/distroless/nodejs22-debian13 AS runner
 

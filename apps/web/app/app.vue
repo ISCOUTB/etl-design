@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    import { Toaster } from "vue-sonner";
+
     const { $gsap } = useNuxtApp();
     const { finalizePendingLocaleChange } = useI18n();
     const utils = useAnimationsUtils();
