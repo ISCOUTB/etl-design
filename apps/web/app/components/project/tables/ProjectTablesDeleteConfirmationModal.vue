@@ -1,50 +1,28 @@
 <script setup lang="ts">
-    import type { z } from "zod";
-
     interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
+        table: MaybeRefOrGetter<MongoRaw | undefined>;
     }
 
     const props = defineProps<Props>();
-    const project = computed(() => toValue(props.project));
+    const table = computed(() => toValue(props.table));
 
-    const auth = useAuth();
     const expectedConfirmation = computed(() => {
-        if (!auth.data.value || !project.value?.name) {
+        if (!table.value) {
             return;
         }
-
-        return $t("projects.id.sections.settings.delete.validation", {
-            project: project.value.name,
+        return $t("projects.id.sections.tables.delete.validation", {
+            value: TableUtils.getTableName(table.value.import_name),
         });
     });
 
-    const userInput = useState(NuxtKeys.Projects.Delete.Validation(project.value), () => "");
+    const userInput = useState(NuxtKeys.Projects.Tables.Delete.Validation(table.value), () => "");
     const isValid = computed(() => userInput.value === expectedConfirmation.value);
 
-    const { $localeRoute } = useNuxtApp();
-    const api = useApi();
-    const errorToast = useErrorToast();
-    async function handleDelete() {
-        if (!isValid.value || !project.value) {
-            return;
-        }
-
-        try {
-            await api(`/projects/${project.value.id}/flush`, {
-                method: "DELETE",
-            });
-
-            await refreshNuxtData(NuxtKeys.Projects.Search);
-            await navigateTo($localeRoute({ name: "projects" }));
-        } catch (error) {
-            errorToast.handleServer(error);
-        }
-    }
+    function handleDelete() {}
 
     const modal = useModal();
     function handleCancel() {
-        if (modal.state.value.currentModalKey === ModalKeys.Projects.Delete.ConfirmationModal) {
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Tables.Delete) {
             modal.dispatch.setOpen(false);
         }
     }
@@ -56,13 +34,16 @@
 <template>
     <DefineDescription>
         <div class="flex flex-col space-y-3">
-            <i18n-t keypath="projects.id.sections.settings.delete.modal.description" tag="p">
-                <template #project>
-                    <strong>{{ project?.name }}</strong>
+            <i18n-t
+                v-if="table"
+                keypath="projects.id.sections.tables.delete.modal.description"
+                tag="p"
+            >
+                <template #table>
+                    <strong>{{ TableUtils.getTableName(table.import_name) }}</strong>
                 </template>
             </i18n-t>
-
-            <i18n-t keypath="projects.id.sections.settings.delete.modal.type_project" tag="p">
+            <i18n-t keypath="projects.id.sections.tables.delete.modal.type_table" tag="p">
                 <template #validation>
                     <code class="rounded bg-muted px-1 py-0.5 font-mono font-bold text-xs">
                         {{ expectedConfirmation }}
@@ -86,12 +67,11 @@
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        {{ $t("projects.id.sections.settings.delete.modal.title") }}
+                        {{ $t("projects.id.sections.tables.delete.modal.title") }}
                     </AlertDialogTitle>
                     <AlertDialogDescription as-child>
                         <ReuseDescription />
                     </AlertDialogDescription>
-
                     <div class="pt-2">
                         <ReuseInput />
                     </div>
@@ -104,7 +84,9 @@
                     >
                         {{ $t("projects.id.sections.settings.delete.label") }}
                     </AlertDialogAction>
-                    <AlertDialogCancel> {{ $t("common.actions.cancel") }} </AlertDialogCancel>
+                    <AlertDialogCancel @click="handleCancel">
+                        {{ $t("common.actions.cancel") }}
+                    </AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </template>
@@ -112,17 +94,15 @@
             <DrawerContent>
                 <DrawerHeader>
                     <DrawerTitle>
-                        {{ $t("projects.id.sections.settings.delete.modal.title") }}
+                        {{ $t("projects.id.sections.tables.delete.modal.title") }}
                     </DrawerTitle>
                     <DrawerDescription as-child>
                         <ReuseDescription />
                     </DrawerDescription>
                 </DrawerHeader>
-
                 <div class="px-4">
                     <ReuseInput />
                 </div>
-
                 <DrawerFooter>
                     <div class="flex justify-end space-x-4">
                         <Button

@@ -68,6 +68,14 @@ export const NuxtKeys = {
                     onlyA: (id) => `project:${id}:tables:shared-state`,
                     both: (id, name) => `project:${id}:tables:${name}:shared-state`,
                 }),
+            Delete: {
+                Validation: (table: MongoRaw | undefined) =>
+                    $(
+                        table,
+                        "project:tables:delete",
+                        (value) => `project:tables:${value.import_name}:delete`,
+                    ),
+            },
         },
         Edit: {
             TableName: (
@@ -113,7 +121,7 @@ export const ModalKeys = {
             UploadFile: "projects:schema:upload-file",
         },
         Tables: {
-            ViewSchema: "projects:tables:view-schema",
+            Delete: "projects:tables:delete-schema",
         },
     },
 } as const;

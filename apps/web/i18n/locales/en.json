@@ -393,7 +393,15 @@
                             "delete": "Delete"
                         }
                     },
-                    "default_table_name": "column_name"
+                    "default_table_name": "column_name",
+                    "delete": {
+                        "validation": "delete {value}",
+                        "modal": {
+                            "title": "Are you absolutely sure?",
+                            "description": "This action cannot be undone. This will permanently delete the {table} table and all its data.",
+                            "type_table": "Please type {validation} to confirm."
+                        }
+                    }
                 },
                 "file": {
                     "tab": "File"

@@ -8,6 +8,7 @@
     const { tables, Section, projectId } = useProjectTabsSharedState();
 
     const events = useAppEvents();
+    const modal = useModal();
 
     const dropdownItems = computed<
         Components.GenericDropdown.Item<z.infer<typeof MongoRawSchema>>[][]
@@ -48,7 +49,20 @@
             {
                 label: "projects.id.sections.tables.card.dropdown.delete",
                 icon: Trash2,
-                action: (context) => console.warn(context),
+                action: (context) => {
+                    if (!context) {
+                        return;
+                    }
+
+                    modal.dispatch.loadComponent({
+                        loader: () =>
+                            import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+                        key: ModalKeys.Projects.Tables.Delete,
+                        props: {
+                            table: context,
+                        },
+                    });
+                },
             },
         ],
     ]);
