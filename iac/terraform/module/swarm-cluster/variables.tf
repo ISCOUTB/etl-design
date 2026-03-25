@@ -75,3 +75,51 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+# ============================ Shared filesystem variables ============================
+
+variable "enable_shared_fs" {
+  description = "Enable provisioning of a shared filesystem (EFS) for Swarm workloads"
+  type        = bool
+  default     = true
+}
+
+variable "shared_fs_name" {
+  description = "Name prefix for shared filesystem resources"
+  type        = string
+  default     = "shared-fs"
+}
+
+variable "shared_fs_encrypted" {
+  description = "Whether EFS should be encrypted at rest"
+  type        = bool
+  default     = true
+}
+
+variable "shared_fs_performance_mode" {
+  description = "EFS performance mode"
+  type        = string
+  default     = "generalPurpose"
+
+  validation {
+    condition     = contains(["generalPurpose", "maxIO"], var.shared_fs_performance_mode)
+    error_message = "shared_fs_performance_mode must be 'generalPurpose' or 'maxIO'."
+  }
+}
+
+variable "shared_fs_throughput_mode" {
+  description = "EFS throughput mode"
+  type        = string
+  default     = "bursting"
+
+  validation {
+    condition     = contains(["bursting", "provisioned", "elastic"], var.shared_fs_throughput_mode)
+    error_message = "shared_fs_throughput_mode must be 'bursting', 'provisioned', or 'elastic'."
+  }
+}
+
+variable "shared_fs_provisioned_throughput" {
+  description = "Provisioned throughput in MiB/s when throughput mode is provisioned"
+  type        = number
+  default     = null
+}

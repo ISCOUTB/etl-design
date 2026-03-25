@@ -322,6 +322,70 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 }
 
 # ============================================
+# Shared filesystem (EFS)
+# ============================================
+
+resource "aws_security_group" "efs" {
+  count = var.enable_shared_fs ? 1 : 0
+
+  name        = "${local.cluster_name}-efs-sg"
+  description = "Security group for shared EFS - ${var.environment}"
+  vpc_id      = aws_vpc.swarm.id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-efs-sg"
+    }
+  )
+
+  ingress {
+    description     = "NFS from swarm nodes"
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.swarm.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_efs_file_system" "shared" {
+  count = var.enable_shared_fs ? 1 : 0
+
+  creation_token = "${local.cluster_name}-${var.shared_fs_name}"
+  encrypted      = var.shared_fs_encrypted
+
+  performance_mode = var.shared_fs_performance_mode
+  throughput_mode  = var.shared_fs_throughput_mode
+
+  provisioned_throughput_in_mibps = var.shared_fs_throughput_mode == "provisioned" ? var.shared_fs_provisioned_throughput : null
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-${var.shared_fs_name}"
+    }
+  )
+}
+
+resource "aws_efs_mount_target" "shared" {
+  for_each = var.enable_shared_fs ? {
+    for idx, subnet in aws_subnet.swarm : idx => subnet.id
+  } : {}
+
+  file_system_id  = aws_efs_file_system.shared[0].id
+  subnet_id       = each.value
+  security_groups = [aws_security_group.efs[0].id]
+}
+
+# ============================================
 # Ansible Inventory Generation
 # ============================================
 
