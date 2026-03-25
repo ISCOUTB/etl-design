@@ -37,5 +37,16 @@
                 v-bind="modal.state.value.componentProps"
             />
         </AlertDialog>
+
+        <Drawer
+            v-if="modal.state.value.currentKind === 'drawer' && canRender"
+            v-model:open="modal.state.value.open"
+        >
+            <component
+                :is="modal.currentComponent.value"
+                v-if="modal.currentComponent.value"
+                v-bind="modal.state.value.componentProps"
+            />
+        </Drawer>
     </div>
 </template>

@@ -28,9 +28,11 @@ export default function () {
     });
 
     function loadComponent<C extends Component>(
-        { loader, props, key, kind = "sheet" }: Components.Modal.Args<C>,
+        args: MaybeRefOrGetter<Components.Modal.Args<C>>,
         options: LoadComponentOptions = { autoOpen: true },
     ) {
+        const { key, loader, kind = "sheet", props } = toValue(args);
+
         const existingEntry = componentRegistry.value.find((component) => component.key === key);
 
         if (existingEntry) {
@@ -73,11 +75,16 @@ export default function () {
         state.value = { ...state.value, ...patch };
     }
 
+    function setModalKind(patch: Components.Modal.Kind) {
+        state.value = { ...state.value, currentKind: patch };
+    }
+
     return {
         state,
         currentComponent,
         dispatch: {
             setOpen,
+            setModalKind,
             loadComponent,
         },
     };

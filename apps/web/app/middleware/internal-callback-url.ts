@@ -47,9 +47,5 @@ function validateCallbackUrl(path: string): boolean {
         return false;
     }
 
-    if (parsed.search) {
-        return false;
-    }
-
     return true;
 }

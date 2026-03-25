@@ -34,7 +34,7 @@ declare global {
         }
 
         namespace Modal {
-            type Kind = "sheet" | "dialog" | "alert-dialog";
+            type Kind = "sheet" | "dialog" | "alert-dialog" | "drawer";
 
             interface State {
                 currentModalKey: string | undefined;

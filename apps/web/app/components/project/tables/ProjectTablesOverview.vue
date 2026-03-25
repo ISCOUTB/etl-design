@@ -39,7 +39,7 @@
                             id: projectId.value,
                             tableName: TableUtils.getTableName(context.import_name),
                         },
-                        query: { callbackUrl: route.path },
+                        query: { callbackUrl: route.fullPath },
                     });
                 },
             },

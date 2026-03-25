@@ -123,24 +123,59 @@
             handleFile();
         }
     }
+
+    const modal = useModal();
+    function handleCancel() {
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadFile) {
+            modal.dispatch.setOpen(false);
+        }
+    }
 </script>
 
 <template>
-    <AlertDialogContent>
-        <AlertDialogHeader>
-            <AlertDialogTitle>
-                {{ $t("projects.id.sections.schema.upload.title") }}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-                {{ $t("projects.id.sections.schema.upload.description") }}
-            </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-            <AlertDialogAction class="space-x-2" @click="handleSubmit">
-                <Upload />
-                {{ $t("projects.id.sections.schema.events.upload_file.label") }}
-            </AlertDialogAction>
-            <AlertDialogCancel> {{ $t("common.actions.cancel") }} </AlertDialogCancel>
-        </AlertDialogFooter>
-    </AlertDialogContent>
+    <ResponsiveModal desktop="alert-dialog" mobile="drawer">
+        <template #alert-dialog>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {{ $t("projects.id.sections.schema.upload.title") }}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {{ $t("projects.id.sections.schema.upload.description") }}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction class="space-x-2" @click="handleSubmit">
+                        <Upload />
+                        {{ $t("projects.id.sections.schema.events.upload_file.label") }}
+                    </AlertDialogAction>
+                    <AlertDialogCancel> {{ $t("common.actions.cancel") }} </AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </template>
+        <template #drawer>
+            <DrawerContent>
+                <DrawerHeader>
+                    <DrawerTitle>
+                        {{ $t("projects.id.sections.schema.upload.title") }}
+                    </DrawerTitle>
+                    <DrawerDescription>
+                        {{ $t("projects.id.sections.schema.upload.description") }}
+                    </DrawerDescription>
+                </DrawerHeader>
+
+                <DrawerFooter>
+                    <div class="flex justify-end space-x-4">
+                        <Button class="space-x-2" @click="handleSubmit">
+                            <Upload />
+                            {{ $t("projects.id.sections.schema.events.upload_file.label") }}
+                        </Button>
+                        <Button variant="outline" @click="handleCancel">
+                            {{ $t("common.actions.cancel") }}
+                        </Button>
+                    </div>
+                </DrawerFooter>
+            </DrawerContent>
+        </template>
+    </ResponsiveModal>
 </template>
