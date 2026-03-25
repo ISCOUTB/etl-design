@@ -12,7 +12,6 @@
         Server,
         User,
     } from "lucide-vue-next";
-    import { FetchError } from "ofetch";
     import { toast } from "vue-sonner";
 
     interface Props {

@@ -88,9 +88,9 @@
         const uploaded = schema.state.value.uploadedFile;
         const hasFile = !!uploaded && uploaded.blob.size > 0;
         const hasValidTableName = (schema.state.value.tableName?.trim().length ?? 0) > 0;
-        const hasWarnings = schema.state.value.warnings.length > 0;
+        const hasErrors = schema.errors.value.length > 0;
 
-        return hasFile && hasValidTableName && !hasWarnings;
+        return hasFile && hasValidTableName && !hasErrors;
     });
 
     function handleUpload(_event: Event) {
@@ -117,96 +117,100 @@
 </script>
 
 <template>
-    <div class="flex flex-col gap-8">
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.schema.header.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.schema.header.description") }}
-            </p>
-
-            <div class="mb-6 grid gap-4 sm:grid-cols-2">
-                <Item variant="outline">
-                    <ItemMedia>
-                        <div class="bg-emerald-500/10 p-2 rounded-md">
-                            <FileSpreadsheet class="size-5 text-emerald-500" />
-                        </div>
-                    </ItemMedia>
-                    <ItemContent>
-                        <ItemTitle class="font-medium text-foreground"> Excel / CSV </ItemTitle>
-                        <ItemDescription>
-                            {{ $t("projects.id.sections.schema.cards.supported_formats") }}
-                        </ItemDescription>
-                    </ItemContent>
-                </Item>
-                <Item variant="outline">
-                    <ItemMedia>
-                        <div class="bg-amber-500/10 p-2 rounded-md">
-                            <FileJson class="size-5 text-amber-500" />
-                        </div>
-                    </ItemMedia>
-                    <ItemContent>
-                        <ItemTitle>
-                            {{ $t("projects.id.sections.schema.cards.json_schema") }}
-                        </ItemTitle>
-                        <ItemDescription>
-                            {{ $t("projects.id.sections.schema.cards.upload_json") }}
-                        </ItemDescription>
-                    </ItemContent>
-                </Item>
+    <div class="space-y-4">
+        <section class="space-y-4">
+            <div class="space-y-1">
+                <h3 class="text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.schema.header.title") }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.schema.header.description") }}
+                </p>
             </div>
 
-            <DropzoneArea
-                :state="() => schema.state.value.uploadedFile"
-                :supported-formats="
-                    config.files.supportedFormats.map((format) => `.${format}`).join(',')
-                "
-                :dropzone-options="{ multiple: false }"
-                @dropped="
-                    (files) => {
-                        const file = files?.[0];
-                        if (file) {
-                            processFile(file);
+            <div class="space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <Item variant="outline">
+                        <ItemMedia>
+                            <div class="bg-emerald-500/10 p-2 rounded-md">
+                                <FileSpreadsheet class="size-5 text-emerald-500" />
+                            </div>
+                        </ItemMedia>
+                        <ItemContent>
+                            <ItemTitle class="font-medium text-foreground"> Excel / CSV </ItemTitle>
+                            <ItemDescription>
+                                {{ $t("projects.id.sections.schema.cards.supported_formats") }}
+                            </ItemDescription>
+                        </ItemContent>
+                    </Item>
+                    <Item variant="outline">
+                        <ItemMedia>
+                            <div class="bg-amber-500/10 p-2 rounded-md">
+                                <FileJson class="size-5 text-amber-500" />
+                            </div>
+                        </ItemMedia>
+                        <ItemContent>
+                            <ItemTitle>
+                                {{ $t("projects.id.sections.schema.cards.json_schema") }}
+                            </ItemTitle>
+                            <ItemDescription>
+                                {{ $t("projects.id.sections.schema.cards.upload_json") }}
+                            </ItemDescription>
+                        </ItemContent>
+                    </Item>
+                </div>
+
+                <DropzoneArea
+                    :state="() => schema.state.value.uploadedFile"
+                    :supported-formats="
+                        config.files.supportedFormats.map((format) => `.${format}`).join(',')
+                    "
+                    :dropzone-options="{ multiple: false }"
+                    @dropped="
+                        (files) => {
+                            const file = files?.[0];
+                            if (file) {
+                                processFile(file);
+                            }
                         }
-                    }
-                "
-                @change="handleInputChange"
-            >
-                <template #file-selected="{ state }">
-                    <div>
-                        <Item variant="outline">
-                            <ItemMedia>
-                                <div class="bg-emerald-500/10 p-2 rounded-md">
-                                    <FileIcon class="size-5 text-emerald-500" />
-                                </div>
-                            </ItemMedia>
-                            <ItemContent>
-                                <ItemTitle class="truncate font-medium text-foreground">
-                                    {{ state.name }}
-                                </ItemTitle>
-                                <ItemDescription>
-                                    {{ state.size }}
-                                </ItemDescription>
-                            </ItemContent>
-                            <ItemActions>
-                                <Button v-if="fileURL" as-child variant="ghost">
-                                    <NuxtLink :to="fileURL" :download="state.name">
-                                        <Download class="size-4" />
-                                    </NuxtLink>
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    @click="schema.dispatch.setUploadedFile(undefined)"
-                                >
-                                    <X class="size-4" />
-                                </Button>
-                            </ItemActions>
-                        </Item>
-                    </div>
-                </template>
-            </DropzoneArea>
+                    "
+                    @change="handleInputChange"
+                >
+                    <template #file-selected="{ state }">
+                        <div>
+                            <Item variant="outline">
+                                <ItemMedia>
+                                    <div class="bg-emerald-500/10 p-2 rounded-md">
+                                        <FileIcon class="size-5 text-emerald-500" />
+                                    </div>
+                                </ItemMedia>
+                                <ItemContent>
+                                    <ItemTitle class="truncate font-medium text-foreground">
+                                        {{ state.name }}
+                                    </ItemTitle>
+                                    <ItemDescription>
+                                        {{ state.size }}
+                                    </ItemDescription>
+                                </ItemContent>
+                                <ItemActions>
+                                    <Button v-if="fileURL" as-child variant="ghost">
+                                        <NuxtLink :to="fileURL" :download="state.name">
+                                            <Download class="size-4" />
+                                        </NuxtLink>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        @click="schema.dispatch.setUploadedFile(undefined)"
+                                    >
+                                        <X class="size-4" />
+                                    </Button>
+                                </ItemActions>
+                            </Item>
+                        </div>
+                    </template>
+                </DropzoneArea>
+            </div>
         </section>
 
         <Transition
@@ -225,30 +229,34 @@
 
                 <ProjectSchemaExample />
             </div>
-            <div v-else>
-                <template v-if="schema.state.value.warnings.length">
+            <div v-else class="space-y-6">
+                <div v-if="schema.errors.value.length > 0">
                     <Alert variant="destructive">
                         <TriangleAlert />
                         <AlertTitle>Warnings</AlertTitle>
                         <AlertDescription>
                             <ul class="list-inside list-disc space-y-1">
-                                <li
-                                    v-for="warning in schema.state.value.warnings"
-                                    :key="warning.key"
-                                >
-                                    {{ $t(warning.message) }}
+                                <li v-for="error in schema.errors.value" :key="error.key">
+                                    <template v-if="$te(error.message)">
+                                        {{ $t(error.message) }}
+                                    </template>
+                                    <template v-else>
+                                        {{ error.message }}
+                                    </template>
                                 </li>
                             </ul>
                         </AlertDescription>
                     </Alert>
-                </template>
+                </div>
 
-                <h3 className="mt-6 mb-1 text-sm font-medium text-foreground">
-                    {{ $t("projects.id.sections.schema.datatype_table.title") }}
-                </h3>
-                <p className="mb-4 text-sm text-muted-foreground">
-                    {{ $t("projects.id.sections.schema.datatype_table.description") }}
-                </p>
+                <div class="space-y-1">
+                    <h3 className="text-sm font-medium text-foreground">
+                        {{ $t("projects.id.sections.schema.datatype_table.title") }}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        {{ $t("projects.id.sections.schema.datatype_table.description") }}
+                    </p>
+                </div>
 
                 <div class="rounded-lg border overflow-hidden">
                     <Table>
@@ -358,7 +366,7 @@
 
                 <ProjectSchemaFields
                     :can-submit="canSubmit"
-                    class="mt-6 space-y-6"
+                    class="space-y-6 disabled:cursor-not-allowed"
                     @submit="handleUpload"
                 />
             </div>

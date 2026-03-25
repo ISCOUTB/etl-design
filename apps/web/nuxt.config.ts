@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     // CORE CONFIG
     ///////////////////////////////////////////////////////
+    debug: true,
     css: ["~/assets/css/tailwind.css"],
     vite: {
         plugins: [tailwindcss()],
@@ -33,6 +34,10 @@ export default defineNuxtConfig({
             ],
         },
         server: {
+            watch: {
+                usePolling: true,
+                interval: 1000,
+            },
             hmr: {
                 overlay: false,
             },

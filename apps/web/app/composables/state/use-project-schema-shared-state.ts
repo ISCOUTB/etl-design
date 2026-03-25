@@ -9,7 +9,11 @@ interface State {
     uploadedFile: Schemas.Schema.UploadedFile | undefined;
     sheetNames: string[];
     columnsConfig: Record<string, ColumnConfig>;
-    warnings: { key: string; message: string }[];
+}
+
+interface SchemaError {
+    key: "error:invalid-delimiter";
+    message: string;
 }
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
@@ -27,6 +31,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         columnsConfig: {},
         warnings: [],
     }));
+    const errors = useState<SchemaError[]>(NuxtKeys.Projects.Schemas.Errors(id.value), () => []);
 
     const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
@@ -37,6 +42,10 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
             }
 
             const { uploadedFile } = state.value;
+            if (!uploadedFile) {
+                return;
+            }
+
             const buffer = await uploadedFile?.blob.arrayBuffer();
 
             if (uploadedFile?.type === "csv") {
@@ -58,16 +67,16 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
                 }
 
                 const firstLine = text.split("\n")[0] ?? "";
-                if (config.files.delimiter && firstLine.split(config.files.delimiter).length) {
-                    setWarnings([
-                        ...state.value.warnings,
-                        {
-                            key: "warning:invalid-delimiter",
-                            message: t("projects.id.sections.schema.validation.delimiter", {
-                                delimiter: t("projects.id.sections.schema.validation.comma"),
-                            }),
-                        },
-                    ]);
+                if (
+                    config.files.delimiter &&
+                    firstLine.split(config.files.delimiter).length === 1
+                ) {
+                    addSchemaError({
+                        key: "error:invalid-delimiter",
+                        message: t("projects.id.sections.schema.validation.delimiter", {
+                            delimiter: t("projects.id.sections.schema.validation.comma"),
+                        }),
+                    });
                 }
 
                 state.value.sheetNames = wb.SheetNames;
@@ -91,7 +100,9 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
                 ROW_ID,
                 utils.sheet_to_json(sheet, { defval: "", raw: true }),
             );
-        } catch {}
+        } catch (error) {
+            console.warn(error);
+        }
     });
 
     const jsonSchema = computedAsync<z.infer<typeof JsonSchema> | undefined>(async () => {
@@ -170,6 +181,9 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
     );
 
     function setUploadedFile(file: Schemas.Schema.UploadedFile | undefined) {
+        if (!file) {
+            clearSchemaErrors();
+        }
         state.value = { ...state.value, uploadedFile: file, tableName: file?.nameWithoutExt };
     }
 
@@ -180,15 +194,20 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         };
     }
 
-    function setWarnings(warnings: State["warnings"]) {
-        const unique = Array.from(
-            new Map(warnings.map((warning) => [warning.key, warning])).values(),
-        );
+    function addSchemaError(error: SchemaError) {
+        const already = errors.value.some((e) => e.key === error.key);
+        if (already) {
+            return;
+        }
+        errors.value = [...errors.value, error];
+    }
 
-        state.value = {
-            ...state.value,
-            warnings: unique,
-        };
+    function removeSchemaError(key: SchemaError["key"]) {
+        errors.value = errors.value.filter((error) => error.key !== key);
+    }
+
+    function clearSchemaErrors() {
+        errors.value = [];
     }
 
     function setColumnConfig(columnKey: string, config: ColumnConfig) {
@@ -237,6 +256,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
 
     return {
         state,
+        errors,
         computed: {
             isTabular,
             parsedFileContent,
@@ -256,6 +276,9 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
             patchColumnConfig,
             getColumnDataTypeModel,
             getColumnConfigModel,
+            addSchemaError,
+            removeSchemaError,
+            clearSchemaErrors,
         },
     };
 }

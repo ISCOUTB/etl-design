@@ -41,6 +41,12 @@ export const NuxtKeys = {
         Schemas: {
             SchemaState: (projectId: ResponseProject["id"] | undefined) =>
                 $(projectId, "project:shared-state", (value) => `project:${value}:shared-state`),
+            Errors: (projectId: ResponseProject["id"] | undefined) =>
+                $(
+                    projectId,
+                    "project:schemas-errors",
+                    (value) => `project:${value}:schemas-errors`,
+                ),
             ExampleFormat: "project:schema:example-format",
             RowId: "__rowId",
         },
