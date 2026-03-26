@@ -42,16 +42,28 @@ tasks:
         options:
             cache: false
 
-    development:
+    backend:
         command: noop
         deps:
             - source:run-parsers
             - source:deploy-postgres
             - source:deploy-mongo
             - source:deploy-redis
+            - source:deploy-rabbit
             - database:run
+            - typechecking:run
             - api:run
+        preset: server
+        options:
+            runDepsInParallel: true
+            cache: false
+
+    development:
+        command: noop
+        deps:
+            - source:backend
             - web:dev
         preset: server
         options:
             runDepsInParallel: true
+            cache: false
