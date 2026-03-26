@@ -383,6 +383,7 @@
                     },
                     "card": {
                         "n_columns": "{length} columns",
+                        "n_versions": "{length} versions",
                         "required_column": "required",
                         "selected_schema": {
                             "description": "JSON Schema validation definition"
@@ -390,15 +391,22 @@
                         "dropdown": {
                             "view_schema": "View",
                             "edit": "Edit",
+                            "revert": "Revert",
                             "delete": "Delete"
                         }
                     },
                     "default_table_name": "column_name",
                     "delete": {
-                        "validation": "delete {value}",
+                        "validation": {
+                            "delete": "delete {value}",
+                            "revert": "revert {value}"
+                        },
                         "modal": {
                             "title": "Are you absolutely sure?",
-                            "description": "This action cannot be undone. This will permanently delete the {table} table and all its data.",
+                            "description": {
+                                "delete": "This action cannot be undone. This will permanently delete the {table} table and all its data.",
+                                "revert": "This action will step back in the history and revert the schema to a previous version."
+                            },
                             "type_table": "Please type {validation} to confirm."
                         }
                     }

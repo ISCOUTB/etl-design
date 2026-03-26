@@ -61,6 +61,17 @@
                                     })
                                 }}
                             </Badge>
+                            <Badge
+                                v-if="table.schemas_releases.length > 0"
+                                variant="outline"
+                                class="bg-emerald-500 border-emerald-400 text-white dark:bg-gray-700"
+                            >
+                                {{
+                                    $t("projects.id.sections.tables.card.n_versions", {
+                                        length: table.schemas_releases.length,
+                                    })
+                                }}
+                            </Badge>
                         </ItemTitle>
                         <ItemDescription>
                             {{

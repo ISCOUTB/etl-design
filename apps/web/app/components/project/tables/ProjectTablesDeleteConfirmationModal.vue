@@ -1,6 +1,7 @@
 <script setup lang="ts">
     interface Props {
         table: MaybeRefOrGetter<MongoRaw | undefined>;
+        kind: "revert" | "delete";
     }
 
     const props = defineProps<Props>();
@@ -10,7 +11,14 @@
         if (!table.value) {
             return;
         }
-        return $t("projects.id.sections.tables.delete.validation", {
+
+        if (props.kind === "delete") {
+            return $t("projects.id.sections.tables.delete.validation.delete", {
+                value: TableUtils.getTableName(table.value.import_name),
+            });
+        }
+
+        return $t("projects.id.sections.tables.delete.validation.revert", {
             value: TableUtils.getTableName(table.value.import_name),
         });
     });
@@ -34,15 +42,20 @@
 <template>
     <DefineDescription>
         <div class="flex flex-col space-y-3">
-            <i18n-t
-                v-if="table"
-                keypath="projects.id.sections.tables.delete.modal.description"
-                tag="p"
-            >
-                <template #table>
-                    <strong>{{ TableUtils.getTableName(table.import_name) }}</strong>
-                </template>
-            </i18n-t>
+            <template v-if="kind === 'delete'">
+                <i18n-t
+                    v-if="table"
+                    keypath="projects.id.sections.tables.delete.modal.description.delete"
+                    tag="p"
+                >
+                    <template #table>
+                        <strong>{{ TableUtils.getTableName(table.import_name) }}</strong>
+                    </template>
+                </i18n-t>
+            </template>
+            <template v-if="kind === 'revert'">
+                {{ $t("projects.id.sections.tables.delete.modal.description.revert") }}
+            </template>
             <i18n-t keypath="projects.id.sections.tables.delete.modal.type_table" tag="p">
                 <template #validation>
                     <code class="rounded bg-muted px-1 py-0.5 font-mono font-bold text-xs">
@@ -77,13 +90,17 @@
                     </div>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogAction
-                        :disabled="!isValid"
-                        class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
-                        @click="handleDelete"
-                    >
-                        {{ $t("projects.id.sections.settings.delete.label") }}
-                    </AlertDialogAction>
+                    <template v-if="kind === 'delete'">
+                        <AlertDialogAction>
+                            {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
+                        </AlertDialogAction>
+                    </template>
+                    <template v-if="kind === 'revert'">
+                        <AlertDialogAction :disabled="!isValid" @click="handleDelete">
+                            {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
+                        </AlertDialogAction>
+                    </template>
+
                     <AlertDialogCancel @click="handleCancel">
                         {{ $t("common.actions.cancel") }}
                     </AlertDialogCancel>
@@ -105,13 +122,19 @@
                 </div>
                 <DrawerFooter>
                     <div class="flex justify-end space-x-4">
-                        <Button
-                            :disabled="!isValid"
-                            class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
-                            @click="handleDelete"
-                        >
-                            {{ $t("projects.id.sections.settings.delete.label") }}
-                        </Button>
+                        <template v-if="kind === 'delete'">
+                            <Button
+                                :disabled="!isValid"
+                                class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+                            >
+                                {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
+                            </Button>
+                        </template>
+                        <template v-if="kind === 'revert'">
+                            <Button variant="outline" :disabled="!isValid" @click="handleDelete">
+                                {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
+                            </Button>
+                        </template>
                         <Button @click="handleCancel">
                             {{ $t("common.actions.cancel") }}
                         </Button>

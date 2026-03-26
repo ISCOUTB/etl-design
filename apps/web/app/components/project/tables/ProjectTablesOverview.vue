@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Edit, Eye, Table2, Trash2 } from "lucide-vue-next";
+    import { Edit, Eye, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
 
     const { $localeRoute } = useNuxtApp();
     const route = useRoute();
@@ -31,7 +31,10 @@
                 icon: Edit,
                 to: (context) => {
                     if (!context) {
-                        return;
+                        return $localeRoute({
+                            name: "projects-id",
+                            params: { id: projectId.value },
+                        });
                     }
 
                     return $localeRoute({
@@ -47,8 +50,15 @@
         ],
         [
             {
-                label: "projects.id.sections.tables.card.dropdown.delete",
-                icon: Trash2,
+                label: "projects.id.sections.tables.card.dropdown.revert",
+                icon: RotateCcw,
+                disabled: (context) => {
+                    if (!context) {
+                        return true;
+                    }
+
+                    return !context.schemas_releases.length;
+                },
                 action: (context) => {
                     if (!context) {
                         return;
@@ -60,6 +70,33 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
+                            kind: "revert",
+                        },
+                    });
+                },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.delete",
+                icon: Trash2,
+                disabled: (context) => {
+                    if (!context) {
+                        return true;
+                    }
+
+                    return !!context.schemas_releases.length;
+                },
+                action: (context) => {
+                    if (!context) {
+                        return;
+                    }
+
+                    modal.dispatch.loadComponent({
+                        loader: () =>
+                            import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+                        key: ModalKeys.Projects.Tables.Delete,
+                        props: {
+                            table: context,
+                            kind: "delete",
                         },
                     });
                 },

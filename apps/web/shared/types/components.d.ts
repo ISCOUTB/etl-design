@@ -25,7 +25,7 @@ declare global {
                 label: string;
                 shortcut?: string[];
                 icon?: Components.LucideIconComponent;
-                disabled?: boolean | (() => boolean);
+                disabled?: boolean | ((ctx?: TContext) => boolean);
                 hidden?: boolean | (() => boolean);
                 to?: (ctx?: TContext) => RouteLocationRaw;
                 action?: (ctx?: TContext) => void;
