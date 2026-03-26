@@ -96,8 +96,23 @@ class ProjectService:
         if encrypted_project is None:
             raise ProjectNotFoundException()
 
+        if not ping:
+            try:
+                project = self.__decrypt_db_credentials(encrypted_project)
+                return create_postgres_uri(
+                    user=project.db_user,  # type: ignore
+                    password=project.db_password,  # type: ignore
+                    host=project.db_host,  # type: ignore
+                    port=project.db_port,  # type: ignore
+                    db_name=project.db_name,  # type: ignore
+                    query=project.db_params,  # type: ignore
+                )
+            except Exception:
+                return ""
+
         project = self.__decrypt_db_credentials(encrypted_project)
         self.repository.db.expunge(project)
+
         try:
             uri = create_postgres_uri(
                 user=project.db_user,  # type: ignore
@@ -107,18 +122,17 @@ class ProjectService:
                 db_name=project.db_name,  # type: ignore
                 query=project.db_params,  # type: ignore
             )
+
+            if not uri:
+                raise Exception()
         except Exception:
             raise InvalidDBCredentialsException()
 
-        if ping:
-            if not uri:
-                raise InvalidDBCredentialsException()
-
-            try:
-                conn = psycopg2.connect(uri)
-                conn.close()
-            except psycopg2.OperationalError:
-                raise CouldNotConnectToDatabaseException()
+        try:
+            connection = psycopg2.connect(uri)
+            connection.close()
+        except psycopg2.OperationalError:
+            raise CouldNotConnectToDatabaseException()
 
         return uri
 
