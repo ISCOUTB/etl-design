@@ -409,6 +409,16 @@
                             },
                             "type_table": "Please type {validation} to confirm."
                         }
+                    },
+                    "events": {
+                        "table_reverted": {
+                            "title": "Table reverted successfully",
+                            "description": "The table has been reverted to a previous validation schema."
+                        },
+                        "table_deleted": {
+                            "title": "Validation schema deleted",
+                            "description": "The validation schema for this table has been removed."
+                        }
                     }
                 },
                 "file": {

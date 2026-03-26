@@ -1,10 +1,10 @@
 export default function () {
     const { t } = useI18n();
 
-    const projectId = useRouteParams("id");
+    const projectId = useRouteParams("id", "-1", { transform: (value) => value.toString() });
 
-    const schema = useProjectSchemaSharedState(() => projectId.value?.toString());
-    const tables = useProjectTables(() => projectId.value?.toString());
+    const schema = useProjectSchemaSharedState(() => projectId.value);
+    const tables = useProjectTables(() => projectId.value);
 
     const Section = computed<Tabs.Project.ProjectSections>(() => ({
         General: t("projects.id.sections.general_information.tab"),

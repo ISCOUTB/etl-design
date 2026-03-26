@@ -32,10 +32,6 @@ export const NuxtKeys = {
     Projects: {
         Id: "projects:id",
         Search: "projects:search",
-        Delete: {
-            Validation: (project: ResponseProject | undefined) =>
-                $(project, "project:delete", (value) => `project:${value.id}:delete`),
-        },
         SharedState: (candidateId: ResponseProject["id"] | undefined) =>
             $(candidateId, "project:state", (value) => `project:${value}:state`),
         Schemas: {
@@ -68,14 +64,6 @@ export const NuxtKeys = {
                     onlyA: (id) => `project:${id}:tables:shared-state`,
                     both: (id, name) => `project:${id}:tables:${name}:shared-state`,
                 }),
-            Delete: {
-                Validation: (table: MongoRaw | undefined) =>
-                    $(
-                        table,
-                        "project:tables:delete",
-                        (value) => `project:tables:${value.import_name}:delete`,
-                    ),
-            },
         },
         Edit: {
             TableName: (

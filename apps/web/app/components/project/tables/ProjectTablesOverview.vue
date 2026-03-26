@@ -70,6 +70,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
+                            projectId: projectId.value,
                             kind: "revert",
                         },
                     });
@@ -96,6 +97,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
+                            projectId: projectId.value,
                             kind: "delete",
                         },
                     });

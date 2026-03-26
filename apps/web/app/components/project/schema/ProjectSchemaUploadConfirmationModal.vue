@@ -13,7 +13,7 @@
 
     const { schema } = useProjectTabsSharedState();
     const errorToast = useErrorToast();
-    const api = useApi();
+    const actions = useProjectTableActions();
 
     function handleSchema() {
         if (!schema.state.value.tableName) {
@@ -25,17 +25,12 @@
             return;
         }
 
-        const payload = SchemaUtils.Builder.buildJsonSchema(
-            schema.state.value.tableName,
-            project.value.id,
-            schema.computed.jsonSchema.value,
-            [],
-        );
-
-        api("/uploads/table-json", {
-            method: "POST",
-            body: payload,
-        })
+        actions
+            .uploadSchema(
+                project.value,
+                schema.state.value.tableName,
+                schema.computed.jsonSchema.value,
+            )
             .then(async () => {
                 if (project.value) {
                     await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
@@ -50,9 +45,13 @@
                     ),
                 });
 
+                handleCloseModal();
                 events.emit("event:schema:table-created", undefined);
             })
-            .catch((error) => errorToast.handleServer(error));
+            .catch((error) => {
+                handleCloseModal();
+                errorToast.handleServer(error);
+            });
     }
 
     function handleFile() {
@@ -74,21 +73,13 @@
             parseResult.data,
         );
 
-        const formData = new FormBuilder()
-            .append(
-                "spreadsheet",
+        actions
+            .uploadFile(
                 schema.state.value.uploadedFile.file,
-                schema.state.value.uploadedFile.file.name,
+                project.value,
+                schema.state.value.tableName,
+                dtypes,
             )
-            .append("project_id", project.value?.id)
-            .append("table_name", schema.state.value.tableName)
-            .append("dtypes_str", JSON.stringify(dtypes))
-            .build();
-
-        api("/uploads/table-excel", {
-            method: "POST",
-            body: formData,
-        })
             .then(async () => {
                 if (project.value) {
                     await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
@@ -103,9 +94,13 @@
                     ),
                 });
 
+                handleCloseModal();
                 events.emit("event:schema:table-created", undefined);
             })
-            .catch((error) => errorToast.handleServer(error));
+            .catch((error) => {
+                handleCloseModal();
+                errorToast.handleServer(error);
+            });
     }
 
     function handleSubmit(_event: Event) {
@@ -125,7 +120,7 @@
     }
 
     const modal = useModal();
-    function handleCancel() {
+    function handleCloseModal() {
         if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadFile) {
             modal.dispatch.setOpen(false);
         }
@@ -145,7 +140,11 @@
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogAction class="space-x-2" @click="handleSubmit">
+                    <AlertDialogAction
+                        :disabled="actions.state.loading.value"
+                        class="space-x-2"
+                        @click="handleSubmit"
+                    >
                         <Upload />
                         {{ $t("projects.id.sections.schema.events.upload_file.label") }}
                     </AlertDialogAction>
@@ -166,11 +165,15 @@
 
                 <DrawerFooter>
                     <div class="flex justify-end space-x-4">
-                        <Button class="space-x-2" @click="handleSubmit">
+                        <Button
+                            :disabled="actions.state.loading.value"
+                            class="space-x-2"
+                            @click="handleSubmit"
+                        >
                             <Upload />
                             {{ $t("projects.id.sections.schema.events.upload_file.label") }}
                         </Button>
-                        <Button variant="outline" @click="handleCancel">
+                        <Button variant="outline" @click="handleCloseModal">
                             {{ $t("common.actions.cancel") }}
                         </Button>
                     </div>

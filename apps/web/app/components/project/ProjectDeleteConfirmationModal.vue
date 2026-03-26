@@ -19,31 +19,30 @@
         });
     });
 
-    const userInput = useState(NuxtKeys.Projects.Delete.Validation(project.value), () => "");
+    const userInput = ref<string>("");
     const isValid = computed(() => userInput.value === expectedConfirmation.value);
 
     const { $localeRoute } = useNuxtApp();
-    const api = useApi();
     const errorToast = useErrorToast();
+    const actions = useProjectActions();
+
     async function handleDelete() {
         if (!isValid.value || !project.value) {
             return;
         }
 
-        try {
-            await api(`/projects/${project.value.id}/flush`, {
-                method: "DELETE",
-            });
-
-            await refreshNuxtData(NuxtKeys.Projects.Search);
-            await navigateTo($localeRoute({ name: "projects" }));
-        } catch (error) {
-            errorToast.handleServer(error);
-        }
+        actions
+            .handleDeleteProject(project.value.id)
+            .then(async () => {
+                handleCloseModal();
+                await refreshNuxtData(NuxtKeys.Projects.Search);
+                await navigateTo($localeRoute({ name: "projects" }));
+            })
+            .catch((error) => errorToast.handleServer(error));
     }
 
     const modal = useModal();
-    function handleCancel() {
+    function handleCloseModal() {
         if (modal.state.value.currentModalKey === ModalKeys.Projects.Delete.ConfirmationModal) {
             modal.dispatch.setOpen(false);
         }
@@ -98,10 +97,11 @@
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogAction
-                        :disabled="!isValid"
+                        :disabled="!isValid || actions.state.loading.value"
                         class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
                         @click="handleDelete"
                     >
+                        <Spinner v-if="actions.state.loading.value" />
                         {{ $t("projects.id.sections.settings.delete.label") }}
                     </AlertDialogAction>
                     <AlertDialogCancel> {{ $t("common.actions.cancel") }} </AlertDialogCancel>
@@ -126,13 +126,14 @@
                 <DrawerFooter>
                     <div class="flex justify-end space-x-4">
                         <Button
-                            :disabled="!isValid"
+                            :disabled="!isValid || actions.state.loading.value"
                             class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
                             @click="handleDelete"
                         >
+                            <Spinner v-if="actions.state.loading.value" />
                             {{ $t("projects.id.sections.settings.delete.label") }}
                         </Button>
-                        <Button @click="handleCancel">
+                        <Button @click="handleCloseModal">
                             {{ $t("common.actions.cancel") }}
                         </Button>
                     </div>

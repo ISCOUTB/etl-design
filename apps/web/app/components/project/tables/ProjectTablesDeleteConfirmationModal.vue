@@ -1,35 +1,71 @@
 <script setup lang="ts">
+    import { toast } from "vue-sonner";
+
     interface Props {
         table: MaybeRefOrGetter<MongoRaw | undefined>;
+        projectId: ResponseProject["id"];
         kind: "revert" | "delete";
     }
 
     const props = defineProps<Props>();
     const table = computed(() => toValue(props.table));
+    const actions = useProjectTableActions();
+    const errorToast = useErrorToast();
 
     const expectedConfirmation = computed(() => {
         if (!table.value) {
             return;
         }
 
-        if (props.kind === "delete") {
+        const currentTable = TableUtils.getTableName(table.value.import_name);
+        const currentKind = props.kind;
+
+        if (currentKind === "delete") {
             return $t("projects.id.sections.tables.delete.validation.delete", {
-                value: TableUtils.getTableName(table.value.import_name),
+                value: currentTable,
             });
         }
 
         return $t("projects.id.sections.tables.delete.validation.revert", {
-            value: TableUtils.getTableName(table.value.import_name),
+            value: currentTable,
         });
     });
 
-    const userInput = useState(NuxtKeys.Projects.Tables.Delete.Validation(table.value), () => "");
+    const userInput = ref<string>("");
     const isValid = computed(() => userInput.value === expectedConfirmation.value);
 
-    function handleDelete() {}
+    function handleDelete(_event: Event) {
+        if (!table.value) {
+            return;
+        }
+
+        actions
+            .handleSchemaTransition(props.projectId, table.value?.import_name)
+            .then(async () => {
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(props.projectId));
+                handleCloseModal();
+
+                if (props.kind === "delete") {
+                    toast.success($t("projects.id.sections.tables.events.table_deleted.title"), {
+                        description: $t(
+                            "projects.id.sections.tables.events.table_deleted.description",
+                        ),
+                    });
+                }
+
+                if (props.kind === "revert") {
+                    toast.success($t("projects.id.sections.tables.events.table_reverted.title"), {
+                        description: $t(
+                            "projects.id.sections.tables.events.table_reverted.description",
+                        ),
+                    });
+                }
+            })
+            .catch((error) => errorToast.handleServer(error));
+    }
 
     const modal = useModal();
-    function handleCancel() {
+    function handleCloseModal() {
         if (modal.state.value.currentModalKey === ModalKeys.Projects.Tables.Delete) {
             modal.dispatch.setOpen(false);
         }
@@ -91,17 +127,23 @@
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <template v-if="kind === 'delete'">
-                        <AlertDialogAction>
+                        <AlertDialogAction
+                            :disabled="!isValid || actions.state.loading.value"
+                            @click="handleDelete"
+                        >
                             {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
                         </AlertDialogAction>
                     </template>
                     <template v-if="kind === 'revert'">
-                        <AlertDialogAction :disabled="!isValid" @click="handleDelete">
+                        <AlertDialogAction
+                            :disabled="!isValid || actions.state.loading.value"
+                            @click="handleDelete"
+                        >
                             {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
                         </AlertDialogAction>
                     </template>
 
-                    <AlertDialogCancel @click="handleCancel">
+                    <AlertDialogCancel @click="handleCloseModal">
                         {{ $t("common.actions.cancel") }}
                     </AlertDialogCancel>
                 </AlertDialogFooter>
@@ -124,18 +166,23 @@
                     <div class="flex justify-end space-x-4">
                         <template v-if="kind === 'delete'">
                             <Button
-                                :disabled="!isValid"
+                                :disabled="!isValid || actions.state.loading.value"
                                 class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+                                @click="handleDelete"
                             >
                                 {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
                             </Button>
                         </template>
                         <template v-if="kind === 'revert'">
-                            <Button variant="outline" :disabled="!isValid" @click="handleDelete">
+                            <Button
+                                variant="outline"
+                                :disabled="!isValid || actions.state.loading.value"
+                                @click="handleDelete"
+                            >
                                 {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
                             </Button>
                         </template>
-                        <Button @click="handleCancel">
+                        <Button @click="handleCloseModal">
                             {{ $t("common.actions.cancel") }}
                         </Button>
                     </div>
