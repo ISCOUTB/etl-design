@@ -112,6 +112,15 @@
                 table: tables.state.value.selectedSchema,
                 projectId: project.value.id,
                 kind: "revert",
+                onSuccess: () => {
+                    const updated = tables.state.value.tableSchemas.find(
+                        (_schema) => _schema.id === tables.state.value.selectedSchema?.id,
+                    );
+
+                    if (updated) {
+                        tables.dispatch.setSelectedSchema(updated);
+                    }
+                },
             },
         });
     }
@@ -129,7 +138,10 @@
                 table: tables.state.value.selectedSchema,
                 projectId: project.value.id,
                 kind: "delete",
-                onSuccess: () => {},
+                onSuccess: () => {
+                    events.emit("event:projects:table:change-view", { value: "overview" });
+                    tables.dispatch.setSelectedSchema(undefined);
+                },
             },
         });
     }
