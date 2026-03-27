@@ -234,7 +234,10 @@ class TestValidateData:
         validation_worker,
         sample_validation_message,
     ):
-        mock_validate_file.return_value = {"validation_results": {"is_valid": True}}
+        mock_validate_file.return_value = {
+            "validation_results": {"is_valid": True},
+            "error": None,
+        }
         mock_get_summary.return_value = {
             "status": "success",
             "summary": "ok",
@@ -280,7 +283,10 @@ class TestValidateData:
     ):
         content = b"A,B\n1,2\n"
         message = {**sample_validation_message, "file_data": content.hex()}
-        mock_validate_file.return_value = {"validation_results": {"is_valid": True}}
+        mock_validate_file.return_value = {
+            "validation_results": {"is_valid": True},
+            "error": None,
+        }
 
         await validation_worker._validate_data(
             message, db_client=validation_worker.db_client
@@ -315,7 +321,14 @@ class TestPublishResult:
             kwargs["routing_key"]
             == validation_module.mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS
         )
-        assert json.loads(kwargs["body"]) == result
+        payload = json.loads(kwargs["body"])
+        assert payload["task_id"] == "task_pub"
+        assert payload["status"] == "success"
+        assert payload["results"] == {"status": json.dumps("success")}
+        assert payload["error"] == ""
+        assert payload["traceparent"] is None
+        assert payload["tracestate"] is None
+        assert payload["baggage"] is None
 
         mock_update_status.assert_called_once()
         assert mock_update_status.call_args.kwargs["value"] == "published"

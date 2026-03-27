@@ -93,6 +93,34 @@ class TestValidateDataParallel:
         assert result["is_valid"] is True
         assert result["total_items"] == 0
 
+    @patch("src.handlers.validation.mp.Pool")
+    def test_validate_data_parallel_optional_string_accepts_none(self, mock_pool_cls):
+        mock_pool = MagicMock()
+
+        def run_validation(func, chunks):
+            return [func(chunk) for chunk in chunks]
+
+        mock_pool.map.side_effect = run_validation
+        mock_pool_cls.return_value.__enter__.return_value = mock_pool
+
+        data = [{"precio_promedio_ponderado": None}, {"precio_promedio_ponderado": "10.5"}]
+        schema = {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "precio_promedio_ponderado": {
+                    "type": "string",
+                    "extra": {},
+                }
+            },
+        }
+
+        result = validate_data_parallel(data, schema, n_workers=1)
+
+        assert result["is_valid"] is True
+        assert result["invalid_items"] == 0
+        assert result["errors"] == []
+
 
 class TestGetValidationSummary:
     def test_summary_success(self):

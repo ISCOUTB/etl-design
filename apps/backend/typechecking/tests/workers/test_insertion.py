@@ -69,7 +69,7 @@ class TestInsertionQueueWorker:
             "results": {"sheet1": "INSERT INTO customers VALUES (1)"},
             "status": "success",
         }
-        insertion_worker._insert_data = AsyncMock(return_value=result)
+        insertion_worker._insert_data = MagicMock(return_value=result)
         insertion_worker._publish_result = MagicMock()
 
         mock_channel = MagicMock()
@@ -109,7 +109,7 @@ class TestInsertionQueueWorker:
     def test_process_insertion_infra_error_requeues(
         self, insertion_worker, sample_insertion_message
     ):
-        insertion_worker._insert_data = AsyncMock(
+        insertion_worker._insert_data = MagicMock(
             side_effect=ConnectionError("db down")
         )
 
@@ -176,13 +176,12 @@ class TestInsertionPublishResult:
 
 
 class TestInsertionDataFlow:
-    @pytest.mark.asyncio
     @patch("src.workers.insertion.update_task_status")
     @patch("src.workers.insertion.psycopg.connect")
-    @patch("src.workers.insertion.httpx.AsyncClient")
-    async def test_insert_data_calls_excel_reader_and_executes_sql(
+    @patch("src.workers.insertion.post_multipart_http")
+    def test_insert_data_calls_excel_reader_and_executes_sql(
         self,
-        mock_async_client_cls,
+        mock_post_multipart,
         mock_psycopg_connect,
         mock_update_status,
         insertion_worker,
@@ -194,15 +193,8 @@ class TestInsertionDataFlow:
         }
 
         mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = sql_per_sheet
-
-        mock_http_client = MagicMock()
-        mock_http_client.post = AsyncMock(return_value=mock_response)
-        mock_http_cm = AsyncMock()
-        mock_http_cm.__aenter__.return_value = mock_http_client
-        mock_http_cm.__aexit__.return_value = None
-        mock_async_client_cls.return_value = mock_http_cm
+        mock_post_multipart.return_value = mock_response
 
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
@@ -212,12 +204,12 @@ class TestInsertionDataFlow:
         mock_conn_cm.__exit__.return_value = None
         mock_psycopg_connect.return_value = mock_conn_cm
 
-        result = await insertion_worker._insert_data(
+        result = insertion_worker._insert_data(
             sample_insertion_message, db_client=insertion_worker.db_client
         )
 
-        mock_http_client.post.assert_called_once()
-        post_kwargs = mock_http_client.post.call_args.kwargs
+        mock_post_multipart.assert_called_once()
+        post_kwargs = mock_post_multipart.call_args.kwargs
         assert post_kwargs["data"] == {"table_name": "customers"}
         assert post_kwargs["params"] == {"overwrite": True}
         assert post_kwargs["files"]["spreadsheet"][0] == "to_insert.csv"
@@ -235,27 +227,18 @@ class TestInsertionDataFlow:
         assert result["status"] == "success"
         assert result["results"] == sql_per_sheet
 
-    @pytest.mark.asyncio
     @patch("src.workers.insertion.update_task_status")
-    @patch("src.workers.insertion.httpx.AsyncClient")
-    async def test_insert_data_excel_reader_failure_returns_failed_processing(
+    @patch("src.workers.insertion.post_multipart_http")
+    def test_insert_data_excel_reader_failure_returns_failed_processing(
         self,
-        mock_async_client_cls,
+        mock_post_multipart,
         mock_update_status,
         insertion_worker,
         sample_insertion_message,
     ):
-        mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = Exception("excel-reader error")
+        mock_post_multipart.side_effect = Exception("excel-reader error")
 
-        mock_http_client = MagicMock()
-        mock_http_client.post = AsyncMock(return_value=mock_response)
-        mock_http_cm = AsyncMock()
-        mock_http_cm.__aenter__.return_value = mock_http_client
-        mock_http_cm.__aexit__.return_value = None
-        mock_async_client_cls.return_value = mock_http_cm
-
-        result = await insertion_worker._insert_data(
+        result = insertion_worker._insert_data(
             sample_insertion_message, db_client=insertion_worker.db_client
         )
 
@@ -267,13 +250,12 @@ class TestInsertionDataFlow:
         ]
         assert "failed-processing-file" in called_statuses
 
-    @pytest.mark.asyncio
     @patch("src.workers.insertion.update_task_status")
     @patch("src.workers.insertion.psycopg.connect")
-    @patch("src.workers.insertion.httpx.AsyncClient")
-    async def test_insert_data_db_failure_returns_failed_inserting(
+    @patch("src.workers.insertion.post_multipart_http")
+    def test_insert_data_db_failure_returns_failed_inserting(
         self,
-        mock_async_client_cls,
+        mock_post_multipart,
         mock_psycopg_connect,
         mock_update_status,
         insertion_worker,
@@ -282,19 +264,12 @@ class TestInsertionDataFlow:
         sql_per_sheet = {"sheet1": "INSERT INTO customers VALUES (1, 'alice')"}
 
         mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = sql_per_sheet
-
-        mock_http_client = MagicMock()
-        mock_http_client.post = AsyncMock(return_value=mock_response)
-        mock_http_cm = AsyncMock()
-        mock_http_cm.__aenter__.return_value = mock_http_client
-        mock_http_cm.__aexit__.return_value = None
-        mock_async_client_cls.return_value = mock_http_cm
+        mock_post_multipart.return_value = mock_response
 
         mock_psycopg_connect.side_effect = Exception("db insert error")
 
-        result = await insertion_worker._insert_data(
+        result = insertion_worker._insert_data(
             sample_insertion_message, db_client=insertion_worker.db_client
         )
 

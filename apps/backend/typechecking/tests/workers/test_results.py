@@ -45,7 +45,7 @@ def sample_results_message():
 
 class TestResultQueueWorker:
     def test_process_results_success_acks(self, result_worker, sample_results_message):
-        result_worker._notify_task_completion = AsyncMock(return_value=None)
+        result_worker._notify_task_completion = MagicMock(return_value=None)
 
         mock_channel = MagicMock()
         mock_method = MagicMock(delivery_tag="delivery_result_1")
@@ -101,7 +101,7 @@ class TestResultQueueWorker:
     def test_results_infrastructure_error_requeues(
         self, result_worker, sample_results_message
     ):
-        result_worker._notify_task_completion = AsyncMock(
+        result_worker._notify_task_completion = MagicMock(
             side_effect=ConnectionError("api down")
         )
 
@@ -121,58 +121,41 @@ class TestResultQueueWorker:
 
 
 class TestNotifyTaskCompletion:
-    @pytest.mark.asyncio
     @patch("src.workers.results.update_task_status")
-    @patch("src.workers.results.httpx.AsyncClient")
-    async def test_notify_task_completion_success_sets_completed(
+    @patch("src.workers.results.post_json_http_with_ssl_fallback")
+    def test_notify_task_completion_success_sets_completed(
         self,
-        mock_async_client_cls,
+        mock_post_json,
         mock_update_status,
         result_worker,
         sample_results_message,
     ):
-        mock_response = MagicMock()
-        mock_response.raise_for_status = MagicMock()
+        mock_post_json.return_value = 200
 
-        mock_client = MagicMock()
-        mock_client.post = AsyncMock(return_value=mock_response)
-
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_client
-        mock_cm.__aexit__.return_value = None
-        mock_async_client_cls.return_value = mock_cm
-
-        await result_worker._notify_task_completion(
+        result_worker._notify_task_completion(
             "task_result_1", sample_results_message, sample_results_message
         )
 
-        mock_client.post.assert_called_once()
-        kwargs = mock_client.post.call_args.kwargs
-        assert kwargs["json"]["task_id"] == "task_result_1"
-        assert kwargs["json"]["status"] == "success"
+        mock_post_json.assert_called_once()
+        kwargs = mock_post_json.call_args.kwargs
+        assert kwargs["payload"]["task_id"] == "task_result_1"
+        assert kwargs["payload"]["status"] == "success"
 
         assert mock_update_status.call_count == 1
         assert mock_update_status.call_args.kwargs["value"] == "completed"
 
-    @pytest.mark.asyncio
     @patch("src.workers.results.update_task_status")
-    @patch("src.workers.results.httpx.AsyncClient")
-    async def test_notify_task_completion_failure_sets_failed(
+    @patch("src.workers.results.post_json_http_with_ssl_fallback")
+    def test_notify_task_completion_failure_sets_failed(
         self,
-        mock_async_client_cls,
+        mock_post_json,
         mock_update_status,
         result_worker,
         sample_results_message,
     ):
-        mock_client = MagicMock()
-        mock_client.post = AsyncMock(side_effect=Exception("request failed"))
+        mock_post_json.side_effect = Exception("request failed")
 
-        mock_cm = AsyncMock()
-        mock_cm.__aenter__.return_value = mock_client
-        mock_cm.__aexit__.return_value = None
-        mock_async_client_cls.return_value = mock_cm
-
-        await result_worker._notify_task_completion(
+        result_worker._notify_task_completion(
             "task_result_1", sample_results_message, sample_results_message
         )
 
