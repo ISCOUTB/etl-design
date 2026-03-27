@@ -1,4 +1,4 @@
-name: CI Production - Database
+name: CD Production - Database
 on:
   # Called by the orchestrator workflow
   workflow_call:

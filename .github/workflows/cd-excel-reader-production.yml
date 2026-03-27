@@ -1,4 +1,4 @@
-name: CI Production - Excel Reader
+name: CD Production - Excel Reader
 on:
   # Called by the orchestrator workflow
   workflow_call:

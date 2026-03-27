@@ -1,4 +1,4 @@
-name: CI Staging - DDL Generator
+name: CD Staging - DDL Generator
 on:
   # Called by the orchestrator workflow
   workflow_call:

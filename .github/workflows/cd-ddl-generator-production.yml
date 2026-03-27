@@ -1,4 +1,4 @@
-name: CI Production - DDL Generator
+name: CD Production - DDL Generator
 on:
   # Called by the orchestrator workflow
   workflow_call:

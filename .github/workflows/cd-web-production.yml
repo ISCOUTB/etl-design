@@ -1,4 +1,4 @@
-name: CI Production - Web
+name: CD Production - Web
 on:
   # Called by the orchestrator workflow
   workflow_call:

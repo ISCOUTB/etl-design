@@ -1,4 +1,4 @@
-name: CI Staging - Typechecking
+name: CD Staging - Typechecking
 on:
   # Called by the orchestrator workflow
   workflow_call:

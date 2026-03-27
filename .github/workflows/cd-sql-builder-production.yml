@@ -1,4 +1,4 @@
-name: CI Production - SQL Builder
+name: CD Production - SQL Builder
 on:
   # Called by the orchestrator workflow
   workflow_call:

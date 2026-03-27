@@ -1,4 +1,4 @@
-name: CI Production - API
+name: CD Production - API
 on:
   # Called by the orchestrator workflow
   workflow_call:

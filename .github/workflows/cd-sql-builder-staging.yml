@@ -1,4 +1,4 @@
-name: CI Staging - SQL Builder
+name: CD Staging - SQL Builder
 on:
   # Called by the orchestrator workflow
   workflow_call:

@@ -1,4 +1,4 @@
-name: CI Production - Formula Parser
+name: CD Production - Formula Parser
 on:
   # Called by the orchestrator workflow
   workflow_call:

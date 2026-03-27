@@ -1,4 +1,4 @@
-name: CI Production - Typechecking
+name: CD Production - Typechecking
 on:
   # Called by the orchestrator workflow
   workflow_call:

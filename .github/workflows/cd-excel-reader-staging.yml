@@ -1,4 +1,4 @@
-name: CI Staging - Excel Reader
+name: CD Staging - Excel Reader
 on:
   # Called by the orchestrator workflow
   workflow_call:

@@ -1,4 +1,4 @@
-name: CI Staging - Formula Parser
+name: CD Staging - Formula Parser
 on:
   # Called by the orchestrator workflow
   workflow_call:

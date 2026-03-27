@@ -1,4 +1,4 @@
-name: CI Staging - API
+name: CD Staging - API
 on:
   # Called by the orchestrator workflow
   workflow_call:
