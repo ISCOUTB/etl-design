@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    import type { z } from "zod";
     import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
     import {
@@ -12,12 +11,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
-    }
-
-    const props = defineProps<Props>();
-    const project = computed(() => toValue(props.project));
+    const { project } = useProjectTabsSharedState();
 
     const events = useAppEvents();
 

@@ -22,18 +22,15 @@
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
 
-    const KEY = NuxtKeys.Projects.SharedState(projectId.value?.toString());
-    const sharedState = useState<ResponseProject>(KEY);
+    const { Section, tab, schema, project } = useProjectTabsSharedState();
 
     const auth = useAuth();
     useHead({
         title: $t("projects.id.title", {
             username: auth.data.value?.user.name,
-            projectName: sharedState.value?.name,
+            projectName: project.value?.name,
         }),
     });
-
-    const { Section, tab, schema } = useProjectTabsSharedState();
 
     const animations = useTabsAnimations();
 
@@ -47,9 +44,7 @@
                 },
                 component: () =>
                     import("~/components/project/general/ProjectGeneralInformation.vue"),
-                props: {
-                    project: sharedState,
-                },
+                props: {},
             },
             {
                 tab: {
@@ -59,7 +54,7 @@
                 },
                 component: () => import("@/components/project/schema/ProjectSchema.vue"),
                 props: {
-                    project: sharedState,
+                    project,
                 },
             },
             {
@@ -70,7 +65,7 @@
                 },
                 component: () => import("~/components/project/tables/ProjectTables.vue"),
                 props: {
-                    project: sharedState,
+                    project,
                 },
             },
             {
@@ -81,7 +76,7 @@
                 },
                 component: () => import("@/components/project/ProjectSettings.vue"),
                 props: {
-                    project: sharedState,
+                    project,
                 },
             },
         ],
@@ -142,9 +137,9 @@
     <div class="mx-auto w-full max-w-5xl">
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                {{ sharedState.name }}
+                {{ project.name }}
             </h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">{{ sharedState.description }}</p>
+            <p class="mt-1.5 text-sm text-muted-foreground">{{ project.description }}</p>
         </div>
 
         <Tabs v-model="tab" :default-value="Section.General">

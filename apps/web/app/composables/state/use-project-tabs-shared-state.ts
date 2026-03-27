@@ -3,6 +3,9 @@ export default function () {
 
     const projectId = useRouteParams("id", "-1", { transform: (value) => value.toString() });
 
+    const KEY = NuxtKeys.Projects.SharedState(projectId.value?.toString());
+    const project = useState<ResponseProject>(KEY);
+
     const schema = useProjectSchemaSharedState(() => projectId.value);
     const tables = useProjectTables(() => projectId.value);
 
@@ -30,6 +33,7 @@ export default function () {
     return {
         tab,
         projectId,
+        project,
         Section,
         schema,
         tables,

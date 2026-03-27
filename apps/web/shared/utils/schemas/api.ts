@@ -131,6 +131,12 @@ export const SpreadsheetDtypesSchema = z.discriminatedUnion("dtype", [
 
 export const ColumnDtypesSchema = z.record(z.string(), SpreadsheetDtypesSchema);
 
+export const JsonSchemaPropertyConstraints = z.object({
+    unique: z.coerce.boolean().optional(),
+    optional: z.coerce.boolean().optional(),
+    primary_key: z.coerce.boolean().optional(),
+});
+
 export const JsonSchema = z.preprocess(
     (data) => {
         if (typeof data === "object" && data !== null) {
@@ -154,10 +160,8 @@ export const JsonSchema = z.preprocess(
             z
                 .object({
                     type: DtypesEnum,
-                    unique: z.coerce.boolean().optional(),
-                    optional: z.coerce.boolean().optional(),
-                    primary_key: z.coerce.boolean().optional(),
                 })
+                .extend(JsonSchemaPropertyConstraints.shape)
                 .catchall(z.unknown()),
         ),
     }),

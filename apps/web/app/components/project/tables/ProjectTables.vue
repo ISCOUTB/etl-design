@@ -1,11 +1,7 @@
 <script setup lang="ts">
     import { Search } from "lucide-vue-next";
 
-    interface Props {
-        project: MaybeRefOrGetter<ResponseProject | undefined>;
-    }
-
-    const props = defineProps<Props>();
+    const { project } = useProjectTabsSharedState();
 
     const { tables } = useProjectTabsSharedState();
     const animations = useTabsAnimations();
@@ -32,7 +28,7 @@
                 component: () => import("~/components/project/tables/ProjectTablesSchemaView.vue"),
                 props: {
                     schema: tables.state.value.selectedSchema,
-                    project: props.project,
+                    project,
                 },
             },
         ],
@@ -40,7 +36,8 @@
     );
 
     onMounted(() => {
-        events.on("event:projects:table:change-view", ({ value }) => {
+        events.on("event:projects:table:change-view", async ({ value }) => {
+            await nextTick();
             tabs.dispatch.setActive(value);
         });
     });
@@ -77,7 +74,11 @@
             @enter="animations.onPanelEnter"
             @leave="animations.onPanelLeave"
         >
-            <component :is="tabs.component.value" v-bind="{ ...tabs.props.value }" />
+            <component
+                :is="tabs.component.value"
+                v-if="tabs.component.value"
+                v-bind="{ ...tabs.props.value }"
+            />
         </Transition>
     </div>
 </template>

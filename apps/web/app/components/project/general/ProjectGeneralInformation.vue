@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import type { ResponseProjectSchema } from "#shared/utils/schemas/api";
-    import type { z } from "zod";
     import { buildPgConnectionString } from "#shared/utils/pg-connection-string";
     import {
         Calendar,
@@ -16,12 +14,7 @@
     import { toast } from "vue-sonner";
     import { cn } from "@/lib/utils";
 
-    interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
-    }
-
-    const props = defineProps<Props>();
-    const project = computed(() => toValue(props.project));
+    const { project } = useProjectTabsSharedState();
 
     const validConnectionString = computed(
         () => project.value && project.value.db_host && project.value.db_port,

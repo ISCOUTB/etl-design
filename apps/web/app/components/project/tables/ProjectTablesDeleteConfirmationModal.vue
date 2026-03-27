@@ -5,6 +5,7 @@
         table: MaybeRefOrGetter<MongoRaw | undefined>;
         projectId: ResponseProject["id"];
         kind: "revert" | "delete";
+        onSuccess?: () => void | (() => Promise<void>);
     }
 
     const props = defineProps<Props>();
@@ -60,6 +61,10 @@
                         ),
                     });
                 }
+
+                if (props.onSuccess) {
+                    await props.onSuccess();
+                }
             })
             .catch((error) => errorToast.handleServer(error));
     }
@@ -107,6 +112,7 @@
             v-model="userInput"
             :placeholder="expectedConfirmation"
             autocomplete="off"
+            :spellcheck="false"
             class="font-mono text-sm"
         />
     </DefineInput>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { DtypesEnum } from "#shared/utils/schemas/api";
-    import type { Component, HTMLAttributes } from "vue";
+    import type { HTMLAttributes } from "vue";
     import type z from "zod";
     import { cn } from "~/lib/utils";
 
@@ -27,7 +27,9 @@
         defaultValue: props.defaultValue,
     });
 
-    const [DefineTemplate, ReuseTemplate] = createReusableTemplate<{ icon: Component }>();
+    const resolvedModel = computed<Dtype>(() => {
+        return (model.value || "string") as Dtype;
+    });
 
     const items = computed<DataType[]>(() => [
         {
@@ -54,19 +56,14 @@
 </script>
 
 <template>
-    <DefineTemplate v-slot="{ icon }">
-        <div class="flex size-6 items-center justify-center rounded">
-            <component :is="icon" class="size-3.5" />
-        </div>
-    </DefineTemplate>
-
     <Select v-model:model-value="model">
         <SelectTrigger :class="cn('w-48', props.class)">
-            <div class="flex items-center space-x-2">
-                <ReuseTemplate
-                    :icon="TableUtils.getIcon((model || 'string') as Dtype)"
-                    :class="cn(TableUtils.getColor(model as Dtype | undefined))"
-                />
+            <div class="flex items-center">
+                <SchemaDtype :dtype="resolvedModel">
+                    <template #icon>
+                        <component :is="TableUtils.getIcon(resolvedModel)" />
+                    </template>
+                </SchemaDtype>
                 <SelectValue
                     :placeholder="$t('projects.id.sections.schema.datatype_table.header.data_type')"
                 />
@@ -74,11 +71,12 @@
         </SelectTrigger>
         <SelectContent>
             <SelectItem v-for="item in items" :key="item.value" :value="item.value">
-                <ReuseTemplate
-                    :icon="TableUtils.getIcon(item.value)"
-                    :class="cn(TableUtils.getColor(item.value))"
-                />
-                {{ item.label }}
+                <SchemaDtype :dtype="item.value">
+                    <template #icon>
+                        <component :is="TableUtils.getIcon(item.value)" />
+                    </template>
+                    {{ item.label }}
+                </SchemaDtype>
             </SelectItem>
         </SelectContent>
     </Select>

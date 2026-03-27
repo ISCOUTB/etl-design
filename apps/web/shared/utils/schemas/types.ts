@@ -1,5 +1,6 @@
 import type {
     JsonSchema as _JsonSchema,
+    JsonSchemaPropertyConstraints as _JsonSchemaPropertyConstraints,
     ColumnDtypesSchema,
     CreateTableFromJsonSchema,
     DtypesEnum,
@@ -16,3 +17,4 @@ export type ColumnDtype = z.infer<typeof ColumnDtypesSchema>;
 export type CreateTableFromJson = z.infer<typeof CreateTableFromJsonSchema>;
 export type MongoRaw = z.infer<typeof MongoRawSchema>;
 export type JsonSchema = z.infer<typeof _JsonSchema>;
+export type JsonSchemaPropertyConstraints = z.infer<typeof _JsonSchemaPropertyConstraints>;

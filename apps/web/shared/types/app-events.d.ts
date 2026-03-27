@@ -16,6 +16,10 @@ declare global {
             | {
                   key: "event:projects:table:change-view";
                   payload: { value: "overview" | "view" };
+              }
+            | {
+                  key: "event:projects:table:set-selected-schema";
+                  payload: { schema: MongoRaw | undefined };
               };
 
         type EventKey = Events["key"];
