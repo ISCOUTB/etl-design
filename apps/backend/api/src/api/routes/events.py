@@ -4,13 +4,13 @@
 # The backend can notify the frontend about the task completion via WebHooks.
 
 import json
-from typing import Annotated, Any, Dict, Optional
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter
 from proto_utils.database import dtypes
 
-from src import models
+from src import models, schemas
 from src.api.deps import IdempotencyServiceDep
+from src.utils import logger
 
 router = APIRouter()
 
@@ -18,29 +18,25 @@ router = APIRouter()
 @router.post("/task-completed")
 async def task_completed(
     idempotency_service: IdempotencyServiceDep,
-    task_id: Annotated[str, Body()],
-    idempotency_key: Annotated[Optional[str], Body()],
-    status: Annotated[str, Body()],
-    message: Annotated[str, Body()],
-    raw_data: Annotated[Optional[Dict[str, Any]], Body()] = None,
+    payload: schemas.TaskCompletionNotification,
 ) -> dtypes.ApiResponse:
     # TODO: Implement the logic to handle the task completion notification
     # For example, we could update the task status in the database and trigger a
     # WebHook to notify the frontend.
 
-    print(
-        f"Received task completion notification: task_id={task_id}, "
-        f"status={status}, message={message}, idempotency_key={idempotency_key}, "
-        f"raw_data={raw_data}"
+    logger.info(
+        f"Received task completion notification: task_id={payload.task_id}, "
+        f"status={payload.status}, message={payload.message}, idempotency_key={payload.idempotency_key}, "
+        f"raw_data={payload.raw_data}"
     )
 
     # Load register from database
-    task = idempotency_service.get_task_by_id(task_id=task_id)
+    task = idempotency_service.get_task_by_id(task_id=payload.task_id)
     if task is None:
         return dtypes.ApiResponse(
             code=404,
             status="task-not-found",
-            message=f"No task found with ID {task_id}",
+            message=f"No task found with ID {payload.task_id}",
             data={},
         )
 
@@ -49,12 +45,12 @@ async def task_completed(
             code=200,
             status="already-processed",
             message="Task already marked as completed",
-            data={"task_id": task_id, "status": task.status.value},
+            data={"task_id": payload.task_id, "status": task.status.value},
         )
 
     updated_status = (
         models.TaskStatus.COMPLETED
-        if status.lower() == "success"
+        if payload.status.lower() == "success"
         else models.TaskStatus.FAILED
     )
 
@@ -69,14 +65,23 @@ async def task_completed(
             data={},
         )
 
+    parsed_raw_data = (
+        dict(map(lambda item: (item[0], json.dumps(item[1])), payload.raw_data))
+        if payload.raw_data is not None
+        else {}
+    )
+
     return dtypes.ApiResponse(
         code=200,
         status="received-request",
         message="Task completion received",
         data={
-            "task_id": task_id,
-            "status": status,
-            "message": message,
-            "raw_data": json.dumps(raw_data),
+            "task_id": payload.task_id,
+            "status": payload.status,
+            "message": payload.message,
+            "idempotency_key": (
+                payload.idempotency_key if payload.idempotency_key else ""
+            ),
+            "raw_data": json.dumps(parsed_raw_data),
         },
     )

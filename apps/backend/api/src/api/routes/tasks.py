@@ -32,8 +32,6 @@ async def get_task_status(
     cached_response = await database_client.get_task_id_async(
         dtypes.GetTaskIdRequest(task_id=task_id, task=task)
     )
-
-    print(f"Cache response for task_id {task_id}: {cached_response}")
     if not cached_response["found"] or cached_response["value"] is None:
         # If not found in redis/mongo, search in the main database (PostgreSQL)
         # as a fallback

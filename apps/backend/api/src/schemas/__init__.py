@@ -5,6 +5,7 @@ from src.schemas.api import (
     SpreadsheetDtypesSchema,
 )
 from src.schemas.auth import SignInSchema, SignUpSchema
+from src.schemas.events import TaskCompletionNotification
 from src.schemas.generic import DeleteResult, T
 from src.schemas.projects import (
     BaseProjectSchema,
@@ -51,6 +52,8 @@ __all__ = [
     # Auth Schemas
     "SignInSchema",
     "SignUpSchema",
+    # Event Schemas
+    "TaskCompletionNotification",
     # Generic Schemas
     "DeleteResult",
     "T",
