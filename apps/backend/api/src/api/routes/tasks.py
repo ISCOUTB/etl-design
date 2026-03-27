@@ -12,7 +12,7 @@ from src.services.permissions import Action, ModelKeys, PermissionService
 router = APIRouter()
 
 
-@router.get("/{task_id}")
+@router.get("/task/{task_id}")
 async def get_task_status(
     task_id: str,
     current_user: CurrentUser,
@@ -33,6 +33,7 @@ async def get_task_status(
         dtypes.GetTaskIdRequest(task_id=task_id, task=task)
     )
 
+    print(f"Cache response for task_id {task_id}: {cached_response}")
     if not cached_response["found"] or cached_response["value"] is None:
         # If not found in redis/mongo, search in the main database (PostgreSQL)
         # as a fallback
@@ -50,7 +51,7 @@ async def get_task_status(
     return cached_response["value"]
 
 
-@router.get("/{project_id}")
+@router.get("/project/{project_id}")
 async def list_tasks(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,

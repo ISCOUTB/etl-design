@@ -6,6 +6,7 @@ from src.api.routes.events import router as events_router
 from src.api.routes.healthcheck import router as healthcheck_router
 from src.api.routes.projects import router as projects_router
 from src.api.routes.schemas import router as schemas_router
+from src.api.routes.tasks import router as tasks_router
 from src.api.routes.uploads import router as uploads_router
 from src.api.routes.users import router as users_router
 
@@ -13,6 +14,7 @@ router = APIRouter()
 
 router.include_router(auth_router, prefix="/auth", tags=["auth"])
 router.include_router(cache_router, prefix="/cache", tags=["cache"])
+router.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
 router.include_router(users_router, prefix="/users", tags=["users"])
 router.include_router(events_router, prefix="/events", tags=["events"])
 router.include_router(schemas_router, prefix="/schemas", tags=["schemas"])
