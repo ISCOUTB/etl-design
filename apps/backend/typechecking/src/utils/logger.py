@@ -159,7 +159,10 @@ def create_component_logger(component_name: str) -> logging.Logger:
 
     # Console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)  # Show INFO and above in console
+    # Show INFO and above in console
+    console_handler.setLevel(
+        logging.INFO if not settings.MINIMAL_SERVER_DEBUG else logging.DEBUG
+    )
     console_handler.setFormatter(console_formatter)
 
     component_logger.addHandler(console_handler)
