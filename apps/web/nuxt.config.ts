@@ -14,7 +14,6 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     // CORE CONFIG
     ///////////////////////////////////////////////////////
-    debug: true,
     css: ["~/assets/css/tailwind.css"],
     vite: {
         plugins: [tailwindcss()],
@@ -203,6 +202,12 @@ export default defineNuxtConfig({
         zeroRuntime: true,
     },
 
+    ///////////////////////////////////////////////////////
+    // ENVIRONMENT
+    ///////////////////////////////////////////////////////
+    $development: {
+        debug: true,
+    },
     $production: {
         site: {
             indexable: true,
