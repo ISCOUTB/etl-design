@@ -1,4 +1,3 @@
-import asyncio
 import json
 import socket
 import time
@@ -26,7 +25,11 @@ from src.core.config import settings
 from src.core.database_client import get_database_client
 from src.core.events import failure_event
 from src.schemas.workers import ResultsMessage
-from src.utils import create_component_logger, get_datetime_now
+from src.utils import (
+    create_component_logger,
+    get_datetime_now,
+    post_json_http_with_ssl_fallback,
+)
 from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [results] prefix
@@ -325,9 +328,7 @@ class ResultWorker:
                 )
 
                 # Do the actual notification work
-                asyncio.run(
-                    self._notify_task_completion(task_id, message, json.loads(body))
-                )
+                self._notify_task_completion(task_id, message, json.loads(body))
             except (
                 grpc.RpcError,
                 httpx.ConnectError,
@@ -398,28 +399,60 @@ class ResultWorker:
             span_cm.__exit__(None, None, None)
             otel_context.detach(token)
 
-    async def _notify_task_completion(
+    def _notify_task_completion(
         self,
         task_id: str,
         message: ResultsMessage,
         raw_data: Optional[Dict[str, Any]] = None,
     ) -> None:
-        try:
-            async with httpx.AsyncClient(
-                timeout=settings.API_TIMEOUT_SECONDS
-            ) as client:
-                response = await client.post(
-                    settings.API_REQUEST_URL,
-                    json={
-                        "task_id": task_id,
-                        "status": message["status"],
-                        "message": "Task completed with results",
-                        "results": message["results"],
-                        "raw_data": raw_data or {},  # Include raw_data if provided
-                    },
-                )
-            response.raise_for_status()
+        status_code: int | str = "unknown"
+        error_detail = message.get("error")
+        if not error_detail and raw_data:
+            error_detail = raw_data.get("error")
 
+        completion_message = "Task completed with results"
+        if message["status"].lower() != "success":
+            completion_message = (
+                f"Task failed: {error_detail}"
+                if error_detail
+                else "Task failed"
+            )
+
+        payload = {
+            "task_id": task_id,
+            "status": message["status"],
+            "message": completion_message,
+            "results": message["results"],
+            "raw_data": raw_data or {},  # Include raw_data if provided
+        }
+
+        try:
+            status_code = post_json_http_with_ssl_fallback(
+                url=settings.API_REQUEST_URL,
+                payload=payload,
+                timeout_seconds=settings.API_TIMEOUT_SECONDS,
+                logger=logger,
+                context=(
+                    f"Main API request failed for task {task_id} "
+                    f"(url={settings.API_REQUEST_URL})"
+                ),
+            )
+        except Exception as e:
+            logger.error(
+                f"Main API request failed for task {task_id} "
+                f"(url={settings.API_REQUEST_URL}): {type(e).__name__}: {repr(e)}"
+            )
+            update_task_status(
+                database_client=self.db_client,
+                task_id=task_id,
+                task=self.TASK,
+                field="status",
+                value="failed",
+                data={"error": str(e), "update_date": get_datetime_now()},
+            )
+            return
+
+        try:
             update_task_status(
                 database_client=self.db_client,
                 task_id=task_id,
@@ -434,7 +467,10 @@ class ResultWorker:
             )
             logger.info(f"Task {task_id} marked as completed with results.")
         except Exception as e:
-            logger.error(f"Error updating task status for task {task_id}: {repr(e)}")
+            logger.error(
+                f"Main API notified (status={status_code}) but failed updating "
+                f"task state for {task_id}: {type(e).__name__}: {repr(e)}"
+            )
             update_task_status(
                 database_client=self.db_client,
                 task_id=task_id,

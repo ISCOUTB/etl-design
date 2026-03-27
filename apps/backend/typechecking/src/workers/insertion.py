@@ -16,7 +16,6 @@ Example:
     >>> worker.start_consuming()  # Blocks and processes messages
 """
 
-import asyncio
 import json
 import socket
 import time
@@ -45,7 +44,7 @@ from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
 from src.core.events import failure_event
 from src.schemas.workers import InsertionResult
-from src.utils import create_component_logger, get_datetime_now
+from src.utils import create_component_logger, get_datetime_now, post_multipart_http
 from src.workers.utils import get_task_status, update_task_status
 
 # Create logger with [insertion] prefix
@@ -304,7 +303,7 @@ class InsertionWorker:
                 return
 
             # If task is already completed, it's safe to skip (idempotent)
-            if current_status in ["success", "error", "published", "completed"]:
+            if current_status in ["success", "error", "completed"]:
                 logger.info(
                     f"Task {task_id} already completed with status={current_status}. "
                     "ACK without reprocessing (idempotent)."
@@ -367,9 +366,7 @@ class InsertionWorker:
             if task == "sample_insertion":
                 logger.info(f"Starting insertion for task {task_id}")
                 try:
-                    result = asyncio.run(
-                        self._insert_data(message, db_client=self.db_client)
-                    )
+                    result = self._insert_data(message, db_client=self.db_client)
                 except (
                     grpc.RpcError,
                     httpx.ConnectError,
@@ -491,7 +488,7 @@ class InsertionWorker:
             span_cm.__exit__(None, None, None)
             otel_context.detach(token)
 
-    async def _insert_data(
+    def _insert_data(
         self, message: InsertionMessage, db_client: DatabaseClient
     ) -> InsertionResult:
         task_id = message["id"]
@@ -519,18 +516,20 @@ class InsertionWorker:
         )
 
         try:
-            async with httpx.AsyncClient(
-                timeout=settings.EXCEL_READER_TIMEOUT_SECONDS
-            ) as client:
-                files = {"spreadsheet": (filename, file_bytes)}
-                response = await client.post(
-                    settings.EXCEL_READER_INSERT_URL,
-                    files=files,
-                    data={"table_name": table_name},
-                    params={"overwrite": overwrite},
-                )
+            files = {"spreadsheet": (filename, file_bytes)}
+            response = post_multipart_http(
+                url=settings.EXCEL_READER_INSERT_URL,
+                files=files,
+                data={"table_name": table_name},
+                params={"overwrite": overwrite},
+                timeout_seconds=settings.EXCEL_READER_TIMEOUT_SECONDS,
+                logger=logger,
+                context=(
+                    f"Error processing file for task {task_id} "
+                    f"(url={settings.EXCEL_READER_INSERT_URL})"
+                ),
+            )
 
-            response.raise_for_status()
             sql_per_sheet = response.json()
 
             update_task_status(
@@ -556,6 +555,7 @@ class InsertionWorker:
                 task_id=task_id,
                 results={},
                 status="failed",
+                error=str(e),
                 traceparent=message.get("traceparent"),
                 tracestate=message.get("tracestate"),
                 baggage=message.get("baggage"),
@@ -581,6 +581,7 @@ class InsertionWorker:
                 task_id=task_id,
                 results=sql_per_sheet,
                 status="failed",
+                error=str(e),
                 traceparent=message.get("traceparent"),
                 tracestate=message.get("tracestate"),
                 baggage=message.get("baggage"),
@@ -627,8 +628,8 @@ class InsertionWorker:
             field="status",
             value="published",
             task=self.TASK,
-            message="Validation result published",
+            message="Insertion result published",
             data={"update_date": get_datetime_now()},
         )
-        logger.info(f"Validation result published for task: {task_id}")
+        logger.info(f"Insertion result published for task: {task_id}")
         return None

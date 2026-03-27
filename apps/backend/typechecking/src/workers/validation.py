@@ -314,7 +314,7 @@ class ValidationWorker:
                 return
 
             # If task is already completed, it's safe to skip (idempotent)
-            if current_status in ["success", "error", "published", "completed"]:
+            if current_status in ["success", "error", "completed"]:
                 logger.info(
                     f"Task {task_id} already completed with status={current_status}. "
                     "ACK without reprocessing (idempotent)."
@@ -404,7 +404,8 @@ class ValidationWorker:
                     ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
                     return
                 except Exception as logic_err:
-                    # Logic errors (validation failed, bad data, etc.) - mark error & ACK
+                    # Logic errors (validation failed, bad data, etc.) - mark error and
+                    # publish a failed result for downstream consumers.
                     logger.error(
                         f"Validation logic error for task {task_id}: "
                         f"{type(logic_err).__name__}: {logic_err}. Marking as error."
@@ -426,8 +427,22 @@ class ValidationWorker:
                         logger.error(
                             f"Failed to mark task {task_id} as error: {status_err}"
                         )
-                    ch.basic_ack(delivery_tag=method.delivery_tag)
-                    return
+
+                    # Publish failed validation so downstream workers/API receive
+                    # the concrete error cause instead of only a generic failed status.
+                    result = DataValidated(
+                        task_id=task_id,
+                        status="error",
+                        results={
+                            "status": "error",
+                            "summary": f"Validation failed: {str(logic_err)}",
+                            "details": None,
+                        },
+                        error=str(logic_err),
+                        traceparent=traceparent,
+                        tracestate=tracestate,
+                        baggage=baggage,
+                    )
             else:
                 logger.warning(f"Unknown task type '{task}' for task_id: {task_id}")
                 ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -464,11 +479,11 @@ class ValidationWorker:
                     insert_overwrite = message.get("insert_overwrite", False) or False
                     db_uri = message.get("insert_db_uri")
 
-                    if not db_uri:
-                        logger.warning(
-                            f"Task {task_id} requested insertion but no db_uri provided. Skipping."
-                        )
-                    else:
+                    if (
+                        db_uri
+                        and insert_overwrite
+                        and not db_uri.startswith("postgres")
+                    ):
                         if self.channel is None:
                             self.channel = (
                                 RabbitMQConnectionFactory.get_thread_channel()
@@ -497,6 +512,10 @@ class ValidationWorker:
                             ),
                         )
                         logger.info(f"Insertion task enqueued for task {task_id}")
+                    else:
+                        logger.warning(
+                            f"Task {task_id} requested insertion but no db_uri valid. Skipping insertion."
+                        )
                 except (AMQPError, Exception) as queue_err:
                     # Couldn't publish to next queue. This is a problem but don't requeue
                     # the original message (it's already processed in DB).
