@@ -1,5 +1,3 @@
-# TODO: Change the print statements for a logger
-
 import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
@@ -26,7 +24,7 @@ from src.exceptions import (
     FilenameEmptyException,
 )
 from src.repositories import UploadRepository
-from src.utils import utc_now
+from src.utils import logger, utc_now
 
 
 class IdempotencyService:
@@ -69,7 +67,7 @@ class IdempotencyService:
             self.upload_repository.db.commit()
         except Exception as e:
             self.upload_repository.db.rollback()
-            print(f"Failed to update task status for task_id={task_id}: {e}")
+            logger.error(f"Failed to update task status for task_id={task_id}: {e}")
             raise AppException() from e
 
         return obj
@@ -136,7 +134,7 @@ class IdempotencyService:
         except IntegrityError as e:
             self.upload_repository.db.rollback()
             if "uq_idempotency_key_active_window" in str(e.orig):
-                print(
+                logger.error(
                     "Idempotency key already exists for an active task, returning existing task"
                 )
                 existing_task = self.upload_repository.check_idempotency_task(
@@ -161,12 +159,12 @@ class IdempotencyService:
                     )
         except OperationalError as e:
             # If the problem is the postgres database, roll back the transaction and raise an AppException.
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
         except Exception as e:
-            print("Failed to create upload task, rolling back", e)
+            logger.error("Failed to create upload task, rolling back", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
@@ -200,11 +198,11 @@ class IdempotencyService:
 
             self.upload_repository.db.commit()
         except OperationalError as e:
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
         except AMQPError as e:
-            print("Failed to publish validation request, rolling back task creation", e)
+            logger.error("Failed to publish validation request, rolling back task creation", e)
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
@@ -215,7 +213,7 @@ class IdempotencyService:
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
-            print("Failed to publish validation request, rolling back task creation", e)
+            logger.error("Failed to publish validation request, rolling back task creation", e)
             raise AppException() from e
 
         # Update cache (not critical, best effort)
@@ -235,7 +233,7 @@ class IdempotencyService:
         except grpc.RpcError as redis_err:
             # Redis/gRPC failed, but DB is already updated
             # Log and continue (Redis is cache, not critical)
-            print(f"Warning: Failed to update cache: {redis_err}")
+            logger.error(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",
@@ -306,7 +304,7 @@ class IdempotencyService:
         except IntegrityError as e:
             self.upload_repository.db.rollback()
             if "uq_idempotency_key_active_window" in str(e.orig):
-                print(
+                logger.error(
                     "Idempotency key already exists for an active task, returning existing task"
                 )
                 existing_task = self.upload_repository.check_idempotency_task(
@@ -330,12 +328,12 @@ class IdempotencyService:
                         },
                     )
         except OperationalError as e:
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
         except Exception as e:
-            print("Failed to create upload task, rolling back", e)
+            logger.error("Failed to create upload task, rolling back", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
@@ -371,11 +369,11 @@ class IdempotencyService:
 
             self.upload_repository.db.commit()
         except OperationalError as e:
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
         except AMQPError as e:
-            print("Failed to publish insertion request, rolling back task creation", e)
+            logger.error("Failed to publish insertion request, rolling back task creation", e)
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
@@ -386,7 +384,7 @@ class IdempotencyService:
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
-            print("Failed to publish insertion request, rolling back task creation", e)
+            logger.error("Failed to publish insertion request, rolling back task creation", e)
             raise AppException() from e
 
         # Update cache (not critical, best effort)
@@ -406,7 +404,7 @@ class IdempotencyService:
         except grpc.RpcError as redis_err:
             # Redis/gRPC failed, but DB is already updated
             # Log and continue (Redis is cache, not critical)
-            print(f"Warning: Failed to update cache: {redis_err}")
+            logger.error(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",
@@ -476,7 +474,7 @@ class IdempotencyService:
         except IntegrityError as e:
             self.upload_repository.db.rollback()
             if "uq_idempotency_key_active_window" in str(e.orig):
-                print(
+                logger.error(
                     "Idempotency key already exists for an active task, returning existing task"
                 )
                 existing_task = self.upload_repository.check_idempotency_task(
@@ -500,12 +498,12 @@ class IdempotencyService:
                         },
                     )
         except OperationalError as e:
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
         except Exception as e:
-            print("Failed to create upload task, rolling back", e)
+            logger.error("Failed to create upload task, rolling back", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
 
@@ -542,11 +540,11 @@ class IdempotencyService:
 
             self.upload_repository.db.commit()
         except OperationalError as e:
-            print("Database operation failed, rolling back task creation", e)
+            logger.error("Database operation failed, rolling back task creation", e)
             self.upload_repository.db.rollback()
             raise AppException() from e
         except AMQPError as e:
-            print(
+            logger.error(
                 "Failed to publish validation/insertion request, rolling back task creation",
                 e,
             )
@@ -560,7 +558,7 @@ class IdempotencyService:
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
-            print(
+            logger.error(
                 "Failed to publish validation/insertion request, rolling back task creation",
                 e,
             )
@@ -583,7 +581,7 @@ class IdempotencyService:
         except grpc.RpcError as redis_err:
             # Redis/gRPC failed, but DB is already updated
             # Log and continue (Redis is cache, not critical)
-            print(f"Warning: Failed to update cache: {redis_err}")
+            logger.error(f"Warning: Failed to update cache: {redis_err}")
 
         return dtypes.ApiResponse(
             status="accepted",

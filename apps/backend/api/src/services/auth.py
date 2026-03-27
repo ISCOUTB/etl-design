@@ -16,7 +16,7 @@ from src.exceptions import (
 )
 from src.repositories import UserRepository
 from src.services.parser import ParserService
-from src.utils import utc_now
+from src.utils import logger, utc_now
 
 
 class AuthService:
@@ -95,7 +95,7 @@ class AuthService:
         except (TokenExpiredException, UnauthenticatedException):
             raise
         except Exception as e:
-            print(repr(e))
+            logger.error(f"Failed to decode access token: {e}")
             raise UnauthenticatedException() from e
 
         return payload_token

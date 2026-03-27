@@ -15,7 +15,7 @@ from src.exceptions import (
 )
 from src.repositories import ProjectRepository
 from src.services.parser import ParserService
-from src.utils import create_postgres_uri
+from src.utils import create_postgres_uri, logger
 
 
 class ProjectService:
@@ -131,7 +131,8 @@ class ProjectService:
         try:
             connection = psycopg2.connect(uri)
             connection.close()
-        except psycopg2.OperationalError:
+        except psycopg2.OperationalError as e:
+            logger.error(f"Could not connect to database with URI: {e}")
             raise CouldNotConnectToDatabaseException()
 
         return uri
