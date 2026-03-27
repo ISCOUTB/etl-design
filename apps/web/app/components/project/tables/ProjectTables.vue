@@ -1,6 +1,12 @@
 <script setup lang="ts">
     import { Search } from "lucide-vue-next";
 
+    interface Props {
+        project: MaybeRefOrGetter<ResponseProject | undefined>;
+    }
+
+    const props = defineProps<Props>();
+
     const { tables } = useProjectTabsSharedState();
     const animations = useTabsAnimations();
     const route = useRoute();
@@ -26,6 +32,7 @@
                 component: () => import("~/components/project/tables/ProjectTablesSchemaView.vue"),
                 props: {
                     schema: tables.state.value.selectedSchema,
+                    project: props.project,
                 },
             },
         ],

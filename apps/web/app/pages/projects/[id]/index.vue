@@ -69,7 +69,9 @@
                     icon: Table,
                 },
                 component: () => import("~/components/project/tables/ProjectTables.vue"),
-                props: {},
+                props: {
+                    project: sharedState,
+                },
             },
             {
                 tab: {
