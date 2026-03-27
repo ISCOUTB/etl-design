@@ -60,7 +60,10 @@
             </div>
             <div>
                 <InputGroup class="max-w-md">
-                    <InputGroupInput placeholder="Search Tables..." />
+                    <InputGroupInput
+                        :disabled="!!tables.state.value.selectedSchema"
+                        placeholder="Search Tables..."
+                    />
                     <InputGroupAddon align="inline-start">
                         <Search class="size-4 text-muted-foreground" />
                     </InputGroupAddon>

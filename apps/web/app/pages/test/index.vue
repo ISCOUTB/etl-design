@@ -9,8 +9,12 @@
         middleware: ["development-only"],
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
         robots: "noindex, nofollow",
+        ogTitle: "Test Page",
+        ogLocale: () => locale.value.replace("-", "_"),
     });
 
     const columns: Column<z.infer<typeof ResponseProjectSchema>>[] = [

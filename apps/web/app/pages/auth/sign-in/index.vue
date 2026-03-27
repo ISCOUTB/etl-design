@@ -9,10 +9,15 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("auth.sign_in.title"),
-        description: $t("auth.sign_in.subtitle"),
         ogType: "website",
+        description: () => $t("auth.sign_in.subtitle"),
+        ogTitle: () => $t("auth.sign_in.title"),
+        ogDescription: () => $t("auth.sign_in.subtitle"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "noindex, follow",
     });
 </script>
 

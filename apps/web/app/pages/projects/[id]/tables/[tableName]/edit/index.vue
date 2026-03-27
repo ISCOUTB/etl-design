@@ -20,9 +20,13 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("projects.id.tables.edit.header.title"),
         ogType: "website",
+        ogTitle: () => $t("projects.id.tables.edit.header.title"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "noindex, nofollow",
     });
 
     const projectId = useRouteParams("id", NuxtKeys.Params.NoDefaultValue, {

@@ -9,9 +9,15 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("projects.create.header.title"),
-        description: $t("projects.create.header.description"),
+        ogType: "website",
+        description: () => $t("projects.create.header.description"),
+        ogTitle: () => $t("projects.create.header.title"),
+        ogDescription: () => $t("projects.create.header.description"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "noindex, nofollow",
     });
 </script>
 

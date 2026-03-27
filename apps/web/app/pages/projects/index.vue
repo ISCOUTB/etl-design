@@ -24,12 +24,15 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("projects.view.title"),
-        description: $t("projects.view.header.description"),
-        ogTitle: $t("projects.view.title"),
-        ogDescription: $t("projects.view.header.description"),
         ogType: "website",
+        description: () => $t("projects.view.header.description"),
+        ogTitle: () => $t("projects.view.title"),
+        ogDescription: () => $t("projects.view.header.description"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "index, follow",
     });
 
     const { $localeRoute } = useNuxtApp();

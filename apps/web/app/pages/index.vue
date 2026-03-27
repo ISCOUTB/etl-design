@@ -9,9 +9,15 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("layouts.title"),
         ogType: "website",
+        description: () => $t("layouts.description"),
+        ogTitle: () => $t("layouts.title"),
+        ogDescription: () => $t("layouts.description"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "index, follow",
     });
 
     const routeError = useRouteError();

@@ -13,9 +13,13 @@
         },
     });
 
+    const { locale } = useI18n();
+
     useSeoMeta({
-        title: $t("projects.id.fallback_title"),
         ogType: "website",
+        ogTitle: () => $t("projects.id.fallback_title"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        robots: "index, follow",
     });
 
     const projectId = useRouteParams("id");
