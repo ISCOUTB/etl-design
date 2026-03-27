@@ -50,7 +50,7 @@ from src.handlers.validation import (
     get_validation_summary,
     validate_file_against_schema,
 )
-from src.schemas.workers import DataValidated
+from src.schemas.workers import DataValidated, ResultsMessage
 from src.utils import create_component_logger, get_datetime_now
 from src.workers.utils import get_task_status, update_task_status
 
@@ -637,6 +637,7 @@ class ValidationWorker:
             task_id=task_id,
             status=summary["status"],
             results=summary,
+            error=json.dumps(results.get("error")),
             traceparent=message.get("traceparent"),
             tracestate=message.get("tracestate"),
             baggage=message.get("baggage"),
@@ -671,7 +672,20 @@ class ValidationWorker:
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
-            body=json.dumps(result),
+            body=json.dumps(
+                ResultsMessage(
+                    task_id=task_id,
+                    results={
+                        item: json.dumps(value)
+                        for (item, value) in result["results"].items()
+                    },
+                    status=result["status"],
+                    error=result.get("error", ""),
+                    traceparent=result.get("traceparent"),
+                    tracestate=result.get("tracestate"),
+                    baggage=result.get("baggage"),
+                )
+            ),
         )
         update_task_status(
             database_client=db_client,
