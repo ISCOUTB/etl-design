@@ -70,12 +70,12 @@ importers:
       consola:
         specifier: ^3.4.2
         version: 3.4.2
+      es-toolkit:
+        specifier: ^1.45.1
+        version: 1.45.1
       eslint:
         specifier: ^9
         version: 9.39.2(jiti@2.6.1)
-      lodash:
-        specifier: ^4.17.23
-        version: 4.17.23
       tsconfig-paths:
         specifier: ^4.2.0
         version: 4.2.0
