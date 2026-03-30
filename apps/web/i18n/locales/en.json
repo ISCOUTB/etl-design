@@ -12,6 +12,7 @@
         "actions": {
             "cancel": "Cancel",
             "go_back": "Go Back",
+            "go_home": "Go Home",
             "remove": "Remove",
             "reset": "Reset",
             "save_changes": "Save Changes"
@@ -101,6 +102,14 @@
         }
     },
     "errors": {
+        "404": {
+            "title": "Page Not Found",
+            "description": "The page you are looking for does not exist or has been moved."
+        },
+        "500": {
+            "title": "Internal Server Error",
+            "description": "An unexpected error occurred on the server. Please try again later."
+        },
         "unknown": {
             "title": "An unknown error ocurred",
             "description": "Please try again later"
