@@ -15,7 +15,7 @@ declare global {
               }
             | {
                   key: "event:projects:table:change-view";
-                  payload: { value: "overview" | "view" };
+                  payload: { value: "list" | "details" };
               }
             | {
                   key: "event:projects:table:set-selected-schema";

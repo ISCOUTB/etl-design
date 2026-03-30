@@ -33,23 +33,23 @@
 
     const items = computed<DataType[]>(() => [
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.string"),
+            label: $t("projects.id.sections.upload_schema.datatype_table.datatype.string"),
             value: "string",
         },
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.int"),
+            label: $t("projects.id.sections.upload_schema.datatype_table.datatype.int"),
             value: "integer",
         },
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.float"),
+            label: $t("projects.id.sections.upload_schema.datatype_table.datatype.float"),
             value: "float",
         },
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.double"),
+            label: $t("projects.id.sections.upload_schema.datatype_table.datatype.double"),
             value: "double",
         },
         {
-            label: $t("projects.id.sections.schema.datatype_table.datatype.boolean"),
+            label: $t("projects.id.sections.upload_schema.datatype_table.datatype.boolean"),
             value: "boolean",
         },
     ]);
@@ -65,7 +65,9 @@
                     </template>
                 </SchemaDtype>
                 <SelectValue
-                    :placeholder="$t('projects.id.sections.schema.datatype_table.header.data_type')"
+                    :placeholder="
+                        $t('projects.id.sections.upload_schema.datatype_table.header.data_type')
+                    "
                 />
             </div>
         </SelectTrigger>

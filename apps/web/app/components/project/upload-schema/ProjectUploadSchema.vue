@@ -89,8 +89,7 @@
 
     function handleUpload(_event: Event) {
         modal.dispatch.loadComponent({
-            loader: () =>
-                import("~/components/project/schema/ProjectSchemaUploadConfirmationModal.vue"),
+            loader: () => import("~/components/project/upload-schema/ProjectUploadSchemaModal.vue"),
             key: ModalKeys.Projects.Schema.UploadFile,
             kind: "alert-dialog",
             props: {
@@ -115,10 +114,10 @@
         <section class="space-y-4">
             <div class="space-y-1">
                 <h3 class="text-sm font-medium text-foreground">
-                    {{ $t("projects.id.sections.schema.header.title") }}
+                    {{ $t("projects.id.sections.upload_schema.header.title") }}
                 </h3>
                 <p class="text-sm text-muted-foreground">
-                    {{ $t("projects.id.sections.schema.header.description") }}
+                    {{ $t("projects.id.sections.upload_schema.header.description") }}
                 </p>
             </div>
 
@@ -133,7 +132,9 @@
                         <ItemContent>
                             <ItemTitle class="font-medium text-foreground"> Excel / CSV </ItemTitle>
                             <ItemDescription>
-                                {{ $t("projects.id.sections.schema.cards.supported_formats") }}
+                                {{
+                                    $t("projects.id.sections.upload_schema.cards.supported_formats")
+                                }}
                             </ItemDescription>
                         </ItemContent>
                     </Item>
@@ -145,10 +146,10 @@
                         </ItemMedia>
                         <ItemContent>
                             <ItemTitle>
-                                {{ $t("projects.id.sections.schema.cards.json_schema") }}
+                                {{ $t("projects.id.sections.upload_schema.cards.json_schema") }}
                             </ItemTitle>
                             <ItemDescription>
-                                {{ $t("projects.id.sections.schema.cards.upload_json") }}
+                                {{ $t("projects.id.sections.upload_schema.cards.upload_json") }}
                             </ItemDescription>
                         </ItemContent>
                     </Item>
@@ -214,14 +215,14 @@
             @leave="animations.onSchemaLeave"
         >
             <div v-if="shouldShowExample">
-                <ProjectSchemaFields
+                <ProjectUploadSchemaForm
                     v-if="schema.state.value.uploadedFile"
                     :can-submit="canSubmit"
                     class="space-y-6"
                     @submit="handleUpload"
                 />
 
-                <ProjectSchemaExample />
+                <ProjectUploadSchemaExample />
             </div>
             <div v-else class="space-y-6">
                 <div v-if="schema.errors.value.length > 0">
@@ -245,10 +246,10 @@
 
                 <div class="space-y-1">
                     <h3 className="text-sm font-medium text-foreground">
-                        {{ $t("projects.id.sections.schema.datatype_table.title") }}
+                        {{ $t("projects.id.sections.upload_schema.datatype_table.title") }}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {{ $t("projects.id.sections.schema.datatype_table.description") }}
+                        {{ $t("projects.id.sections.upload_schema.datatype_table.description") }}
                     </p>
                 </div>
 
@@ -259,21 +260,21 @@
                                 <TableHead class="p-4">
                                     {{
                                         $t(
-                                            "projects.id.sections.schema.datatype_table.header.column",
+                                            "projects.id.sections.upload_schema.datatype_table.header.column",
                                         )
                                     }}
                                 </TableHead>
                                 <TableHead class="p-4">
                                     {{
                                         $t(
-                                            "projects.id.sections.schema.datatype_table.header.sample_value",
+                                            "projects.id.sections.upload_schema.datatype_table.header.sample_value",
                                         )
                                     }}
                                 </TableHead>
                                 <TableHead class="p-4">
                                     {{
                                         $t(
-                                            "projects.id.sections.schema.datatype_table.header.data_type",
+                                            "projects.id.sections.upload_schema.datatype_table.header.data_type",
                                         )
                                     }}
                                 </TableHead>
@@ -358,7 +359,7 @@
                     </Table>
                 </div>
 
-                <ProjectSchemaFields
+                <ProjectUploadSchemaForm
                     :can-submit="canSubmit"
                     class="space-y-6 disabled:cursor-not-allowed"
                     @submit="handleUpload"

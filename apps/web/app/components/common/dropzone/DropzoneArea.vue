@@ -85,13 +85,13 @@
                         </div>
                         <div>
                             <p class="text-sm font-medium text-foreground">
-                                {{ $t("projects.id.sections.schema.dropzone.title") }}
+                                {{ $t("projects.id.sections.upload_schema.dropzone.title") }}
                                 <span class="text-primary">
-                                    {{ $t("projects.id.sections.schema.dropzone.browse") }}
+                                    {{ $t("projects.id.sections.upload_schema.dropzone.browse") }}
                                 </span>
                             </p>
                             <p class="mt-1 text-xs text-muted-foreground">
-                                <i18n-t keypath="projects.id.sections.schema.dropzone.supported">
+                                <i18n-t keypath="projects.id.sections.upload_schema.dropzone.supported">
                                     <template #formats>
                                         <span class="font-bold">
                                             {{ supportedFormats }}

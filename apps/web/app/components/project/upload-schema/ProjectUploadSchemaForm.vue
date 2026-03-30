@@ -38,10 +38,10 @@
     <div>
         <div>
             <h3 className="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.schema.table_name.title") }}
+                {{ $t("projects.id.sections.upload_schema.table_name.title") }}
             </h3>
             <p className="mb-4 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.schema.table_name.description") }}
+                {{ $t("projects.id.sections.upload_schema.table_name.description") }}
             </p>
 
             <Field>
@@ -50,11 +50,13 @@
                     type="text"
                     :default-value="schema.state.value.uploadedFile?.nameWithoutExt"
                     :aria-invalid="!tableName.trim()"
-                    :placeholder="$t('projects.id.sections.schema.table_name.placeholder')"
+                    :placeholder="$t('projects.id.sections.upload_schema.table_name.placeholder')"
                 />
                 <FieldError
                     v-if="!tableName.trim()"
-                    :errors="[$t('projects.id.sections.schema.validation.table_name_not_empty')]"
+                    :errors="[
+                        $t('projects.id.sections.upload_schema.validation.table_name_not_empty'),
+                    ]"
                 />
             </Field>
         </div>
@@ -69,7 +71,7 @@
             >
                 <Upload />
                 <span>
-                    {{ $t("projects.id.sections.schema.events.upload_file.label") }}
+                    {{ $t("projects.id.sections.upload_schema.events.upload_file.label") }}
                 </span>
             </Button>
 

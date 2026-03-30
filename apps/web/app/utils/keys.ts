@@ -64,12 +64,6 @@ export const NuxtKeys = {
                     onlyA: (id) => `project:${id}:tables:shared-state`,
                     both: (id, name) => `project:${id}:tables:${name}:shared-state`,
                 }),
-            State: (projectId: ResponseProject["id"] | undefined, table: MongoRaw | undefined) =>
-                $$(projectId, table, {
-                    none: "project:tables:selected:state",
-                    onlyA: (id) => `project:${id}:tables:selected:state`,
-                    both: (id, table) => `project:${id}:tables:${table.id}:selected:state`,
-                }),
         },
         Edit: {
             TableName: (

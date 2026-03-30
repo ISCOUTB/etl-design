@@ -23,8 +23,7 @@
         }
 
         modal.dispatch.loadComponent({
-            loader: () =>
-                import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+            loader: () => import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
             key: ModalKeys.Projects.Tables.Delete,
             props: {
                 table: tables.state.value.selectedSchema,
@@ -69,7 +68,7 @@
                     >
                         <Collapsible v-slot="{ open }">
                             <CollapsibleTrigger as-child class="w-full cursor-pointer">
-                                <Item class="w-full bg-muted/30">
+                                <Item class="w-full bg-muted/30 py-3.5">
                                     <ItemMedia>
                                         <Avatar>
                                             <AvatarFallback>
@@ -78,9 +77,29 @@
                                         </Avatar>
                                     </ItemMedia>
                                     <ItemContent>
-                                        <ItemTitle>
-                                            {{ Object.entries(release.schema.properties).length }}
-                                            columns
+                                        <ItemTitle class="flex-col gap-0.5 items-start">
+                                            <div>
+                                                {{
+                                                    new Date(release.created_at).toLocaleDateString(
+                                                        $i18n.locale,
+                                                        {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            timeZone: "UTC",
+                                                        },
+                                                    )
+                                                }}
+                                            </div>
+
+                                            <div class="text-left text-muted-foreground text-xs">
+                                                {{
+                                                    Object.entries(release.schema.properties).length
+                                                }}
+                                                columns
+                                            </div>
                                         </ItemTitle>
                                     </ItemContent>
                                     <ItemActions>
@@ -113,7 +132,7 @@
                             >
                                 <CollapsibleContent v-if="open" force-mount class="mt-4">
                                     <div class="space-y-4">
-                                        <ProjectTablesSchemaDetailsTable
+                                        <ProjectTablesDetailsPropertiesTable
                                             :properties="Object.entries(release.schema.properties)"
                                         />
 

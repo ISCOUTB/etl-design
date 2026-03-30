@@ -21,7 +21,7 @@
     );
     const connectionString = computed(() => {
         if (!project.value || !validConnectionString.value) {
-            return $t("projects.id.sections.general_information.connection_string.invalid");
+            return $t("projects.id.sections.overview.connection_string.invalid");
         }
 
         return buildPgConnectionString({
@@ -47,10 +47,10 @@
     <div v-if="project" class="flex flex-col gap-8">
         <section>
             <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.general_information.overview.title") }}
+                {{ $t("projects.id.sections.overview.header.title") }}
             </h3>
             <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.general_information.overview.description") }}
+                {{ $t("projects.id.sections.overview.header.description") }}
             </p>
 
             <div class="rounded-lg border">
@@ -59,7 +59,7 @@
                         <div class="flex items-center space-x-3 text-muted-foreground">
                             <Hash class="size-4 shrink-0" />
                             <span class="text-sm">
-                                {{ $t("projects.id.sections.general_information.fields.id") }}
+                                {{ $t("projects.id.sections.overview.fields.id") }}
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -95,10 +95,10 @@
                         </Badge>
                     </div>
 
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         no-sensitive
                         :icon="Calendar"
-                        label="projects.id.sections.general_information.fields.created_at"
+                        label="projects.id.sections.overview.fields.created_at"
                         :value="
                             new Date(project.created_at).toLocaleDateString($i18n.locale, {
                                 month: 'long',
@@ -113,29 +113,29 @@
 
         <section>
             <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.general_information.connection_details.title") }}
+                {{ $t("projects.id.sections.overview.connection_details.title") }}
             </h3>
             <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.general_information.connection_details.description") }}
+                {{ $t("projects.id.sections.overview.connection_details.description") }}
             </p>
 
             <div class="rounded-lg border">
                 <div class="divide-y px-5">
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         copyable
                         :icon="Server"
                         label="projects.create.fields.db_host.label"
                         :value="project.db_host"
                     />
 
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         copyable
                         :icon="Plug"
                         label="projects.create.fields.db_port.label"
                         :value="project.db_port?.toString()"
                     />
 
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         copyable
                         no-warning
                         :icon="User"
@@ -143,7 +143,7 @@
                         :value="project.db_user"
                     />
 
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         copyable
                         no-warning
                         :icon="Database"
@@ -151,7 +151,7 @@
                         :value="project.db_name"
                     />
 
-                    <ProjectGeneralInformationRow
+                    <ProjectOverviewItem
                         copyable
                         no-warning
                         :icon="Globe"
@@ -165,10 +165,10 @@
 
         <section>
             <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.general_information.connection_string.title") }}
+                {{ $t("projects.id.sections.overview.connection_string.title") }}
             </h3>
             <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.general_information.connection_string.description") }}
+                {{ $t("projects.id.sections.overview.connection_string.description") }}
             </p>
 
             <div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-3">

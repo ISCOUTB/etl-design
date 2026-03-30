@@ -15,17 +15,18 @@
             {
                 tab: {
                     label: "",
-                    value: "overview",
+                    value: "list",
                 },
-                component: () => import("@/components/project/tables/ProjectTablesOverview.vue"),
+                component: () => import("~/components/project/tables/ProjectTablesList.vue"),
                 props: {},
             },
             {
                 tab: {
                     label: "",
-                    value: "view",
+                    value: "details",
                 },
-                component: () => import("~/components/project/tables/ProjectTablesSchemaView.vue"),
+                component: () =>
+                    import("~/components/project/tables/details/ProjectTablesDetails.vue"),
                 props: {
                     schema: tables.state.value.selectedSchema,
                     project,

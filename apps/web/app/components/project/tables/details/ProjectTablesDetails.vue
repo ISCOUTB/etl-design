@@ -13,7 +13,7 @@
 
     const events = useAppEvents();
     function handleBack(_event: Event) {
-        events.emit("event:projects:table:change-view", { value: "overview" });
+        events.emit("event:projects:table:change-view", { value: "list" });
     }
 
     const modal = useModal();
@@ -24,15 +24,14 @@
         }
 
         modal.dispatch.loadComponent({
-            loader: () =>
-                import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+            loader: () => import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
             key: ModalKeys.Projects.Tables.Delete,
             props: {
                 table: tables.state.value.selectedSchema,
                 projectId: project.value.id,
                 kind: "delete",
                 onSuccess: () => {
-                    events.emit("event:projects:table:change-view", { value: "overview" });
+                    events.emit("event:projects:table:change-view", { value: "list" });
                     tables.dispatch.setSelectedSchema(undefined);
                 },
             },
@@ -94,7 +93,7 @@
                 </div>
             </div>
 
-            <ProjectTablesSchemaDetails />
+            <ProjectTablesDetailsOverview />
 
             <Card>
                 <CardContent>
@@ -104,7 +103,7 @@
                 </CardContent>
             </Card>
 
-            <ProjectTablesSchemaVersionHistory />
+            <ProjectTablesDetailsVersionHistory />
         </div>
     </div>
 </template>

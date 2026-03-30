@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { Database, FileIcon, Info, Settings, Table } from "lucide-vue-next";
+    import { FileIcon, Info, Settings, Table, Upload } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     definePageMeta({
@@ -42,21 +42,21 @@
         () => [
             {
                 tab: {
-                    label: "projects.id.sections.general_information.tab",
-                    value: Section.value.General,
+                    label: "projects.id.sections.overview.tab",
+                    value: Section.value.Overview,
                     icon: Info,
                 },
-                component: () =>
-                    import("~/components/project/general/ProjectGeneralInformation.vue"),
+                component: () => import("~/components/project/overview/ProjectOverview.vue"),
                 props: {},
             },
             {
                 tab: {
-                    label: "projects.id.sections.schema.tab",
-                    value: Section.value.Schema,
-                    icon: Database,
+                    label: "projects.id.sections.upload_schema.tab",
+                    value: Section.value.UploadFile,
+                    icon: Upload,
                 },
-                component: () => import("@/components/project/schema/ProjectSchema.vue"),
+                component: () =>
+                    import("@/components/project/upload-schema/ProjectUploadSchema.vue"),
                 props: {
                     project,
                 },
@@ -131,7 +131,7 @@
     const events = useAppEvents();
 
     onMounted(() => {
-        tabs.dispatch.preload([Section.value.Schema, Section.value.Settings]);
+        tabs.dispatch.preload([Section.value.UploadFile, Section.value.Settings]);
 
         events.on("event:projects:change-tab", ({ value }) => tabs.dispatch.setActive(value));
     });
@@ -146,7 +146,7 @@
             <p class="mt-1.5 text-sm text-muted-foreground">{{ project.description }}</p>
         </div>
 
-        <Tabs v-model="tab" :default-value="Section.General">
+        <Tabs v-model="tab" :default-value="Section.Overview">
             <TabsList>
                 <TabsTrigger
                     v-for="entry in tabs.filteredTabs.value"

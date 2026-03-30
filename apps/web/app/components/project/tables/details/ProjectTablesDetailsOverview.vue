@@ -2,18 +2,7 @@
     import { ChevronsRight, Clock } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
-    interface State {
-        schemaCollapsibleOpen: boolean;
-    }
-
-    const { tables, project } = useProjectTabsSharedState();
-
-    const state = useState<State>(
-        NuxtKeys.Projects.Tables.State(project.value?.id, tables.state.value.selectedSchema),
-        () => ({
-            schemaCollapsibleOpen: false,
-        }),
-    );
+    const { tables } = useProjectTabsSharedState();
 
     const tableName = computed(() => {
         if (!tables.state.value.selectedSchema) {
@@ -71,21 +60,23 @@
                 </code>
             </div>
 
-            <ProjectTablesSchemaDetailsTable v-if="properties" :properties="properties" />
+            <ProjectTablesDetailsPropertiesTable v-if="properties" :properties="properties" />
 
-            <Collapsible v-slot="{ open }" v-model:open="state.schemaCollapsibleOpen">
+            <Collapsible v-slot="{ open }">
                 <CollapsibleTrigger as-child>
                     <Item class="bg-muted/30 h-12 py-1.5 cursor-pointer">
                         <ItemContent>
                             <ItemTitle> Raw JSON Schema </ItemTitle>
                         </ItemContent>
                         <ItemActions>
-                            <ChevronsRight :class="cn('size-5 transition-transform', open && 'rotate-90')" />
+                            <ChevronsRight
+                                :class="cn('size-5 transition-transform', open && 'rotate-90')"
+                            />
                         </ItemActions>
                     </Item>
                 </CollapsibleTrigger>
                 <Transition :css="false" @enter="animations.onEnter" @leave="animations.onLeave">
-                    <CollapsibleContent v-if="state.schemaCollapsibleOpen" force-mount class="mt-4">
+                    <CollapsibleContent v-if="open" force-mount class="mt-4">
                         <CodeBlock
                             :file="tableName"
                             :content="tables.state.value.selectedSchema.active_schema"

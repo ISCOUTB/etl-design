@@ -10,14 +10,14 @@ export default function () {
     const tables = useProjectTables(() => projectId.value);
 
     const Section = computed<Tabs.Project.ProjectSections>(() => ({
-        General: t("projects.id.sections.general_information.tab"),
-        Schema: t("projects.id.sections.schema.tab"),
+        Overview: t("projects.id.sections.overview.tab"),
+        UploadFile: t("projects.id.sections.upload_schema.tab"),
         Tables: t("projects.id.sections.tables.tab"),
         Settings: t("projects.id.sections.settings.tab"),
         File: t("projects.id.sections.file.tab"),
     }));
 
-    const tab = useRouteQuery<string>("tab", Section.value.General, {
+    const tab = useRouteQuery<string>("tab", Section.value.Overview, {
         mode: "replace",
         transform: (value) => {
             const sections = Object.values(Section.value);
@@ -26,7 +26,7 @@ export default function () {
                 return found;
             }
 
-            return Section.value.General;
+            return Section.value.Overview;
         },
     });
 

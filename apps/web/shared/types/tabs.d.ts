@@ -2,8 +2,8 @@ declare global {
     namespace Tabs {
         namespace Project {
             interface ProjectSections {
-                General: string;
-                Schema: string;
+                Overview: string;
+                UploadFile: string;
                 Tables: string;
                 Settings: string;
                 File: string;

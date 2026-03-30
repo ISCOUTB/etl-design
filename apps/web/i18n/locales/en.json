@@ -260,9 +260,9 @@
             "fallback_title": "My Project",
             "title": "{username}'s Project - {projectName}",
             "sections": {
-                "general_information": {
+                "overview": {
                     "tab": "General",
-                    "overview": {
+                    "header": {
                         "title": "Overview",
                         "description": "General details about this project."
                     },
@@ -315,8 +315,8 @@
                         "title": "Danger Zone"
                     }
                 },
-                "schema": {
-                    "tab": "Schema",
+                "upload_schema": {
+                    "tab": "Upload Schema",
                     "header": {
                         "title": "Schema Configuration",
                         "description": "Upload your database schema to get started. You can provide an Excel file or a JSON schema definition."

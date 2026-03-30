@@ -23,7 +23,7 @@
                     }
 
                     tables.dispatch.setSelectedSchema(context);
-                    events.emit("event:projects:table:change-view", { value: "view" });
+                    events.emit("event:projects:table:change-view", { value: "details" });
                 },
             },
             {
@@ -66,7 +66,7 @@
 
                     modal.dispatch.loadComponent({
                         loader: () =>
-                            import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
@@ -93,7 +93,7 @@
 
                     modal.dispatch.loadComponent({
                         loader: () =>
-                            import("@/components/project/tables/ProjectTablesDeleteConfirmationModal.vue"),
+                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
@@ -136,7 +136,9 @@
                 <div class="flex space-x-2">
                     <Button
                         class="cursor-pointer"
-                        @click="events.emit('event:projects:change-tab', { value: Section.Schema })"
+                        @click="
+                            events.emit('event:projects:change-tab', { value: Section.UploadFile })
+                        "
                     >
                         {{ $t("projects.id.sections.tables.empty.events.create_new") }}
                     </Button>
