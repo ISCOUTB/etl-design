@@ -21,9 +21,7 @@
     });
 
     const routeError = useRouteError();
-    onMounted(() => {
-        routeError.onToast();
-    });
+    onMounted(() => routeError.onToast());
 </script>
 
 <template>

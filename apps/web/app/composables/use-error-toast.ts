@@ -1,3 +1,9 @@
+/**
+ * Refactor this shit
+ * Du not know how could I write this messy code
+ *
+ */
+
 import type { ExternalToast } from "vue-sonner";
 import { ResponseCodesRecord } from "#shared/utils/response-codes";
 import { ApiErrorSchema } from "#shared/utils/schemas/api";
@@ -43,93 +49,89 @@ export default function () {
         switch (errorCode) {
             case ResponseCodesRecord.Server.Auth.SignIn.InvalidCredentials: {
                 return {
-                    title: t("errors.auth.invalid_credentials.title"),
+                    title: "errors.auth.invalid_credentials.title",
                 };
             }
 
             case ResponseCodesRecord.Server.Auth.SignIn.UserNotFound: {
                 return {
-                    title: t("errors.auth.user_not_found.title"),
-                    description: t("errors.auth.user_not_found.description"),
+                    title: "errors.auth.user_not_found.title",
+                    description: "errors.auth.user_not_found.description",
                 };
             }
 
             case ResponseCodesRecord.Server.BadPayload: {
                 return {
-                    title: t("errors.bad_payload.title"),
-                    description: t("errors.bad_payload.description"),
+                    title: "errors.bad_payload.title",
+                    description: "errors.bad_payload.description",
                 };
             }
 
             case ResponseCodesRecord.Server.UnAuthorized: {
                 return {
-                    title: t("errors.auth.unauthorized.title"),
-                    description: t("errors.auth.unauthorized.description"),
+                    title: "errors.auth.unauthorized.title",
+                    description: "errors.auth.unauthorized.description",
                 };
             }
 
             case ResponseCodesRecord.Server.UnAutenticated: {
                 return {
-                    title: t("errors.auth.unauthenticated.title"),
-                    description: t("errors.auth.unauthenticated.description"),
+                    title: "errors.auth.unauthenticated.title",
+                    description: "errors.auth.unauthenticated.description",
                 };
             }
 
             case ResponseCodesRecord.Server.Project.NotFound: {
                 return {
-                    title: $t("errors.project.not_found.title"),
-                    description: $t("errors.project.not_found.description"),
+                    title: "errors.project.not_found.title",
+                    description: "errors.project.not_found.description",
                 };
             }
 
             case ResponseCodesRecord.Server.Project.Schema.NoFileProvided: {
                 return {
-                    title: $t("errors.project.file_not_provided.title"),
+                    title: "errors.project.file_not_provided.title",
                 };
             }
 
             default: {
                 return {
-                    title: t("errors.unknown.title"),
-                    description: t("errors.unknown.description"),
+                    title: "errors.unknown.title",
+                    description: "errors.unknown.description",
                 };
             }
         }
     }
 
     function show(notification: ToastNotification) {
-        const { title, description, ...rest } = notification;
+        const title = resolveI18nText(notification.title) || t("errors.unknown.title");
+        const description = resolveI18nText(notification.description);
 
-        toast.error(resolveI18nText(title) ?? title, {
-            description: resolveI18nText(description) ?? description,
-            ...rest,
+        // eslint-disable-next-line sonarjs/no-unused-vars
+        const { title: _, description: __, ...options } = notification;
+
+        toast.error(title || "errors.unknown.title", {
+            ...options,
+            description,
         });
     }
 
     function handle(payload: unknown, props?: Props) {
-        const { handler, ...options } = props ?? {};
+        const { handler, ...rest } = props ?? {};
 
-        if (typeof payload === "object") {
-            const error = ApiErrorSchema.safeParse(payload);
-            const errorType = error.data?.error;
-            const defaults = getDefaults(errorType);
+        const options = Object.fromEntries(
+            Object.entries(rest).filter(([_, v]) => v !== undefined),
+        );
 
-            const merged: ToastNotification = {
-                ...defaults,
-                ...(errorType ? handler?.[errorType as ResponseCodes.Code] : {}),
-                ...options,
-            };
+        const errorCode =
+            payload && typeof payload === "object"
+                ? ApiErrorSchema.safeParse(payload).data?.error
+                : String(payload);
 
-            show(merged);
-
-            return;
-        }
-
-        const error = String(payload);
-        const defaults = getDefaults(error);
+        const defaults = getDefaults(errorCode);
         const merged: ToastNotification = {
             ...defaults,
-            ...handler?.[error as ResponseCodes.Code],
+            ...(errorCode ? handler?.[errorCode as ResponseCodes.Code] : {}),
             ...options,
         };
 

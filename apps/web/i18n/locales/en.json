@@ -1,6 +1,7 @@
 {
     "layouts": {
-        "title": "S.L.O.T.H"
+        "title": "S.L.O.T.H",
+        "description": "Framework for migrating business logic from spreadsheets to SQL database engines."
     },
     "common": {
         "validation": {

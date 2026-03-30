@@ -2,6 +2,7 @@
 # Maybe, the user receives an invite link with a token that they can use to join the project with a predefined role (e.g., editor, viewer).
 # or, maybe, the user can only add other users by their email, and they will receive an email with the invite link.
 
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, status
@@ -13,7 +14,7 @@ from src.api.deps import (
     ProjectServiceDep,
     UserProjectServiceDep,
 )
-from src.exceptions import ForbiddenException
+from src.exceptions import ForbiddenException, ProjectNotFoundException
 from src.services.permissions import Action, PermissionService
 
 router = APIRouter()
@@ -67,6 +68,11 @@ async def get_project_by_id(
     current_user: CurrentUser,
     project_service: ProjectServiceDep,
 ) -> schemas.ResponseProjectSchema:
+    try:
+        uuid.UUID(project_id)
+    except ValueError:
+        raise ProjectNotFoundException()
+
     has_permission = PermissionService.has_permission(
         action=Action.view,
         user=current_user,
