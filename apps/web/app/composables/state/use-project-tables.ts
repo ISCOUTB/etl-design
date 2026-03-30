@@ -3,6 +3,7 @@ import type { z } from "zod";
 interface State {
     tableSchemas: z.infer<typeof MongoRawSchema>[];
     selectedSchema: z.infer<typeof MongoRawSchema> | undefined;
+    selectedFiles: Record<MongoRaw["id"], Schemas.Schema.UploadedFile | undefined>;
 }
 
 export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | undefined>) {
@@ -13,6 +14,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
     const state = useState<State>(NuxtKeys.Projects.Tables.TableState(id.value), () => ({
         tableSchemas: [],
         selectedSchema: undefined,
+        selectedFiles: {},
     }));
 
     const { data: _schemas } = useApiFetch(() => `/schemas/search/${id.value}`, {
@@ -26,6 +28,16 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
 
     function setSelectedSchema(schema: z.infer<typeof MongoRawSchema> | undefined) {
         state.value = { ...state.value, selectedSchema: schema };
+    }
+
+    function setUploadedFile(
+        tableId: MongoRaw["id"],
+        file: Schemas.Schema.UploadedFile | undefined,
+    ) {
+        state.value = {
+            ...state.value,
+            selectedFiles: { ...state.value.selectedFiles, [tableId]: file },
+        };
     }
 
     watch(
@@ -52,6 +64,7 @@ export default function (projectId: MaybeRefOrGetter<ResponseProject["id"] | und
         dispatch: {
             setSchemas,
             setSelectedSchema,
+            setUploadedFile,
         },
     };
 }

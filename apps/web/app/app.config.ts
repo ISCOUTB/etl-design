@@ -21,13 +21,23 @@ export default defineAppConfig({
         defaultPageSize: 10,
     },
     files: {
-        supportedFormats: ["json", "xlsx", "xls", "csv"],
-        supportedMimeTypes: [
-            "application/json",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-            "text/csv",
-        ],
+        uploadSchema: {
+            supportedFormats: ["json", "xlsx", "xls", "csv"],
+            supportedMimeTypes: [
+                "application/json",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel",
+                "text/csv",
+            ],
+        },
+        importData: {
+            supportedFormats: ["xlsx", "xls", "csv"],
+            supportedMimeTypes: [
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel",
+                "text/csv",
+            ],
+        },
         delimiter: ",",
     },
 });

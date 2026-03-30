@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    import { fileTypeFromBuffer } from "file-type";
     import { filesize } from "filesize";
     import {
         Download,
@@ -17,7 +16,6 @@
 
     const { schema } = useProjectTabsSharedState();
 
-    const config = useAppConfig();
     const fileURL = useObjectUrl(() => schema.state.value.uploadedFile?.blob);
     const shouldShowExample = computed(
         () =>
@@ -25,31 +23,36 @@
             (schema.state.value.uploadedFile && schema.state.value.uploadedFile.type === "json"),
     );
 
-    async function processFile(file: File) {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const detected = await fileTypeFromBuffer(bytes);
+    const actions = useProjectUploadFileActions();
 
-        const ext = (detected?.ext ?? SchemaUtils.File.getFileExtension(file.name)).toLowerCase();
-        const mime = SchemaUtils.File.normalizeMime(detected?.mime ?? file.type);
-
-        const validExt = config.files.supportedFormats.includes(ext);
-        const validMime = !mime.length || config.files.supportedMimeTypes.includes(mime);
-
-        if (!validExt || !validMime) {
-            toast.error($t("errors.project.file_not_supported.title"), {
-                description: $t("errors.project.file_not_supported.description"),
-            });
-
-            return;
-        }
-
-        schema.dispatch.setUploadedFile({
-            name: file.name,
-            nameWithoutExt: file.name.replace(/\.[^/.]+$/, ""),
-            size: filesize(file.size),
-            type: ext,
-            file,
-            blob: new Blob([file], { type: mime }),
+    const config = useAppConfig();
+    const selectedFile = computed({
+        get() {
+            return schema.state.value.uploadedFile;
+        },
+        set(value) {
+            schema.dispatch.setUploadedFile(value);
+        },
+    });
+    function handleFile(file: File) {
+        actions.processFile(file, {
+            supportedFormats: config.files.uploadSchema.supportedFormats,
+            mimeTypes: config.files.uploadSchema.supportedMimeTypes,
+            onError() {
+                toast.error($t("errors.project.file_not_supported.title"), {
+                    description: $t("errors.project.file_not_supported.description"),
+                });
+            },
+            onSuccess(file, extension, mime) {
+                selectedFile.value = {
+                    name: file.name,
+                    nameWithoutExt: file.name.replace(/\.[^/.]+$/, ""),
+                    size: filesize(file.size),
+                    type: extension,
+                    file,
+                    blob: new Blob([file], { type: mime }),
+                };
+            },
         });
     }
 
@@ -64,7 +67,7 @@
             return;
         }
 
-        processFile(file);
+        handleFile(file);
     }
 
     const dataTypeModels = computed(() =>
@@ -79,7 +82,7 @@
     const animations = useProjectSchemaAnimations();
     const modal = useModal();
     const canSubmit = computed<boolean>(() => {
-        const uploaded = schema.state.value.uploadedFile;
+        const uploaded = selectedFile.value;
         const hasFile = !!uploaded && uploaded.blob.size > 0;
         const hasValidTableName = (schema.state.value.tableName?.trim().length ?? 0) > 0;
         const hasErrors = schema.errors.value.length > 0;
@@ -156,16 +159,18 @@
                 </div>
 
                 <DropzoneArea
-                    :state="() => schema.state.value.uploadedFile"
+                    :state="selectedFile"
                     :supported-formats="
-                        config.files.supportedFormats.map((format) => `.${format}`).join(',')
+                        config.files.uploadSchema.supportedFormats
+                            .map((format) => `.${format}`)
+                            .join(',')
                     "
                     :dropzone-options="{ multiple: false }"
                     @dropped="
                         (files) => {
                             const file = files?.[0];
                             if (file) {
-                                processFile(file);
+                                handleFile(file);
                             }
                         }
                     "
@@ -196,6 +201,7 @@
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        class="cursor-pointer"
                                         @click="schema.dispatch.setUploadedFile(undefined)"
                                     >
                                         <X class="size-4" />
@@ -216,7 +222,7 @@
         >
             <div v-if="shouldShowExample">
                 <ProjectUploadSchemaForm
-                    v-if="schema.state.value.uploadedFile"
+                    v-if="selectedFile"
                     :can-submit="canSubmit"
                     class="space-y-6"
                     @submit="handleUpload"
