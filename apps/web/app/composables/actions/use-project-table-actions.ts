@@ -1,4 +1,4 @@
-import type { JsonSchema } from "~~/shared/utils/schemas/types";
+import type { JsonSchema, MongoRaw, ResponseProject } from "~~/shared/utils/schemas/types";
 
 export default function () {
     const { $api } = useNuxtApp();
@@ -70,6 +70,29 @@ export default function () {
         }
     }
 
+    async function handleImportData(
+        file: File,
+        projectId: ResponseProject["id"],
+        tableName: MongoRaw["import_name"],
+    ) {
+        loading.value = true;
+
+        try {
+            const response = await $api("/uploads/process", {
+                method: "POST",
+                body: new FormBuilder()
+                    .append("spreadsheet_file", file, file.name)
+                    .append("project_id", projectId)
+                    .append("table_name", tableName)
+                    .build(),
+            });
+
+            return response;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     return {
         state: {
             loading,
@@ -77,5 +100,6 @@ export default function () {
         handleSchemaTransition,
         uploadFile,
         uploadSchema,
+        handleImportData,
     };
 }

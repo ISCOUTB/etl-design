@@ -49,12 +49,17 @@
             <CardTitle class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <History class="size-4 text-muted-foreground" />
-                    <span class="text-sm font-medium text-foreground">Version History</span>
+                    <span class="text-sm font-medium text-foreground">
+                        {{ $t("projects.id.sections.tables.details.version_history.title") }}
+                    </span>
                 </div>
                 <div>
                     <Badge variant="secondary" class="text-xs font-normal">
-                        {{ tables.state.value.selectedSchema?.schemas_releases.length }}
-                        Releases
+                        {{
+                            $t("projects.id.sections.tables.details.version_history.releases", {
+                                count: tables.state.value.selectedSchema?.schemas_releases.length,
+                            })
+                        }}
                     </Badge>
                 </div>
             </CardTitle>
@@ -96,9 +101,15 @@
 
                                             <div class="text-left text-muted-foreground text-xs">
                                                 {{
-                                                    Object.entries(release.schema.properties).length
+                                                    $t(
+                                                        "projects.id.sections.tables.details.overview.columns",
+                                                        {
+                                                            count: Object.entries(
+                                                                release.schema.properties,
+                                                            ).length,
+                                                        },
+                                                    )
                                                 }}
-                                                columns
                                             </div>
                                         </ItemTitle>
                                     </ItemContent>
@@ -112,7 +123,11 @@
                                                 @click.stop="handleRevert"
                                             >
                                                 <RotateCcw class="size-4" />
-                                                Revert
+                                                {{
+                                                    $t(
+                                                        "projects.id.sections.tables.details.version_history.revert",
+                                                    )
+                                                }}
                                             </Button>
                                             <Button
                                                 variant="outline"
@@ -150,9 +165,19 @@
                         <EmptyMedia variant="icon">
                             <History />
                         </EmptyMedia>
-                        <EmptyTitle>No previous versions</EmptyTitle>
+                        <EmptyTitle>
+                            {{
+                                $t(
+                                    "projects.id.sections.tables.details.version_history.no_versions.title",
+                                )
+                            }}
+                        </EmptyTitle>
                         <EmptyDescription>
-                            Version history will appear here after updates.
+                            {{
+                                $t(
+                                    "projects.id.sections.tables.details.version_history.no_versions.description",
+                                )
+                            }}
                         </EmptyDescription>
                     </EmptyHeader>
                 </Empty>

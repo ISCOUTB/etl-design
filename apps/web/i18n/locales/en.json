@@ -429,6 +429,39 @@
                             "title": "Validation schema deleted",
                             "description": "The validation schema for this table has been removed."
                         }
+                    },
+                    "details": {
+                        "back": "Back to tables",
+                        "edit": "Edit Schema",
+                        "delete": "Delete",
+                        "overview": {
+                            "active": "Active",
+                            "columns": "{count} columns",
+                            "schema": "Schema:",
+                            "raw_json": "Raw JSON Schema"
+                        },
+                        "upload": {
+                            "title": "Import Data",
+                            "description": "Select a file to import records into your database",
+                            "submit": "Submit"
+                        },
+                        "version_history": {
+                            "title": "Version History",
+                            "releases": "{count} Releases",
+                            "revert": "Revert",
+                            "no_versions": {
+                                "title": "No previous versions",
+                                "description": "Version history will appear here after updates."
+                            }
+                        },
+                        "properties_table": {
+                            "column": "Column",
+                            "type": "Type",
+                            "constraints": "Constraints",
+                            "primary": "Primary",
+                            "unique": "Unique",
+                            "optional": "Optional"
+                        }
                     }
                 },
                 "file": {

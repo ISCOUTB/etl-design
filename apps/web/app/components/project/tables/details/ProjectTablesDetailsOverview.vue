@@ -28,8 +28,16 @@
         <CardHeader>
             <CardTitle class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <Badge variant="default"> Active </Badge>
-                    <span> {{ properties?.length }} columns </span>
+                    <Badge variant="default">
+                        {{ $t("projects.id.sections.tables.details.overview.active") }}
+                    </Badge>
+                    <span>
+                        {{
+                            $t("projects.id.sections.tables.details.overview.columns", {
+                                count: properties?.length || 0,
+                            })
+                        }}
+                    </span>
                 </div>
                 <div class="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock class="size-3.5" />
@@ -54,7 +62,9 @@
 
         <CardContent class="space-y-4">
             <div class="flex items-center space-x-2 text-xs text-muted-foreground">
-                <span class="font-medium">Schema:</span>
+                <span class="font-medium">
+                    {{ $t("projects.id.sections.tables.details.overview.schema") }}
+                </span>
                 <code class="rounded bg-muted px-1.5 py-0.5">
                     {{ tables.state.value.selectedSchema.active_schema.$schema }}
                 </code>
@@ -66,7 +76,9 @@
                 <CollapsibleTrigger as-child>
                     <Item class="bg-muted/30 h-12 py-1.5 cursor-pointer">
                         <ItemContent>
-                            <ItemTitle> Raw JSON Schema </ItemTitle>
+                            <ItemTitle>
+                                {{ $t("projects.id.sections.tables.details.overview.raw_json") }}
+                            </ItemTitle>
                         </ItemContent>
                         <ItemActions>
                             <ChevronsRight

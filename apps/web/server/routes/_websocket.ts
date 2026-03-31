@@ -1,9 +1,6 @@
 import { $makeWebSocketMessage, WebSocketMessageSchema } from "#shared/utils/websocket";
 
 export default defineWebSocketHandler({
-    open(peer) {
-        console.warn(peer);
-    },
     message(peer, message) {
         const parsedMessage = WebSocketMessageSchema.safeParse(JSON.parse(message.toString()));
 
