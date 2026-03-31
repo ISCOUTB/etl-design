@@ -29,4 +29,5 @@ export const WebSocketMessageSchema = z.discriminatedUnion("key", [
     $message("ping"),
     $message("pong"),
     $message(ResponseCodesRecord.WebSocket.BadPayload),
+    $message("user-logged", { userId: z.string(), accessToken: z.string() }),
 ]);
