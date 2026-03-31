@@ -99,10 +99,6 @@
                 project,
             },
         });
-
-        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadFile) {
-            modal.dispatch.setOpen(true);
-        }
     }
 
     onMounted(() => {

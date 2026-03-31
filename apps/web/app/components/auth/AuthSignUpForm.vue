@@ -1,8 +1,5 @@
 <script setup lang="ts">
-    import { ResponseCodesRecord } from "#shared/utils/response-codes";
-    import { ApiErrorSchema } from "#shared/utils/schemas/api";
     import { UserResponse } from "#shared/utils/schemas/auth";
-    import { FetchError } from "ofetch";
     import { toast } from "vue-sonner";
 
     const { SignUpSchema } = useSignUpSchema();
@@ -17,8 +14,7 @@
     });
 
     const errorToast = useErrorToast();
-    const api = useApi();
-    const { $localeRoute } = useNuxtApp();
+    const { $api, $localeRoute } = useNuxtApp();
     const router = useRouter();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
@@ -29,7 +25,7 @@
             .build();
 
         loading.value = true;
-        api("/auth/sign-up", {
+        $api("/auth/sign-up", {
             method: "POST",
             body: formData,
         })

@@ -1,6 +1,7 @@
 /* eslint-disable style/indent */
 import type { UseWebSocketReturn } from "@vueuse/core";
 import type { gsap } from "gsap";
+import type { $Fetch, NitroFetchRequest } from "nitropack";
 import "vue-router";
 
 // source: @sidebase/nuxt-auth/dist/runtime/middleware/sidebase-auth.d.ts
@@ -31,6 +32,7 @@ declare module "#app" {
     interface NuxtApp {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
+        $api: $Fetch<unknown, NitroFetchRequest>;
     }
 
     interface PageMeta {
@@ -43,6 +45,7 @@ declare module "vue" {
     interface ComponentCustomProperties {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
+        $api: $Fetch<unknown, NitroFetchRequest>;
     }
 }
 

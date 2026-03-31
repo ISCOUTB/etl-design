@@ -1,8 +1,8 @@
 import type { JsonSchema } from "~~/shared/utils/schemas/types";
 
 export default function () {
+    const { $api } = useNuxtApp();
     const [loading] = useToggle(false);
-    const api = useApi();
 
     async function handleSchemaTransition(
         projectId: ResponseProject["id"],
@@ -11,7 +11,7 @@ export default function () {
         loading.value = true;
 
         try {
-            const response = await api(`/schemas/${projectId}`, {
+            const response = await $api(`/schemas/${projectId}`, {
                 method: "DELETE",
                 query: {
                     table_name: TableUtils.getTableName(import_name),
@@ -33,7 +33,7 @@ export default function () {
         loading.value = true;
 
         try {
-            const response = await api("/uploads/table-excel", {
+            const response = await $api("/uploads/table-excel", {
                 method: "POST",
                 body: new FormBuilder()
                     .append("spreadsheet", file, file.name)
@@ -56,7 +56,7 @@ export default function () {
         loading.value = true;
 
         try {
-            const response = await api("/uploads/table-json", {
+            const response = await $api("/uploads/table-json", {
                 method: "POST",
                 body: SchemaUtils.Builder.buildJsonSchema(tableName, project.id, schema, []),
                 query: {

@@ -38,7 +38,7 @@
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value, tableName: tableName.value } });
 
-    const { $localePath } = useNuxtApp();
+    const { $api, $localePath } = useNuxtApp();
     const callbackUrl = useRouteQuery(
         "callbackUrl",
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
@@ -73,12 +73,11 @@
 
     const router = useRouter();
     const errorToast = useErrorToast();
-    const api = useApi();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         loading.value = true;
 
-        api(`/schemas/${projectId.value}`, {
+        $api(`/schemas/${projectId.value}`, {
             method: "POST",
             query: {
                 table_name: values.tableName,

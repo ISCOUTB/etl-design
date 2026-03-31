@@ -117,13 +117,6 @@
                             project: context,
                         },
                     });
-
-                    if (
-                        modal.state.value.currentModalKey ===
-                        ModalKeys.Projects.Delete.ConfirmationModal
-                    ) {
-                        modal.dispatch.setOpen(true);
-                    }
                 },
             },
         ],

@@ -28,9 +28,8 @@
         },
     });
 
-    const { $localeRoute } = useNuxtApp();
+    const { $api, $localeRoute } = useNuxtApp();
     const errorToast = useErrorToast();
-    const api = useApi();
     const [loading] = useToggle(false);
     const router = useRouter();
     const onSubmit = handleSubmit((values) => {
@@ -47,7 +46,7 @@
         };
 
         loading.value = true;
-        api("/projects/", {
+        $api("/projects/", {
             method: "POST",
             body,
         })

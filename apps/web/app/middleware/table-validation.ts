@@ -2,7 +2,7 @@ import { FetchError } from "ofetch";
 
 export default defineNuxtRouteMiddleware(async (to) => {
     const auth = useAuth();
-    const { $localePath } = useNuxtApp();
+    const { $api, $localePath } = useNuxtApp();
 
     const projectId = to.params.id?.toString();
     const tableName = to.params.tableName?.toString();
@@ -18,9 +18,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const KEY = NuxtKeys.Projects.Tables.SharedState(projectId, tableName);
     const sharedState = useState<MongoRaw | undefined>(KEY);
 
-    const api = useApi();
     try {
-        const response = await api(`/schemas/${projectId}/raw`, {
+        const response = await $api(`/schemas/${projectId}/raw`, {
             method: "GET",
             query: {
                 table_name: tableName,

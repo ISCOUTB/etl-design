@@ -2,7 +2,7 @@ import { FetchError } from "ofetch";
 
 export default defineNuxtRouteMiddleware(async (to) => {
     const auth = useAuth();
-    const { $localePath } = useNuxtApp();
+    const { $api, $localePath } = useNuxtApp();
 
     const projectId = to.params.id?.toString();
 
@@ -17,9 +17,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const KEY = NuxtKeys.Projects.SharedState(projectId);
     const sharedState = useState<ResponseProject | undefined>(KEY);
 
-    const api = useApi();
     try {
-        const response = await api(`/projects/id/${projectId}`);
+        const response = await $api(`/projects/id/${projectId}`);
         const parsedResponse = ResponseProjectSchema.safeParse(response);
 
         if (!parsedResponse.success) {

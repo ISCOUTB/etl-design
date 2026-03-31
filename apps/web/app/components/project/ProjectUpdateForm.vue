@@ -41,9 +41,8 @@
         },
     });
 
-    const { $localeRoute } = useNuxtApp();
+    const { $api, $localeRoute } = useNuxtApp();
     const router = useRouter();
-    const api = useApi();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         if (!project.value) {
@@ -63,7 +62,7 @@
         };
 
         loading.value = true;
-        api(`/projects/${project.value.id}`, {
+        $api(`/projects/${project.value.id}`, {
             method: "PATCH",
             body,
         })

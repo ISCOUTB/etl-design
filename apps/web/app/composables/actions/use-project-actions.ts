@@ -1,10 +1,10 @@
 export default function () {
+    const { $api } = useNuxtApp();
     const [loading] = useToggle(false);
-    const api = useApi();
 
     async function handleDeleteProject(projectId: ResponseProject["id"]) {
         try {
-            const response = await api(`/projects/${projectId}/flush`, {
+            const response = await $api(`/projects/${projectId}/flush`, {
                 method: "DELETE",
             });
 
