@@ -11,25 +11,25 @@
     const project = computed(() => toValue(props.project));
     const events = useAppEvents<AppEvents.Events>();
 
-    const { schema } = useProjectTabsSharedState();
+    const { uploadSchema } = useProject();
     const errorToast = useErrorToast();
     const actions = useProjectTableActions();
 
     function handleSchema() {
-        if (!schema.state.value.tableName) {
+        if (!uploadSchema.state.value.tableName) {
             toast.error($t("projects.id.sections.schema.validation.table_name_not_empty"));
             return;
         }
 
-        if (!schema.computed.jsonSchema.value || !project.value) {
+        if (!uploadSchema.computed.jsonSchema.value || !project.value) {
             return;
         }
 
         actions
             .uploadSchema(
                 project.value,
-                schema.state.value.tableName,
-                schema.computed.jsonSchema.value,
+                uploadSchema.state.value.tableName,
+                uploadSchema.computed.jsonSchema.value,
             )
             .then(async () => {
                 if (project.value) {
@@ -56,28 +56,32 @@
 
     function handleFile() {
         const parseResult = SchemaUtils.Builder.buildColumnsPayload(
-            schema.state.value.columnsConfig,
+            uploadSchema.state.value.columnsConfig,
         );
 
-        if (!parseResult.success || !schema.state.value.uploadedFile?.blob || !project.value) {
+        if (
+            !parseResult.success ||
+            !uploadSchema.state.value.uploadedFile?.blob ||
+            !project.value
+        ) {
             return;
         }
 
-        if (!schema.state.value.tableName) {
+        if (!uploadSchema.state.value.tableName) {
             toast.error($t("projects.id.sections.schema.validation.table_name_not_empty"));
             return;
         }
 
         const dtypes = SchemaUtils.Builder.buildDtypesBySheet(
-            schema.state.value.sheetNames,
+            uploadSchema.state.value.sheetNames,
             parseResult.data,
         );
 
         actions
             .uploadFile(
-                schema.state.value.uploadedFile.file,
+                uploadSchema.state.value.uploadedFile.file,
                 project.value,
-                schema.state.value.tableName,
+                uploadSchema.state.value.tableName,
                 dtypes,
             )
             .then(async () => {
@@ -104,24 +108,24 @@
     }
 
     function handleSubmit(_event: Event) {
-        if (!schema.state.value.uploadedFile) {
+        if (!uploadSchema.state.value.uploadedFile) {
             errorToast.handle(ResponseCodesRecord.Server.Project.Schema.NoFileProvided);
             return;
         }
 
-        if (schema.state.value.uploadedFile.type === "json") {
+        if (uploadSchema.state.value.uploadedFile.type === "json") {
             handleSchema();
             return;
         }
 
-        if (["xlsx", "xls", "csv"].includes(schema.state.value.uploadedFile.type)) {
+        if (["xlsx", "xls", "csv"].includes(uploadSchema.state.value.uploadedFile.type)) {
             handleFile();
         }
     }
 
     const modal = useModal();
     function handleCloseModal() {
-        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadFile) {
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadSchema) {
             modal.dispatch.setOpen(false);
         }
     }

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-    const { schema } = useProjectTabsSharedState();
+    const { uploadSchema } = useProject();
 </script>
 
 <template>
     <div class="rounded-lg">
         <DataTable
-            v-if="schema.computed.isTabular.value"
+            v-if="uploadSchema.computed.isTabular.value"
             :index="NuxtKeys.Projects.Schemas.RowId"
-            :data="schema.computed.parsedFileContent"
-            :columns="schema.computed.columns"
+            :data="uploadSchema.computed.parsedFileContent"
+            :columns="uploadSchema.computed.columns"
         >
             <DataTableHeader />
             <TableBody>
@@ -19,8 +19,8 @@
         </DataTable>
         <CodeBlock
             v-else
-            :content="() => schema.computed.jsonSchema.value?.payload"
-            :file="() => schema.state.value.uploadedFile?.name"
+            :content="() => uploadSchema.computed.jsonSchema.value"
+            :file="() => uploadSchema.state.value.uploadedFile?.name"
         />
     </div>
     <section class="py-12" />

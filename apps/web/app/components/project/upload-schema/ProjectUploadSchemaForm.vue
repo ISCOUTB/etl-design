@@ -15,18 +15,18 @@
 
     const canSubmit = computed(() => toValue(props.canSubmit));
 
-    const { schema } = useProjectTabsSharedState();
+    const { uploadSchema } = useProject();
 
     const tableName = computed<string>({
         get: () => {
-            const name = schema.state.value.tableName;
+            const name = uploadSchema.state.value.tableName;
             if (name !== undefined) {
                 return name;
             }
 
-            return schema.state.value.uploadedFile?.nameWithoutExt ?? "";
+            return uploadSchema.state.value.uploadedFile?.nameWithoutExt ?? "";
         },
-        set: (value) => schema.dispatch.setTableName(value),
+        set: (value) => uploadSchema.dispatch.setTableName(value),
     });
 
     function handleSubmit(event: Event) {
@@ -48,7 +48,7 @@
                 <Input
                     v-model="tableName"
                     type="text"
-                    :default-value="schema.state.value.uploadedFile?.nameWithoutExt"
+                    :default-value="uploadSchema.state.value.uploadedFile?.nameWithoutExt"
                     :aria-invalid="!tableName.trim()"
                     :placeholder="$t('projects.id.sections.upload_schema.table_name.placeholder')"
                 />
