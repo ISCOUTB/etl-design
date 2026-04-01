@@ -1,5 +1,5 @@
 declare global {
-    namespace Tabs {
+    namespace Views {
         namespace Project {
             interface ProjectSections {
                 Overview: string;

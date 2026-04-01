@@ -2,7 +2,10 @@
     import { ChevronsRight, History, RotateCcw } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
-    const { tables, project } = useProjectTabsSharedState();
+    const {
+        state: { project },
+        tables,
+    } = useProject();
 
     const sortedSchemaReleases = computed(() => {
         if (!tables.state.value.selectedSchema) {

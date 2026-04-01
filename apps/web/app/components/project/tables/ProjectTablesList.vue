@@ -5,7 +5,10 @@
     const { $localeRoute } = useNuxtApp();
     const route = useRoute();
 
-    const { tables, Section, projectId } = useProjectTabsSharedState();
+    const {
+        state: { project, VIEWS },
+        tables,
+    } = useProject();
 
     const events = useAppEvents();
     const modal = useModal();
@@ -33,14 +36,14 @@
                     if (!context) {
                         return $localeRoute({
                             name: "projects-id",
-                            params: { id: projectId.value },
+                            params: { id: project.value.id },
                         });
                     }
 
                     return $localeRoute({
                         name: "projects-id-tables-tableName-edit",
                         params: {
-                            id: projectId.value,
+                            id: project.value.id,
                             tableName: TableUtils.getTableName(context.import_name),
                         },
                         query: { callbackUrl: route.fullPath },
@@ -70,7 +73,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
-                            projectId: projectId.value,
+                            projectId: project.value.id,
                             kind: "revert",
                         },
                     });
@@ -97,7 +100,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: context,
-                            projectId: projectId.value,
+                            projectId: project.value.id,
                             kind: "delete",
                         },
                     });
@@ -137,7 +140,7 @@
                     <Button
                         class="cursor-pointer"
                         @click="
-                            events.emit('event:projects:change-tab', { value: Section.UploadFile })
+                            events.emit('event:projects:change-tab', { value: VIEWS.UploadFile })
                         "
                     >
                         {{ $t("projects.id.sections.tables.empty.events.create_new") }}

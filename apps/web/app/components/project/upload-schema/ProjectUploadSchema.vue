@@ -10,17 +10,19 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const { project } = useProjectTabsSharedState();
+    const {
+        state: { project },
+        uploadSchema,
+    } = useProject();
 
     const events = useAppEvents();
 
-    const { schema } = useProjectTabsSharedState();
-
-    const fileURL = useObjectUrl(() => schema.state.value.uploadedFile?.blob);
+    const fileURL = useObjectUrl(() => uploadSchema.state.value.uploadedFile?.blob);
     const shouldShowExample = computed(
         () =>
-            !schema.state.value.uploadedFile ||
-            (schema.state.value.uploadedFile && schema.state.value.uploadedFile.type === "json"),
+            !uploadSchema.state.value.uploadedFile ||
+            (uploadSchema.state.value.uploadedFile &&
+                uploadSchema.state.value.uploadedFile.type === "json"),
     );
 
     const actions = useProjectUploadFileActions();
@@ -28,10 +30,10 @@
     const config = useAppConfig();
     const selectedFile = computed({
         get() {
-            return schema.state.value.uploadedFile;
+            return uploadSchema.state.value.uploadedFile;
         },
         set(value) {
-            schema.dispatch.setUploadedFile(value);
+            uploadSchema.dispatch.setUploadedFile(value);
         },
     });
     function handleFile(file: File) {
@@ -72,9 +74,9 @@
 
     const dataTypeModels = computed(() =>
         Object.fromEntries(
-            schema.computed.columns.value.map((column) => [
+            uploadSchema.computed.columns.value.map((column) => [
                 String(column.key),
-                schema.dispatch.getColumnDataTypeModel(String(column.key)),
+                uploadSchema.dispatch.getColumnDataTypeModel(String(column.key)),
             ]),
         ),
     );
@@ -84,8 +86,8 @@
     const canSubmit = computed<boolean>(() => {
         const uploaded = selectedFile.value;
         const hasFile = !!uploaded && uploaded.blob.size > 0;
-        const hasValidTableName = (schema.state.value.tableName?.trim().length ?? 0) > 0;
-        const hasErrors = schema.errors.value.length > 0;
+        const hasValidTableName = (uploadSchema.state.value.tableName?.trim().length ?? 0) > 0;
+        const hasErrors = uploadSchema.errors.value.length > 0;
 
         return hasFile && hasValidTableName && !hasErrors;
     });
@@ -93,7 +95,7 @@
     function handleUpload(_event: Event) {
         modal.dispatch.loadComponent({
             loader: () => import("~/components/project/upload-schema/ProjectUploadSchemaModal.vue"),
-            key: ModalKeys.Projects.Schema.UploadFile,
+            key: ModalKeys.Projects.Schema.UploadSchema,
             kind: "alert-dialog",
             props: {
                 project,
@@ -103,7 +105,7 @@
 
     onMounted(() => {
         events.on("event:schema:table-created", () => {
-            schema.dispatch.setUploadedFile(undefined);
+            uploadSchema.dispatch.setUploadedFile(undefined);
         });
     });
 </script>
@@ -198,7 +200,7 @@
                                         variant="ghost"
                                         size="icon"
                                         class="cursor-pointer"
-                                        @click="schema.dispatch.setUploadedFile(undefined)"
+                                        @click="uploadSchema.dispatch.setUploadedFile(undefined)"
                                     >
                                         <X class="size-4" />
                                     </Button>
@@ -227,13 +229,13 @@
                 <ProjectUploadSchemaExample />
             </div>
             <div v-else class="space-y-6">
-                <div v-if="schema.errors.value.length > 0">
+                <div v-if="uploadSchema.errors.value.length > 0">
                     <Alert variant="destructive">
                         <TriangleAlert />
                         <AlertTitle>Warnings</AlertTitle>
                         <AlertDescription>
                             <ul class="list-inside list-disc space-y-1">
-                                <li v-for="error in schema.errors.value" :key="error.key">
+                                <li v-for="error in uploadSchema.errors.value" :key="error.key">
                                     <template v-if="$te(error.message)">
                                         {{ $t(error.message) }}
                                     </template>
@@ -287,7 +289,7 @@
                         </TableHeader>
                         <TableBody>
                             <TableRow
-                                v-for="column in schema.computed.columns.value"
+                                v-for="column in uploadSchema.computed.columns.value"
                                 :key="column.key"
                                 class="hover:bg-amber-300/10"
                             >
@@ -298,7 +300,11 @@
                                     <span
                                         class="truncate rounded bg-muted px-2 py-0.5 font-mono text-xs"
                                     >
-                                        {{ schema.computed.sampleValueByColumn.value[column.key] }}
+                                        {{
+                                            uploadSchema.computed.sampleValueByColumn.value[
+                                                column.key
+                                            ]
+                                        }}
                                     </span>
                                 </TableCell>
                                 <TableCell class="px-4 py-2">
@@ -312,17 +318,17 @@
                                 <TableCell class="px-4 py-2">
                                     <Checkbox
                                         :disabled="
-                                            Object.entries(schema.state.value.columnsConfig).some(
-                                                ([k, v]) => v.primary_key && k !== column.key,
-                                            )
+                                            Object.entries(
+                                                uploadSchema.state.value.columnsConfig,
+                                            ).some(([k, v]) => v.primary_key && k !== column.key)
                                         "
                                         :model-value="
-                                            schema.state.value.columnsConfig?.[column.key]
+                                            uploadSchema.state.value.columnsConfig?.[column.key]
                                                 ?.primary_key ?? false
                                         "
                                         @update:model-value="
                                             (value) =>
-                                                schema.dispatch.setColumnPrimaryKey(
+                                                uploadSchema.dispatch.setColumnPrimaryKey(
                                                     column.key,
                                                     !!value,
                                                 )
@@ -332,24 +338,27 @@
                                 <TableCell class="px-4 py-2">
                                     <Checkbox
                                         :model-value="
-                                            schema.state.value.columnsConfig?.[column.key]
+                                            uploadSchema.state.value.columnsConfig?.[column.key]
                                                 ?.unique ?? false
                                         "
                                         @update:model-value="
                                             (value) =>
-                                                schema.dispatch.setColumnUnique(column.key, !!value)
+                                                uploadSchema.dispatch.setColumnUnique(
+                                                    column.key,
+                                                    !!value,
+                                                )
                                         "
                                     />
                                 </TableCell>
                                 <TableCell class="px-4 py-2">
                                     <Checkbox
                                         :model-value="
-                                            schema.state.value.columnsConfig?.[column.key]
+                                            uploadSchema.state.value.columnsConfig?.[column.key]
                                                 ?.optional ?? false
                                         "
                                         @update:model-value="
                                             (value) =>
-                                                schema.dispatch.setColumnOptional(
+                                                uploadSchema.dispatch.setColumnOptional(
                                                     column.key,
                                                     !!value,
                                                 )

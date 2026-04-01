@@ -1,19 +1,18 @@
 <script setup lang="ts">
     import { Search } from "lucide-vue-next";
 
-    const { project } = useProjectTabsSharedState();
+    const { tables } = useProject();
 
-    const { tables } = useProjectTabsSharedState();
-    const animations = useTabsAnimations();
     const route = useRoute();
 
     const model = useState<string>(NuxtKeys.Projects.Tables.View(route.path), () => "");
     const events = useAppEvents();
 
-    const tabs = useTabsManager(
+    const animations = useViewManagerAnimations();
+    const views = useViewManager(
         () => [
             {
-                tab: {
+                meta: {
                     label: "",
                     value: "list",
                 },
@@ -21,16 +20,13 @@
                 props: {},
             },
             {
-                tab: {
+                meta: {
                     label: "",
                     value: "details",
                 },
                 component: () =>
                     import("~/components/project/tables/details/ProjectTablesDetails.vue"),
-                props: {
-                    schema: tables.state.value.selectedSchema,
-                    project,
-                },
+                props: {},
             },
         ],
         { model, key: NuxtKeys.Projects.Tables.TabsManager(route.path) },
@@ -39,7 +35,7 @@
     onMounted(() => {
         events.on("event:projects:table:change-view", async ({ value }) => {
             await nextTick();
-            tabs.dispatch.setActive(value);
+            views.dispatch.setActive(value);
         });
     });
 </script>
@@ -79,9 +75,9 @@
             @leave="animations.onPanelLeave"
         >
             <component
-                :is="tabs.component.value"
-                v-if="tabs.component.value"
-                v-bind="{ ...tabs.props.value }"
+                :is="views.computed.component.value"
+                v-if="views.computed.component.value"
+                v-bind="{ ...views.computed.props.value }"
             />
         </Transition>
     </div>

@@ -106,7 +106,7 @@ export const ModalKeys = {
             ConfirmationModal: "projects:delete:confirmation-modal",
         },
         Schema: {
-            UploadFile: "projects:schema:upload-file",
+            UploadSchema: "projects:schema:upload-schema",
         },
         Tables: {
             Delete: "projects:tables:delete-schema",

@@ -1,15 +1,11 @@
 <script setup lang="ts">
-    import type { z } from "zod";
     import { ExternalLink, Pencil, Trash2, TriangleAlert } from "lucide-vue-next";
 
-    interface Props {
-        project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
-    }
-
-    const props = defineProps<Props>();
+    const {
+        state: { project },
+    } = useProject();
 
     const modal = useModal();
-    const project = computed(() => toValue(props.project));
 
     function deleteProject() {
         modal.dispatch.loadComponent({

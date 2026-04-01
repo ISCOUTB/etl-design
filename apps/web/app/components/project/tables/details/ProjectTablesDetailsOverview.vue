@@ -2,7 +2,7 @@
     import { ChevronsRight, Clock } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
-    const { tables } = useProjectTabsSharedState();
+    const { tables } = useProject();
 
     const tableName = computed(() => {
         if (!tables.state.value.selectedSchema) {

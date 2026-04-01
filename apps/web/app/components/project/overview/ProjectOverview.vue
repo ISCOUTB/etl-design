@@ -14,13 +14,15 @@
     import { toast } from "vue-sonner";
     import { cn } from "@/lib/utils";
 
-    const { project } = useProjectTabsSharedState();
+    const {
+        state: { project },
+    } = useProject();
 
     const validConnectionString = computed(
-        () => project.value && project.value.db_host && project.value.db_port,
+        () => project && project.value.db_host && project.value.db_port,
     );
     const connectionString = computed(() => {
-        if (!project.value || !validConnectionString.value) {
+        if (!project || !validConnectionString.value) {
             return $t("projects.id.sections.overview.connection_string.invalid");
         }
 
@@ -44,7 +46,7 @@
 </script>
 
 <template>
-    <div v-if="project" class="flex flex-col gap-8">
+    <div class="flex flex-col gap-8">
         <section>
             <h3 class="mb-1 text-sm font-medium text-foreground">
                 {{ $t("projects.id.sections.overview.header.title") }}

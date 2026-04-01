@@ -3,7 +3,10 @@
     import { Download, FileIcon, Rocket, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const { tables, projectId } = useProjectTabsSharedState();
+    const {
+        state: { project },
+        tables,
+    } = useProject();
     const selectedFile = computed({
         get() {
             if (tables.state.value.selectedSchema) {
@@ -76,7 +79,7 @@
 
         handleImportData(
             selectedFile.value.file,
-            projectId.value,
+            project.value.id,
             TableUtils.getTableName(tables.state.value.selectedSchema.import_name),
         )
             .then(() => {
