@@ -7,6 +7,7 @@ import type {
 } from "#shared/utils/schemas/types";
 import type { z } from "zod";
 import { ColumnDtypesSchema } from "#shared/utils/schemas/api";
+import { read, utils } from "xlsx";
 
 export const SchemaUtils = {
     File: {
@@ -124,6 +125,79 @@ export const SchemaUtils = {
                 jsonschema: schema,
                 primary_keys: primaryKeys,
             };
+        },
+    },
+
+    Parser: {
+        async parseContent(
+            blob: Blob,
+            options: {
+                ROW_ID: string;
+                type: string;
+                delimiter: string;
+                onDelimiterError: () => void;
+                onError?: (error: unknown) => void;
+            },
+        ): Promise<{ sheetNames: string[]; parsed: Record<string, unknown>[] }> {
+            try {
+                const buffer = await blob.arrayBuffer();
+
+                if (options.type === "csv") {
+                    const text = new TextDecoder().decode(buffer);
+
+                    const wb = read(text, {
+                        type: "string",
+                        cellDates: true,
+                        raw: true,
+                    });
+
+                    const firstSheet = wb.SheetNames[0];
+                    if (!firstSheet) {
+                        return { sheetNames: [], parsed: [] };
+                    }
+                    const sheet = wb.Sheets[firstSheet];
+                    if (!sheet) {
+                        return { sheetNames: [], parsed: [] };
+                    }
+
+                    const firstLine = text.split("\n")[0] ?? "";
+                    if (options.delimiter && firstLine.split(options.delimiter).length === 1) {
+                        options.onDelimiterError();
+                    }
+
+                    return {
+                        sheetNames: wb.SheetNames,
+                        parsed: SchemaUtils.withRowId(
+                            options.ROW_ID,
+                            utils.sheet_to_json(sheet, { defval: "", raw: true }),
+                        ),
+                    };
+                }
+
+                const wb = read(buffer, { type: "array", cellDates: true, raw: true });
+                const firstSheet = wb.SheetNames[0];
+                if (!firstSheet) {
+                    return { sheetNames: [], parsed: [] };
+                }
+                const sheet = wb.Sheets[firstSheet];
+                if (!sheet) {
+                    return { sheetNames: [], parsed: [] };
+                }
+
+                return {
+                    sheetNames: wb.SheetNames,
+                    parsed: SchemaUtils.withRowId(
+                        options.ROW_ID,
+                        utils.sheet_to_json(sheet, { defval: "", raw: true }),
+                    ),
+                };
+            } catch (error) {
+                if (options.onError) {
+                    options.onError(error);
+                }
+            }
+
+            return { sheetNames: [], parsed: [] };
         },
     },
 };

@@ -1,6 +1,5 @@
 import type { Dtype, JsonSchema } from "#shared/utils/schemas/types";
 import type { Column } from "@/components/common/data-table/utils";
-import { read, utils } from "xlsx";
 
 interface State {
     tableName: string | undefined;
@@ -16,8 +15,8 @@ interface SchemaError {
 
 const ROW_ID = NuxtKeys.Projects.Schemas.RowId;
 
-export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] = createInjectionState(
-    (initialId: string | undefined) => {
+export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
+    createInjectionState((initialId: string | undefined) => {
         const { t } = useI18n();
         const config = useAppConfig();
 
@@ -35,74 +34,35 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
 
         const isTabular = computed(() => state.value.uploadedFile?.type !== "json");
 
-        const parsedFileContent = computedAsync<Record<string, unknown>[] | undefined>(async () => {
-            try {
-                if (!isTabular.value || !state.value.uploadedFile) {
-                    return [];
-                }
+        const parsedFileContent = computedAsync<Record<string, unknown>[]>(async () => {
+            if (!isTabular.value || !state.value.uploadedFile) {
+                return [];
+            }
 
-                const { uploadedFile } = state.value;
-                if (!uploadedFile) {
-                    return;
-                }
+            const { uploadedFile } = state.value;
+            if (!uploadedFile) {
+                return [];
+            }
 
-                const buffer = await uploadedFile?.blob.arrayBuffer();
-
-                if (uploadedFile?.type === "csv") {
-                    const text = new TextDecoder().decode(buffer);
-
-                    const wb = read(text, {
-                        type: "string",
-                        cellDates: true,
-                        raw: true,
-                    });
-
-                    const firstSheet = wb.SheetNames[0];
-                    if (!firstSheet) {
-                        return [];
-                    }
-                    const sheet = wb.Sheets[firstSheet];
-                    if (!sheet) {
-                        return [];
-                    }
-
-                    const firstLine = text.split("\n")[0] ?? "";
-                    if (
-                        config.files.delimiter &&
-                        firstLine.split(config.files.delimiter).length === 1
-                    ) {
+            const { sheetNames, parsed } = await SchemaUtils.Parser.parseContent(
+                uploadedFile.blob,
+                {
+                    ROW_ID,
+                    delimiter: config.files.delimiter,
+                    type: uploadedFile.type,
+                    onDelimiterError() {
                         addSchemaError({
                             key: "error:invalid-delimiter",
                             message: t("projects.id.sections.schema.validation.delimiter", {
                                 delimiter: t("projects.id.sections.schema.validation.comma"),
                             }),
                         });
-                    }
+                    },
+                },
+            );
 
-                    state.value.sheetNames = wb.SheetNames;
-                    return SchemaUtils.withRowId(
-                        ROW_ID,
-                        utils.sheet_to_json(sheet, { defval: "", raw: true }),
-                    );
-                }
-
-                const wb = read(buffer, { type: "array", cellDates: true, raw: true });
-                const firstSheet = wb.SheetNames[0];
-                if (!firstSheet) {
-                    return [];
-                }
-                const sheet = wb.Sheets[firstSheet];
-                if (!sheet) {
-                    return [];
-                }
-                state.value.sheetNames = wb.SheetNames;
-                return SchemaUtils.withRowId(
-                    ROW_ID,
-                    utils.sheet_to_json(sheet, { defval: "", raw: true }),
-                );
-            } catch (error) {
-                console.warn(error);
-            }
+            state.value.sheetNames = sheetNames;
+            return parsed;
         });
 
         const jsonSchema = computedAsync<JsonSchema | undefined>(async () => {
@@ -283,5 +243,4 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 clearSchemaErrors,
             },
         };
-    },
-);
+    });
