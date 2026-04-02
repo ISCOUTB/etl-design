@@ -70,6 +70,9 @@ shared_fs_throughput_mode = "bursting"
 # Only set a number when throughput mode is provisioned; otherwise keep null
 shared_fs_provisioned_throughput = null
 
+# Traefik certificate path
+traefik_cert_path = "/mnt/shared/traefik/staging"
+
 # ============================================
 # Additional Tags
 # ============================================

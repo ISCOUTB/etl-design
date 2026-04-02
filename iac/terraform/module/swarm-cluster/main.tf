@@ -16,7 +16,8 @@ locals {
     var.tags
   )
 
-  cluster_name = "${var.project_name}-${var.environment}"
+  cluster_name        = "${var.project_name}-${var.environment}"
+  effective_cert_path = coalesce(var.traefik_cert_path, "/mnt/shared/traefik/${var.environment}")
 }
 
 # ============================================
@@ -392,11 +393,13 @@ resource "aws_efs_mount_target" "shared" {
 # Generate dynamic inventory for Ansible
 resource "local_file" "ansible_inventory" {
   content = templatefile("${path.module}/templates/inventory.tpl", {
-    managers     = aws_instance.managers
-    workers      = aws_instance.workers
-    ssh_key_file = local_sensitive_file.ssh_key_pem.filename
-    ssh_user     = "ubuntu"
-    environment  = var.environment
+    managers          = aws_instance.managers
+    workers           = aws_instance.workers
+    ssh_key_file      = local_sensitive_file.ssh_key_pem.filename
+    ssh_user          = "ubuntu"
+    environment       = var.environment
+    traefik_cert_path = local.effective_cert_path
+    efs_dns           = var.enable_shared_fs ? aws_efs_file_system.shared[0].dns_name : null
   })
 
   filename        = abspath("${path.root}/inventories/${var.environment}-inventory.ini")

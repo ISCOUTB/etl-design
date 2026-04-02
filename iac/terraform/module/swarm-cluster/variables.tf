@@ -123,3 +123,9 @@ variable "shared_fs_provisioned_throughput" {
   type        = number
   default     = null
 }
+
+variable "traefik_cert_path" {
+  description = "Certificate path for Traefik (must match the path in Ansible inventory template)"
+  type        = string
+  default     = null
+}

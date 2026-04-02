@@ -149,6 +149,9 @@ shared_fs_throughput_mode = "$shared_fs_throughput_mode"
 # Only used when throughput mode is provisioned; otherwise keep null
 shared_fs_provisioned_throughput = $shared_fs_provisioned_throughput
 
+# Traefik certificate path
+traefik_cert_path = "/mnt/shared/traefik/$env"
+
 # ============================================
 # Additional Tags
 # ============================================
