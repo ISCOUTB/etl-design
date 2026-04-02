@@ -110,13 +110,14 @@
         @apply border-border outline-ring/50;
     }
 
-    html {
+    html,
+    body {
         scrollbar-color: var(--border) var(--background);
         scrollbar-gutter: stable;
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground overflow-y-scroll;
     }
 
     *::-webkit-scrollbar {

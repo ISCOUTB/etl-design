@@ -17,6 +17,7 @@
     definePageMeta({
         title: "projects.view.title",
         layout: "sidebar",
+        middleware: ["sidebase-auth"],
         i18n: {
             paths: {
                 en: "/projects",

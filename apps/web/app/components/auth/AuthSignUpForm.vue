@@ -1,6 +1,12 @@
 <script setup lang="ts">
     import { UserResponse } from "#shared/utils/schemas/auth";
-    import { toast } from "vue-sonner";
+
+    interface Emits {
+        sucess: [email: string];
+        error: [error: unknown];
+    }
+
+    const emit = defineEmits<Emits>();
 
     const { SignUpSchema } = useSignUpSchema();
     const { handleSubmit } = useForm({
@@ -13,9 +19,7 @@
         },
     });
 
-    const errorToast = useErrorToast();
-    const { $api, $localeRoute } = useNuxtApp();
-    const router = useRouter();
+    const { $api } = useNuxtApp();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         const formData = new FormBuilder()
@@ -36,20 +40,9 @@
                     throw createError({});
                 }
 
-                toast.success($t("auth.events.user_created.title"), {
-                    description: $t("auth.events.user_created.description", {
-                        email: parsedResponse.data.email,
-                    }),
-                });
-
-                router.push(
-                    $localeRoute({
-                        name: "auth-sign-in",
-                        query: { email: parsedResponse.data.email },
-                    }),
-                );
+                emit("sucess", parsedResponse.data.email);
             })
-            .catch((error) => errorToast.handleServer(error))
+            .catch((error) => emit("error", error))
             .finally(() => (loading.value = false));
     });
 </script>

@@ -11,7 +11,11 @@ const typeIconMap: Record<Dtype, Components.LucideIconComponent> = {
 };
 
 export const TableUtils = {
-    getTableName(importName: string): string {
+    getTableName(importName: string | undefined): string {
+        if (!importName) {
+            return "";
+        }
+
         const separator = "__";
         const firstIndex = importName.indexOf(separator);
 

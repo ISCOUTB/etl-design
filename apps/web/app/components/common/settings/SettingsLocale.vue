@@ -71,7 +71,7 @@
                 <SelectValue />
             </slot>
         </SelectTrigger>
-        <SelectContent class="w-44" v-bind="contentProps">
+        <SelectContent class="w-44" :body-lock="false" v-bind="contentProps">
             <SelectGroup>
                 <template v-for="_locale in locales" :key="_locale.code">
                     <SelectItem :value="_locale.code">

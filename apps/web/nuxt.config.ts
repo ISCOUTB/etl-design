@@ -186,7 +186,6 @@ export default defineNuxtConfig({
             enablePeriodically: 5 * 60 * 1000,
             enableOnWindowFocus: true,
         },
-        globalAppMiddleware: true,
     },
     veeValidate: {
         autoImports: true,

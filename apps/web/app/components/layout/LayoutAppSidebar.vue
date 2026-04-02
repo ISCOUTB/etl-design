@@ -9,6 +9,7 @@
     });
 
     const { $localeRoute } = useNuxtApp();
+    const auth = useAuth();
 
     const { isMobile } = useSidebar();
     const dropdownSide = computed<DropdownMenuContentProps["side"]>(() => {
@@ -136,7 +137,7 @@
         </SidebarContent>
 
         <SidebarFooter>
-            <LayoutAppSidebarUser />
+            <LayoutAppSidebarUser v-if="auth.status.value === 'authenticated'" />
         </SidebarFooter>
 
         <SidebarRail />

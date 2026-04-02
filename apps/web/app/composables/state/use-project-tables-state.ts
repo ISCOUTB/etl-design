@@ -1,14 +1,24 @@
 interface State {
+    loading: boolean;
     tableSchemas: MongoRaw[];
     selectedSchema: MongoRaw | undefined;
+    tasks: {
+        validation: unknown[];
+    };
     selectedFiles: Record<MongoRaw["id"], Schemas.Schema.UploadedFile | undefined>;
 }
 
 export const [useProvideProjectTablesState, useProjectTablesState] = createInjectionState(
     (initialId: string | undefined) => {
+        const { $api } = useNuxtApp();
+
         const state = useState<State>(NuxtKeys.Projects.Tables.TableState(initialId), () => ({
+            loading: false,
             tableSchemas: [],
             selectedSchema: undefined,
+            tasks: {
+                validation: [],
+            },
             selectedFiles: {},
         }));
 
@@ -17,22 +27,23 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
             key: NuxtKeys.Projects.Tables.RawSchemas(initialId),
         });
 
+        function setLoading(value: boolean) {
+            state.value.loading = value;
+        }
+
         function setSchemas(schemas: MongoRaw[]) {
-            state.value = { ...state.value, tableSchemas: schemas };
+            state.value.tableSchemas = schemas;
         }
 
         function setSelectedSchema(schema: MongoRaw | undefined) {
-            state.value = { ...state.value, selectedSchema: schema };
+            state.value.selectedSchema = schema;
         }
 
         function setUploadedFile(
             tableId: MongoRaw["id"],
             file: Schemas.Schema.UploadedFile | undefined,
         ) {
-            state.value = {
-                ...state.value,
-                selectedFiles: { ...state.value.selectedFiles, [tableId]: file },
-            };
+            state.value.selectedFiles[tableId] = file;
         }
 
         const errorToast = useErrorToast();
@@ -45,7 +56,6 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
 
                 const parseResult = MongoGetSchemasResponse.safeParse(schemas);
                 if (!parseResult.success) {
-                    console.warn(parseResult.error);
                     errorToast.handle(ResponseCodesRecord.Server.BadPayload);
                     return;
                 }
@@ -53,6 +63,37 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
                 setSchemas(parseResult.data.schemas);
             },
             { immediate: true },
+        );
+
+        watch(
+            () => state.value.selectedSchema,
+            (schema) => {
+                if (!schema) {
+                    return;
+                }
+
+                setLoading(true);
+                Promise.all([
+                    $api(`/tasks/project/${initialId}`, {
+                        method: "GET",
+                        query: {
+                            table_name: TableUtils.getTableName(schema.import_name),
+                            task: API_CONSTANTS.TASK.VALIDATION_TASK,
+                        },
+                    }),
+                    $api(`/tasks/project/${initialId}`, {
+                        method: "GET",
+                        query: {
+                            table_name: TableUtils.getTableName(schema.import_name),
+                            task: API_CONSTANTS.TASK.INSERTION_TASK,
+                        },
+                    }),
+                ])
+                    .then((values) => console.warn(values))
+                    .catch((error) => console.error(error))
+                    .finally(() => setLoading(false));
+            },
+            { deep: true },
         );
 
         return {

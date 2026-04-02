@@ -85,6 +85,7 @@
                             :items="dropdownItems"
                             :context="table"
                             :content-props="{ align: 'end' }"
+                            :root-props="{ modal: false }"
                         >
                             <template #trigger>
                                 <Button variant="ghost" size="icon">

@@ -94,6 +94,7 @@ export const NuxtKeys = {
     Sidebar: {
         OpenCollapsible: (group: Components.Sidebar.GroupCollapsibleKind) =>
             `sidebar:${group.kind}:${group.label}`,
+        CookieOpen: "sloth:sidebar_state",
     },
     Params: {
         NoDefaultValue: "keys:params:default-value",

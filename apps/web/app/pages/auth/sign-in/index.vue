@@ -1,7 +1,10 @@
 <script setup lang="ts">
+    import { toast } from "vue-sonner";
+
     definePageMeta({
         title: "auth.sign_in.title",
         auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
+        middleware: ["propagate-callback-url"],
         i18n: {
             paths: {
                 en: "/auth/sign-in",
@@ -19,6 +22,44 @@
         ogLocale: () => locale.value.replace("-", "_"),
         robots: "noindex, follow",
     });
+
+    const config = useAppConfig();
+    const router = useRouter();
+    const runtimeConfig = useRuntimeConfig();
+    const { $localeRoute } = useNuxtApp();
+    const callbackUrl = useRouteQuery(
+        config.constants.CALLBACK_KEY,
+        runtimeConfig.public.homePageURL,
+        {
+            transform: (value) => {
+                try {
+                    const parsed = new URL(value, runtimeConfig.public.homePageURL);
+                    return parsed.pathname + parsed.search + parsed.hash;
+                } catch {
+                    if (value.startsWith("/")) {
+                        return value;
+                    }
+
+                    return $localeRoute({ name: "index" });
+                }
+            },
+        },
+    );
+
+    function handleSuccess(email: string) {
+        toast.success($t("auth.events.user_logged.title"), {
+            description: $t("auth.events.user_logged.description", {
+                email,
+            }),
+        });
+
+        router.push(callbackUrl.value);
+    }
+
+    const errorToast = useErrorToast();
+    function handleError(error: string) {
+        errorToast.handle(error);
+    }
 </script>
 
 <template>
@@ -41,7 +82,7 @@
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AuthSignInForm />
+                    <AuthSignInForm @sucess="handleSuccess" @error="handleError" />
                 </CardContent>
             </Card>
             <div class="flex justify-end space-x-2">

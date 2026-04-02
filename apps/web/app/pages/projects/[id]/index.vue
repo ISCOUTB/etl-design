@@ -5,7 +5,7 @@
     definePageMeta({
         title: "projects.id.fallback_title",
         layout: "sidebar",
-        middleware: ["project-validation"],
+        middleware: ["sidebase-auth", "project-validation"],
         i18n: {
             paths: {
                 en: "/projects/[id]",

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-    import { toast } from "vue-sonner";
+    interface Emits {
+        sucess: [email: string];
+        error: [error: string];
+    }
+
+    const emit = defineEmits<Emits>();
 
     const email = useRouteQuery<string>("email", "");
     const { SignInSchema } = useSignInSchema();
@@ -11,25 +16,8 @@
         },
     });
 
-    const errorToast = useErrorToast();
-    const router = useRouter();
     const auth = useAuth();
-    const runtimeConfig = useRuntimeConfig();
-    const { $localeRoute } = useNuxtApp();
-    const callbackUrl = useRouteQuery("callbackUrl", runtimeConfig.public.homePageURL, {
-        transform: (value) => {
-            try {
-                const parsed = new URL(value, runtimeConfig.public.homePageURL);
-                return parsed.pathname + parsed.search + parsed.hash;
-            } catch {
-                if (value.startsWith("/")) {
-                    return value;
-                }
 
-                return $localeRoute({ name: "index" });
-            }
-        },
-    });
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         loading.value = true;
@@ -41,18 +29,12 @@
         })
             .then((response) => {
                 if (response.error) {
-                    errorToast.handle(response.error);
+                    emit("error", response.error);
                     return;
                 }
 
                 if (response.ok) {
-                    toast.success($t("auth.events.user_logged.title"), {
-                        description: $t("auth.events.user_logged.description", {
-                            email: values.email,
-                        }),
-                    });
-
-                    router.push(callbackUrl.value);
+                    emit("sucess", values.email);
                 }
             })
             .finally(() => (loading.value = false));

@@ -71,7 +71,7 @@
                 />
             </div>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent :body-lock="false">
             <SelectItem v-for="item in items" :key="item.value" :value="item.value">
                 <SchemaDtype :dtype="item.value">
                     <template #icon>

@@ -1,11 +1,12 @@
 <script setup lang="ts" generic="TContext">
     import type { ClassValue } from "class-variance-authority/types";
-    import type { DropdownMenuContentProps } from "reka-ui";
+    import type { DropdownMenuContentProps, DropdownMenuRootProps } from "reka-ui";
     import type { HTMLAttributes } from "vue";
     import { cn } from "@/lib/utils";
 
     interface Props<T> {
         items: MaybeRefOrGetter<Components.GenericDropdown.Item<T>[][]>;
+        rootProps?: DropdownMenuRootProps;
         contentProps?: DropdownMenuContentProps & { class?: HTMLAttributes["class"] };
         context?: MaybeRefOrGetter<T>;
     }
@@ -39,7 +40,7 @@
 </script>
 
 <template>
-    <DropdownMenu>
+    <DropdownMenu v-bind="rootProps">
         <DropdownMenuTrigger as-child>
             <slot name="trigger" />
         </DropdownMenuTrigger>

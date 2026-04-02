@@ -1,5 +1,7 @@
 export default defineNuxtRouteMiddleware((to) => {
-    const { callbackUrl } = to.query;
+    const config = useAppConfig();
+
+    const callbackUrl = to.query[config.constants.CALLBACK_KEY];
 
     if (!callbackUrl) {
         return;
@@ -12,7 +14,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
     if (!isSafe) {
         const query = new Map(Object.entries(to.query));
-        query.delete("callbackUrl");
+        query.delete(config.constants.CALLBACK_KEY);
 
         return navigateTo({
             path: to.path,

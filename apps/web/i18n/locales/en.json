@@ -3,6 +3,63 @@
         "title": "S.L.O.T.H",
         "description": "Framework for migrating business logic from spreadsheets to SQL database engines."
     },
+    "home": {
+        "hero": {
+            "badge": "Optimized for PostgreSQL",
+            "title_prefix": "Manage your Postgres clusters with",
+            "title_accent": "confidence",
+            "description": "{app} is the specialized environment to organize, validate, and version control your PostgreSQL schemas. Deep integration for professional data engineering.",
+            "cta": "Start Managing Postgres"
+        },
+        "preview_projects": {
+            "window_title": "PostgreSQL Projects",
+            "connected": "Connected",
+            "tables_label": "{count} tables",
+            "production_main": {
+                "name": "production-main",
+                "provider": "AWS"
+            },
+            "analytics_replica": {
+                "name": "analytics-replica",
+                "provider": "Azure"
+            },
+            "staging_dev": {
+                "name": "staging-dev",
+                "provider": "Local"
+            }
+        },
+        "features": {
+            "title": "Specialized PostgreSQL Toolset",
+            "description": "Stop using generic managers. DBManager understands the nuances of Postgres schemas and data types.",
+            "native_support": {
+                "title": "PostgreSQL Native Support",
+                "description": "Deep integration with Postgres features: schemas, enums, and native geometric types."
+            },
+            "jsonb_validation": {
+                "title": "JSONB Validation",
+                "description": "Validate your JSONB columns against strict JSON Schema standards directly in the editor."
+            },
+            "type_integrity": {
+                "title": "Strict Type Integrity",
+                "description": "Manage constraints, foreign keys, and custom types to ensure your data stays consistent."
+            },
+            "schema_organization": {
+                "title": "Schema Organization",
+                "description": "Group your tables into logical projects and namespaces for better navigation."
+            },
+            "versioning": {
+                "title": "Migration Versioning",
+                "description": "Track how your Postgres schema evolves. Version control for your DDL statements."
+            },
+            "one_click_import": {
+                "title": "One-Click Import",
+                "description": "Import existing schemas from SQL dumps or external files and map them to Postgres in seconds."
+            }
+        },
+        "footer": {
+            "copyright": "\u00a9 2026 {app}. All rights reserved."
+        }
+    },
     "common": {
         "validation": {
             "required": "Field is required",

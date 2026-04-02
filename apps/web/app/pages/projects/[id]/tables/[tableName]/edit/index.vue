@@ -12,7 +12,7 @@
     definePageMeta({
         title: "projects.id.tables.edit.header.title",
         layout: "sidebar",
-        middleware: ["table-validation", "internal-callback-url"],
+        middleware: ["sidebase-auth", "table-validation", "internal-callback-url"],
         i18n: {
             paths: {
                 en: "/projects/[id]/tables/[tableName]",
@@ -39,8 +39,9 @@
     setI18nParams({ en: { id: projectId.value, tableName: tableName.value } });
 
     const { $api, $localePath } = useNuxtApp();
+    const config = useAppConfig();
     const callbackUrl = useRouteQuery(
-        "callbackUrl",
+        config.constants.CALLBACK_KEY,
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
     );
     const KEY = NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value);

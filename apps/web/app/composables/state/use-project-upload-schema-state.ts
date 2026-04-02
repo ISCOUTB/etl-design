@@ -146,22 +146,18 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             if (!file) {
                 clearSchemaErrors();
             }
-            state.value = { ...state.value, uploadedFile: file, tableName: file?.nameWithoutExt };
+            state.value.uploadedFile = file;
+            state.value.tableName = file?.nameWithoutExt;
         }
 
         function setTableName(tableName: string) {
-            state.value = {
-                ...state.value,
-                tableName,
-            };
+            state.value.tableName = tableName;
         }
 
         function addSchemaError(error: SchemaError) {
-            const already = errors.value.some((e) => e.key === error.key);
-            if (already) {
-                return;
+            if (!errors.value.some((e) => e.key === error.key)) {
+                errors.value.push(error);
             }
-            errors.value = [...errors.value, error];
         }
 
         function removeSchemaError(key: SchemaError["key"]) {
@@ -169,19 +165,15 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
         }
 
         function clearSchemaErrors() {
-            errors.value = [];
+            errors.value.length = 0;
         }
 
         function setColumnConfig(columnKey: string, config: ColumnConfig) {
-            state.value.columnsConfig = {
-                ...state.value.columnsConfig,
-                [columnKey]: config,
-            };
+            state.value.columnsConfig[columnKey] = config;
         }
 
         function patchColumnConfig(columnKey: string, patch: Partial<ColumnConfig>) {
             const current = state.value.columnsConfig[columnKey] ?? SchemaUtils.getColumnConfig();
-
             setColumnConfig(columnKey, { ...current, ...patch } as ColumnConfig);
         }
 

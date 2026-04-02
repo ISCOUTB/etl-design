@@ -72,7 +72,7 @@ async def list_tasks(
             import_name=f"{project_id}__{table_name}", task=task
         )
     )
-    if not response["tasks"]:
-        raise TaskNotFoundException()
 
-    return response["tasks"]
+    tasks = response.get("tasks") or []
+
+    return tasks

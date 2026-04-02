@@ -1,7 +1,10 @@
 <script setup lang="ts">
+    import { toast } from "vue-sonner";
+
     definePageMeta({
         title: "auth.sign_up.title",
         auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
+        middleware: ["propagate-callback-url"],
         i18n: {
             paths: {
                 en: "/auth/sign-up",
@@ -19,6 +22,28 @@
         ogLocale: () => locale.value.replace("-", "_"),
         robots: "noindex, follow",
     });
+
+    const router = useRouter();
+    const { $localeRoute } = useNuxtApp();
+    function handleSuccess(email: string) {
+        toast.success($t("auth.events.user_created.title"), {
+            description: $t("auth.events.user_created.description", {
+                email,
+            }),
+        });
+
+        router.push(
+            $localeRoute({
+                name: "auth-sign-in",
+                query: { email },
+            }),
+        );
+    }
+
+    const errorToast = useErrorToast();
+    function handleError(error: unknown) {
+        errorToast.handleServer(error);
+    }
 </script>
 
 <template>
@@ -41,7 +66,7 @@
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AuthSignUpForm />
+                    <AuthSignUpForm @sucess="handleSuccess" @error="handleError" />
                 </CardContent>
             </Card>
             <div class="flex justify-end space-x-2">

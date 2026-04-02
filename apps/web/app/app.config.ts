@@ -40,4 +40,7 @@ export default defineAppConfig({
         },
         delimiter: ",",
     },
+    constants: {
+        CALLBACK_KEY: "callbackUrl",
+    },
 });

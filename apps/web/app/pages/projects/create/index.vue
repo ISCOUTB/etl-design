@@ -2,6 +2,7 @@
     definePageMeta({
         title: "projects.create.header.title",
         layout: "sidebar",
+        middleware: ["sidebase-auth"],
         i18n: {
             paths: {
                 en: "/projects/create",

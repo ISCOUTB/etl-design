@@ -40,7 +40,11 @@
                         }}
                     </CardDescription>
                 </FieldContent>
-                <DropdownMenuRoot :context="project" :items="dropdownItems">
+                <DropdownMenuRoot
+                    :context="project"
+                    :items="dropdownItems"
+                    :root-props="{ modal: false }"
+                >
                     <template #trigger>
                         <Button
                             variant="ghost"

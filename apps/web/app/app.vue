@@ -23,7 +23,7 @@
 <template>
     <div>
         <NuxtLayout>
-            <NuxtLoadingIndicator />
+            <NuxtLoadingIndicator color="var(--primary)" />
             <NuxtPage :transition="{ css: false, mode: 'out-in', onBeforeEnter, onLeave }" />
             <Toaster rich-colors />
         </NuxtLayout>

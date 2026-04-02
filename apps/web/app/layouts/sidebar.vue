@@ -1,6 +1,14 @@
+<script setup lang="ts">
+    const auth = useAuth();
+
+    const open = useCookie(NuxtKeys.Sidebar.CookieOpen, {
+        default: () => false,
+    });
+</script>
+
 <template>
     <LayoutDefault>
-        <SidebarProvider>
+        <SidebarProvider v-model:open="open">
             <LayoutAppSidebar collapsible="icon" />
 
             <SidebarInset>
@@ -15,9 +23,21 @@
                                 class="mr-2 data-[orientation=vertical]:h-4"
                             />
                         </div>
-                        <div class="flex space-x-2 items-center pointer-events-auto">
-                            <SettingsLocale :content-props="{ side: 'bottom', align: 'end' }" />
-                            <SettingsColorMode :content-props="{ side: 'bottom', align: 'end' }" />
+
+                        <div class="flex space-x-2">
+                            <div v-if="auth.status.value === 'unauthenticated'" class="space-x-2">
+                                <Button variant="secondary">
+                                    {{ $t("auth.sign_up.title") }}
+                                </Button>
+                                <Button variant="outline"> {{ $t("auth.sign_in.title") }} </Button>
+                            </div>
+
+                            <div class="flex space-x-2 items-center pointer-events-auto">
+                                <SettingsLocale :content-props="{ side: 'bottom', align: 'end' }" />
+                                <SettingsColorMode
+                                    :content-props="{ side: 'bottom', align: 'end' }"
+                                />
+                            </div>
                         </div>
                     </div>
                 </header>
