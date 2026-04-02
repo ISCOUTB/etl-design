@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    import { ArrowLeft, Home } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
     definePageMeta({
@@ -85,9 +86,21 @@
                     <AuthSignInForm @sucess="handleSuccess" @error="handleError" />
                 </CardContent>
             </Card>
-            <div class="flex justify-end space-x-2">
-                <SettingsLocale />
-                <SettingsColorMode :content-props="{ side: 'bottom', align: 'end' }" />
+            <div class="flex justify-between space-x-2">
+                <div class="flex space-x-2">
+                    <Button variant="outline" class="cursor-pointer" @click="$router.back()">
+                        <ArrowLeft />
+                    </Button>
+                    <Button variant="outline" as-child>
+                        <NuxtLink :to="$localeRoute({ name: 'index' })">
+                            <Home />
+                        </NuxtLink>
+                    </Button>
+                </div>
+                <div class="flex space-x-2">
+                    <SettingsLocale />
+                    <SettingsColorMode :content-props="{ side: 'bottom', align: 'end' }" />
+                </div>
             </div>
         </div>
     </div>

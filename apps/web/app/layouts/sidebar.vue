@@ -26,10 +26,16 @@
 
                         <div class="flex space-x-2">
                             <div v-if="auth.status.value === 'unauthenticated'" class="space-x-2">
-                                <Button variant="secondary">
-                                    {{ $t("auth.sign_up.title") }}
+                                <Button variant="secondary" as-child>
+                                    <NuxtLink :to="$localeRoute({ name: 'auth-sign-up' })">
+                                        {{ $t("auth.sign_up.title") }}
+                                    </NuxtLink>
                                 </Button>
-                                <Button variant="outline"> {{ $t("auth.sign_in.title") }} </Button>
+                                <Button variant="outline">
+                                    <NuxtLink :to="$localeRoute({ name: 'auth-sign-in' })">
+                                        {{ $t("auth.sign_in.title") }}
+                                    </NuxtLink>
+                                </Button>
                             </div>
 
                             <div class="flex space-x-2 items-center pointer-events-auto">

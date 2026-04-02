@@ -36,8 +36,7 @@
                 action: () => {
                     auth.signOut({
                         callbackUrl: $localePath({
-                            name: "auth-sign-in",
-                            query: { email: auth.data.value?.user.email },
+                            name: "index",
                         }),
                     });
 
@@ -58,6 +57,7 @@
                 align: 'end',
                 sideOffset: 4,
             }"
+            :root-props="{ modal: false }"
         >
             <template #trigger>
                 <SidebarMenuButton
