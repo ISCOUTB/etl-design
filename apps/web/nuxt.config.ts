@@ -42,10 +42,6 @@ export default defineNuxtConfig({
             },
         },
     },
-    sourcemap: {
-        client: true,
-        server: true,
-    },
     modules: [
         "@nuxt/eslint",
         "@vite-pwa/nuxt",
@@ -206,8 +202,10 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     $development: {
         debug: true,
+        sourcemap: true,
     },
     $production: {
+        sourcemap: false,
         site: {
             indexable: true,
         },

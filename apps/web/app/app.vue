@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { Toaster } from "vue-sonner";
+    import { Sonner } from "@/components/ui/sonner";
 
     const { $gsap } = useNuxtApp();
     const { finalizePendingLocaleChange } = useI18n();
@@ -25,7 +25,7 @@
         <NuxtLayout>
             <NuxtLoadingIndicator color="var(--primary)" />
             <NuxtPage :transition="{ css: false, mode: 'out-in', onBeforeEnter, onLeave }" />
-            <Toaster rich-colors />
+            <Sonner rich-colors />
         </NuxtLayout>
     </div>
 </template>

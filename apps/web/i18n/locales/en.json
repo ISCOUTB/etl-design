@@ -30,7 +30,7 @@
         },
         "features": {
             "title": "Specialized PostgreSQL Toolset",
-            "description": "Stop using generic managers. DBManager understands the nuances of Postgres schemas and data types.",
+            "description": "Stop using generic managers. {app} understands the nuances of Postgres schemas and data types.",
             "native_support": {
                 "title": "PostgreSQL Native Support",
                 "description": "Deep integration with Postgres features: schemas, enums, and native geometric types."

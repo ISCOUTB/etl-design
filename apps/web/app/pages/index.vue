@@ -104,15 +104,15 @@
 <template>
     <div class="flex min-h-screen flex-col bg-background">
         <main class="flex-1">
-            <section class="relative overflow-hidden border-b">
+            <section class="relative overflow-hidden">
                 <div
                     class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-muted/50 via-background to-background"
                 />
                 <div class="mx-auto max-w-6xl px-4 py-24 md:py-32">
                     <div class="mx-auto max-w-3xl text-center">
-                        <UiBadge variant="secondary" class="mb-4">
+                        <Badge variant="secondary" class="mb-4">
                             {{ $t("home.hero.badge") }}
-                        </UiBadge>
+                        </Badge>
                         <h1
                             class="text-balance text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
                         >
@@ -126,7 +126,7 @@
                             class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
                         >
                             <Button size="lg" as-child>
-                                <NuxtLink to="/projects/create">
+                                <NuxtLink :to="$localeRoute({ name: 'projects-create' })">
                                     {{ $t("home.hero.cta") }}
                                     <ArrowRight class="ml-2 size-4" />
                                 </NuxtLink>
@@ -187,6 +187,8 @@
                 </div>
             </section>
 
+            <Separator />
+
             <section id="features" class="py-24">
                 <div class="mx-auto max-w-6xl px-4">
                     <div class="mx-auto max-w-2xl text-center">
@@ -194,7 +196,7 @@
                             {{ $t("home.features.title") }}
                         </h2>
                         <p class="mt-4 text-muted-foreground">
-                            {{ $t("home.features.description") }}
+                            {{ $t("home.features.description", { app: $t("layouts.title") }) }}
                         </p>
                     </div>
 
@@ -219,7 +221,9 @@
             </section>
         </main>
 
-        <footer class="border-t py-12">
+        <Separator />
+
+        <footer class="py-12">
             <div class="mx-auto max-w-6xl px-4">
                 <div class="flex flex-col items-center justify-between gap-6 md:flex-row">
                     <div class="flex items-center gap-2">
