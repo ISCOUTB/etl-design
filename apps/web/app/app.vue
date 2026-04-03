@@ -23,7 +23,7 @@
 <template>
     <div>
         <NuxtLayout>
-            <NuxtLoadingIndicator color="var(--primary)" />
+            <NuxtLoadingIndicator color="var(--accent)" />
             <NuxtPage :transition="{ css: false, mode: 'out-in', onBeforeEnter, onLeave }" />
             <Sonner rich-colors />
         </NuxtLayout>

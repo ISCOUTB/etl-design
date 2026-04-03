@@ -122,7 +122,7 @@
 
     const events = useAppEvents();
     onMounted(() => {
-        views.dispatch.preload([state.VIEWS.value.UploadFile, state.VIEWS.value.Settings]);
+        views.dispatch.preload();
         events.on("event:projects:change-tab", ({ value }) => views.dispatch.setActive(value));
     });
 </script>

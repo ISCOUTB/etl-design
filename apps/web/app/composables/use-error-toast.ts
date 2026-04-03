@@ -143,7 +143,7 @@ export default function () {
             return;
         }
 
-        if (error instanceof FetchError) {
+        if (error instanceof FetchError && error.data) {
             const parsedError = ApiErrorSchema.safeParse(error.data);
             console.warn(parsedError);
             if (!parsedError.success) {

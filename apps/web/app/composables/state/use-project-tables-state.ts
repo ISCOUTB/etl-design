@@ -1,24 +1,16 @@
+import z from "zod";
+
 interface State {
-    loading: boolean;
     tableSchemas: MongoRaw[];
     selectedSchema: MongoRaw | undefined;
-    tasks: {
-        validation: unknown[];
-    };
     selectedFiles: Record<MongoRaw["id"], Schemas.Schema.UploadedFile | undefined>;
 }
 
 export const [useProvideProjectTablesState, useProjectTablesState] = createInjectionState(
     (initialId: string | undefined) => {
-        const { $api } = useNuxtApp();
-
         const state = useState<State>(NuxtKeys.Projects.Tables.TableState(initialId), () => ({
-            loading: false,
             tableSchemas: [],
             selectedSchema: undefined,
-            tasks: {
-                validation: [],
-            },
             selectedFiles: {},
         }));
 
@@ -26,10 +18,6 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
             method: "GET",
             key: NuxtKeys.Projects.Tables.RawSchemas(initialId),
         });
-
-        function setLoading(value: boolean) {
-            state.value.loading = value;
-        }
 
         function setSchemas(schemas: MongoRaw[]) {
             state.value.tableSchemas = schemas;
@@ -65,6 +53,67 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
             { immediate: true },
         );
 
+        const _TasksResponse = z.array(ApiResponse());
+        const { data: tasks, refresh } = useAsyncData(
+            () =>
+                NuxtKeys.Projects.Tables.Tasks(
+                    initialId,
+                    TableUtils.getTableName(state.value.selectedSchema?.import_name),
+                ),
+            async (nuxtApp, { signal }) => {
+                if (!state.value.selectedSchema) {
+                    return [];
+                }
+
+                try {
+                    const response = await Promise.all([
+                        nuxtApp.$api(`/tasks/project/${initialId}`, {
+                            method: "GET",
+                            query: {
+                                table_name: TableUtils.getTableName(
+                                    state.value.selectedSchema.import_name,
+                                ),
+                                task: API_CONSTANTS.TASK.VALIDATION_TASK,
+                            },
+                            signal,
+                        }),
+                        nuxtApp.$api(`/tasks/project/${initialId}`, {
+                            method: "GET",
+                            query: {
+                                table_name: TableUtils.getTableName(
+                                    state.value.selectedSchema.import_name,
+                                ),
+                                task: API_CONSTANTS.TASK.INSERTION_TASK,
+                            },
+                            signal,
+                        }),
+                    ]);
+
+                    return response;
+                } catch (error) {
+                    errorToast.handleServer(error);
+                }
+            },
+            {
+                transform: (response) => {
+                    if (!response) {
+                        return [];
+                    }
+
+                    const [_validation, _insertion] = response;
+                    const validation = _TasksResponse.safeParse(_validation);
+                    const insertion = _TasksResponse.safeParse(_insertion);
+
+                    if (!validation.success || !insertion.success) {
+                        errorToast.handle(ResponseCodesRecord.Server.BadPayload);
+                        return [];
+                    }
+
+                    return [validation.data, insertion.data];
+                },
+            },
+        );
+
         watch(
             () => state.value.selectedSchema,
             (schema) => {
@@ -72,32 +121,13 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
                     return;
                 }
 
-                setLoading(true);
-                Promise.all([
-                    $api(`/tasks/project/${initialId}`, {
-                        method: "GET",
-                        query: {
-                            table_name: TableUtils.getTableName(schema.import_name),
-                            task: API_CONSTANTS.TASK.VALIDATION_TASK,
-                        },
-                    }),
-                    $api(`/tasks/project/${initialId}`, {
-                        method: "GET",
-                        query: {
-                            table_name: TableUtils.getTableName(schema.import_name),
-                            task: API_CONSTANTS.TASK.INSERTION_TASK,
-                        },
-                    }),
-                ])
-                    .then((values) => console.warn(values))
-                    .catch((error) => console.error(error))
-                    .finally(() => setLoading(false));
+                refresh();
             },
-            { deep: true },
         );
 
         return {
             state,
+            tasks,
             dispatch: {
                 setSchemas,
                 setUploadedFile,

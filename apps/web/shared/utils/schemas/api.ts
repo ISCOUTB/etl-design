@@ -5,7 +5,7 @@ export const ApiErrorSchema = z.looseObject({
     message: z.string(),
 });
 
-const PaginatedResponseObject = z.object({
+const _PaginatedResponseObject = z.object({
     total: z.coerce.number().int(),
     page: z.coerce.number().int(),
     limit: z.coerce.number().int(),
@@ -15,7 +15,24 @@ const PaginatedResponseObject = z.object({
 });
 
 export function PaginatedResponse<T extends z.ZodType>(object: T) {
-    return PaginatedResponseObject.extend({ items: z.array(object) });
+    return _PaginatedResponseObject.extend({ items: z.array(object) });
+}
+
+const _ApiResponseObject = z.object({
+    status: z.string(),
+    code: z.coerce.number().int(),
+    message: z.string(),
+});
+
+export function ApiResponse(): z.ZodObject<
+    Prettify<typeof _ApiResponseObject.shape & { data: z.ZodRecord<z.ZodString, z.ZodString> }>
+>;
+export function ApiResponse<T extends z.ZodType>(
+    object: T,
+): z.ZodObject<Prettify<typeof _ApiResponseObject.shape & { data: T }>>;
+export function ApiResponse<T extends z.ZodType>(object?: T) {
+    const schema = object ?? z.record(z.string(), z.string());
+    return _ApiResponseObject.extend({ data: schema });
 }
 
 export const BaseProjectSchema = z.object({
