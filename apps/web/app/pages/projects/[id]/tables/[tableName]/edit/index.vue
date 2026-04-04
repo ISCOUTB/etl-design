@@ -12,10 +12,36 @@
     definePageMeta({
         title: "projects.id.tables.edit.header.title",
         layout: "sidebar",
-        middleware: ["sidebase-auth", "table-validation", "internal-callback-url"],
+        middleware: [
+            "sidebase-auth",
+            "project-validation",
+            "table-validation",
+            "internal-callback-url",
+        ],
         i18n: {
             paths: {
                 en: "/projects/[id]/tables/[tableName]",
+            },
+        },
+        breadcrumb: {
+            options: {
+                parent: {
+                    options: {
+                        parent: {
+                            kind: "link",
+                            overrides: {
+                                label: {
+                                    keypath: "PROJECT_TITLE",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            overrides: {
+                label: {
+                    keypath: "TABLE_NAME",
+                },
             },
         },
     });
@@ -38,18 +64,27 @@
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value, tableName: tableName.value } });
 
+    const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(projectId.value));
+
     const { $api, $localePath } = useNuxtApp();
     const config = useAppConfig();
     const callbackUrl = useRouteQuery(
         config.constants.CALLBACK_KEY,
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
     );
-    const KEY = NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value);
-    const sharedState = useState<MongoRaw>(KEY);
+    const table = useState<MongoRaw>(
+        NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
+    );
+
+    const { BREADCRUMB_OVERRIDES } = useGlobalState();
+    watchEffect(() => {
+        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = project.value.name;
+        BREADCRUMB_OVERRIDES.value.TABLE_NAME = tableName.value;
+    });
 
     const initialValues = {
         tableName: tableName.value,
-        columns: Object.entries(sharedState.value.active_schema.properties).map<ColumnDefinition>(
+        columns: Object.entries(table.value.active_schema.properties).map<ColumnDefinition>(
             ([name, def]) => ({
                 name,
                 type: def.type || "string",
@@ -84,8 +119,8 @@
                 table_name: values.tableName,
             },
             body: {
-                $schema: sharedState.value.active_schema.$schema,
-                type: sharedState.value.active_schema.type,
+                $schema: table.value.active_schema.$schema,
+                type: table.value.active_schema.type,
                 required: values.columns
                     .filter((column) => !column.optional)
                     .map((column) => column.name),
@@ -96,7 +131,9 @@
         })
             .then(async () => {
                 await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(projectId.value));
-                clearNuxtData(KEY);
+                clearNuxtData(
+                    NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
+                );
 
                 router.push(callbackUrl.value);
             })
@@ -179,7 +216,7 @@
                             <FieldDescription>
                                 {{
                                     $t("projects.id.tables.edit.fields.table_id", {
-                                        id: sharedState.id,
+                                        id: table.id,
                                     })
                                 }}
                             </FieldDescription>

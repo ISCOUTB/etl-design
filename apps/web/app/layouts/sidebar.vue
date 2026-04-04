@@ -16,12 +16,13 @@
                     class="sticky top-0 z-10 flex h-16 shrink-0 items-center backdrop-blur-sm bg-background/80 border-b border-border/10 rounded-t-xl"
                 >
                     <div class="flex justify-between grow px-4">
-                        <div class="flex space-x-2 items-center">
+                        <div class="flex items-center space-x-3">
                             <SidebarTrigger class="-ml-1" />
                             <Separator
                                 orientation="vertical"
-                                class="mr-2 data-[orientation=vertical]:h-4"
+                                class="data-[orientation=vertical]:h-4"
                             />
+                            <LayoutBreadcrumbs />
                         </div>
 
                         <div class="flex space-x-2">

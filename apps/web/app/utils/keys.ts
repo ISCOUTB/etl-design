@@ -108,6 +108,7 @@ export const NuxtKeys = {
     Params: {
         NoDefaultValue: "keys:params:default-value",
     },
+    GlobalState: "state:global",
 } as const;
 
 export const ModalKeys = {

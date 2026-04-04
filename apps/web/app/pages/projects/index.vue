@@ -23,6 +23,13 @@
                 en: "/projects",
             },
         },
+        breadcrumb: {
+            options: {
+                parent: {
+                    kind: "link",
+                },
+            },
+        },
     });
 
     const { locale } = useI18n();

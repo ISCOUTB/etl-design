@@ -16,6 +16,9 @@ export default defineAppConfig({
         useModal: {
             maxStorageLength: 3,
         },
+        useBreadcrumbItems: {
+            maxItems: 4,
+        },
     },
     pagination: {
         defaultPageSize: 10,

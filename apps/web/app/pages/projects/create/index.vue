@@ -8,6 +8,13 @@
                 en: "/projects/create",
             },
         },
+        breadcrumb: {
+            options: {
+                parent: {
+                    kind: "link",
+                },
+            },
+        },
     });
 
     const { locale } = useI18n();

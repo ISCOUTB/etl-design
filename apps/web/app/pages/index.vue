@@ -17,6 +17,9 @@
                 en: "/",
             },
         },
+        breadcrumb: {
+            label: "home.title",
+        },
     });
 
     export interface Feature {

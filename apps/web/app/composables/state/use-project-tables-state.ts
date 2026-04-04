@@ -111,6 +111,7 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
 
                     return [validation.data, insertion.data];
                 },
+                immediate: false,
             },
         );
 

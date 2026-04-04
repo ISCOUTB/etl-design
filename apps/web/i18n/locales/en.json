@@ -4,6 +4,7 @@
         "description": "Framework for migrating business logic from spreadsheets to SQL database engines."
     },
     "home": {
+        "title": "Home",
         "hero": {
             "badge": "Optimized for PostgreSQL",
             "title_prefix": "Manage your Postgres clusters with",

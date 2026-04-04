@@ -11,28 +11,40 @@
                 en: "/projects/[id]",
             },
         },
+        breadcrumb: {
+            options: {
+                parent: {
+                    kind: "link",
+                },
+            },
+            overrides: {
+                label: {
+                    keypath: "PROJECT_TITLE",
+                },
+            },
+        },
     });
 
     const { locale } = useI18n();
-
+    const { BREADCRUMB_OVERRIDES } = useGlobalState();
+    const auth = useAuth();
+    const projectId = useRouteParams("id");
+    const setI18nParams = useSetI18nParams();
+    setI18nParams({ en: { id: projectId.value } });
+    const { state, uploadSchema } = useProvideProjectState(projectId.value?.toString());
     useSeoMeta({
+        title: () =>
+            $t("projects.id.title", {
+                username: auth.data.value?.user.name,
+                projectName: state.project.value?.name,
+            }),
         ogType: "website",
         ogTitle: () => $t("projects.id.fallback_title"),
         ogLocale: () => locale.value.replace("-", "_"),
         robots: "index, follow",
     });
-
-    const projectId = useRouteParams("id");
-    const setI18nParams = useSetI18nParams();
-    setI18nParams({ en: { id: projectId.value } });
-    const { state, uploadSchema } = useProvideProjectState(projectId.value?.toString());
-
-    const auth = useAuth();
-    useHead({
-        title: $t("projects.id.title", {
-            username: auth.data.value?.user.name,
-            projectName: state.project.value?.name,
-        }),
+    watchEffect(() => {
+        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = state.project.value.name;
     });
 
     const animations = useViewManagerAnimations();
