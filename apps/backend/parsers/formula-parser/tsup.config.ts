@@ -22,7 +22,8 @@ export default defineConfig(() => {
         minify: isProduction,
         platform: "node",
         external: ["@grpc/grpc-js", "google-protobuf"],
-        noExternal: ["@etl-design/packages-proto-utils-js"],
+        noExternal: ["@etl-design/packages-proto-utils-js", "@opentelemetry/sdk-trace-node"],
+        treeshake: false,
         outExtension({ format }) {
             if (format === "esm") {
                 return {

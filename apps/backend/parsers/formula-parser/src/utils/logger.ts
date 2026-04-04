@@ -8,9 +8,15 @@ export const logger = winston.createLogger({
         debug: 3,
     },
     format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ level, message }) => {
-            return `[server] [formula-parser] ${level}: ${message}`;
+        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss,SSS" }),
+        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+            return JSON.stringify({
+                asctime: timestamp,
+                levelname: level.toUpperCase(),
+                name: "formula-parser",
+                message,
+                ...meta,
+            });
         }),
     ),
     transports: [new winston.transports.Console()],

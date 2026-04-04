@@ -13,8 +13,10 @@ export function handler(formula: string) {
         const { DEBUG_FORMULA_PARSER } = yield* settings;
 
         if (DEBUG_FORMULA_PARSER) {
-            logger.debug(`received formula: ${formula}`);
-            logger.debug(`AST: ${JSON.stringify(ast, null, 2)}`);
+            logger.debug("received formula", { formula });
+            logger.debug("AST", {
+                AST: JSON.stringify(ast, null, 2),
+            });
         }
 
         response.formula = formula;
