@@ -5,9 +5,10 @@
     interface Props {
         value: MaybeRefOrGetter<string>;
         maskChar?: string;
+        timeout?: number;
     }
 
-    const props = withDefaults(defineProps<Props>(), { maskChar: "\u2022" });
+    const props = withDefaults(defineProps<Props>(), { maskChar: "\u2022", timeout: 3000 });
 
     const [visible, toggleVisible] = useToggle();
 
@@ -19,6 +20,24 @@
 
         return props.maskChar.repeat(Math.max(value.value.length, 8));
     });
+
+    const { start, stop } = useTimeoutFn(
+        () => {
+            visible.value = false;
+        },
+        props.timeout,
+        { immediate: true },
+    );
+
+    function toggle() {
+        const value = toggleVisible();
+        if (value) {
+            start();
+            return;
+        }
+
+        stop();
+    }
 </script>
 
 <template>
@@ -26,10 +45,14 @@
         <Tooltip :delay-duration="500">
             <TooltipTrigger>
                 <span
-                    class="font-mono text-sm transition-all duration-300 select-none cursor-pointer flex items-center"
-                    :class="cn(!visible && 'blur-sm')"
+                    :class="
+                        cn(
+                            'font-mono text-sm transition-all duration-300 select-none cursor-pointer flex items-center',
+                            !visible && 'blur-sm',
+                        )
+                    "
                     aria-live="polite"
-                    @click="() => toggleVisible()"
+                    @click="() => toggle()"
                 >
                     {{ displayValue }}
                     <Dot v-if="visible" class="text-green-500 size-5" />

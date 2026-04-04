@@ -182,7 +182,7 @@
                         )
                     "
                 >
-                    {{ connectionString }}
+                    <SensitiveInfoInline :value="connectionString" />
                 </code>
                 <Button
                     v-if="validConnectionString"
