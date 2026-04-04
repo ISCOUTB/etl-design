@@ -1,12 +1,16 @@
 <script setup lang="ts">
+    import type { HTMLAttributes } from "vue";
     import { Dot } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     interface Props {
         value: MaybeRefOrGetter<string>;
+        class?: HTMLAttributes["class"];
         maskChar?: string;
         timeout?: number;
     }
+
+    defineOptions({ inheritAttrs: false });
 
     const props = withDefaults(defineProps<Props>(), { maskChar: "\u2022", timeout: 3000 });
 
@@ -49,6 +53,7 @@
                         cn(
                             'font-mono text-sm transition-all duration-300 select-none cursor-pointer flex items-center',
                             !visible && 'blur-sm',
+                            props.class,
                         )
                     "
                     aria-live="polite"

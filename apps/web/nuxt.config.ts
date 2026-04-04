@@ -29,7 +29,8 @@ export default defineNuxtConfig({
                 "tailwind-merge",
                 "file-type",
                 "uuid",
-                "ajv",
+                "ajv", // CJS
+                "class-variance-authority",
             ],
         },
         server: {

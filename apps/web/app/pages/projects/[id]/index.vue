@@ -134,7 +134,7 @@
 
     const events = useAppEvents();
     onMounted(() => {
-        views.dispatch.preload();
+        views.dispatch.preload([state.VIEWS.value.UploadFile, state.VIEWS.value.Tables]);
         events.on("event:projects:change-tab", ({ value }) => views.dispatch.setActive(value));
     });
 </script>

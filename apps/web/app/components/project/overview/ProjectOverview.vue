@@ -12,7 +12,6 @@
         User,
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
-    import { cn } from "@/lib/utils";
 
     const {
         state: { project },
@@ -173,17 +172,10 @@
                 {{ $t("projects.id.sections.overview.connection_string.description") }}
             </p>
 
-            <div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-3">
-                <code
-                    :class="
-                        cn(
-                            'flex-1 truncate font-mono text-sm text-foreground',
-                            !validConnectionString && 'text-muted-foreground italic',
-                        )
-                    "
-                >
-                    <SensitiveInfoInline :value="connectionString" />
-                </code>
+            <div
+                class="flex items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3"
+            >
+                <SensitiveInfoInline :value="connectionString" class="text-foreground" />
                 <Button
                     v-if="validConnectionString"
                     variant="outline"
