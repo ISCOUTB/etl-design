@@ -5,6 +5,7 @@
 
     interface Props<T> {
         state: MaybeRefOrGetter<T | undefined>;
+        disabled?: MaybeRefOrGetter<boolean>;
         supportedFormats?: string;
         dropzoneOptions?: UseDropZoneOptions;
     }
@@ -39,6 +40,7 @@
         ...props.dropzoneOptions,
     });
 
+    const disabled = computed(() => toValue(props.disabled));
     const animations = useSchemaUploadAnimation();
 
     function handleChange(event: Event) {
@@ -60,49 +62,71 @@
         @leave="animations.onUploadStateLeave"
     >
         <template v-if="!state">
-            <Label
-                ref="dropzone"
-                :class="
-                    cn(
-                        'relative min-h-80 cursor-pointer flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
-                        isOverDropZone
-                            ? 'border-primary bg-primary/5'
-                            : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-                    )
-                "
-            >
-                <Input
-                    type="file"
-                    class="sr-only"
-                    :accept="supportedFormats"
-                    @change="handleChange"
-                />
+            <div class="space-y-4">
+                <Label
+                    ref="dropzone"
+                    :class="
+                        cn(
+                            'relative min-h-80 cursor-pointer flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors',
+                            isOverDropZone
+                                ? 'border-primary bg-primary/5'
+                                : 'border-muted-foreground/25 hover:border-muted-foreground/50',
+                            disabled &&
+                                'opacity-60 cursor-not-allowed pointer-events-none grayscale-[0.5] border-muted',
+                        )
+                    "
+                >
+                    <Input
+                        type="file"
+                        :disabled="disabled"
+                        class="sr-only"
+                        :accept="supportedFormats"
+                        @change="handleChange"
+                    />
 
-                <div class="flex flex-col items-center gap-3 text-center">
-                    <slot name="dropzone-content">
-                        <div class="flex size-12 items-center justify-center rounded-full bg-muted">
-                            <Upload class="size-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-foreground">
-                                {{ $t("projects.id.sections.upload_schema.dropzone.title") }}
-                                <span class="text-primary">
-                                    {{ $t("projects.id.sections.upload_schema.dropzone.browse") }}
-                                </span>
-                            </p>
-                            <p class="mt-1 text-xs text-muted-foreground">
-                                <i18n-t keypath="projects.id.sections.upload_schema.dropzone.supported">
-                                    <template #formats>
-                                        <span class="font-bold">
-                                            {{ supportedFormats }}
-                                        </span>
-                                    </template>
-                                </i18n-t>
-                            </p>
-                        </div>
-                    </slot>
+                    <div
+                        :class="
+                            cn(
+                                'flex flex-col items-center gap-3 text-center',
+                                disabled && 'select-none opacity-50',
+                            )
+                        "
+                    >
+                        <slot name="dropzone-content">
+                            <div
+                                class="flex size-12 items-center justify-center rounded-full bg-muted"
+                            >
+                                <Upload class="size-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-foreground">
+                                    {{ $t("projects.id.sections.upload_schema.dropzone.title") }}
+                                    <span class="text-primary">
+                                        {{
+                                            $t("projects.id.sections.upload_schema.dropzone.browse")
+                                        }}
+                                    </span>
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    <i18n-t
+                                        keypath="projects.id.sections.upload_schema.dropzone.supported"
+                                    >
+                                        <template #formats>
+                                            <span class="font-bold">
+                                                {{ supportedFormats }}
+                                            </span>
+                                        </template>
+                                    </i18n-t>
+                                </p>
+                            </div>
+                        </slot>
+                    </div>
+                </Label>
+
+                <div v-if="disabled">
+                    <slot name="disabled" />
                 </div>
-            </Label>
+            </div>
         </template>
 
         <template v-else>

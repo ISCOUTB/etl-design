@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    import type { z } from "zod";
     import { PaginatedResponse, ResponseProjectSchema } from "#shared/utils/schemas/api";
     import {
         AlignLeft,
@@ -80,10 +79,9 @@
         return parsed.data;
     });
 
+    const route = useRoute();
     const modal = useModal();
-    const dropdownItems = computed<
-        Components.GenericDropdown.Item<z.infer<typeof ResponseProjectSchema>>[][]
-    >(() => [
+    const dropdownItems = computed<Components.GenericDropdown.Item<ResponseProject>[][]>(() => [
         [
             {
                 label: "projects.view.dropdown.view.label",
@@ -104,7 +102,13 @@
                         return;
                     }
 
-                    return $localeRoute({ name: "projects-id-edit", params: { id: context.id } });
+                    return $localeRoute({
+                        name: "projects-id-edit",
+                        params: { id: context.id },
+                        query: {
+                            [config.constants.CALLBACK_KEY]: route.fullPath,
+                        },
+                    });
                 },
             },
         ],
@@ -130,9 +134,7 @@
         ],
     ]);
 
-    function makeInfo(
-        project: z.infer<typeof ResponseProjectSchema>,
-    ): Schemas.Project.ProjectInformation[] {
+    function makeInfo(project: ResponseProject): Schemas.Project.ProjectInformation[] {
         return [
             {
                 label: $t("projects.create.fields.db_host.label"),

@@ -24,28 +24,8 @@
         robots: "noindex, follow",
     });
 
-    const config = useAppConfig();
-    const router = useRouter();
-    const runtimeConfig = useRuntimeConfig();
     const { $localeRoute } = useNuxtApp();
-    const callbackUrl = useRouteQuery(
-        config.constants.CALLBACK_KEY,
-        runtimeConfig.public.homePageURL,
-        {
-            transform: (value) => {
-                try {
-                    const parsed = new URL(value, runtimeConfig.public.homePageURL);
-                    return parsed.pathname + parsed.search + parsed.hash;
-                } catch {
-                    if (value.startsWith("/")) {
-                        return value;
-                    }
-
-                    return $localeRoute({ name: "index" });
-                }
-            },
-        },
-    );
+    const { navigate } = useCallbackUrl();
 
     function handleSuccess(email: string) {
         toast.success($t("auth.events.user_logged.title"), {
@@ -54,7 +34,7 @@
             }),
         });
 
-        router.push(callbackUrl.value);
+        navigate();
     }
 
     const errorToast = useErrorToast();

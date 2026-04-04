@@ -47,7 +47,9 @@
             <div class="flex items-center gap-4">
                 <Button variant="ghost" size="icon" class="shrink-0" @click="handleBack">
                     <ArrowLeft class="size-4" />
-                    <span class="sr-only">{{ $t("projects.id.sections.tables.details.back") }}</span>
+                    <span class="sr-only">{{
+                        $t("projects.id.sections.tables.details.back")
+                    }}</span>
                 </Button>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-3">
@@ -88,6 +90,7 @@
                         v-if="tables.state.value.selectedSchema"
                         variant="destructive"
                         :disabled="tables.state.value.selectedSchema.schemas_releases.length > 0"
+                        class="cursor-pointer"
                         @click="handleDelete"
                     >
                         <Trash2 class="size-4" />

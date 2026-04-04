@@ -501,7 +501,11 @@
                         "upload": {
                             "title": "Import Data",
                             "description": "Select a file to import records into your database",
-                            "submit": "Submit"
+                            "submit": "Submit",
+                            "disabled": {
+                                "title": "Missing project configuration",
+                                "description": "You need to define {fields} brefore you can upload any data."
+                            }
                         },
                         "version_history": {
                             "title": "Version History",

@@ -6,6 +6,7 @@
     } = useProject();
 
     const modal = useModal();
+    const config = useAppConfig();
 
     function deleteProject() {
         modal.dispatch.loadComponent({
@@ -45,6 +46,9 @@
                                 $localeRoute({
                                     name: 'projects-id-edit',
                                     params: { id: project.id },
+                                    query: {
+                                        [config.constants.CALLBACK_KEY]: $route.fullPath,
+                                    },
                                 })
                             "
                         >

@@ -67,9 +67,7 @@
     const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(projectId.value));
 
     const { $api, $localePath } = useNuxtApp();
-    const config = useAppConfig();
-    const callbackUrl = useRouteQuery(
-        config.constants.CALLBACK_KEY,
+    const { callbackUrl, navigate } = useCallbackUrl(
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
     );
     const table = useState<MongoRaw>(
@@ -107,7 +105,6 @@
             JSON.stringify(initialValues.columns),
     );
 
-    const router = useRouter();
     const errorToast = useErrorToast();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
@@ -135,7 +132,7 @@
                     NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
                 );
 
-                router.push(callbackUrl.value);
+                navigate();
             })
             .catch((error) => errorToast.handleServer(error))
             .finally(() => (loading.value = false));

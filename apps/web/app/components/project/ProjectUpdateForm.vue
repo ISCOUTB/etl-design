@@ -12,18 +12,23 @@
         Server,
         User,
     } from "lucide-vue-next";
-    import { toast } from "vue-sonner";
 
     interface Props {
         project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema> | undefined>;
     }
 
+    interface Emits {
+        sucess: [];
+        error: [error: unknown];
+        cancel: [];
+    }
+
     defineOptions({ inheritAttrs: false });
 
     const props = defineProps<Props>();
-    const project = computed(() => toValue(props.project));
+    const emit = defineEmits<Emits>();
 
-    const errorToast = useErrorToast();
+    const project = computed(() => toValue(props.project));
 
     const { CreateProjectSchema } = useCreateProjectSchema();
     const { handleSubmit, resetField } = useForm({
@@ -41,8 +46,7 @@
         },
     });
 
-    const { $api, $localeRoute } = useNuxtApp();
-    const router = useRouter();
+    const { $api } = useNuxtApp();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         if (!project.value) {
@@ -72,15 +76,9 @@
                     throw new Error(ResponseCodesRecord.Server.UnknownError);
                 }
 
-                toast.success($t("projects.edit.events.project_updated.title"));
-
-                await refreshNuxtData(NuxtKeys.Projects.Id);
-
-                router.push(
-                    $localeRoute({ name: "projects-id", params: { id: parsedResponse.data.id } }),
-                );
+                emit("sucess");
             })
-            .catch((error) => errorToast.handleServer(error))
+            .catch((error) => emit("error", error))
             .finally(() => (loading.value = false));
     });
 </script>
@@ -458,12 +456,14 @@
                     </span>
                 </Button>
 
-                <Button v-if="project" type="button" variant="destructive" as-child>
-                    <NuxtLink
-                        :to="$localeRoute({ name: 'projects-id', params: { id: project.id } })"
-                    >
-                        {{ $t("common.actions.cancel") }}
-                    </NuxtLink>
+                <Button
+                    v-if="project"
+                    type="button"
+                    variant="destructive"
+                    class="cursor-pointer"
+                    @click="$emit('cancel')"
+                >
+                    {{ $t("common.actions.cancel") }}
                 </Button>
             </div>
         </div>

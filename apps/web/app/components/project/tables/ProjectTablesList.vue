@@ -10,6 +10,7 @@
         tables,
     } = useProject();
 
+    const config = useAppConfig();
     const events = useAppEvents();
     const modal = useModal();
 
@@ -46,7 +47,7 @@
                             id: project.value.id,
                             tableName: TableUtils.getTableName(context.import_name),
                         },
-                        query: { callbackUrl: route.fullPath },
+                        query: { [config.constants.CALLBACK_KEY]: route.fullPath },
                     });
                 },
             },
