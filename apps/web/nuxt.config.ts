@@ -31,6 +31,7 @@ export default defineNuxtConfig({
                 "uuid",
                 "ajv", // CJS
                 "class-variance-authority",
+                "vaul-vue",
             ],
         },
         server: {
