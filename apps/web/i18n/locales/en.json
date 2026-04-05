@@ -1,6 +1,7 @@
 {
     "layouts": {
         "title": "S.L.O.T.H",
+        "tagline": "PostgreSQL Schema Manager & Logic Migrator",
         "description": "Framework for migrating business logic from spreadsheets to SQL database engines."
     },
     "home": {
@@ -317,6 +318,7 @@
         "id": {
             "fallback_title": "My Project",
             "title": "{username}'s Project - {projectName}",
+            "description": "Manage your project configuration, import schemas, data and more",
             "sections": {
                 "overview": {
                     "tab": "General",

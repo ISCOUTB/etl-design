@@ -25,6 +25,9 @@
     });
 
     const { $localeRoute } = useNuxtApp();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
     const { locale } = useI18n();
     const { BREADCRUMB_OVERRIDES } = useGlobalState();
     const projectId = useRouteParams("id");
@@ -32,9 +35,21 @@
     setI18nParams({ en: { id: projectId.value } });
     const { state } = useProvideProjectState(projectId.value?.toString());
     useSeoMeta({
+        description: () => $t("projects.edit.header.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
         ogType: "website",
         ogTitle: () => $t("projects.edit.title"),
+        ogDescription: () => $t("projects.edit.header.description"),
         ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("projects.edit.title"),
+        twitterDescription: () => $t("projects.edit.header.description"),
+
         robots: "noindex, nofollow",
     });
     watchEffect(() => {

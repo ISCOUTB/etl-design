@@ -14,13 +14,26 @@
     });
 
     const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
 
     useSeoMeta({
-        ogType: "website",
         description: () => $t("auth.sign_in.subtitle"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
+        ogType: "website",
         ogTitle: () => $t("auth.sign_in.title"),
         ogDescription: () => $t("auth.sign_in.subtitle"),
         ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("auth.sign_in.title"),
+        twitterDescription: () => $t("auth.sign_in.subtitle"),
+
         robots: "noindex, follow",
     });
 

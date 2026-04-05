@@ -35,6 +35,7 @@ export default defineNuxtConfig({
             ],
         },
         server: {
+            allowedHosts: [".trycloudflare.com"],
             watch: {
                 usePolling: true,
                 interval: 1000,

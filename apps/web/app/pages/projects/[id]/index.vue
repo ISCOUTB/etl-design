@@ -26,6 +26,9 @@
     });
 
     const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
     const { BREADCRUMB_OVERRIDES } = useGlobalState();
     const auth = useAuth();
     const projectId = useRouteParams("id");
@@ -38,10 +41,22 @@
                 username: auth.data.value?.user.name,
                 projectName: state.project.value?.name,
             }),
+        description: () => $t("projects.id.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
         ogType: "website",
         ogTitle: () => $t("projects.id.fallback_title"),
+        ogDescription: () => $t("projects.id.description"),
         ogLocale: () => locale.value.replace("-", "_"),
-        robots: "index, follow",
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("projects.id.fallback_title"),
+        twitterDescription: () => $t("projects.id.description"),
+
+        robots: "noindex, nofollow",
     });
     watchEffect(() => {
         BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = state.project.value.name;

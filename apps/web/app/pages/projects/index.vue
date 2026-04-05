@@ -32,13 +32,26 @@
     });
 
     const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
 
     useSeoMeta({
-        ogType: "website",
         description: () => $t("projects.view.header.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
+        ogType: "website",
         ogTitle: () => $t("projects.view.title"),
         ogDescription: () => $t("projects.view.header.description"),
         ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("projects.view.title"),
+        twitterDescription: () => $t("projects.view.header.description"),
+
         robots: "index, follow",
     });
 

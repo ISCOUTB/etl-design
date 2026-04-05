@@ -47,11 +47,26 @@
     });
 
     const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
 
     useSeoMeta({
+        description: () => $t("projects.id.tables.edit.header.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
         ogType: "website",
         ogTitle: () => $t("projects.id.tables.edit.header.title"),
+        ogDescription: () => $t("projects.id.tables.edit.header.description"),
         ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("projects.id.tables.edit.header.title"),
+        twitterDescription: () => $t("projects.id.tables.edit.header.description"),
+
         robots: "noindex, nofollow",
     });
 

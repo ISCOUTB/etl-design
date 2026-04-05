@@ -18,13 +18,26 @@
     });
 
     const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
 
     useSeoMeta({
-        ogType: "website",
         description: () => $t("projects.create.header.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
+        ogType: "website",
         ogTitle: () => $t("projects.create.header.title"),
         ogDescription: () => $t("projects.create.header.description"),
         ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("projects.create.header.title"),
+        twitterDescription: () => $t("projects.create.header.description"),
+
         robots: "noindex, nofollow",
     });
 </script>
