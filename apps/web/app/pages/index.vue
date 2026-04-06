@@ -10,7 +10,6 @@
     } from "lucide-vue-next";
 
     definePageMeta({
-        title: "layouts.title",
         layout: "sidebar",
         i18n: {
             paths: {

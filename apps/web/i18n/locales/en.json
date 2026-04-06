@@ -317,7 +317,7 @@
         },
         "id": {
             "fallback_title": "My Project",
-            "title": "{username}'s Project - {projectName}",
+            "title": "{projectName} Project",
             "description": "Manage your project configuration, import schemas, data and more",
             "sections": {
                 "overview": {
@@ -525,6 +525,12 @@
                             "primary": "Primary",
                             "unique": "Unique",
                             "optional": "Optional"
+                        },
+                        "events": {
+                            "task_created": {
+                                "title": "A new task has been created succesfully",
+                                "description": "Depending on the file, it may take some time. Please wait."
+                            }
                         }
                     }
                 },

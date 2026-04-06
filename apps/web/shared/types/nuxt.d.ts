@@ -36,7 +36,7 @@ declare module "#app" {
     }
 
     interface PageMeta {
-        title: string;
+        title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
     }
@@ -52,7 +52,7 @@ declare module "vue" {
 
 declare module "vue-router" {
     interface RouteMeta {
-        title: string;
+        title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
     }

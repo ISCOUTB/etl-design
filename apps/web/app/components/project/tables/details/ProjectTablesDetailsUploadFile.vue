@@ -84,6 +84,11 @@
         )
             .then(() => {
                 selectedFile.value = undefined;
+                toast.success($t("projects.id.sections.tables.details.events.task_created.title"), {
+                    description: $t(
+                        "projects.id.sections.tables.details.events.task_created.description",
+                    ),
+                });
             })
             .catch((error) => errorToast.handleServer(error));
     }

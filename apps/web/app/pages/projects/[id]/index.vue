@@ -30,7 +30,6 @@
         public: { homePageURL },
     } = useRuntimeConfig();
     const { BREADCRUMB_OVERRIDES } = useGlobalState();
-    const auth = useAuth();
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
@@ -38,7 +37,6 @@
     useSeoMeta({
         title: () =>
             $t("projects.id.title", {
-                username: auth.data.value?.user.name,
                 projectName: state.project.value?.name,
             }),
         description: () => $t("projects.id.description"),

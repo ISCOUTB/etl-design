@@ -2,8 +2,9 @@
     const { t, te } = useI18n();
     const route = useRoute();
     const head = useLocaleHead();
+
     const title = computed(() => {
-        if (te(route.meta.title)) {
+        if (route.meta.title && te(route.meta.title)) {
             return t(route.meta.title);
         }
 
@@ -15,7 +16,13 @@
         link: head.value.link,
         meta: head.value.meta,
         title: title.value,
-        titleTemplate: "%s",
+        titleTemplate: (titleChunk) => {
+            if (titleChunk) {
+                return `${titleChunk} | ${$t("layouts.title")}`;
+            }
+
+            return $t("layouts.title");
+        },
     }));
 </script>
 
