@@ -304,6 +304,14 @@ services:
             FORMULA_PARSER_HOST: "0.0.0.0"
             FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
             DEBUG_FORMULA_PARSER: "false"
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
+            FORMULA_TRACE_CONTEXT_ENABLED: "true"
+            FORMULA_TRACE_CONTEXT_LOG_HEADERS: "false"
+            OTEL_SERVICE_NAME: formula-parser
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
         networks:
             - monitoring
             - parsers
@@ -330,6 +338,9 @@ services:
                     cpus: "0.5"
             labels:
                 - scaler.enabled=true
+                - prometheus-job=formula-parser
+                - prometheus-port=9090
+                - prometheus-path=/metrics
 
     ddl-generator:
         image: vulcan99/ddl-generator:latest

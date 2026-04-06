@@ -1,50 +1,42 @@
-FROM alpine:latest AS workspace
-
-WORKDIR /workspace
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml /workspace/
-COPY apps/backend/parsers/formula-parser /workspace/apps/backend/parsers/formula-parser/  
-COPY packages/proto-utils/proto-utils-js /workspace/packages/proto-utils/proto-utils-js/
-COPY tools/eslint /workspace/tools/eslint/
-COPY tools/tsconfig /workspace/tools/tsconfig/
-COPY .moon /workspace/.moon/
-
-FROM node:lts AS builder
+FROM node:lts-alpine AS builder
 
 ENV NODE_ENV="production"
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+
 RUN corepack enable
 
-RUN pnpm install -g @moonrepo/cli
+WORKDIR /workspace
 
-WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /workspace/
+COPY apps/backend/parsers/formula-parser /workspace/apps/backend/parsers/formula-parser/
+COPY packages/proto-utils/proto-utils-js /workspace/packages/proto-utils/proto-utils-js/
+COPY tools/eslint /workspace/tools/eslint/
+COPY tools/tsconfig /workspace/tools/tsconfig/
 
-COPY --from=workspace /workspace /app/
+RUN --mount=type=cache,target=/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
 
-RUN --mount=type=cache,target=/app/.pnpm \
-    pnpm i
-
-RUN moon run formula-parser:build
+RUN pnpm --filter @etl-design/apps-formula-parser build
 
 FROM node:lts-alpine AS runner
 
 ENV NODE_ENV="production"
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+
 RUN corepack enable
 
 WORKDIR /app
 
-COPY --from=builder /app/apps/backend/parsers/formula-parser/dist /app/dist
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /app/
+COPY apps/backend/parsers/formula-parser/package.json /app/apps/backend/parsers/formula-parser/package.json
+COPY apps/backend/parsers/formula-parser/dist /app/apps/backend/parsers/formula-parser/dist
+COPY packages/proto-utils/proto-utils-js /app/packages/proto-utils/proto-utils-js/
+COPY tools/eslint /app/tools/eslint/
+COPY tools/tsconfig /app/tools/tsconfig/
 
-COPY --from=builder /app/packages /app/packages/
-COPY --from=builder /app/tools /app/tools/
-COPY --from=builder /app/apps/backend/parsers/formula-parser/package.json /app/package.json
-COPY --from=builder /app/pnpm-lock.yaml /app/pnpm-lock.yaml
-COPY --from=builder /app/pnpm-workspace.yaml /app/pnpm-workspace.yaml
+RUN --mount=type=cache,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile --ignore-scripts
 
-RUN --mount=type=cache,target=/app/.pnpm \
-    pnpm i --prod
-
-CMD [ "node", "dist/server.cjs" ]
+CMD ["node", "apps/backend/parsers/formula-parser/dist/server.cjs"]

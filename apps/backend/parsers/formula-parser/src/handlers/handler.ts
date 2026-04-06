@@ -4,9 +4,22 @@ import { settings } from "@/core/";
 import { parseFormula } from "@/services/parse";
 import { Convert, logger } from "@/utils/";
 
-export function handler(formula: string) {
+type TraceLogContext = {
+    trace_id?: string;
+    span_id?: string;
+    trace_flags?: string;
+};
+
+export function handler(formula: string, traceLogContext: TraceLogContext = {}) {
     return Effect.gen(function* () {
         const response = new formula_parser.FormulaParserResponse();
+
+        logger.info("[HANDLER] Parsing formula", {
+            module: "handler",
+            funcName: "handler",
+            formula,
+            ...traceLogContext,
+        });
 
         const { tokens, ast, error } = yield* parseFormula(formula);
 

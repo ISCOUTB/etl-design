@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "license": "ISC",
     "scripts": {
+        "build": "tsup",
         "parse-formula": "node dist/cli.cjs"
     },
     "dependencies": {
@@ -20,6 +21,7 @@
         "excel-formula-tokenizer": "^3.0.0",
         "google-protobuf": "^4.0.2",
         "grpc-tools": "^1.13.1",
+        "prom-client": "^15.1.3",
         "winston": "^3.19.0",
         "zod": "^4.3.6"
     },

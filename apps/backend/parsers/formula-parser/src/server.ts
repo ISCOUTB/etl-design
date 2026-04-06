@@ -1,187 +1,214 @@
-import type { sendUnaryData, ServerUnaryCall } from "@grpc/grpc-js";
-import type { formula_parser } from "@sloth/packages-proto-utils-js";
-import { Server, ServerCredentials } from "@grpc/grpc-js";
-import { SpanStatusCode, trace } from "@opentelemetry/api";
-import {
-    requestDeserialize,
-    requestSerialize,
-    responseDeserialize,
-    responseSerialize,
-} from "@sloth/packages-proto-utils-js";
+import process from "node:process";
+import type { ServerUnaryCall, sendUnaryData, Server } from "@grpc/grpc-js";
+import { status, Server as GrpcServer, ServerCredentials } from "@grpc/grpc-js";
+import { formula_parser } from "@sloth/packages-proto-utils-js";
+import { context, trace } from "@opentelemetry/api";
 import { Effect } from "effect";
-import { BindPortError, settings } from "@/core/";
 import { handler } from "@/handlers/handler";
-import { setupTelemetry } from "@/instrumentation";
-import { logger } from "@/utils/";
+import { settings, type Settings } from "@/core";
+import { logger } from "@/utils/logger";
+import {
+    configureOtelTracing,
+    getGrpcTracer,
+    shutdownOtelTracing,
+} from "@/utils/telemetry";
+import {
+    extractTraceContextFromCall,
+} from "@/utils/trace-context";
+import {
+    getGrpcMetricBaseLabels,
+    incrementGrpcServerHandled,
+    incrementGrpcServerMsgReceived,
+    incrementGrpcServerMsgSent,
+    incrementGrpcServerStarted,
+    startGrpcServerHandledLatencyTimer,
+    startGrpcServerHandlingTimer,
+    startPrometheusMetricsServer,
+} from "@/utils/metrics";
 
-const tracer = trace.getTracer("formula-parser");
+const SERVICE_NAME = "formula-parser";
+const METHOD_PATH = "/formula_parser.FormulaParser/ParseFormula";
+
+type TraceLogContext = {
+    trace_id?: string;
+    span_id?: string;
+    trace_flags?: string;
+};
+
+function getStatusName(code: status): string {
+    return status[code] ?? "UNKNOWN";
+}
+
+function getTraceContextEnabled(): boolean {
+    const rawValue = process.env["FORMULA_TRACE_CONTEXT_ENABLED"] ?? process.env["OTEL_TRACE_CONTEXT_ENABLED"];
+
+    if (rawValue === undefined || rawValue === "") {
+        return true;
+    }
+
+    return ["true", "1", "yes", "on"].includes(rawValue.toLowerCase());
+}
+
+function getTraceLogContext() : TraceLogContext {
+    const activeSpan = trace.getActiveSpan();
+    const spanContext = activeSpan?.spanContext();
+
+    if (!spanContext) {
+        return {};
+    }
+
+    return {
+        trace_id: spanContext.traceId,
+        span_id: spanContext.spanId,
+        trace_flags: spanContext.traceFlags.toString(16).padStart(2, "0"),
+    };
+}
+
+function toGrpcError(error: unknown): Error {
+    if (error instanceof Error) {
+        return error;
+    }
+
+    return new Error(typeof error === "string" ? error : String(error));
+}
+
+export function getServer(): Effect.Effect<Server> {
+    return Effect.succeed(new GrpcServer());
+}
 
 export function parseFormula(
-    call: ServerUnaryCall<
-        formula_parser.FormulaParserRequest,
-        formula_parser.FormulaParserResponse
-    >,
+    call: ServerUnaryCall<formula_parser.FormulaParserRequest, formula_parser.FormulaParserResponse>,
     callback: sendUnaryData<formula_parser.FormulaParserResponse>,
-) {
-    const span = tracer.startSpan("grpc.ParseFormula", {
-        attributes: {
-            "rpc.system": "grpc",
-            "rpc.service": "formul_parser.FormulaParser",
-            "rpc.method": "ParseFormula",
-            "rpc.request.formula": call.request.formula,
-            "rpc.request.peer": call.getPeer(),
-        },
-    });
+): void {
+    const grpcLabels = getGrpcMetricBaseLabels(METHOD_PATH);
+    incrementGrpcServerStarted(grpcLabels);
+    incrementGrpcServerMsgReceived(grpcLabels);
 
-    const startTime = Date.now();
-    logger.info("[parseFormula] request received", {
-        formula: call.request.formula,
-        peer: call.getPeer(),
-    });
+    const stopHandlingTimer = startGrpcServerHandlingTimer(grpcLabels);
+    let grpcStatus: status = status.OK;
 
-    Effect.runPromise(handler(call.request.formula))
-        .then((response) => {
-            const duration = Date.now() - startTime;
+    const traceContext = getTraceContextEnabled()
+        ? extractTraceContextFromCall(call)
+        : context.active();
+    const tracer = getGrpcTracer();
 
-            span.setStatus({ code: SpanStatusCode.OK });
-            span.setAttributes({
-                "rpc.response.status": "ok",
-                "rpc.response.duration_ms": duration,
-            });
+    void context.with(traceContext, async () => {
+        await tracer.startActiveSpan("grpc.ParseFormula", async (span) => {
+            try {
+                const response = await Effect.runPromise(
+                    handler(call.request.formula ?? "", getTraceLogContext()),
+                );
 
-            logger.info("[parseFormula] request completed", {
-                duration_ms: duration,
-                peer: call.getPeer(),
-            });
+                incrementGrpcServerMsgSent(grpcLabels);
+                incrementGrpcServerHandled({ ...grpcLabels, grpc_code: "OK" });
 
-            callback(null, response);
-        })
-        .catch((error) => {
-            const duration = Date.now() - startTime;
+                callback(null, response);
+            } catch (error) {
+                grpcStatus = status.INTERNAL;
+                incrementGrpcServerHandled({ ...grpcLabels, grpc_code: getStatusName(grpcStatus) });
 
-            span.setStatus({ code: SpanStatusCode.ERROR, message: String(error) });
-            span.recordException(error);
-            span.setAttributes({
-                "rpc.response.status": "error",
-                "rpc.response.duration_ms": duration,
-                "error.type": error?.constructor?.name ?? "UnknownError",
-            });
-
-            logger.error(`[parseFormula] request failed`, {
-                duration_ms: duration,
-                error: String(error),
-                peer: call.getPeer(),
-            });
-
-            callback(error, null);
-        })
-        .finally(() => span.end());
-}
-
-export function getServer() {
-    return Effect.sync(() => {
-        const server = new Server();
-
-        server.addService(
-            {
-                parseFormula: {
-                    path: "/formula_parser.FormulaParser/ParseFormula",
-                    requestStream: false,
-                    responseStream: false,
-                    requestDeserialize,
-                    requestSerialize,
-                    responseDeserialize,
-                    responseSerialize,
-                },
-            },
-            { parseFormula },
-        );
-
-        return server;
-    });
-}
-
-function loadSettings() {
-    return settings.pipe(
-        Effect.withSpan("node.loadSettings", {
-            attributes: {
-                "rpc.system": "grpc",
-                "rpc.service": "formula_parser.FormulaParser",
-                "rpc.method": "LoadSettings",
-            },
-        }),
-        Effect.catchTag("EnvParseError", (error) => {
-            return Effect.gen(function* () {
-                yield* Effect.sync(() => {
-                    logger.crit("[server] failed to parse env", {
-                        message: error.error.message,
-                        error: String(error),
-                    });
+                const grpcError = toGrpcError(error);
+                logger.error("[SERVER] ParseFormula request failed", {
+                    module: "server",
+                    funcName: "parseFormula",
+                    error: grpcError.message,
                 });
 
-                return yield* Effect.fail(error);
-            });
-        }),
-    );
-}
-
-function main() {
-    return Effect.gen(function* () {
-        const {
-            FORMULA_PARSER_HOST,
-            FORMULA_PARSER_PORT,
-            DEBUG_FORMULA_PARSER,
-            OTEL_SERVICE_NAME,
-            OTEL_SERVICE_VERSION,
-            OTEL_EXPORTER_OTLP_ENDPOINT,
-            OTEL_TRACE_CONTEXT_ENABLED,
-        } = yield* loadSettings();
-
-        yield* Effect.sync(() => {
-            setupTelemetry({
-                serviceName: OTEL_SERVICE_NAME,
-                serviceVersion: OTEL_SERVICE_VERSION,
-                endpoint: OTEL_EXPORTER_OTLP_ENDPOINT,
-                enabled: OTEL_TRACE_CONTEXT_ENABLED,
-            });
-        });
-
-        const server = yield* getServer();
-
-        yield* Effect.async<void, BindPortError>((resume) => {
-            server.bindAsync(
-                `${FORMULA_PARSER_HOST}:${FORMULA_PARSER_PORT}`,
-                ServerCredentials.createInsecure(),
-                (error, port) => {
-                    if (error) {
-                        logger.error("failed to bind server", {
-                            message: error.message,
-                            error: String(error),
-                        });
-                        resume(Effect.fail(new BindPortError({ error })));
-                        return;
-                    }
-
-                    logger.info("formula-parser service running", {
-                        uri: `${FORMULA_PARSER_HOST}:${port}`,
-                    });
-                    logger.info("debug", { value: DEBUG_FORMULA_PARSER });
-
-                    resume(Effect.void);
-                },
-            );
+                callback(grpcError, null);
+            } finally {
+                stopHandlingTimer();
+                startGrpcServerHandledLatencyTimer(grpcLabels)({
+                    grpc_code: getStatusName(grpcStatus),
+                });
+                span.end();
+            }
         });
     });
 }
 
-Effect.runPromise(
-    main().pipe(
-        Effect.catchTag("BindPortError", (error) => {
-            logger.crit("[main] port binding failed", {
-                message: error.message,
-                error: String(error),
-            });
-            return Effect.void;
-        }),
-    ),
-);
+async function configureServerRuntime(config: Settings): Promise<void> {
+    await configureOtelTracing({
+        enabled: config["OTEL_TRACING_ENABLED"],
+        serviceName: config["OTEL_SERVICE_NAME"],
+        serviceVersion: config["OTEL_SERVICE_VERSION"],
+        environment: config["DEBUG_FORMULA_PARSER"] ? "debug" : "production",
+        endpoint: config["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        debug: config["DEBUG_FORMULA_PARSER"],
+    });
+
+    if (config["ENABLE_PROMETHEUS_METRICS"]) {
+        startPrometheusMetricsServer(config["PROMETHEUS_METRICS_PORT"]);
+    }
+}
+
+export async function serve(): Promise<void> {
+    const config = await Effect.runPromise(settings);
+
+    await configureServerRuntime(config);
+
+    const server = new GrpcServer();
+
+    server.addService(formula_parser.UnimplementedFormulaParserService.definition, {
+        ParseFormula: parseFormula,
+    });
+
+    const bindAddress = `${config["FORMULA_PARSER_HOST"]}:${config["FORMULA_PARSER_PORT"]}`;
+
+    await new Promise<void>((resolve, reject) => {
+        server.bindAsync(bindAddress, ServerCredentials.createInsecure(), (error) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve();
+        });
+    });
+
+    logger.info("[SERVER] Formula Parser server started", {
+        module: "server",
+        funcName: "serve",
+        host: config["FORMULA_PARSER_HOST"],
+        port: config["FORMULA_PARSER_PORT"],
+        service_name: SERVICE_NAME,
+    });
+
+    const shutdown = async (signal: NodeJS.Signals) => {
+        logger.info("[SERVER] Shutdown signal received", {
+            module: "server",
+            funcName: "serve",
+            signal,
+        });
+
+        await new Promise<void>((resolve) => {
+            server.tryShutdown(() => resolve());
+        });
+
+        await shutdownOtelTracing();
+    };
+
+    process.once("SIGINT", () => {
+        void shutdown("SIGINT");
+    });
+    process.once("SIGTERM", () => {
+        void shutdown("SIGTERM");
+    });
+}
+
+export async function main(): Promise<void> {
+    try {
+        await serve();
+    } catch (error) {
+        const grpcError = toGrpcError(error);
+        logger.error("[MAIN] Fatal error while starting Formula Parser", {
+            module: "server",
+            funcName: "main",
+            error: grpcError.message,
+        });
+
+        process.exitCode = 1;
+    }
+}
+
+if (process.argv[1]?.endsWith("server.cjs") || process.argv[1]?.endsWith("server.js")) {
+    void main();
+}
