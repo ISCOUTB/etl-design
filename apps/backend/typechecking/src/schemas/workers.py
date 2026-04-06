@@ -51,6 +51,8 @@ class DataValidated(TypedDict):
     """
 
     task_id: str
+    project_id: str
+    import_name: str
     status: SummaryStatus
     results: ValidationSummary
     error: NotRequired[str]
@@ -61,6 +63,8 @@ class DataValidated(TypedDict):
 
 class InsertionResult(TypedDict):
     task_id: str
+    project_id: str
+    import_name: str
     results: Dict[str, str]
     status: Literal["success", "failed"]
     error: NotRequired[str]
@@ -71,6 +75,8 @@ class InsertionResult(TypedDict):
 
 class ResultsMessage(TypedDict):
     task_id: str
+    project_id: str
+    import_name: str
     results: Dict[str, str]
     status: str
     error: NotRequired[str]

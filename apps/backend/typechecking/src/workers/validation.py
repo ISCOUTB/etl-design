@@ -279,6 +279,8 @@ class ValidationWorker:
         """
         message = ValidationMessage(**json.loads(body.decode()))
         task_id = message["id"]
+        project_id = message["project_id"]
+        import_name = f"{project_id}__{message['table_name']}"
         task = message.get("task", "sample_validation")
         traceparent = message.get("traceparent")
         tracestate = message.get("tracestate")
@@ -352,7 +354,11 @@ class ValidationWorker:
                                 status="received",
                                 code=202,
                                 message="Task received and processing",
-                                data={"task_id": task_id},
+                                data={
+                                    "task_id": task_id,
+                                    "project_id": project_id,
+                                    "import_name": import_name,
+                                },
                             ),
                             task=self.TASK,
                         )
@@ -432,6 +438,8 @@ class ValidationWorker:
                     # the concrete error cause instead of only a generic failed status.
                     result = DataValidated(
                         task_id=task_id,
+                        project_id=project_id,
+                        import_name=import_name,
                         status="error",
                         results={
                             "status": "error",
@@ -635,6 +643,8 @@ class ValidationWorker:
 
         return DataValidated(
             task_id=task_id,
+            project_id=message["project_id"],
+            import_name=f"{message['project_id']}__{message['table_name']}",
             status=summary["status"],
             results=summary,
             error=json.dumps(results.get("error")),
@@ -675,6 +685,8 @@ class ValidationWorker:
             body=json.dumps(
                 ResultsMessage(
                     task_id=task_id,
+                    project_id=result["project_id"],
+                    import_name=result["import_name"],
                     results={
                         item: json.dumps(value)
                         for (item, value) in result["results"].items()

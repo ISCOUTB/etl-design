@@ -202,7 +202,9 @@ class IdempotencyService:
             self.upload_repository.db.rollback()
             raise AppException() from e
         except AMQPError as e:
-            logger.error("Failed to publish validation request, rolling back task creation", e)
+            logger.error(
+                "Failed to publish validation request, rolling back task creation", e
+            )
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
@@ -213,7 +215,9 @@ class IdempotencyService:
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
-            logger.error("Failed to publish validation request, rolling back task creation", e)
+            logger.error(
+                "Failed to publish validation request, rolling back task creation", e
+            )
             raise AppException() from e
 
         # Update cache (not critical, best effort)
@@ -225,7 +229,11 @@ class IdempotencyService:
                         status=models.TaskStatus.PUBLISHED.value,
                         code=202,
                         message="Validation request published successfully",
-                        data={"task_id": task_id, "project_id": project_id},
+                        data={
+                            "task_id": task_id,
+                            "project_id": project_id,
+                            "import_name": f"{project_id}__{table_name}",
+                        },
                     ),
                     task=VALIDATION_TASK,
                 )
@@ -373,7 +381,9 @@ class IdempotencyService:
             self.upload_repository.db.rollback()
             raise AppException() from e
         except AMQPError as e:
-            logger.error("Failed to publish insertion request, rolling back task creation", e)
+            logger.error(
+                "Failed to publish insertion request, rolling back task creation", e
+            )
 
             db_task.status = models.TaskStatus.PENDING  # type: ignore
             db_task.locked_until = utc_now() + timedelta(  # type: ignore
@@ -384,7 +394,9 @@ class IdempotencyService:
             # The rabbitmq_exception_handler manages this error, so we can just raise the same error
             raise
         except Exception as e:
-            logger.error("Failed to publish insertion request, rolling back task creation", e)
+            logger.error(
+                "Failed to publish insertion request, rolling back task creation", e
+            )
             raise AppException() from e
 
         # Update cache (not critical, best effort)
@@ -396,7 +408,11 @@ class IdempotencyService:
                         status=models.TaskStatus.PUBLISHED.value,
                         code=202,
                         message="Insertion request published successfully",
-                        data={"task_id": task_id, "project_id": project_id},
+                        data={
+                            "task_id": task_id,
+                            "project_id": project_id,
+                            "import_name": f"{project_id}__{table_name}",
+                        },
                     ),
                     task=INSERTION_TASK,
                 )
@@ -573,7 +589,11 @@ class IdempotencyService:
                         status=models.TaskStatus.PUBLISHED.value,
                         code=202,
                         message="Validation/Insertion request published successfully",
-                        data={"task_id": task_id, "project_id": project_id},
+                        data={
+                            "task_id": task_id,
+                            "project_id": project_id,
+                            "import_name": f"{project_id}__{table_name}",
+                        },
                     ),
                     task=VALIDATION_TASK,
                 )

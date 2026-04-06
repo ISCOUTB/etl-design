@@ -43,7 +43,7 @@ from proto_utils.database import dtypes
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
 from src.core.events import failure_event
-from src.schemas.workers import InsertionResult
+from src.schemas.workers import InsertionResult, ResultsMessage
 from src.utils import create_component_logger, get_datetime_now, post_multipart_http
 from src.workers.utils import get_task_status, update_task_status
 
@@ -341,7 +341,11 @@ class InsertionWorker:
                                 status="received",
                                 code=202,
                                 message="Task received and processing",
-                                data={"task_id": task_id},
+                                data={
+                                    "task_id": task_id,
+                                    "project_id": message["project_id"],
+                                    "import_name": f"{message['project_id']}__{message['table_name']}",
+                                },
                             ),
                             task=self.TASK,
                         )
@@ -443,6 +447,8 @@ class InsertionWorker:
                             data={
                                 "task_id": task_id,
                                 "results": json.dumps(result.get("results", {})),
+                                "project_id": message["project_id"],
+                                "import_name": f"{message['project_id']}__{message['table_name']}",
                             },
                         ),
                         task=self.TASK,
@@ -492,6 +498,8 @@ class InsertionWorker:
         self, message: InsertionMessage, db_client: DatabaseClient
     ) -> InsertionResult:
         task_id = message["id"]
+        project_id = message["project_id"]
+        import_name = f"{project_id}__{message['table_name']}"
         update_task_status(
             database_client=db_client,
             task_id=task_id,
@@ -553,6 +561,8 @@ class InsertionWorker:
             )
             return InsertionResult(
                 task_id=task_id,
+                project_id=project_id,
+                import_name=import_name,
                 results={},
                 status="failed",
                 error=str(e),
@@ -579,6 +589,8 @@ class InsertionWorker:
             )
             return InsertionResult(
                 task_id=task_id,
+                project_id=project_id,
+                import_name=import_name,
                 results=sql_per_sheet,
                 status="failed",
                 error=str(e),
@@ -589,6 +601,8 @@ class InsertionWorker:
 
         return InsertionResult(
             task_id=task_id,
+            project_id=project_id,
+            import_name=import_name,
             results=sql_per_sheet,
             status="success",
             traceparent=message.get("traceparent"),
@@ -620,7 +634,19 @@ class InsertionWorker:
         self.channel.basic_publish(
             exchange=mq_settings.RABBITMQ_EXCHANGE,
             routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_RESULTS,
-            body=json.dumps(result),
+            body=json.dumps(
+                ResultsMessage(
+                    task_id=task_id,
+                    project_id=result["project_id"],
+                    import_name=result["import_name"],
+                    results=result["results"],
+                    status=result["status"],
+                    error=result.get("error", ""),
+                    traceparent=result.get("traceparent"),
+                    tracestate=result.get("tracestate"),
+                    baggage=result.get("baggage"),
+                )
+            ).encode(),
         )
         update_task_status(
             database_client=db_client,

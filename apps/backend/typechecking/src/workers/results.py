@@ -297,7 +297,11 @@ class ResultWorker:
                                 status="received",
                                 code=200,
                                 message="Task received for results processing",
-                                data={"update_date": get_datetime_now()},
+                                data={
+                                    "update_date": get_datetime_now(),
+                                    "project_id": message["project_id"],
+                                    "import_name": message["import_name"],
+                                },
                             ),
                             task=self.TASK,
                         )
@@ -413,9 +417,7 @@ class ResultWorker:
         completion_message = "Task completed with results"
         if message["status"].lower() != "success":
             completion_message = (
-                f"Task failed: {error_detail}"
-                if error_detail
-                else "Task failed"
+                f"Task failed: {error_detail}" if error_detail else "Task failed"
             )
 
         payload = {
