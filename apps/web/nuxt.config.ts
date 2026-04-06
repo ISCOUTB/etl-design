@@ -114,6 +114,12 @@ export default defineNuxtConfig({
                 file: "en.json",
                 name: "English",
             },
+            {
+                code: "es",
+                language: "es-ES",
+                file: "es.json",
+                name: "Español",
+            },
         ],
         autoDeclare: true,
         experimental: {

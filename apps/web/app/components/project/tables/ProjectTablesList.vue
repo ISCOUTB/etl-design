@@ -1,114 +1,10 @@
 <script setup lang="ts">
-    import type { z } from "zod";
-    import { Edit, Eye, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
-
-    const { $localeRoute } = useNuxtApp();
-    const route = useRoute();
-
     const {
-        state: { project, VIEWS },
+        state: { VIEWS },
         tables,
     } = useProject();
 
-    const config = useAppConfig();
     const events = useAppEvents();
-    const modal = useModal();
-
-    const dropdownItems = computed<
-        Components.GenericDropdown.Item<z.infer<typeof MongoRawSchema>>[][]
-    >(() => [
-        [
-            {
-                label: "projects.id.sections.tables.card.dropdown.view_schema",
-                icon: Eye,
-                action: (context) => {
-                    if (!context) {
-                        return;
-                    }
-
-                    tables.dispatch.setSelectedSchema(context);
-                    events.emit("event:projects:table:change-view", { value: "details" });
-                },
-            },
-            {
-                label: "projects.id.sections.tables.card.dropdown.edit",
-                icon: Edit,
-                to: (context) => {
-                    if (!context) {
-                        return $localeRoute({
-                            name: "projects-id",
-                            params: { id: project.value.id },
-                        });
-                    }
-
-                    return $localeRoute({
-                        name: "projects-id-tables-tableName-edit",
-                        params: {
-                            id: project.value.id,
-                            tableName: TableUtils.getTableName(context.import_name),
-                        },
-                        query: { [config.constants.CALLBACK_KEY]: route.fullPath },
-                    });
-                },
-            },
-        ],
-        [
-            {
-                label: "projects.id.sections.tables.card.dropdown.revert",
-                icon: RotateCcw,
-                disabled: (context) => {
-                    if (!context) {
-                        return true;
-                    }
-
-                    return !context.schemas_releases.length;
-                },
-                action: (context) => {
-                    if (!context) {
-                        return;
-                    }
-
-                    modal.dispatch.loadComponent({
-                        loader: () =>
-                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
-                        key: ModalKeys.Projects.Tables.Delete,
-                        props: {
-                            table: context,
-                            projectId: project.value.id,
-                            kind: "revert",
-                        },
-                    });
-                },
-            },
-            {
-                label: "projects.id.sections.tables.card.dropdown.delete",
-                icon: Trash2,
-                disabled: (context) => {
-                    if (!context) {
-                        return true;
-                    }
-
-                    return !!context.schemas_releases.length;
-                },
-                action: (context) => {
-                    if (!context) {
-                        return;
-                    }
-
-                    modal.dispatch.loadComponent({
-                        loader: () =>
-                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
-                        key: ModalKeys.Projects.Tables.Delete,
-                        props: {
-                            table: context,
-                            projectId: project.value.id,
-                            kind: "delete",
-                        },
-                    });
-                },
-            },
-        ],
-    ]);
 </script>
 
 <template>
@@ -122,7 +18,7 @@
             class="flex flex-col space-y-4"
         >
             <template #item="{ $item }">
-                <ProjectTablesCard :table="$item" :dropdown-items="dropdownItems" />
+                <ProjectTablesCard :table="$item" />
             </template>
         </PaginationRoot>
     </template>

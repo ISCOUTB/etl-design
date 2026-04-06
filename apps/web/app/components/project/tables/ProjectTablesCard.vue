@@ -1,13 +1,18 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { ChevronRight, MoreVertical, Table2 } from "lucide-vue-next";
+    import { ChevronRight, Edit, Eye, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
         table: MaybeRefOrGetter<z.infer<typeof MongoRawSchema>>;
-        dropdownItems: MaybeRefOrGetter<
-            Components.GenericDropdown.Item<z.infer<typeof MongoRawSchema>>[][]
-        >;
+    }
+
+    interface Action {
+        label: string;
+        icon: Components.LucideIconComponent;
+        hidden?: boolean | (() => boolean);
+        disabled?: boolean | (() => boolean);
+        action: () => void;
     }
 
     const props = defineProps<Props>();
@@ -30,6 +35,76 @@
             icon: TableUtils.getIcon(prop.type),
             color: TableUtils.getColor(prop.type),
         })),
+    );
+
+    const modal = useModal();
+
+    const { $localeRoute } = useNuxtApp();
+    const route = useRoute();
+    const config = useAppConfig();
+    const events = useAppEvents();
+    const { state, tables } = useProject();
+    const actions = computed<Action[]>(() =>
+        [
+            {
+                label: "projects.id.sections.tables.card.dropdown.view_schema",
+                icon: Eye,
+                action() {
+                    tables.dispatch.setSelectedSchema(table.value);
+                    events.emit("event:projects:table:change-view", { value: "details" });
+                },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.edit",
+                icon: Edit,
+                action() {
+                    navigateTo(
+                        $localeRoute({
+                            name: "projects-id-tables-tableName-edit",
+                            params: {
+                                id: state.project.value.id,
+                                tableName: TableUtils.getTableName(table.value.import_name),
+                            },
+                            query: { [config.constants.CALLBACK_KEY]: route.fullPath },
+                        }),
+                    );
+                },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.revert",
+                icon: RotateCcw,
+                hidden: () => table.value.schemas_releases.length === 0,
+                action() {
+                    modal.dispatch.loadComponent({
+                        loader: () =>
+                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
+                        key: ModalKeys.Projects.Tables.Delete,
+                        props: {
+                            table: table.value,
+                            projectId: state.project.value.id,
+                            kind: "revert",
+                        },
+                    });
+                },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.delete",
+                icon: Trash2,
+                hidden: () => table.value.schemas_releases.length > 0,
+                action() {
+                    modal.dispatch.loadComponent({
+                        loader: () =>
+                            import("~/components/project/tables/ProjectTablesDeleteModal.vue"),
+                        key: ModalKeys.Projects.Tables.Delete,
+                        props: {
+                            table: table.value,
+                            projectId: state.project.value.id,
+                            kind: "revert",
+                        },
+                    });
+                },
+            },
+        ].filter((action) => !toValue(action.hidden)),
     );
 </script>
 
@@ -76,23 +151,25 @@
                         </ItemDescription>
                     </ItemContent>
                     <ItemActions>
+                        <template v-for="action in actions" :key="action.label">
+                            <Tooltip :delay-duration="800">
+                                <TooltipProvider>
+                                    <TooltipTrigger as-child>
+                                        <Button variant="ghost" size="icon" @click="action.action">
+                                            <component :is="action.icon" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                        {{ $t(action.label) }}
+                                    </TooltipContent>
+                                </TooltipProvider>
+                            </Tooltip>
+                        </template>
                         <CollapsibleTrigger as-child class="data-[state=open]:rotate-90">
                             <Button variant="ghost" size="icon">
                                 <ChevronRight class="size-4" />
                             </Button>
                         </CollapsibleTrigger>
-                        <DropdownMenuRoot
-                            :items="dropdownItems"
-                            :context="table"
-                            :content-props="{ align: 'end' }"
-                            :root-props="{ modal: false }"
-                        >
-                            <template #trigger>
-                                <Button variant="ghost" size="icon">
-                                    <MoreVertical class="size-4" />
-                                </Button>
-                            </template>
-                        </DropdownMenuRoot>
                     </ItemActions>
                 </Item>
             </CardHeader>

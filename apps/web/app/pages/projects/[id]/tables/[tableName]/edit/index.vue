@@ -80,13 +80,13 @@
     setI18nParams({ en: { id: projectId.value, tableName: tableName.value } });
 
     const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(projectId.value));
+    const table = useState<MongoRaw>(
+        NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
+    );
 
     const { $api, $localePath } = useNuxtApp();
     const { callbackUrl, navigate } = useCallbackUrl(
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
-    );
-    const table = useState<MongoRaw>(
-        NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
     );
 
     const { BREADCRUMB_OVERRIDES } = useGlobalState();
@@ -143,9 +143,7 @@
         })
             .then(async () => {
                 await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(projectId.value));
-                clearNuxtData(
-                    NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
-                );
+                await nextTick();
 
                 navigate();
             })

@@ -19,7 +19,12 @@
 </script>
 
 <template>
-    <Card class="group relative overflow-hidden transition-colors hover:border-foreground/20">
+    <Card
+        class="group relative overflow-hidden transition-colors hover:border-foreground/20"
+        @dblclick="
+            () => $router.push($localeRoute({ name: 'projects-id', params: { id: project.id } }))
+        "
+    >
         <CardHeader>
             <Field orientation="horizontal">
                 <Database class="size-8" stroke-width="2" />

@@ -69,7 +69,7 @@
         </CardHeader>
         <CardContent v-if="sortedSchemaReleases">
             <template v-if="sortedSchemaReleases.length > 0">
-                <div class="divide-y">
+                <div class="space-y-4">
                     <template
                         v-for="(release, index) in sortedSchemaReleases"
                         :key="release.created_at"

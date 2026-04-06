@@ -92,6 +92,107 @@
         return hasFile && hasValidTableName && !hasErrors;
     });
 
+    const errorToast = useErrorToast();
+    const tableActions = useProjectTableActions();
+
+    function handleCloseModal() {
+        if (modal.state.value.currentModalKey === ModalKeys.Projects.Schema.UploadSchema) {
+            modal.dispatch.setOpen(false);
+        }
+    }
+
+    function _uploadSchema() {
+        if (!uploadSchema.state.value.tableName) {
+            toast.error($t("projects.id.sections.upload_schema.validation.table_name_not_empty"));
+            return;
+        }
+
+        if (!uploadSchema.computed.jsonSchema.value || !project.value) {
+            return;
+        }
+
+        tableActions
+            .uploadSchema(
+                project.value,
+                uploadSchema.state.value.tableName,
+                uploadSchema.computed.jsonSchema.value,
+            )
+            .then(async () => {
+                if (project.value) {
+                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+                }
+
+                toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
+                    description: $t(
+                        "projects.id.sections.upload_schema.events.table_created.description",
+                        {
+                            tab: $t("projects.id.sections.tables.tab"),
+                        },
+                    ),
+                });
+
+                handleCloseModal();
+                events.emit("event:schema:table-created", undefined);
+            })
+            .catch((error) => {
+                handleCloseModal();
+                errorToast.handleServer(error);
+            });
+    }
+
+    function _uploadFile() {
+        const parseResult = SchemaUtils.Builder.buildColumnsPayload(
+            uploadSchema.state.value.columnsConfig,
+        );
+
+        if (
+            !parseResult.success ||
+            !uploadSchema.state.value.uploadedFile?.blob ||
+            !project.value
+        ) {
+            return;
+        }
+
+        if (!uploadSchema.state.value.tableName) {
+            toast.error($t("projects.id.sections.upload_schema.validation.table_name_not_empty"));
+            return;
+        }
+
+        const dtypes = SchemaUtils.Builder.buildDtypesBySheet(
+            uploadSchema.state.value.sheetNames,
+            parseResult.data,
+        );
+
+        tableActions
+            .uploadFile(
+                uploadSchema.state.value.uploadedFile.file,
+                project.value,
+                uploadSchema.state.value.tableName,
+                dtypes,
+            )
+            .then(async () => {
+                if (project.value) {
+                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+                }
+
+                toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
+                    description: $t(
+                        "projects.id.sections.schema.events.table_created.description",
+                        {
+                            tab: $t("projects.id.sections.tables.tab"),
+                        },
+                    ),
+                });
+
+                handleCloseModal();
+                events.emit("event:schema:table-created", undefined);
+            })
+            .catch((error) => {
+                handleCloseModal();
+                errorToast.handleServer(error);
+            });
+    }
+
     function handleUpload(_event: Event) {
         modal.dispatch.loadComponent({
             loader: () => import("~/components/project/upload-schema/ProjectUploadSchemaModal.vue"),
@@ -99,6 +200,23 @@
             kind: "alert-dialog",
             props: {
                 project,
+                onSubmit() {
+                    if (!uploadSchema.state.value.uploadedFile) {
+                        errorToast.handle(ResponseCodesRecord.Server.Project.Schema.NoFileProvided);
+                        return;
+                    }
+
+                    if (uploadSchema.state.value.uploadedFile.type === "json") {
+                        _uploadSchema();
+                        return;
+                    }
+
+                    if (
+                        ["xlsx", "xls", "csv"].includes(uploadSchema.state.value.uploadedFile.type)
+                    ) {
+                        _uploadFile();
+                    }
+                },
             },
         });
     }

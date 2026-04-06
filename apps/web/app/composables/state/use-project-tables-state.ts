@@ -49,6 +49,15 @@ export const [useProvideProjectTablesState, useProjectTablesState] = createInjec
                 }
 
                 setSchemas(parseResult.data.schemas);
+
+                const currentSelectedId = state.value.selectedSchema?.id;
+                if (currentSelectedId) {
+                    const updatedSelected = parseResult.data.schemas.find(
+                        (schema) => schema.id === currentSelectedId,
+                    );
+
+                    setSelectedSchema(updatedSelected);
+                }
             },
             { immediate: true },
         );
