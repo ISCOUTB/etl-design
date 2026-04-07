@@ -4,13 +4,13 @@ import { settings } from "@/core/";
 import { parseFormula } from "@/services/parse";
 import { Convert, logger } from "@/utils/";
 
-type TraceLogContext = {
-    trace_id?: string;
-    span_id?: string;
-    trace_flags?: string;
-};
+interface TraceLogContext {
+    trace_id: string;
+    span_id: string;
+    trace_flags: string;
+}
 
-export function handler(formula: string, traceLogContext: TraceLogContext = {}) {
+export function handler(formula: string, traceLogContext: Partial<TraceLogContext> = {}) {
     return Effect.gen(function* () {
         const response = new formula_parser.FormulaParserResponse();
 
