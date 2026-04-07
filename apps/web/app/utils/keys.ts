@@ -107,6 +107,7 @@ export const NuxtKeys = {
     },
     Params: {
         NoDefaultValue: "keys:params:default-value",
+        PreviousRoute: "keys:params:previous-route",
     },
     GlobalState: "state:global",
 } as const;

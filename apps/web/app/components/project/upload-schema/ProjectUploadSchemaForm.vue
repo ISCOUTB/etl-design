@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { Upload } from "lucide-vue-next";
+    import { Check } from "lucide-vue-next";
 
     interface Props {
         canSubmit: MaybeRefOrGetter<boolean>;
@@ -69,13 +69,17 @@
                 :disabled="!canSubmit"
                 @click="handleSubmit"
             >
-                <Upload />
+                <Check />
                 <span>
-                    {{ $t("projects.id.sections.upload_schema.events.upload_file.label") }}
+                    {{ $t("projects.id.sections.upload_schema.events.upload_file.confirmation") }}
                 </span>
             </Button>
 
-            <Button type="button" variant="destructive" @click="$router.back()">
+            <Button
+                type="button"
+                variant="destructive"
+                @click="uploadSchema.dispatch.setUploadedFile(undefined)"
+            >
                 {{ $t("common.actions.cancel") }}
             </Button>
         </div>

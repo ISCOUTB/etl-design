@@ -101,6 +101,7 @@ declare global {
             interface GroupCollapsibleKind extends Components.Sidebar.BaseItem {
                 kind: "collapsible";
                 defaultActive?: boolean;
+                menuAction?: () => unknown;
                 collapsibleItems: Components.Sidebar.GroupCollapsibleKindItem[];
             }
 
@@ -110,6 +111,7 @@ declare global {
 
             interface GroupActionButtonKind extends Components.Sidebar.BaseItem {
                 kind: "action-button";
+                menuAction?: () => unknown;
                 dropdownItems: Components.GenericDropdown.Item[][];
             }
         }

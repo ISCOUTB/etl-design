@@ -11,6 +11,9 @@ export default function () {
                     label: "projects.title",
                     defaultActive: true,
                     icon: FolderOpen,
+                    menuAction: () => {
+                        navigateTo($localeRoute({ name: "projects" }));
+                    },
                     collapsibleItems: [
                         {
                             label: "projects.create.title",

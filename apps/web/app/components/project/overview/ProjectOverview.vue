@@ -175,7 +175,14 @@
             <div
                 class="flex items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3"
             >
-                <SensitiveInfoInline :value="connectionString" class="text-foreground" />
+                <template v-if="validConnectionString">
+                    <SensitiveInfoInline :value="connectionString" class="text-foreground" />
+                </template>
+                <template v-else>
+                    <code class="font-mono text-sm italic text-muted-foreground">
+                        {{ connectionString }}
+                    </code>
+                </template>
                 <Button
                     v-if="validConnectionString"
                     variant="outline"

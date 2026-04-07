@@ -2,7 +2,7 @@
     import { UserResponse } from "#shared/utils/schemas/auth";
 
     interface Emits {
-        sucess: [email: string];
+        success: [email: string];
         error: [error: unknown];
     }
 
@@ -40,7 +40,7 @@
                     throw createError({});
                 }
 
-                emit("sucess", parsedResponse.data.email);
+                emit("success", parsedResponse.data.email);
             })
             .catch((error) => emit("error", error))
             .finally(() => (loading.value = false));

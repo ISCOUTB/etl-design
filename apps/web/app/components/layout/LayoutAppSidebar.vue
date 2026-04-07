@@ -92,6 +92,7 @@
                                         <template #trigger>
                                             <SidebarMenuButton
                                                 class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                                @click="groupItem.menuAction"
                                             >
                                                 <component
                                                     :is="groupItem.icon"

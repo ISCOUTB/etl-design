@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    import { Table2 } from "lucide-vue-next";
+
     const {
         state: { VIEWS },
         tables,

@@ -80,7 +80,7 @@
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AuthSignUpForm @sucess="handleSuccess" @error="handleError" />
+                    <AuthSignUpForm @success="handleSuccess" @error="handleError" />
                 </CardContent>
             </Card>
             <div class="flex justify-between space-x-2">

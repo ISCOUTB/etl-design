@@ -4,13 +4,10 @@
         AlignLeft,
         ChevronsLeft,
         ChevronsRight,
-        Edit,
-        ExternalLink,
         Plug,
         Plus,
         Search,
         Server,
-        Trash,
     } from "lucide-vue-next";
 
     definePageMeta({
@@ -91,61 +88,6 @@
 
         return parsed.data;
     });
-
-    const route = useRoute();
-    const modal = useModal();
-    const dropdownItems = computed<Components.GenericDropdown.Item<ResponseProject>[][]>(() => [
-        [
-            {
-                label: "projects.view.dropdown.view.label",
-                icon: ExternalLink,
-                to: (context) => {
-                    if (context) {
-                        return $localeRoute({ name: "projects-id", params: { id: context.id } });
-                    }
-
-                    return $localeRoute({ name: "index" });
-                },
-            },
-            {
-                label: "projects.view.dropdown.edit.label",
-                icon: Edit,
-                to: (context) => {
-                    if (!context) {
-                        return;
-                    }
-
-                    return $localeRoute({
-                        name: "projects-id-edit",
-                        params: { id: context.id },
-                        query: {
-                            [config.constants.CALLBACK_KEY]: route.fullPath,
-                        },
-                    });
-                },
-            },
-        ],
-        [
-            {
-                label: "projects.view.dropdown.delete.label",
-                icon: Trash,
-                action: (context) => {
-                    if (!context) {
-                        return;
-                    }
-
-                    modal.dispatch.loadComponent({
-                        loader: () =>
-                            import("@/components/project/ProjectDeleteConfirmationModal.vue"),
-                        key: ModalKeys.Projects.Delete.ConfirmationModal,
-                        props: {
-                            project: context,
-                        },
-                    });
-                },
-            },
-        ],
-    ]);
 
     function makeInfo(project: ResponseProject): Schemas.Project.ProjectInformation[] {
         return [
@@ -249,11 +191,7 @@
                 </template>
 
                 <template #item="{ $item }">
-                    <ProjectCard
-                        :project="$item"
-                        :dropdown-items="dropdownItems"
-                        :make-info="makeInfo"
-                    />
+                    <ProjectCard :project="$item" :make-info="makeInfo" />
                 </template>
             </PaginationRoot>
         </TooltipProvider>

@@ -76,7 +76,7 @@
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AuthSignInForm @sucess="handleSuccess" @error="handleError" />
+                    <AuthSignInForm @success="handleSuccess" @error="handleError" />
                 </CardContent>
             </Card>
             <div class="flex justify-between space-x-2">

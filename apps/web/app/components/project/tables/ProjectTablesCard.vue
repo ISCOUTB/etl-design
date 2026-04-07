@@ -106,11 +106,16 @@
             },
         ].filter((action) => !toValue(action.hidden)),
     );
+
+    function handleSelect(_event: Event) {
+        tables.dispatch.setSelectedSchema(table.value);
+        events.emit("event:projects:table:change-view", { value: "details" });
+    }
 </script>
 
 <template>
     <Collapsible v-model:open="open">
-        <Card class="shadow-sm">
+        <Card class="shadow-sm" @dblclick="handleSelect">
             <CardHeader>
                 <Item class="p-0">
                     <ItemMedia>
@@ -140,7 +145,7 @@
                                 }}
                             </Badge>
                         </ItemTitle>
-                        <ItemDescription>
+                        <ItemDescription class="select-none">
                             {{
                                 new Date(table.created_at).toLocaleDateString($i18n.locale, {
                                     month: "long",

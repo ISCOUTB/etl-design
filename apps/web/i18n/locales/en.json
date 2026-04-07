@@ -399,7 +399,7 @@
                     },
                     "events": {
                         "upload_file": {
-                            "label": "Upload File"
+                            "confirmation": "Confirm"
                         },
                         "table_created": {
                             "title": "Table Created Succesfully",

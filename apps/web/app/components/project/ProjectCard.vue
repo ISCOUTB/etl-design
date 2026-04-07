@@ -1,13 +1,10 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Check, Database, MoreVertical } from "lucide-vue-next";
+    import { Check, Database, ExternalLink } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
         project: MaybeRefOrGetter<z.infer<typeof ResponseProjectSchema>>;
-        dropdownItems: MaybeRefOrGetter<
-            Components.GenericDropdown.Item<z.infer<typeof ResponseProjectSchema>>[][]
-        >;
         makeInfo: (
             project: z.infer<typeof ResponseProjectSchema>,
         ) => Schemas.Project.ProjectInformation[];
@@ -15,7 +12,6 @@
 
     const props = defineProps<Props>();
     const project = computed(() => toValue(props.project));
-    const dropdownItems = computed(() => toValue(props.dropdownItems));
 </script>
 
 <template>
@@ -45,23 +41,16 @@
                         }}
                     </CardDescription>
                 </FieldContent>
-                <DropdownMenuRoot
-                    :context="project"
-                    :items="dropdownItems"
-                    :root-props="{ modal: false }"
-                >
-                    <template #trigger>
-                        <Button
-                            variant="ghost"
-                            class="size-8 p-0 opacity-0 group-hover:opacity-100"
-                        >
-                            <MoreVertical class="size-4" />
-                        </Button>
-                    </template>
-                </DropdownMenuRoot>
+                <Button variant="ghost" size="icon" as-child>
+                    <NuxtLink
+                        :to="$localeRoute({ name: 'projects-id', params: { id: project.id } })"
+                    >
+                        <ExternalLink />
+                    </NuxtLink>
+                </Button>
             </Field>
         </CardHeader>
-        <CardContent>
+        <CardContent class="cursor-default select-none">
             <div class="grid grid-cols-1 gap-px overflow-hidden rounded-lg border bg-border">
                 <div
                     v-for="info in makeInfo(project)"

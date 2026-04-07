@@ -399,7 +399,7 @@
                     },
                     "events": {
                         "upload_file": {
-                            "label": "Subir archivo"
+                            "confirmation": "Confirmar"
                         },
                         "table_created": {
                             "title": "Tabla creada exitosamente",

@@ -1,6 +1,6 @@
 <script setup lang="ts">
     interface Emits {
-        sucess: [email: string];
+        success: [email: string];
         error: [error: string];
     }
 
@@ -34,7 +34,7 @@
                 }
 
                 if (response.ok) {
-                    emit("sucess", values.email);
+                    emit("success", values.email);
                 }
             })
             .finally(() => (loading.value = false));

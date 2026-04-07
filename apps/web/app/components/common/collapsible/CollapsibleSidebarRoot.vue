@@ -31,7 +31,7 @@
 <template>
     <Collapsible v-model:open="open" as-child class="group/collapsible">
         <SidebarMenuItem>
-            <SidebarMenuButton :tooltip="$t(collapsible.label)">
+            <SidebarMenuButton :tooltip="$t(collapsible.label)" @click="collapsible.menuAction">
                 <component :is="collapsible.icon" v-if="collapsible.icon" />
                 <span>{{ $t(collapsible.label) }}</span>
             </SidebarMenuButton>
