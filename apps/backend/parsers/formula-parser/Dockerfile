@@ -31,8 +31,8 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /app/
 COPY apps/backend/parsers/formula-parser/package.json /app/apps/backend/parsers/formula-parser/package.json
-COPY apps/backend/parsers/formula-parser/dist /app/apps/backend/parsers/formula-parser/dist
-COPY packages/proto-utils/proto-utils-js /app/packages/proto-utils/proto-utils-js/
+COPY --from=builder /workspace/apps/backend/parsers/formula-parser/dist /app/apps/backend/parsers/formula-parser/dist
+COPY --from=builder /workspace/packages/proto-utils/proto-utils-js /app/packages/proto-utils/proto-utils-js/
 COPY tools/eslint /app/tools/eslint/
 COPY tools/tsconfig /app/tools/tsconfig/
 

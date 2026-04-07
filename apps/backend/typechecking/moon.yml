@@ -67,6 +67,7 @@ tasks:
             - -f
             - apps/backend/typechecking/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true
             cache: false
