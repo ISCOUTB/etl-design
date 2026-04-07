@@ -28,18 +28,35 @@ inputs:
     description: "Redis host"
     required: false
     default: ""
+  postgres_username:
+    description: "PostgreSQL username"
+    required: false
+    default: ""
+  postgres_password:
+    description: "PostgreSQL password"
+    required: false
+    default: ""
+  postgres_db:
+    description: "PostgreSQL database name"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Setup Python 3.12.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12.10"
+
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
-        version: "0.8.22"
+        version: "0.11.3"
 
     - uses: moonrepo/setup-toolchain@v0
       with:
-        auto-install: true
+        auto-install: false
 
     - uses: actions/cache@v4
       with:
@@ -69,9 +86,20 @@ runs:
         if [ -n "${{ inputs.redis_host }}" ]; then
           sed -i "s/^REDIS_HOST=.*/REDIS_HOST=${{ inputs.redis_host }}/" "$ENV_EXAMPLE_FILE"
         fi
+        if [ -n "${{ inputs.postgres_username }}" ]; then
+          sed -i "s/^POSTGRES_USER=.*/POSTGRES_USER=${{ inputs.postgres_username }}/" "$ENV_EXAMPLE_FILE"
+        fi
+        if [ -n "${{ inputs.postgres_password }}" ]; then
+          sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ inputs.postgres_password }}/" "$ENV_EXAMPLE_FILE"
+        fi
+        if [ -n "${{ inputs.postgres_db }}" ]; then
+          sed -i "s/^POSTGRES_DB=.*/POSTGRES_DB=${{ inputs.postgres_db }}/" "$ENV_EXAMPLE_FILE"
+        fi
 
         cp "$ENV_EXAMPLE_FILE" "$(dirname "$ENV_EXAMPLE_FILE")/.env"
 
     - name: Run tests
       shell: bash
+      env:
+        UV_VENV_CLEAR: "1"
       run: moon run ${{ inputs.service_name }}:test

@@ -14,9 +14,14 @@ from contextlib import contextmanager
 from typing import Dict, Generator, Optional
 
 import pika
+import pika.channel
 from pika.adapters.blocking_connection import BlockingChannel
 
 from messaging_utils.core.connection_params import messaging_params
+from messaging_utils.core.constants import (
+    RABBITMQ_DELIVARY_LIMIT,
+    RABBITMQ_MESSAGE_TTL_MS,
+)
 from messaging_utils.schemas.connection import (
     AllConnectionParams,
     ConnectionParams,
@@ -44,8 +49,8 @@ class RabbitMQConnectionFactory:
     _connections: Dict[int, pika.BlockingConnection] = {}
     _channels: Dict[int, BlockingChannel] = {}
     _lock = threading.RLock()
-    _params: ConnectionParams = ConnectionParams()
-    _exchange_info: ExchangeInfo = ExchangeInfo()
+    _params: ConnectionParams
+    _exchange_info: ExchangeInfo
 
     @classmethod
     def configure(
@@ -175,7 +180,9 @@ class RabbitMQConnectionFactory:
             return cls._channels[thread_id]
 
     @classmethod
-    def setup_infrastructure(cls, channel: pika.channel.Channel) -> None:
+    def setup_infrastructure(
+        cls, channel: pika.channel.Channel | BlockingChannel
+    ) -> None:
         """Set up exchanges and queues for messaging.
 
         Declares the necessary messaging infrastructure including exchanges,
@@ -189,6 +196,9 @@ class RabbitMQConnectionFactory:
             - Exchange: typechecking.exchange (topic, durable)
             - Queues: validation, schema, and results queues (all durable)
             - Bindings: Appropriate routing key bindings for message routing
+            - Queue arguments:
+                - x-message-ttl: Message time-to-live in milliseconds
+                - x-delivery-limit: Only for quorum queues
 
         Raises:
             Exception: If exchange/queue declaration or binding fails.
@@ -200,10 +210,26 @@ class RabbitMQConnectionFactory:
                 durable=cls._exchange_info["durable"],
             )
 
-            # Declare queues
+            # Declare queues with arguments
             for queue in cls._exchange_info["queues"]:
+                queue_type = queue.get("queue_type", "classic")
+
+                queue_arguments: Dict[str, int | str] = {
+                    "x-message-ttl": queue.get(
+                        "message_ttl_ms", RABBITMQ_MESSAGE_TTL_MS
+                    )
+                }
+
+                if queue_type == "quorum":
+                    queue_arguments["x-queue-type"] = "quorum"
+                    queue_arguments["x-delivery-limit"] = queue.get(
+                        "delivery_limit", RABBITMQ_DELIVARY_LIMIT
+                    )
+
                 channel.queue_declare(
-                    queue=queue["queue"], durable=queue["durable"]
+                    queue=queue["queue"],
+                    durable=queue["durable"],
+                    arguments=queue_arguments,
                 )
 
                 # Bind queue to exchange with routing key

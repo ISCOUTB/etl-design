@@ -1,6 +1,6 @@
 # SQL Builder Service
 
-A Python gRPC service that constructs complete SQL statements from individual DDL expressions and column metadata. This service is responsible for assembling final CREATE TABLE and INSERT statements by managing dependencies and execution order of SQL expressions.
+A Python gRPC service that constructs SQL DDL statements from individual DDL expressions and column metadata. This service assembles `CREATE TABLE` plus dependency-ordered `ALTER TABLE ... GENERATED ALWAYS AS (...) STORED` statements.
 
 ## Overview
 
@@ -8,9 +8,9 @@ The SQL Builder service provides:
 
 - **SQL Statement Assembly**: Combines individual SQL expressions into complete statements
 - **Dependency Resolution**: Manages execution order of interdependent SQL expressions
-- **Schema Generation**: Creates complete CREATE TABLE statements with all columns
-- **Data Insertion**: Generates INSERT statements with proper value ordering
-- **Error Management**: Validates SQL expressions and reports construction errors
+- **Schema Generation**: Creates `CREATE TABLE IF NOT EXISTS` statements for level-0 columns
+- **Generated Columns**: Creates dependency-based `ALTER TABLE ... ADD COLUMN ... GENERATED ALWAYS AS` statements
+- **Error Management**: Detects cyclic dependencies and reports construction errors
 
 ## Architecture
 
@@ -24,19 +24,19 @@ The SQL Builder service provides:
                        ┌─────────────────┐
                        │ Dependencies:   │
                        │ • Graph Analysis│
-                       │ • Order Sorting │
-                       │ • SQL Validation│
+                       │ • Level Ordering│
+                       │ • SQL Assembly  │
                        └─────────────────┘
 ```
 
 ## Features
 
 - **Dependency Graph Construction**: Builds dependency graphs for SQL expressions
-- **Topological Sorting**: Orders SQL statements based on dependencies
-- **SQL Statement Generation**: Creates valid CREATE TABLE and INSERT statements
+- **Level-Based Ordering**: Orders SQL statements based on dependency depth
+- **SQL Statement Generation**: Creates valid `CREATE TABLE` and `ALTER TABLE` DDL statements
 - **Column Type Management**: Handles different SQL data types and constraints
-- **Expression Validation**: Validates SQL expressions before assembly
-- **Error Reporting**: Comprehensive error handling and reporting
+- **Constraint Handling**: Handles PRIMARY KEY cleanup on generated columns
+- **Error Reporting**: Cyclic dependency detection and structured response errors
 
 ## gRPC Service Definition
 
@@ -59,11 +59,16 @@ message BuildSQLRequest {
 }
 
 message BuildSQLResponse {
-    message Sentence {
-        repeated string sql = 1;
+  message SQLContent {
+    string sql = 1;
+    repeated string columns = 2;
     }
 
-    map<int32, Sentence> content = 1;
+  message Content {
+    repeated SQLContent sql_content = 1;
+  }
+
+  map<int32, Content> content = 1;
     optional string error = 2;
 }
 ```
@@ -97,18 +102,18 @@ Generates complete table creation statements with:
 - Constraints (PRIMARY KEY, NOT NULL, etc.)
 - Generated columns (calculated fields)
 
-#### INSERT Statements
+#### ALTER TABLE Statements for Dependent Columns
 
-Creates data insertion statements with:
+Creates additional statements for columns with dependencies:
 
-- Proper value ordering
-- Type conversion
-- Expression evaluation
+- `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...`
+- `GENERATED ALWAYS AS (<expression>) STORED`
+- One statement per dependent column, grouped by dependency level
 
 ### Column Type Support
 
 | SQL Type | Description | Example |
-|----------|-------------|---------|
+| ---------- | ------------- | --------- |
 | `INTEGER` | Whole numbers | `42`, `-10` |
 | `NUMERIC` | Decimal numbers | `3.14`, `99.99` |
 | `TEXT` | String values | `'John Doe'`, `'Sample Text'` |
@@ -198,28 +203,22 @@ sql-builder/
 ├── src/
 │   ├── server.py                    # gRPC server setup
 │   ├── client.py                    # Test client
-│   ├── clients/                     # Generated Protocol Buffer files
-│   │   ├── sql_builder_pb2.py
-│   │   ├── sql_builder_pb2.pyi
-│   │   ├── sql_builder_pb2_grpc.py
-│   │   ├── ddl_generator_pb2.py
-│   │   ├── ddl_generator_pb2.pyi
-│   │   ├── ddl_generator_pb2_grpc.py
-│   │   ├── dtypes_pb2.py
-│   │   ├── dtypes_pb2.pyi
-│   │   ├── dtypes_pb2_grpc.py
-│   │   └── utils.py                 # Protocol Buffer utilities
 │   ├── core/
 │   │   └── config.py                # Configuration management
 │   ├── handlers/
 │   │   └── sql_builder.py           # Request handling logic
 │   ├── services/
 │   │   ├── sql_builder.py           # Main service logic
-│   │   ├── dtypes.py                # Type definitions
 │   │   ├── create_graph.py          # Dependency analysis
 │   │   ├── builder.py               # SQL statement construction
-│   │   └── utils.py                 # SQL validation utilities
-│   └── tests/                       # Test files
+│   │   └── utils.py                 # Graph utility functions
+│   └── utils/
+│       ├── logger.py                # Logger configuration
+│       └── watch_files.py           # Debug file watcher
+├── tests/                           # Test files
+│   ├── services/
+│   ├── test_server.py
+│   └── conftest.py
 ├── scripts/                         # Utility scripts
 ├── pyproject.toml                   # Project configuration
 ├── Dockerfile                       # Container configuration
@@ -237,41 +236,41 @@ def build_sql(request_data):
     # 1. Parse input data
     # 2. Analyze dependencies
     # 3. Build dependency graph
-    # 4. Generate SQL statements in order
-    # 5. Return structured response
+    # 4. Detect cyclic dependencies
+    # 5. Generate SQL statements by dependency level
+    # 6. Return structured response
 ```
 
-#### Dependency Analyzer (`services/dependency_analyzer.py`)
+#### Dependency Graph Builder (`services/create_graph.py`)
 
 Analyzes SQL expressions to identify column dependencies:
 
 - **Graph Construction**: Builds dependency graphs using igraph
-- **Cycle Detection**: Identifies circular dependencies
-- **Topological Sorting**: Orders statements for execution
+- **AST Reference Extraction**: Resolves dependencies from `cell`, `function`, `binary-expression`, etc.
+- **Edge Creation**: Adds directed edges from a column to referenced columns
 
-#### Statement Builder (`services/statement_builder.py`)
+#### Statement Builder (`services/builder.py`)
 
 Constructs final SQL statements:
 
-- **CREATE TABLE**: Assembles table creation statements
-- **Column Definitions**: Handles regular and generated columns
-- **INSERT Statements**: Creates data insertion statements
-- **Constraint Handling**: Manages PRIMARY KEY, NOT NULL, etc.
+- **Level 0**: Assembles `CREATE TABLE IF NOT EXISTS`
+- **Dependent Levels**: Builds `ALTER TABLE ... GENERATED ALWAYS AS (...) STORED`
+- **Constraint Handling**: Preserves extras and removes `PRIMARY KEY` from generated columns
 
-#### Validators (`services/validators.py`)
+#### Graph Utilities (`services/utils.py`)
 
-Validates SQL expressions and data types:
+Utility helpers for dependency processing:
 
-- **SQL Syntax**: Validates generated SQL expressions
-- **Type Compatibility**: Ensures data type consistency
-- **Constraint Validation**: Verifies constraint compatibility
+- **Cycle Detection**: Checks if graph is DAG
+- **Priority Level Calculation**: Computes dependency depth per column
+- **Connection Counters**: Incoming and outgoing edge helpers
 
 ### Error Handling
 
 The service provides comprehensive error handling:
 
 - **Circular Dependencies**: Detects and reports dependency cycles
-- **Missing Dependencies**: Identifies unresolved column references
+- **Request Processing Errors**: Logs and propagates handler/server exceptions
 
 ## API Examples
 
@@ -283,9 +282,9 @@ The service provides comprehensive error handling:
 {
   "cols": {
     "id": {
-      "type": "cell",
-      "sql": "id",
-      "column": "id"
+      "type": "number",
+      "sql": "1",
+      "number_value": 1
     },
     "name": {
       "type": "text",
@@ -307,66 +306,11 @@ The service provides comprehensive error handling:
 {
   "content": {
     "0": {
-      "sql": [
-        "CREATE TABLE users (",
-        "  id INTEGER PRIMARY KEY,",
-        "  name TEXT NOT NULL",
-        ");"
-      ]
-    }
-  }
-}
-```
-
-### Table with Calculated Columns
-
-**Input**:
-
-```json
-{
-  "cols": {
-    "salary": {
-      "type": "number",
-      "sql": "50000",
-      "number_value": 50000
-    },
-    "bonus": {
-      "type": "number",
-      "sql": "5000",
-      "number_value": 5000
-    },
-    "total": {
-      "type": "binary-expression",
-      "sql": "salary + bonus",
-      "operator": "+"
-    }
-  },
-  "dtypes": {
-    "salary": {"type": "NUMERIC"},
-    "bonus": {"type": "NUMERIC"},
-    "total": {"type": "NUMERIC"}
-  },
-  "table_name": "payroll"
-}
-```
-
-**Output**:
-
-```json
-{
-  "content": {
-    "0": {
-      "sql": [
-        "CREATE TABLE payroll (",
-        "  salary NUMERIC,",
-        "  bonus NUMERIC,",
-        "  total NUMERIC GENERATED ALWAYS AS (salary + bonus) STORED",
-        ");"
-      ]
-    },
-    "1": {
-      "sql": [
-        "INSERT INTO payroll (salary, bonus) VALUES (50000, 5000);"
+      "sql_content": [
+        {
+          "sql": "CREATE TABLE IF NOT EXISTS users (id INTEGER, name TEXT NOT NULL, CONSTRAINT users_pk PRIMARY KEY (id));",
+          "columns": ["id", "name"]
+        }
       ]
     }
   }
@@ -379,15 +323,104 @@ The service provides comprehensive error handling:
 
 **Output**: Properly ordered SQL statements ensuring dependencies are resolved in correct sequence.
 
+## Testing
+
+### Running Tests
+
+Run all tests:
+
+```bash
+uv run pytest tests/ -v
+```
+
+Run specific test module:
+
+```bash
+uv run pytest tests/services/test_builder.py -v
+uv run pytest tests/services/test_utils.py -v
+uv run pytest tests/services/test_create_graph.py -v
+```
+
+Run with coverage report:
+
+```bash
+uv run pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
+```
+
+### Test Structure
+
+```text
+tests/
+├── services/
+│   ├── test_builder.py           # SQL generation tests
+│   ├── test_utils.py             # Graph utilities tests
+│   ├── test_create_graph.py      # Dependency graph tests
+│   └── test_sql_builder.py       # Orchestrator tests
+├── test_server.py                # gRPC servicer tests
+└── conftest.py                   # pytest configuration
+```
+
+### Key Test Patterns
+
+#### Graph Dependency Tests
+
+Tests validate:
+
+- Single and multiple independent columns
+- Linear dependency chains
+- Diamond pattern dependencies (multiple paths)
+- Cyclic dependency detection
+- Complex nested expressions
+
+#### SQL Generation Tests
+
+Tests validate:
+
+- **Level 0**: CREATE TABLE statements
+- **Level N**: ALTER TABLE ADD COLUMN for dependent columns
+- **PRIMARY KEY**: Only allowed in level 0
+- **GENERATED ALWAYS AS STORED**: Syntax for calculated columns
+- **Constraints**: UNIQUE, NOT NULL preservation
+
+#### Priority Level Tests
+
+Tests validate:
+
+- Recursive depth calculation
+- Cumulative priority over multiple dependency paths
+- Level gap handling in SQL generation
+- Order independence check
+
+### Example Test
+
+```python
+# Excel input: col1, col2=col1, col3=col2 (linear chain)
+def test_linear_chain_three_columns():
+    cols = {
+        "col1": {"type": "number", "value": 10, "sql": "10"},
+        "col2": {"type": "cell", "column": "col1", "sql": "col1"},
+        "col3": {"type": "cell", "column": "col2", "sql": "col2"},
+    }
+    
+    response = sql_builder(cols, dtypes, "test_table")
+    
+    # Should have 3 levels (0, 1, 2)
+    assert 0 in response["content"]
+    assert 1 in response["content"]
+    assert 2 in response["content"]
+    assert response["error"] is None
+```
+
 ## Dependencies
 
 ### Core Dependencies
 
-- **grpcio**: gRPC server implementation
-- **grpcio-tools**: Protocol Buffer compilation
+- **proto-utils**: Shared proto types and serializers
+- **asyncio**: Async server runtime
 - **igraph**: Graph analysis for dependency resolution
-<!-- - **sqlglot**: SQL parsing and validation -->
 - **pydantic-settings**: Configuration management
+- **watchfiles**: Debug auto-reload support
+- **py-async-grpc-prometheus**: Prometheus gRPC interceptor
 
 ### Dependency Analysis
 
@@ -395,15 +428,7 @@ The service uses igraph for:
 
 - **Graph Construction**: Building dependency relationships
 - **Cycle Detection**: Identifying circular dependencies
-- **Topological Sorting**: Ordering statements for execution
-
-<!-- ### SQL Processing
-
-Uses sqlglot for:
-
-- **SQL Parsing**: Analyzing SQL expression syntax
-- **Validation**: Ensuring SQL correctness
-- **Optimization**: Optimizing generated queries -->
+- **Priority/Level Calculation**: Ordering statements by dependency depth
 
 ## Monitoring and Logging
 
@@ -411,4 +436,4 @@ Uses sqlglot for:
 - **Request Logging**: Logs incoming requests and generated SQL
 - **Dependency Analysis**: Logs dependency resolution process
 - **Error Tracking**: Comprehensive error reporting with context
-- **Performance Monitoring**: Built-in timing for SQL generation
+- **Metrics Support**: Optional Prometheus interceptor and metrics HTTP endpoint

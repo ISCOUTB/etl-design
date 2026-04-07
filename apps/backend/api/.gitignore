@@ -4,3 +4,7 @@
 logs/
 .env
 .ruff_cache/
+.coverage
+coverage.xml
+.pytest_cache/
+htmlcov/

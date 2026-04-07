@@ -1,0 +1,584 @@
+{
+    "layouts": {
+        "title": "S.L.O.T.H",
+        "tagline": "Gestor de Esquemas y Migrador de Lógica para PostgreSQL",
+        "description": "Framework para migrar lógica de negocios desde hojas de cálculo a motores de bases de datos SQL."
+    },
+    "home": {
+        "title": "Inicio",
+        "hero": {
+            "badge": "Optimizado para PostgreSQL",
+            "title_prefix": "Gestiona tus clústeres de Postgres con",
+            "title_accent": "confianza",
+            "description": "{app} es el entorno especializado para organizar, validar y controlar versiones de tus esquemas de PostgreSQL. Integración profunda para ingeniería de datos profesional.",
+            "cta": "Empezar a gestionar Postgres"
+        },
+        "preview_projects": {
+            "window_title": "Proyectos de PostgreSQL",
+            "connected": "Conectado",
+            "tables_label": "{count} tablas",
+            "production_main": {
+                "name": "producción-principal",
+                "provider": "AWS"
+            },
+            "analytics_replica": {
+                "name": "réplica-analítica",
+                "provider": "Azure"
+            },
+            "staging_dev": {
+                "name": "staging-dev",
+                "provider": "Local"
+            }
+        },
+        "features": {
+            "title": "Conjunto de herramientas especializadas para PostgreSQL",
+            "description": "Deja de usar gestores genéricos. {app} entiende los matices de los esquemas y tipos de datos de Postgres.",
+            "native_support": {
+                "title": "Soporte nativo de PostgreSQL",
+                "description": "Integración profunda con funciones de Postgres: esquemas, enums y tipos geométricos nativos."
+            },
+            "jsonb_validation": {
+                "title": "Validación de JSONB",
+                "description": "Valida tus columnas JSONB contra estándares estrictos de JSON Schema directamente en el editor."
+            },
+            "type_integrity": {
+                "title": "Integridad de tipos estricta",
+                "description": "Gestiona restricciones, claves foráneas y tipos personalizados para asegurar que tus datos se mantengan consistentes."
+            },
+            "schema_organization": {
+                "title": "Organización de esquemas",
+                "description": "Agrupa tus tablas en proyectos lógicos y espacios de nombres para una mejor navegación."
+            },
+            "versioning": {
+                "title": "Control de versiones de migración",
+                "description": "Rastrea cómo evoluciona tu esquema de Postgres. Control de versiones para tus sentencias DDL."
+            },
+            "one_click_import": {
+                "title": "Importación en un clic",
+                "description": "Importa esquemas existentes desde volcados SQL o archivos externos y mapealos a Postgres en segundos."
+            }
+        },
+        "footer": {
+            "copyright": "\u00a9 2026 {app}. Todos los derechos reservados."
+        }
+    },
+    "common": {
+        "validation": {
+            "required": "Este campo es obligatorio",
+            "min_length": "Debe tener al menos {min} caracteres",
+            "max_length": "Debe tener un máximo de {max} caracteres",
+            "password_mismatch": "Las contraseñas no coinciden"
+        },
+        "actions": {
+            "cancel": "Cancelar",
+            "go_back": "Volver",
+            "go_home": "Ir al inicio",
+            "remove": "Eliminar",
+            "reset": "Restablecer",
+            "save_changes": "Guardar cambios"
+        },
+        "pagination": {
+            "previous": "Página anterior",
+            "next": "Página siguiente"
+        },
+        "visibility": {
+            "show": "Mostrar",
+            "hide": "Ocultar",
+            "toggle": "Haz clic para alternar visibilidad"
+        },
+        "clipboard": {
+            "copy": "Copiar",
+            "copied": "Copiado al portapapeles"
+        }
+    },
+    "settings": {
+        "label": "Configuración",
+        "color_mode": {
+            "label": "Modo de color",
+            "light": "Claro",
+            "dark": "Oscuro",
+            "system": "Sistema",
+            "changed_to": "Esquema de color cambiado a {mode}"
+        },
+        "locale": {
+            "description": "Cambiar idioma",
+            "changed_to": "Idioma cambiado a {locale}"
+        }
+    },
+    "auth": {
+        "fields": {
+            "username": {
+                "label": "Nombre de usuario",
+                "placeholder": "Ingresa tu usuario"
+            },
+            "email": {
+                "label": "Correo electrónico",
+                "placeholder": "Ingresa tu correo"
+            },
+            "password": {
+                "label": "Contraseña",
+                "placeholder": "Ingresa tu contraseña"
+            },
+            "confirm_password": {
+                "label": "Confirmar contraseña",
+                "placeholder": "Reingresa tu contraseña"
+            }
+        },
+        "sign_up": {
+            "title": "Crear cuenta",
+            "subtitle": "Ingresa tus datos para comenzar.",
+            "submit": "Crear cuenta",
+            "has_account": "¿Ya tienes una cuenta?",
+            "sign_in_link": "Iniciar sesión"
+        },
+        "sign_in": {
+            "title": "Iniciar sesión",
+            "subtitle": "Accede a tu cuenta",
+            "submit": "Iniciar sesión",
+            "create_account": "¿No tienes una cuenta?",
+            "sign_up_link": "Regístrate"
+        },
+        "sign_out": {
+            "title": "Cerrar sesión"
+        },
+        "validation": {
+            "name_min": "El nombre debe tener al menos {length} caracteres",
+            "email_invalid": "Por favor escribe un correo válido",
+            "password_min": "La contraseña debe tener al menos {length} caracteres",
+            "passwords_mismatch": "Las contraseñas no coinciden"
+        },
+        "events": {
+            "user_created": {
+                "title": "Usuario creado exitosamente",
+                "description": "Correo: {email}"
+            },
+            "user_logged": {
+                "title": "¡Usuario conectado!",
+                "description": "Correo: {email}"
+            },
+            "user_signout": {
+                "title": "Sesión cerrada"
+            }
+        }
+    },
+    "errors": {
+        "404": {
+            "title": "Página no encontrada",
+            "description": "La página que buscas no existe o ha sido movida."
+        },
+        "500": {
+            "title": "Error interno del servidor",
+            "description": "Ocurrió un error inesperado en el servidor. Por favor, inténtalo de nuevo más tarde."
+        },
+        "unknown": {
+            "title": "Ocurrió un error desconocido",
+            "description": "Por favor, inténtalo de nuevo más tarde"
+        },
+        "bad_payload": {
+            "title": "Respuesta de servidor inválida",
+            "description": "Los datos recibidos del servidor están mal formados y no pudieron ser procesados. Por favor, inténtalo de nuevo más tarde."
+        },
+        "auth": {
+            "invalid_credentials": {
+                "title": "Credenciales inválidas"
+            },
+            "user_not_found": {
+                "title": "No se encontró la cuenta",
+                "description": "¿Lo escribiste correctamente?"
+            },
+            "unauthorized": {
+                "title": "¡No autorizado!",
+                "description": "No tienes suficientes permisos para ver este recurso"
+            },
+            "unauthenticated": {
+                "title": "No autenticado",
+                "description": "Por favor inicia sesión para ver este recurso"
+            }
+        },
+        "project": {
+            "not_found": {
+                "title": "El proyecto solicitado no existe",
+                "description": "Revisa tus proyectos e inténtalo de nuevo"
+            },
+            "file_not_supported": {
+                "title": "El formato de archivo proporcionado no es compatible",
+                "description": "Por favor proporciona uno válido"
+            },
+            "file_not_provided": {
+                "title": "Por favor proporciona un archivo antes de enviar"
+            }
+        }
+    },
+    "projects": {
+        "title": "Proyectos",
+        "create": {
+            "title": "Crear",
+            "header": {
+                "title": "Crear proyecto",
+                "description": "Configura un nuevo proyecto y la conexión a la base de datos."
+            },
+            "sections": {
+                "general": {
+                    "title": "Información general"
+                },
+                "database": {
+                    "title": "Información de la base de datos"
+                },
+                "missing_args": {
+                    "text": "Ten en cuenta que los parámetros de la base de datos son todos opcionales. En caso de que quieras aplicar los cambios directamente, primero debes actualizar tu proyecto con las credenciales apropiadas."
+                },
+                "encryption_notice": {
+                    "text": "Todas las credenciales de la base de datos se cifran mediante AEGIS-256 antes de almacenarse. Tus datos están protegidos."
+                }
+            },
+            "fields": {
+                "name": {
+                    "label": "Nombre del proyecto",
+                    "placeholder": "Mi proyecto increíble",
+                    "description": "Este es el nombre visible de tu proyecto"
+                },
+                "description": {
+                    "label": "Descripción",
+                    "placeholder": "Mi proyecto de negocio",
+                    "description": "Una breve descripción de tu proyecto"
+                },
+                "provider": {
+                    "label": "Proveedor",
+                    "placeholder": "AWS",
+                    "description": "Tu proveedor de base de datos"
+                },
+                "db_host": {
+                    "label": "Host"
+                },
+                "db_port": {
+                    "label": "Puerto"
+                },
+                "db_user": {
+                    "label": "Usuario"
+                },
+                "db_password": {
+                    "label": "Contraseña"
+                },
+                "db_name": {
+                    "label": "Nombre de la base de datos",
+                    "placeholder": "NombreDeMiBaseDeDatos"
+                },
+                "db_params": {
+                    "label": "Parámetros extra",
+                    "placeholder": "sslmode=require&connect_timeout=10",
+                    "description": "Parámetros adicionales requeridos para conectar a tu base de datos"
+                }
+            },
+            "validation": {
+                "name_empty": "El nombre del proyecto no puede estar vacío",
+                "port_number": "Debe ser un número de puerto válido"
+            },
+            "events": {
+                "project_created": {
+                    "title": "Nuevo proyecto creado",
+                    "description": "Nombre: {projectName}"
+                }
+            }
+        },
+        "view": {
+            "title": "Mis proyectos",
+            "header": {
+                "title": "Proyectos",
+                "description": "Gestiona tus conexiones de bases de datos y proyectos."
+            },
+            "dropdown": {
+                "view": {
+                    "label": "Ver"
+                },
+                "edit": {
+                    "label": "Editar"
+                },
+                "delete": {
+                    "label": "Eliminar"
+                }
+            },
+            "search_input": {
+                "placeholder": "Buscar proyectos..."
+            },
+            "content": {
+                "no_description": "Este proyecto no tiene descripción",
+                "no_db_host": "Sin Host",
+                "no_db_port": "Sin Puerto",
+                "no_db_name": "Sin Base de Datos",
+                "no_provider": "Sin Proveedor",
+                "no_field": "Este proyecto no tiene ({field}) configurado.\nPor favor revisa tu configuración."
+            },
+            "empty": {
+                "header": {
+                    "title": "Aún no hay proyectos",
+                    "description": "Aún no has creado ningún proyecto. Comienza creando el primero."
+                }
+            }
+        },
+        "id": {
+            "fallback_title": "Mi proyecto",
+            "title": "Proyecto {projectName}",
+            "description": "Gestiona la configuración de tu proyecto, importa esquemas, datos y más",
+            "sections": {
+                "overview": {
+                    "tab": "General",
+                    "header": {
+                        "title": "Resumen",
+                        "description": "Detalles generales sobre este proyecto."
+                    },
+                    "connection_details": {
+                        "title": "Detalles de conexión",
+                        "description": "Parámetros de conexión a la base de datos para este proyecto."
+                    },
+                    "connection_string": {
+                        "title": "Cadena de conexión",
+                        "description": "Usa esta URI para conectarte desde tu aplicación.",
+                        "invalid": "No se pudo generar una cadena de conexión válida con los parámetros proporcionados"
+                    },
+                    "fields": {
+                        "id": "ID del Proyecto",
+                        "created_at": "Creado"
+                    }
+                },
+                "settings": {
+                    "tab": "Configuración",
+                    "overview": {
+                        "title": "Configuración del proyecto",
+                        "description": "Actualiza la configuración de tu proyecto y los detalles de conexión."
+                    },
+                    "edit": {
+                        "title": "Editar proyecto",
+                        "description": "Modifica el nombre de tu proyecto, descripción y conexión a la base de datos.",
+                        "label": "Editar"
+                    },
+                    "ownership": {
+                        "title": "Propiedad",
+                        "description": "Transfiere este proyecto a otro usuario u organización.",
+                        "transfer": {
+                            "title": "Transferir proyecto",
+                            "description": "Mueve este proyecto a un nuevo propietario. Perderás el acceso a menos que el nuevo dueño te lo otorgue.",
+                            "label": "Transferir"
+                        }
+                    },
+                    "delete": {
+                        "title": "Eliminar este proyecto",
+                        "description": "Una vez que eliminas un proyecto, no hay vuelta atrás. Esta acción es irreversible.",
+                        "label": "Eliminar",
+                        "validation": "eliminar {project}",
+                        "modal": {
+                            "title": "¿Estás absolutamente seguro?",
+                            "description": "Esta acción no se puede deshacer. Esto eliminará permanentemente el proyecto {project}, sus conexiones y todos los datos asociados.",
+                            "type_project": "Por favor escribe {validation} para confirmar."
+                        }
+                    },
+                    "danger_zone": {
+                        "title": "Zona de peligro"
+                    }
+                },
+                "upload_schema": {
+                    "tab": "Subir esquema",
+                    "header": {
+                        "title": "Configuración de esquema",
+                        "description": "Sube tu esquema de base de datos para comenzar. Puedes proporcionar un archivo Excel o una definición de esquema en JSON."
+                    },
+                    "cards": {
+                        "json_schema": "JSON Schema",
+                        "upload_json": "Sube un archivo .json con la estructura de tu esquema",
+                        "supported_formats": "Sube archivos .xlsx, .xls o .csv con tus definiciones de tablas"
+                    },
+                    "dropzone": {
+                        "title": "Arrastra tu archivo aquí, o ",
+                        "browse": "explora",
+                        "supported": "Soporta formatos {formats}"
+                    },
+                    "expected_json": {
+                        "title": "Formato de esquema",
+                        "description": "Aprende cómo estructurar tu archivo de esquema para una importación óptima",
+                        "expected": "Estructura JSON esperada",
+                        "example_filename": "esquema.ejemplo.json"
+                    },
+                    "events": {
+                        "upload_file": {
+                            "confirmation": "Confirmar"
+                        },
+                        "table_created": {
+                            "title": "Tabla creada exitosamente",
+                            "description": "Puedes revisarla en la pestaña de {tab}"
+                        }
+                    },
+                    "datatype_table": {
+                        "title": "Configurar tipos de columnas",
+                        "description": "Revisa las columnas detectadas y ajusta sus tipos de datos según sea necesario.",
+                        "header": {
+                            "column": "Columna",
+                            "sample_value": "Valor de ejemplo",
+                            "data_type": "Tipo de dato"
+                        },
+                        "datatype": {
+                            "string": "Texto",
+                            "int": "Entero",
+                            "float": "Flotante",
+                            "double": "Doble",
+                            "boolean": "Booleano"
+                        }
+                    },
+                    "table_name": {
+                        "title": "Nombre de la tabla",
+                        "description": "Configura el nombre de la tabla generada",
+                        "placeholder": "usuarios"
+                    },
+                    "upload": {
+                        "title": "¿Estás seguro?",
+                        "description": "Asegúrate de haber revisado todos los ajustes antes de subir el archivo."
+                    },
+                    "validation": {
+                        "table_name_not_empty": "El nombre de la tabla no puede estar vacío",
+                        "delimiter": "El delimitador del archivo no es válido. Por favor usa {delimiter}.",
+                        "comma": "coma"
+                    }
+                },
+                "tables": {
+                    "tab": "Tablas",
+                    "header": {
+                        "title": "Tablas",
+                        "description": "{length} tabla(s) en este proyecto"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "No se encontraron tablas"
+                        },
+                        "events": {
+                            "create_new": "Crear una nueva"
+                        }
+                    },
+                    "card": {
+                        "n_columns": "{length} columnas",
+                        "n_versions": "{length} versiones",
+                        "required_column": "requerido",
+                        "selected_schema": {
+                            "description": "Definición de validación de JSON Schema"
+                        },
+                        "dropdown": {
+                            "view_schema": "Ver",
+                            "edit": "Editar",
+                            "revert": "Revertir",
+                            "delete": "Eliminar"
+                        }
+                    },
+                    "default_table_name": "nombre_columna",
+                    "delete": {
+                        "validation": {
+                            "delete": "eliminar {value}",
+                            "revert": "revertir {value}"
+                        },
+                        "modal": {
+                            "title": "¿Estás absolutamente seguro?",
+                            "description": {
+                                "delete": "Esta acción no se puede deshacer. Esto eliminará permanentemente la tabla {table} y todos sus datos.",
+                                "revert": "Esta acción retrocederá en el historial y revertirá el esquema a una versión anterior."
+                            },
+                            "type_table": "Por favor escribe {validation} para confirmar."
+                        }
+                    },
+                    "events": {
+                        "table_reverted": {
+                            "title": "Tabla revertida exitosamente",
+                            "description": "La tabla ha sido revertida a un esquema de validación anterior."
+                        },
+                        "table_deleted": {
+                            "title": "Esquema de validación eliminado",
+                            "description": "El esquema de validación para esta tabla ha sido removido."
+                        }
+                    },
+                    "details": {
+                        "back": "Volver a tablas",
+                        "edit": "Editar esquema",
+                        "delete": "Eliminar",
+                        "overview": {
+                            "active": "Activo",
+                            "columns": "{count} columnas",
+                            "schema": "Esquema:",
+                            "raw_json": "JSON Schema puro"
+                        },
+                        "upload": {
+                            "title": "Importar datos",
+                            "description": "Selecciona un archivo para importar registros a tu base de datos",
+                            "submit": "Enviar",
+                            "disabled": {
+                                "title": "Falta configuración del proyecto",
+                                "description": "Necesitas definir {fields} antes de poder subir cualquier dato."
+                            }
+                        },
+                        "version_history": {
+                            "title": "Historial de versiones",
+                            "releases": "{count} lanzamientos",
+                            "revert": "Revertir",
+                            "no_versions": {
+                                "title": "No hay versiones anteriores",
+                                "description": "El historial de versiones aparecerá aquí después de las actualizaciones."
+                            }
+                        },
+                        "properties_table": {
+                            "column": "Columna",
+                            "type": "Tipo",
+                            "constraints": "Restricciones",
+                            "primary": "Primaria",
+                            "unique": "Única",
+                            "optional": "Opcional"
+                        },
+                        "events": {
+                            "task_created": {
+                                "title": "Se ha creado una nueva tarea exitosamente",
+                                "description": "Dependiendo del archivo, esto puede tomar algo de tiempo. Por favor espera."
+                            }
+                        }
+                    }
+                },
+                "file": {
+                    "tab": "Archivo"
+                }
+            },
+            "tables": {
+                "edit": {
+                    "header": {
+                        "title": "Editar tabla",
+                        "description": "Modifica la definición del esquema para esta tabla"
+                    },
+                    "project_information": "Información del proyecto",
+                    "fields": {
+                        "table_name": "Nombre de la tabla",
+                        "table_id": "ID: {id}"
+                    },
+                    "columns": {
+                        "title": "Columnas",
+                        "add": "Agregar columna",
+                        "name": "Nombre de columna",
+                        "type": "Tipo de columna"
+                    },
+                    "buttons": {
+                        "reset": "Restablecer",
+                        "save": "Guardar cambios"
+                    },
+                    "validation": {
+                        "table_name_format": "El formato no es válido",
+                        "column_name_format": "Nombre de columna inválido",
+                        "invalid_type": "Tipo no compatible",
+                        "min_columns": "Se requiere al menos {min} columna(s)"
+                    }
+                }
+            }
+        },
+        "edit": {
+            "title": "Editar",
+            "header": {
+                "title": "Editar proyecto",
+                "description": "Revisa tu configuración"
+            },
+            "events": {
+                "project_updated": {
+                    "title": "¡Proyecto actualizado!"
+                }
+            }
+        }
+    }
+}

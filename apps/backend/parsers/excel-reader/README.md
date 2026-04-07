@@ -1,288 +1,243 @@
 # Excel Reader Service
 
-A FastAPI-based REST service that serves as the main entry point for the Excel Parsing system. This service processes Excel files, extracts formulas and data, and orchestrates communication with other microservices to generate SQL statements.
+Excel Reader is a FastAPI REST service that orchestrates spreadsheet processing and coordinates three parser microservices:
 
-**Migration Note**: This service currently uses REST API for client communication but is planned to be migrated to gRPC to maintain consistency with other parsing services in the system.
+- Formula Parser
+- DDL Generator
+- SQL Builder
+
+It also exposes an insertion endpoint that generates `INSERT INTO` statements directly from spreadsheet data.
 
 ## Overview
 
-The Excel Reader service is responsible for:
+This service is responsible for:
 
-- Accepting Excel file uploads via REST API *(Current implementation)*
-- Extracting data and formulas from Excel worksheets
-- Coordinating with Formula Parser, DDL Generator, and SQL Builder services
-- Processing Excel files in various formats (.xlsx, .xls, .csv)
-- Returning generated SQL CREATE and INSERT statements
+- Receiving spreadsheet uploads (`.xlsx`, `.xls`, `.csv`)
+- Extracting spreadsheet data and formulas
+- Calling Formula Parser to build ASTs
+- Calling DDL Generator to transform ASTs into SQL expressions
+- Calling SQL Builder to build final table-level SQL
+- Generating insertion SQL for non-formula columns
 
-### Migration to gRPC
-
-This service will be migrated from REST API to gRPC to align with the architecture of other parsing services:
-
-- **Current**: FastAPI REST server with HTTP endpoints
-- **Future**: gRPC server with protocol buffer definitions
-- **Benefits**: Improved performance, type safety, and consistency with other microservices
-- **Timeline**: Migration planned as part of system architecture standardization
-
-## Architecture
-
-### Current Implementation (REST API)
+## Current Architecture
 
 ```text
-┌─────────────────┐
-│   Client        │
-│                 │
-└─────────┬───────┘
-          │ HTTP POST
-          ▼
-┌─────────────────┐
-│  Excel Reader   │◄──► Formula Parser (gRPC)
-│   (FastAPI)     │◄──► DDL Generator (gRPC)
-│                 │◄──► SQL Builder (gRPC)
-└─────────────────┘
+Client (HTTP)
+   |
+   v
+Excel Reader (FastAPI REST)
+   |-- gRPC -> Formula Parser
+   |-- gRPC -> DDL Generator
+   |-- gRPC -> SQL Builder
 ```
-
-### Future Implementation (gRPC)
-
-```text
-┌─────────────────┐
-│   Client        │
-│                 │
-└─────────┬───────┘
-          │ gRPC
-          ▼
-┌─────────────────┐
-│  Excel Reader   │◄──► Formula Parser (gRPC)
-│   (gRPC Server) │◄──► DDL Generator (gRPC)
-│                 │◄──► SQL Builder (gRPC)
-└─────────────────┘
-```
-
-**Migration Benefits**:
-
-- Consistent communication protocol across all parsing services
-- Improved performance with binary protocol
-- Strong typing with Protocol Buffers
-- Better error handling and status codes
-
-## Features
-
-- **Multi-format Support**: Handles .xlsx, .xls, and .csv files
-- **Formula Parsing**: Extracts and processes Excel formulas
-- **Data Type Mapping**: Maps Excel data types to SQL equivalents
-- **Performance Monitoring**: Built-in performance tracking for operations
-- **Flexible Configuration**: Environment-based configuration
-- **CORS Support**: Enabled for cross-origin requests
 
 ## API Endpoints
 
-### POST /excel-parser
+### `POST /parser/excel`
 
-Processes an Excel file and returns generated SQL statements.
+Orchestrates Formula Parser + DDL Generator + SQL Builder from an uploaded spreadsheet.
 
-**Request:**
+Request:
 
-- **Content-Type**: `multipart/form-data`
-- **Parameters**:
-  - `spreadsheet` (file): Excel file to process
-  - `dtypes_str` (string): JSON string defining column data types
-  - `table_name` (string): Base name for generated tables
-  - `limit` (int, optional): Maximum number of rows to process (default: 50)
+- `spreadsheet` (file, required)
+- `dtypes_str` (form stringified JSON, required)
+- `table_name` (form string, required)
+- `limit` (query int, optional, default `50`)
+- `fill_spaces` (query string, optional, default `" "`)
 
-**Example Request:**
+Response:
+
+- `Dict[str, str]` where each key is a table/sheet name and each value is generated SQL.
+- If one sheet is returned, key is normalized to the provided `table_name`.
+
+Example:
 
 ```bash
-curl -X POST "http://localhost:8001/excel-parser" \
+curl -X POST "http://localhost:8001/parser/excel" \
   -H "Content-Type: multipart/form-data" \
   -F "spreadsheet=@sample.xlsx" \
   -F "table_name=users" \
-  -F 'dtypes_str={"Sheet1": {"id": {"type": "INTEGER", "extra": "PRIMARY KEY"}, "name": {"type": "TEXT"}, "age": {"type": "INTEGER"}}}'
+  -F 'dtypes_str={"Sheet1": {"A": {"dtype": "integer"}, "B": {"dtype": "string"}}}'
 ```
 
-**Response:**
+### `POST /parser/json`
 
-```json
-{
-  "Sheet1": "CREATE TABLE users_Sheet1 (id INTEGER PRIMARY KEY, name TEXT, age INTEGER); INSERT INTO users_Sheet1 (id, name, age) VALUES (1, 'John', 25);"
-}
-```
+Builds SQL directly from a JSON Schema payload and primary keys.
+
+Request body:
+
+- `jsonschema` (object)
+- `table_name` (string)
+- `primary_keys` (list of strings, optional)
+
+Response:
+
+- `Dict[str, str]` with one key (`table_name`) and generated SQL as value.
+
+### `POST /insert-sql`
+
+Generates `INSERT INTO` statements from spreadsheet data.
+
+Request:
+
+- `spreadsheet` (file, required)
+- `table_name` (form string, required)
+- `overwrite` (form bool, optional, default `false`)
+
+Behavior:
+
+- Uses only non-formula columns for inserts.
+- If `overwrite=true`, emits a temp-table swap sequence (`CREATE ... LIKE`, rename, drop backup, `COMMIT`) around the insertion SQL.
+
+### `GET /metrics`
+
+Prometheus metrics endpoint provided by `prometheus-fastapi-instrumentator`.
 
 ## Configuration
 
-Environment variables (see `.env.example`):
+Environment variables (`src/core/config.py`):
 
 ```env
-# Excel Reader Configuration
-EXCEL_READER_HOST="localhost"
-EXCEL_READER_PORT="8001"
-EXCEL_READER_DEBUG=True
+EXCEL_READER_HOST=localhost
+EXCEL_READER_PORT=8001
+EXCEL_READER_DEBUG=False
 
-# Dependent Services
-FORMULA_PARSER_HOST="localhost"
-FORMULA_PARSER_PORT="50052"
-DDL_GENERATOR_HOST="localhost"
-DDL_GENERATOR_PORT="50053"
-SQL_BUILDER_HOST="localhost"
-SQL_BUILDER_PORT="50054"
+FORMULA_PARSER_HOST=localhost
+FORMULA_PARSER_PORT=50052
+
+DDL_GENERATOR_HOST=localhost
+DDL_GENERATOR_PORT=50053
+
+SQL_BUILDER_HOST=localhost
+SQL_BUILDER_PORT=50054
 ```
+
+Derived channels:
+
+- `FORMULA_PARSER_CHANNEL=<host>:<port>`
+- `DDL_GENERATOR_CHANNEL=<host>:<port>`
+- `SQL_BUILDER_CHANNEL=<host>:<port>`
 
 ## Installation
 
-### Prerequisites
+Prerequisites:
 
-- Python 3.12.10
-- uv (package manager)
+- Python `3.12.10`
+- `uv`
 
-### Setup
-
-1. Install dependencies:
-
-   ```bash
-   uv sync
-   ```
-
-2. Configure environment:
-
-   ```bash
-   cp ../.env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. Start the service:
-
-   ```bash
-   uv run python src/server_rest.py
-   ```
-
-## Development
-
-### Project Structure
-
-```text
-excel-reader/
-├── src/
-│   ├── main.py              # Core processing logic
-│   ├── server_rest.py       # FastAPI REST server
-│   ├── clients/             # gRPC client implementations
-│   │   ├── ddl_generator/   # DDL Generator client
-│   │   ├── formula_parser/  # Formula Parser client
-│   │   ├── sql_builder/     # SQL Builder client
-│   │   └── dtypes/          # Common data types
-│   ├── core/
-│   │   └── config.py        # Configuration management
-│   ├── services/
-│   │   ├── get_data.py      # Excel data extraction
-│   │   ├── utils.py         # Utility functions
-│   │   └── dtypes.py        # Type definitions
-│   └── tests/               # Test files
-├── scripts/                 # Utility scripts
-├── pyproject.toml          # Project configuration
-├── Dockerfile              # Container configuration
-└── README.md               # This file
-```
-
-### Key Components
-
-#### Core Processing (`main.py`)
-
-The main processing pipeline includes:
-
-1. **Formula Parsing**: Extracts formulas and sends them to Formula Parser service
-2. **DDL Generation**: Converts parsed ASTs to SQL expressions via DDL Generator
-3. **SQL Building**: Constructs final SQL statements using SQL Builder service
-
-#### Data Extraction (`services/get_data.py`)
-
-Handles reading various Excel file formats:
-
-- OpenPyXL for .xlsx/.xls files
-- CSV parsing with conversion to Excel format
-- Formula extraction and cell data processing
-
-#### REST API (`server_rest.py`)
-
-FastAPI application providing:
-
-- File upload handling
-- Request validation
-- Response formatting
-- CORS configuration
-
-### Running Tests
+Setup:
 
 ```bash
-uv run python -m pytest src/tests/
+uv sync
 ```
 
-### Performance Monitoring
+Run server:
 
-The service includes built-in performance monitoring using the `@monitor_performance` decorator. Monitor logs to track:
+```bash
+uv run python src/server_rest.py
+```
 
-- Excel file processing time
-- Formula parsing duration
-- SQL generation performance
+## Project Structure
 
-## Dependencies
+```text
+excel-reader
+├── src
+│   ├── core
+│   │   ├── config.py
+│   │   └── __init__.py
+│   ├── services
+│   │   ├── get_data.py
+│   │   ├── __init__.py
+│   │   ├── insert.py
+│   │   ├── json_schema.py
+│   │   ├── parse_formulas.py
+│   │   └── utils.py
+│   ├── utils
+│   │   ├── deps.py
+│   │   ├── __init__.py
+│   │   ├── logger.py
+│   │   ├── monitor_performance.py
+│   │   └── sql.py
+│   ├── schemas.py
+│   └── server_rest.py
+├── tests
+│   ├── conftest.py
+│   ├── test_get_data.py
+│   ├── test_insert.py
+│   ├── test_json_schema.py
+│   ├── test_parse_formulas.py
+│   ├── test_server_rest.py
+│   ├── test_services_utils.py
+│   └── test_utils_sql.py
+├── Dockerfile
+├── moon.yml
+├── pyproject.toml
+├── README.md
+└── uv.lock
+```
 
-### Core Dependencies
+## Key Internal Flows
 
-- **FastAPI**: Web framework for building APIs
-- **openpyxl**: Excel file reading and manipulation
-- **grpcio**: gRPC client for service communication
-- **pydantic**: Data validation and settings management
+### Spreadsheet Flow (`/parser/excel`)
 
-### Service Communication
+1. Parse and validate `dtypes_str`.
+2. Extract spreadsheet cells/columns from file bytes.
+3. Parse formulas with Formula Parser.
+4. Convert ASTs to DDL fragments with DDL Generator.
+5. Build final SQL per sheet with SQL Builder.
 
-The service communicates with:
+### JSON Schema Flow (`/parser/json`)
 
-- **Formula Parser** (port 50052): Excel formula tokenization and AST generation
-- **DDL Generator** (port 50053): AST to SQL expression conversion
-- **SQL Builder** (port 50054): Final SQL statement construction
+1. Validate `table_name` and schema.
+2. Convert JSON Schema into SQL Builder payload (`cols`, `dtypes`).
+3. Build final SQL with SQL Builder.
+
+### Insertion Flow (`/insert-sql`)
+
+1. Extract sheet data.
+2. Keep only non-formula columns.
+3. Emit `INSERT INTO ... VALUES ...` statements.
+4. Optionally wrap with overwrite strategy SQL.
 
 ## Error Handling
 
-The service handles various error conditions:
+Common validation errors:
 
-- **Invalid file formats**: Returns HTTP 400 with descriptive error
-- **Empty files**: Validates file content before processing
-- **Service communication errors**: Graceful degradation with error reporting
-- **Invalid JSON parameters**: Validates dtypes_str parameter
+- Empty uploaded file -> HTTP `400`
+- Missing filename -> HTTP `400`
+- Invalid `dtypes_str` JSON -> HTTP `400`
+- `dtypes_str` schema mismatch -> HTTP `400`
+- DDL sheet keys not matching dtypes sheet keys -> HTTP `400`
+- Blank `table_name` in `/parser/json` -> HTTP `400`
 
-## Monitoring and Logging
+## Testing
 
-- **Structured Logging**: Uses Python's logging module with INFO level
-- **Performance Tracking**: Built-in timing for operations
-- **Request Logging**: Logs incoming requests and processing status
-- **Error Reporting**: Detailed error messages for debugging
+Run all tests:
 
-## Migration Planning
+```bash
+uv run -m pytest tests/ -v
+```
 
-### REST to gRPC Migration
+Run with coverage:
 
-**Current State**:
+```bash
+uv run -m pytest tests/ -v --cov=src --cov-report=term-missing
+```
 
-- FastAPI REST server handling file uploads via multipart/form-data
-- HTTP endpoints for client communication
-- JSON response format
+Current suite includes endpoint, service, and utility level tests.
 
-**Target State**:
+## Dependencies
 
-- gRPC server with Protocol Buffer definitions
-- Binary file transfer via gRPC streaming
-- Structured protobuf responses
-- Integration with existing gRPC parsing services
+Core runtime dependencies (from `pyproject.toml`):
 
-**Migration Considerations**:
+- `fastapi[standard]`
+- `openpyxl`
+- `pydantic`
+- `pydantic-settings`
+- `prometheus-fastapi-instrumentator`
+- `proto-utils`
 
-- Protocol Buffer schema design for file upload and response structures
-- gRPC streaming for large file uploads
-- Client adaptation for gRPC communication
-- Backward compatibility during transition period
-- Testing and validation of gRPC implementation
+## Notes
 
-**Dependencies**:
-
-- Protocol Buffer definitions for Excel Reader service
-- gRPC client libraries for consuming applications
-- Migration of dependent services that currently use REST endpoints
-
-**Timeline**: Migration will be coordinated with overall system architecture standardization to ensure minimal disruption to existing integrations.
+- The service interface is REST.
+- Internal communication to Formula Parser, DDL Generator, and SQL Builder is gRPC via stubs in `src/utils/deps.py`.

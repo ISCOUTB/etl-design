@@ -42,6 +42,11 @@ create_tfvars() {
     local instance_type="t3.micro"
     local vpc_cidr="10.0.0.0/16"
     local purpose="ETL Design Project"
+    local enable_shared_fs="true"
+    local shared_fs_name="swarm-shared"
+    local shared_fs_performance_mode="generalPurpose"
+    local shared_fs_throughput_mode="bursting"
+    local shared_fs_provisioned_throughput="null"
 
     case $env in
         development)
@@ -64,6 +69,7 @@ create_tfvars() {
             instance_type="t3.small"
             vpc_cidr="10.3.0.0/16"
             purpose="Production Environment for ETL Design Project"
+            shared_fs_throughput_mode="elastic"
             ;;
     esac
 
@@ -122,7 +128,29 @@ availability_zones = [
 #   - ["$PUBLIC_IP/32"]           # Only your current IP
 #   - ["0.0.0.0/0"]               # Allow from anywhere (requires SSH key)
 #   - ["IP1/32", "IP2/32"]        # Multiple specific IPs
-allowed_ssh_cidr = ["0.0.0.0/0"]
+allowed_ssh_cidr = ["$PUBLIC_IP/32"]
+
+# ============================================
+# Shared Filesystem (EFS)
+# ============================================
+
+# Enable shared filesystem provisioning (recommended for swarm shared state)
+enable_shared_fs = $enable_shared_fs
+
+# Shared filesystem name suffix
+shared_fs_name = "$shared_fs_name"
+
+# EFS performance mode: generalPurpose or maxIO
+shared_fs_performance_mode = "$shared_fs_performance_mode"
+
+# EFS throughput mode: bursting, provisioned, elastic
+shared_fs_throughput_mode = "$shared_fs_throughput_mode"
+
+# Only used when throughput mode is provisioned; otherwise keep null
+shared_fs_provisioned_throughput = $shared_fs_provisioned_throughput
+
+# Traefik certificate path
+traefik_cert_path = "/mnt/shared/traefik/$env"
 
 # ============================================
 # Additional Tags
@@ -165,5 +193,5 @@ echo "   terraform init"
 echo "   terraform plan"
 echo "   terraform apply"
 echo ""
-echo "Note: SSH is currently open to 0.0.0.0/0 (any IP) but requires SSH key authentication."
-echo "To restrict access, update 'allowed_ssh_cidr' in the terraform.tfvars file."
+echo "Note: SSH is restricted to your current public IP by default."
+echo "If your IP changes, update 'allowed_ssh_cidr' in the terraform.tfvars file."

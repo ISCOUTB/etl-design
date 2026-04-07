@@ -239,6 +239,66 @@ class MongoPingResponse(TypedDict):
     pong: bool
 
 
+class MongoGetRawSchemasRequest(TypedDict):
+    """Request message for retrieving all raw schema documents from MongoDB.
+
+    Attributes:
+        import_name (str): The import name to filter schemas by (e.g., "user_table", "product_schema")
+    """
+
+    import_name: str
+
+
+class MongoGetRawSchemasResponseSchemaRelease(TypedDict):
+    """Inner structure for individual schema releases in the MongoGetRawSchemasResponse.
+
+    Attributes:
+        created_at (str): ISO timestamp when this schema version was created
+        schema (JsonSchema): The JSON schema definition for this version
+    """
+
+    created_at: str
+    schema: JsonSchema
+
+
+class MongoGetRawSchemasResponse(TypedDict):
+    """Response message containing all raw schema documents matching the import name.
+
+    Attributes:
+        id (str): Unique identifier of the document in MongoDB
+        import_name (str): The unique identifier of the import name associated with these schemas
+        created_at (str): ISO timestamp when the document was created
+        active_schema (JsonSchema): The currently active/latest version of the schema
+        schemas_releases (List[MongoGetRawSchemasResponseSchemaReleases]): Historical versions of the schema for versioning
+    """
+
+    id: str
+    import_name: str
+    created_at: str
+    active_schema: JsonSchema
+    schemas_releases: List[MongoGetRawSchemasResponseSchemaRelease]
+
+
+class MongoGetSchemasByImportRegexRequest(TypedDict):
+    """Request message for retrieving all schema documents associated with an import name pattern.
+
+    Attributes:
+        import_name (str): The unique identifier of the import name to retrieve associated schemas (supports regex patterns)
+    """
+
+    import_name: str
+
+
+class MongoGetSchemasByImportRegexResponse(TypedDict):
+    """Response message containing all schema documents associated with the import name pattern.
+
+    Attributes:
+        schemas (List[MongoGetRawSchemasResponse]): List of schema documents matching the import name pattern
+    """
+
+    schemas: List[MongoGetRawSchemasResponse]
+
+
 class MongoInsertOneSchemaRequest(TypedDict):
     """Request message for inserting a new schema document into MongoDB.
 
@@ -501,3 +561,27 @@ class GetTasksByImportNameResponse(TypedDict):
     """
 
     tasks: List[ApiResponse]
+
+
+class RemoveTaskIdRequest(TypedDict):
+    """Request message for removing a specific task by its ID.
+
+    Attributes:
+        task_id (str): Unique identifier of the task to remove
+        task (str): Task type/category to remove from
+    """
+
+    task_id: str
+    task: str
+
+
+class RemoveTaskIdResponse(TypedDict):
+    """Response message for task removal operations.
+
+    Attributes:
+        success (bool): Indicates if the task was successfully removed
+        message (str): Descriptive message about the operation result or any errors
+    """
+
+    success: bool
+    message: str

@@ -23,11 +23,16 @@ Logging Enhancements:
 import asyncio
 
 import grpc
+from prometheus_client import start_http_server
 from proto_utils.generated.database import (
     database_pb2,
     database_pb2_grpc,
     mongo_pb2,
     redis_pb2,
+)
+from proto_utils.telemetry import configure_otel_tracing
+from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
+    PromAsyncServerInterceptor,
 )
 
 from src.core.config import settings
@@ -36,6 +41,14 @@ from src.handlers.mongo_handler import MongoHandler
 from src.handlers.redis_handler import RedisHandler
 from src.handlers.tasks_handler import DatabaseTasksHandler
 from src.utils.logger import logger
+from src.utils.trace_context import decorate_grpc_methods, with_grpc_trace_context
+from src.utils.watch_files import main_debug
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.DATABASE_CONNECTION_DEBUG else "production",
+)
 
 
 class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
@@ -74,7 +87,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # =================== Redis - General Purpose ===================
 
-    def RedisGetKeys(
+    async def RedisGetKeys(
         self,
         request: redis_pb2.RedisGetKeysRequest,
         context: grpc.aio.ServicerContext,
@@ -105,7 +118,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET_KEYS] Operation failed: {e}")
             raise
 
-    def RedisSet(
+    async def RedisSet(
         self,
         request: redis_pb2.RedisSetRequest,
         context: grpc.aio.ServicerContext,
@@ -141,7 +154,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_SET] Operation failed: {e}")
             raise
 
-    def RedisGet(
+    async def RedisGet(
         self,
         request: redis_pb2.RedisGetRequest,
         context: grpc.aio.ServicerContext,
@@ -173,7 +186,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET] Operation failed: {e}")
             raise
 
-    def RedisDelete(
+    async def RedisDelete(
         self,
         request: redis_pb2.RedisDeleteRequest,
         context: grpc.aio.ServicerContext,
@@ -207,7 +220,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_DELETE] Operation failed: {e}")
             raise
 
-    def RedisPing(
+    async def RedisPing(
         self,
         request: redis_pb2.RedisPingRequest,
         context: grpc.aio.ServicerContext,
@@ -239,7 +252,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # =================== Redis - Manage all cache ===================
 
-    def RedisGetCache(
+    async def RedisGetCache(
         self,
         request: redis_pb2.RedisGetCacheRequest,
         context: grpc.aio.ServicerContext,
@@ -270,7 +283,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[REDIS_GET_CACHE] Operation failed: {e}")
             raise
 
-    def RedisClearCache(
+    async def RedisClearCache(
         self,
         request: redis_pb2.RedisClearCacheRequest,
         context: grpc.aio.ServicerContext,
@@ -302,7 +315,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # ================== Mongo - Related to schemas ==================
 
-    def MongoPing(
+    async def MongoPing(
         self,
         request: mongo_pb2.MongoPingRequest,
         context: grpc.aio.ServicerContext,
@@ -332,7 +345,75 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_PING] Health check failed: {e}")
             raise
 
-    def MongoInsertOneSchema(
+    async def MongoGetRawSchemas(
+        self,
+        request: mongo_pb2.MongoGetRawSchemasRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> mongo_pb2.MongoGetRawSchemasResponse:
+        """Retrieve raw schemas from MongoDB.
+
+        Args:
+            request: Request containing parameters for schema retrieval.
+            context: gRPC service context for the request.
+
+        Returns:
+            MongoGetRawSchemasResponse containing the raw schemas.
+
+        Raises:
+            grpc.RpcError: If MongoDB operation fails.
+        """
+        logger.info(
+            f"[MONGO_GET_RAW_SCHEMAS] Request from client {context.peer()} - "
+            f"ImportName: '{request.import_name}'"
+        )
+
+        try:
+            response = self.mongo_handler.get_raw_schemas(request)
+            schema_count = len(response.schemas_releases) + 1  # +1 for the main schema
+            logger.info(
+                f"[MONGO_GET_RAW_SCHEMAS] Schema retrieval completed - "
+                f"ImportName: '{request.import_name}', SchemaCount: {schema_count}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[MONGO_GET_RAW_SCHEMAS] Operation failed: {e}")
+            raise
+
+    async def MongoGetSchemasByImportRegex(
+        self,
+        request: mongo_pb2.MongoGetSchemasByImportRegexRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexResponse:
+        """Retrieve schemas from MongoDB matching an import name regex.
+
+        Args:
+            request: Request containing the import name regex to search for.
+            context: gRPC service context for the request.
+
+        Returns:
+             MongoGetSchemasByImportRegexResponse containing the matching schemas.
+
+        Raises:
+            grpc.RpcError: If MongoDB operation fails.
+        """
+        logger.info(
+            f"[MONGO_GET_SCHEMAS_BY_REGEX] Request from client {context.peer()} - "
+            f"ImportNameRegex: '{request.import_name}'"
+        )
+
+        try:
+            response = self.mongo_handler.get_schemas_by_import_regex(request)
+            schema_count = len(response.schemas)
+            logger.info(
+                f"[MONGO_GET_SCHEMAS_BY_REGEX] Schema retrieval completed - "
+                f"ImportNameRegex: '{request.import_name}', SchemaCount: {schema_count}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[MONGO_GET_SCHEMAS_BY_REGEX] Operation failed: {e}")
+            raise
+
+    async def MongoInsertOneSchema(
         self,
         request: mongo_pb2.MongoInsertOneSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -366,7 +447,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_INSERT_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoCountAllDocuments(
+    async def MongoCountAllDocuments(
         self,
         request: mongo_pb2.MongoCountAllDocumentsRequest,
         context: grpc.aio.ServicerContext,
@@ -396,7 +477,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_COUNT_DOCS] Operation failed: {e}")
             raise
 
-    def MongoFindJsonSchema(
+    async def MongoFindJsonSchema(
         self,
         request: mongo_pb2.MongoFindJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -431,7 +512,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_FIND_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoUpdateOneJsonSchema(
+    async def MongoUpdateOneJsonSchema(
         self,
         request: mongo_pb2.MongoUpdateOneJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -464,7 +545,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_UPDATE_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoDeleteOneJsonSchema(
+    async def MongoDeleteOneJsonSchema(
         self,
         request: mongo_pb2.MongoDeleteOneJsonSchemaRequest,
         context: grpc.aio.ServicerContext,
@@ -498,7 +579,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[MONGO_DELETE_SCHEMA] Operation failed: {e}")
             raise
 
-    def MongoDeleteImportName(
+    async def MongoDeleteImportName(
         self,
         request: mongo_pb2.MongoDeleteImportNameRequest,
         context: grpc.aio.ServicerContext,
@@ -534,7 +615,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
 
     # ================== Both - Related to task IDs ==================
 
-    def UpdateTaskId(
+    async def UpdateTaskId(
         self,
         request: database_pb2.UpdateTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -568,7 +649,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_UPDATE] Operation failed: {e}")
             raise
 
-    def GetTaskId(
+    async def GetTaskId(
         self,
         request: database_pb2.GetTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -603,7 +684,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_GET] Operation failed: {e}")
             raise
 
-    def GetTasksByImportName(
+    async def GetTasksByImportName(
         self,
         request: database_pb2.GetTasksByImportNameRequest,
         context: grpc.aio.ServicerContext,
@@ -637,7 +718,7 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_GET_BY_IMPORT] Operation failed: {e}")
             raise
 
-    def SetTaskId(
+    async def SetTaskId(
         self,
         request: database_pb2.SetTaskIdRequest,
         context: grpc.aio.ServicerContext,
@@ -670,6 +751,75 @@ class DatabaseServicer(database_pb2_grpc.DatabaseServiceServicer):
             logger.error(f"[TASKS_SET] Operation failed: {e}")
             raise
 
+    async def RemoveTaskId(
+        self,
+        request: database_pb2.RemoveTaskIdRequest,
+        context: grpc.aio.ServicerContext,
+    ) -> database_pb2.RemoveTaskIdResponse:
+        """Remove a task ID from the database.
+
+        Args:
+            request: Request containing task information to remove.
+            context: gRPC service context for the request.
+
+        Returns:
+            RemoveTaskIdResponse indicating removal operation result.
+
+        Raises:
+            grpc.RpcError: If database operation fails.
+        """
+        logger.info(
+            f"[TASKS_REMOVE] Request from client {context.peer()} - "
+            f"TaskID: '{request.task_id}', Task: '{request.task}'"
+        )
+
+        try:
+            response = self.database_tasks_handler.remove_task_id(request)
+            logger.info(
+                f"[TASKS_REMOVE] Task removal completed - "
+                f"TaskID: '{request.task_id}', Success: {response.success}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"[TASKS_REMOVE] Operation failed: {e}")
+            raise
+
+
+_TRACE_CONTEXT_DECORATOR = with_grpc_trace_context(
+    logger=logger,
+    enabled=settings.DB_TRACE_CONTEXT_ENABLED,
+    log_headers=settings.DB_TRACE_CONTEXT_LOG_HEADERS,
+    debug_enabled=settings.DATABASE_CONNECTION_DEBUG,
+)
+
+DatabaseServicer = decorate_grpc_methods(
+    DatabaseServicer,
+    [
+        "RedisGetKeys",
+        "RedisSet",
+        "RedisGet",
+        "RedisDelete",
+        "RedisPing",
+        "RedisGetCache",
+        "RedisClearCache",
+        "MongoPing",
+        "MongoGetRawSchemas",
+        "MongoGetSchemasByImportRegex",
+        "MongoInsertOneSchema",
+        "MongoCountAllDocuments",
+        "MongoFindJsonSchema",
+        "MongoUpdateOneJsonSchema",
+        "MongoDeleteOneJsonSchema",
+        "MongoDeleteImportName",
+        "UpdateTaskId",
+        "GetTaskId",
+        "GetTasksByImportName",
+        "SetTaskId",
+        "RemoveTaskId",
+    ],
+    _TRACE_CONTEXT_DECORATOR,
+)
+
 
 async def serve() -> None:
     """Start the gRPC database server.
@@ -695,7 +845,23 @@ async def serve() -> None:
     servicer = DatabaseServicer()
 
     # Create and configure server
-    server = grpc.aio.server()
+
+    # Interceptor for Prometheus metrics if enabled
+    if settings.ENABLE_PROMETHEUS_METRICS:
+        logger.info("[SERVER] Prometheus metrics enabled")
+
+        # Create prometheus metrics server
+        start_http_server(int(settings.PROMETHEUS_METRICS_PORT))
+        logger.info(
+            "[SERVER] Prometheus metrics rest server started on port "
+            f"{settings.PROMETHEUS_METRICS_PORT}"
+        )
+
+        logger.info("[SERVER] Starting gRPC server with Prometheus interceptor")
+        server = grpc.aio.server(interceptors=(PromAsyncServerInterceptor(),))
+    else:
+        server = grpc.aio.server()
+
     database_pb2_grpc.add_DatabaseServiceServicer_to_server(servicer, server)
     server.add_insecure_port(settings.DATABASE_CONNECTION_CHANNEL)
 
@@ -716,15 +882,17 @@ async def serve() -> None:
     except KeyboardInterrupt:
         logger.info("[SERVER] Shutdown signal received, stopping server...")
     finally:
+        logger.info("[SERVER] Stopping gRPC server...")
+        await server.stop(grace=5)
         logger.info("[SERVER] Database server stopped")
 
 
-if __name__ == "__main__":
+def main() -> None:
     """Main entry point for the database server.
-    
+
     When run as a script, this starts the gRPC server and runs it until
     terminated. The server will handle KeyboardInterrupt gracefully.
-    
+
     Example:
         $ python -m src.server
     """
@@ -737,3 +905,13 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"[MAIN] Fatal error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    if settings.DATABASE_CONNECTION_DEBUG:
+        try:
+            asyncio.run(main_debug(main))
+        except KeyboardInterrupt:
+            logger.info("[MAIN] Application terminated by user")
+    else:
+        main()

@@ -39,4 +39,5 @@ def get_database_client(
         retry_delay=settings.DATABASE_RETRY_DELAY_SECONDS,
         backoff=settings.DATABASE_BACKOFF_MULTIPLIER,
         logger=logger,
+        trace_context_enabled=True,
     )

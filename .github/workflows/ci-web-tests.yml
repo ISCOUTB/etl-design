@@ -1,0 +1,33 @@
+name: CI - Web Tests
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+      - development
+    paths:
+      - apps/web/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - tools/tsconfig/**
+      - tools/eslint/**
+      - .github/actions/run-unit-tests/**
+      - .github/workflows/ci-web-tests.yml
+
+jobs:
+  web-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Just test if docker image is built successfully, without pushing it to registry
+      # the unit tests are not done yet
+      - name: Build Docker Image
+        uses: ./.github/actions/build-docker-image
+        with:
+          service_name: "web"
+          verify_image: "true"
+          push_image: "false"

@@ -187,7 +187,7 @@ class DTypesSerde:
             ),
             arguments=(
                 list(map(DTypesSerde.deserialize_ast, proto.arguments))
-                if DTypesSerde._has_field_safe(proto, "arguments")
+                if len(proto.arguments) > 0
                 else None
             ),
             name=proto.name if DTypesSerde._has_field_safe(proto, "name") else None,

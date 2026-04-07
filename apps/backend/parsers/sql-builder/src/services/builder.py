@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List
 
 from igraph import Graph
@@ -5,21 +6,13 @@ from proto_utils.parsers.dtypes import AllASTs, SQLResponseSQLContent
 
 from src.services.utils import get_priority_level
 
+PRIMARY_KEY_CLAUSE_RE = re.compile(r"\bPRIMARY\s+KEY\b", re.IGNORECASE)
 
-def has_primary_key(dtypes: Dict[str, Dict[str, str]]) -> bool:
-    """
-    Check if any column in the provided data types has a primary key defined.
 
-    Args:
-        dtypes (Dict[str, Dict[str, str]]): Dictionary mapping column names to their SQL data types.
-
-    Returns:
-        bool: True if any column has a primary key, False otherwise.
-    """
-    return any(
-        "primary key" in dtype.get("extra", "").lower()
-        for dtype in dtypes.values()
-    )
+def remove_primary_key_clause(extra: str) -> str:
+    """Remove PRIMARY KEY from an extra clause while preserving other constraints."""
+    cleaned = PRIMARY_KEY_CLAUSE_RE.sub("", extra or "")
+    return " ".join(cleaned.split())
 
 
 # TODO: Refactor hardcoded SQL generation
@@ -44,27 +37,49 @@ def build_sql(
     Returns:
         Dict[int, List[SQLResponseSQLContent]]: Dictionary mapping column names to their SQL expressions.
     """
-    primary_key_suffix = (
-        "id SERIAL PRIMARY KEY, " if not has_primary_key(dtypes) else ""
-    )
+    # Calculate the priority level for each column based on the dependency graph
     priorities = {
         col: get_priority_level(dependency_graph, col) for col in cols
     }
-    level_0 = list(filter(lambda pair: pair[1] == 0, priorities.items()))
+    level_0_cols = [pair[0] for pair in priorities.items() if pair[1] == 0]
     sql_expressions = {}
 
-    columns_lvl0 = ["id"] if not has_primary_key(dtypes) else []
-    sql_level0 = (
-        f"CREATE TABLE IF NOT EXISTS {table_name} ({primary_key_suffix}"
-    )
-    for i, (col, _) in enumerate(level_0):
-        # In 'extra' we can add things like 'NOT NULL', 'PRIMARY KEY', etc.
-        base_sql = f"{col} {dtypes[col]['type']} {dtypes[col].get('extra', '')}".strip()
+    # Get all primary keys
+    level_0_cols_set = set(level_0_cols)
+    primary_keys = [
+        col
+        for col, dtype in dtypes.items()
+        if "primary key" in dtype.get("extra", "").lower()
+        and col in level_0_cols_set
+    ]
+
+    # Create constraint for primary keys if there are any
+    if len(primary_keys) > 0:
+        primary_keys_str = ", ".join(primary_keys)
+        primary_key_constraint = (
+            f"CONSTRAINT {table_name}_pk PRIMARY KEY ({primary_keys_str})"
+        )
+    else:
+        primary_key_constraint = ""
+
+    # Generate SQL for level 0 columns (those without dependencies)
+    columns_lvl0 = []
+    columns_sql = []
+    for col in level_0_cols:
+        # In 'extra' we can add things like 'NOT NULL', 'UNIQUE', etc.
+        extra_statements = remove_primary_key_clause(
+            dtypes[col].get("extra", "")
+        )
+        base_sql = f"{col} {dtypes[col]['type']} {extra_statements}".strip()
         columns_lvl0.append(col)
-        if i == len(level_0) - 1:
-            sql_level0 += f"{base_sql});"
-            continue
-        sql_level0 += f"{base_sql}, "
+        columns_sql.append(base_sql)
+
+    if primary_key_constraint:
+        columns_sql.append(primary_key_constraint)
+
+    sql_level0 = (
+        f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_sql)});"
+    )
 
     sql_expressions[0] = [
         SQLResponseSQLContent(sql=sql_level0, columns=columns_lvl0)
@@ -74,11 +89,7 @@ def build_sql(
     priorities_levels = list(set(priorities.values()))
     sql_expressions = {
         **sql_expressions,
-        **{
-            level: []
-            for level, _ in enumerate(priorities_levels, start=1)
-            if level > 0
-        },
+        **{level: [] for level, _ in enumerate(priorities_levels, start=1)},
     }
 
     # Fill the information of the other levels
@@ -88,15 +99,18 @@ def build_sql(
     )
 
     for col, level in other_levels:
+        extra_statements = remove_primary_key_clause(
+            dtypes[col].get("extra", "")
+        ).strip()
         sql_expression = (
-            f"ALTER TABLE {table_name} ADD COLUMN {col} {dtypes[col]['type']} "
+            f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
+            f"{col} {dtypes[col]['type']} {extra_statements} ".strip()
         )
-        sql_expression += (
-            f"GENERATED ALWAYS AS ({cols[col]['sql']}) "
-            f"STORED {dtypes[col].get('extra', '')};"
-        )
+        sql_expression += f" GENERATED ALWAYS AS ({cols[col]['sql']}) STORED"
         sql_expressions[level].append(
-            SQLResponseSQLContent(sql=sql_expression, columns=[col])
+            SQLResponseSQLContent(
+                sql=f"{sql_expression.strip()};", columns=[col]
+            )
         )
 
     # Remove empty levels

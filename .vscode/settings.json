@@ -146,5 +146,9 @@
         "packages/proto-utils/proto-utils-py/src",
         "packages/messaging-utils/messaging-utils-py/src"
     ],
-    "ruff.organizeImports": true
+    "ruff.organizeImports": true,
+    "tailwindCSS.experimental.classRegex": [
+        ["class\\s*:\\s*['\"`]([^'\"`]*)['\"`]", 1],
+        ["cn\\(([^)]*)\\)", 1]
+    ]
 }

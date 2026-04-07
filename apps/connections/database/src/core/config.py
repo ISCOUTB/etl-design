@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from pydantic import MongoDsn, RedisDsn, computed_field
+from pydantic import RedisDsn, computed_field
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     MONGO_PORT: int
     MONGO_INITDB_ROOT_USERNAME: str | None = None
     MONGO_INITDB_ROOT_PASSWORD: str | None = None
+    MONGO_AUTH_SOURCE: str = "admin"
     MONGO_DB: str
     MONGO_SCHEMAS_COLLECTION: str
     MONGO_TASKS_COLLECTION: str
@@ -27,13 +28,16 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def MONGO_URI(self) -> MongoDsn:
-        return MultiHostUrl.build(
-            scheme="mongodb",
-            username=self.MONGO_INITDB_ROOT_USERNAME,
-            password=self.MONGO_INITDB_ROOT_PASSWORD,
-            host=self.MONGO_HOST,
-            port=self.MONGO_PORT,
+    def MONGO_URI(self) -> str:
+        credentials = ""
+        if self.MONGO_INITDB_ROOT_USERNAME and self.MONGO_INITDB_ROOT_PASSWORD:
+            credentials = (
+                f"{self.MONGO_INITDB_ROOT_USERNAME}:{self.MONGO_INITDB_ROOT_PASSWORD}@"
+            )
+
+        return (
+            f"mongodb://{credentials}{self.MONGO_HOST}:{self.MONGO_PORT}/"
+            f"?authSource={self.MONGO_AUTH_SOURCE}"
         )
 
     # Redis Configuration
@@ -49,7 +53,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def REDIS_URI(self) -> RedisDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="redis",
             password=self.REDIS_PASSWORD,
             host=self.REDIS_HOST,
@@ -80,6 +84,18 @@ class Settings(BaseSettings):
 
     # Default TTL configuration
     DEFAULT_TTL_SECONDS: int = 60 * 30  # 30 minutes
+
+    # Prometheus Metrics Configuration
+    ENABLE_PROMETHEUS_METRICS: bool = False
+    PROMETHEUS_METRICS_PORT: str = "9090"
+
+    # Inbound Trace Context Configuration
+    DB_TRACE_CONTEXT_ENABLED: bool = True
+    DB_TRACE_CONTEXT_LOG_HEADERS: bool = False
+
+    # Service Metadata for Logs/OTel
+    OTEL_SERVICE_NAME: str = "database-server"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
 
 
 settings = Settings()

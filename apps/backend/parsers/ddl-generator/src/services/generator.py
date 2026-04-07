@@ -74,12 +74,21 @@ def binary_maps(ast: AST, columns: Dict[str, str]) -> BinaryExpressionAST:
     left = MAPS[ast["left"]["type"]](ast["left"], columns)
     right = MAPS[ast["right"]["type"]](ast["right"], columns)
 
+    match ast["operator"]:
+        # Handle null-safe equality and inequality to prevent NULL comparisons from becoming UNKNOWN in SQL.
+        case "<>":
+            operator_sql = "IS DISTINCT FROM"
+        case "=":
+            operator_sql = "IS NOT DISTINCT FROM"
+        case _:
+            operator_sql = ast["operator"]
+
     return {
         "type": "binary-expression",
         "operator": ast["operator"],
         "left": left,
         "right": right,
-        "sql": f"({left['sql']}) {ast['operator']} ({right['sql']})",
+        "sql": f"({left['sql']}) {operator_sql} ({right['sql']})",
     }
 
 
@@ -170,6 +179,7 @@ def cell_range_maps(ast: AST, columns: Dict[str, str]) -> CellRangeAST:
 
     return {
         "type": "cell-range",
+        "sql": ", ".join(columns_range),
         "start": start_cell,
         "end": end_cell,
         "cells": range_cell,
@@ -249,7 +259,11 @@ def number_maps(ast: AST, _) -> NumberAST:
     if ast["type"] != "number":
         raise ValueError("AST must be of type 'number'")
 
-    return {"type": "number", "value": float(ast["value"]), "sql": ast["value"]}
+    return {
+        "type": "number",
+        "value": float(ast["value"]),
+        "sql": str(ast["value"]),
+    }
 
 
 def logical_maps(ast: AST, _) -> CellAST:

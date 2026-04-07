@@ -1,142 +1,296 @@
-from typing import Any, Dict
+"""Schema Routes Module.
 
-from fastapi import APIRouter, HTTPException
-from messaging_utils.core.config import settings as mq_settings
+This module provides RESTful API endpoints for schema management operations.
+Schemas are JSON Schema documents used for data validation and structure definition.
+
+All operations are synchronous and interact directly with the database service
+via gRPC, providing immediate responses without message queue overhead.
+"""
+
+# TODO: This can be improved by adding more detailed error handling, logging, better response
+# schemas, and a bunch of things, but I'll keep it simple for now to focus on core functionality
+
+from fastapi import APIRouter
 from proto_utils.database import dtypes
 
-from src.api.deps import DatabaseClientDep, PublisherDep
+from src import models, schemas
+from src.api.deps import CurrentUser, DatabaseClientDep
+from src.exceptions import (
+    AppException,
+    ForbiddenException,
+    SchemaNotFoundException,
+    SchemaNotProvidedException,
+)
+from src.services import Action, ModelKeys, PermissionService, SchemaService
 
-TASK = "schemas"
 router = APIRouter()
 
 
-@router.post("/upload/{import_name}")
-async def upload_schema(
+@router.post("/{project_id}")
+async def create_or_update_schema(
+    current_user: CurrentUser,
     database_client: DatabaseClientDep,
-    publisher: PublisherDep,
-    import_name: str,
-    schema: Dict[str, Any],
-    raw: bool = False,
-    new: bool = False,
-) -> dtypes.ApiResponse | list[dtypes.ApiResponse]:
-    """
-    Upload a schema for validation.
-    This endpoint allows users to upload a JSON schema for validation purposes.
-    It checks if the schema is the same as the active schema in the database.
-    If it is the same, no update is made. If it is different, the schema is saved
-    as the active schema and added to the schemas_releases.
-    """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
-
-    if not new and (
-        cached_response := database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=TASK)
-        )
-    ):
-        return cached_response["tasks"]
-
-    try:
-        task_id = publisher.publish_schema_update(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_SCHEMAS,
-            schema=schema,
-            import_name=import_name,
-            raw=raw,
-            task="upload_schema",
-        )
-
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Schema upload request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
-        )
-    except Exception as e:
-        task_id = None
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to upload schema: {str(e)}",
-            data={"task_id": task_id, "import_name": import_name},
-        )
-
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response.copy(),
-            task=TASK,
-        )
-    )
-    return response
-
-
-@router.get("/status")
-async def get_schema_task(
-    database_client: DatabaseClientDep,
-    task_id: str = "",
-    import_name: str = "",
-) -> list[dtypes.ApiResponse] | dtypes.ApiResponse:
-    """
-    Get the status of a schema upload task.
-    This endpoint retrieves the status of a schema upload task by its ID.
-    """
-    if not task_id and not import_name:
-        raise HTTPException(400, "Either task_id or import_name must be provided.")
-
-    if import_name:
-        cached_response = database_client.get_tasks_by_import_name(
-            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=TASK)
-        )
-        return cached_response["tasks"]
-
-    cached_response = database_client.get_task_id(
-        dtypes.GetTaskIdRequest(task_id=task_id, task=TASK)
-    )
-    if not cached_response["found"]:
-        raise HTTPException(404, f"Task with ID {task_id} not found.")
-
-    return cached_response["value"]
-
-
-@router.delete("/remove/{import_name}")
-async def remove_schema(
-    import_name: str,
-    database_client: DatabaseClientDep,
-    publisher: PublisherDep,
+    project_id: str,
+    table_name: str,
+    schema: schemas.JsonSchemaRequest,
 ) -> dtypes.ApiResponse:
     """
-    Remove a schema by its import name.
-    This endpoint allows users to remove a schema from the system by its import name.
-    It publishes a message to remove the schema and returns the task ID for tracking.
-    """
-    if not import_name:
-        raise HTTPException(400, "import_name must be provided.")
+    Create or update a schema.
 
+    This endpoint creates a new schema or updates an existing one for the specified
+    import name. The schema is validated and saved directly to the database.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        import_name: Unique identifier for the schema.
+        schema: JSON schema definition (as a dictionary).
+        table_name: The name of the table associated with the schema
+            (used for validation context).
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema created/updated successfully
+        - 400: Invalid schema format
+        - 500: Database operation failed
+
+    Raises:
+        AppException: If import_name is empty or schema validation fails.
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.create,
+        model_key=ModelKeys.schemas,
+        model=models.Project(id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    if not schema:
+        raise SchemaNotProvidedException()
+
+    import_name = f"{project_id}__{table_name}"
     try:
-        task_id = publisher.publish_schema_update(
-            routing_key=mq_settings.RABBITMQ_PUBLISHERS_ROUTING_KEY_VALIDATIONS,
+        # Save to database
+        db_response = await SchemaService.save_schema(
+            orig_schema=schema,
             import_name=import_name,
-            task="remove_schema",
+            database_client=database_client,
         )
 
-        response = dtypes.ApiResponse(
-            status="accepted",
-            code=202,
-            message="Schema removal request submitted successfully",
-            data={"task_id": task_id, "import_name": import_name},
+        # Map database response to API response
+        response = SchemaService.map_db_response_to_api(
+            db_response=db_response,
+            operation="save",
+            import_name=import_name,
+        )
+        if response["code"] == 500:
+            raise AppException(message=response["message"])
+
+        return response
+    except AppException:
+        raise
+    except Exception as e:
+        raise AppException(message=f"Failed to save schema: {repr(e)}") from e
+
+
+@router.get("/{project_id}/raw")
+async def get_raw_schema(
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    project_id: str,
+    table_name: str,
+) -> schemas.MongoSchemasResponse:
+    """
+    Retrieve the raw schema document for a given import name.
+
+    This endpoint fetches the raw JSON schema document associated with the specified
+    import name from the database, without any additional processing or formatting.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        project_id: Unique identifier for the schema to retrieve.
+        table_name: The name of the table associated with the schema
+            (used to construct import_name).
+    Returns:
+        schemas.MongoSchemasResponse
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    import_name = f"{project_id}__{table_name}"
+    try:
+        # Retrieve raw schema from database
+        raw_schema = await SchemaService.get_raw_schema(
+            import_name=import_name,
+            database_client=database_client,
         )
     except Exception as e:
-        response = dtypes.ApiResponse(
-            status="error",
-            code=500,
-            message=f"Failed to remove schema: {str(e)}",
-        )
+        raise AppException() from e
 
-    database_client.set_task_id(
-        dtypes.SetTaskIdRequest(
-            task_id=task_id,
-            value=response.copy(),
-            task=TASK,
-        )
+    # Raise AppException for 404 to match FastAPI conventions
+    if raw_schema is None:
+        raise SchemaNotFoundException()
+
+    return raw_schema
+
+
+@router.get("/search/{project_id}")
+async def search_schemas(
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    project_id: str,
+) -> schemas.MongoGetSchemasByImportResponse:
+    """
+    Search for schemas matching the given criteria.
+
+    This endpoint allows searching for schemas based on the provided project ID and
+    table name. It returns a list of matching schemas with their details.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        project_id: Unique identifier for the project to search within.
+        table_name: The name of the table to filter schemas by.
+    Returns:
+        schemas.MongoGetSchemasByImportResponse
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
     )
+    if not has_permission:
+        raise ForbiddenException()
+
+    try:
+        # Search for schemas in the database
+        search_results = await SchemaService.get_schemas_by_project_id(
+            project_id=project_id,
+            database_client=database_client,
+        )
+    except Exception as e:
+        raise AppException() from e
+
+    return search_results
+
+
+@router.get("/{project_id}")
+async def get_schema(
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    project_id: str,
+    table_name: str,
+) -> schemas.JsonSchemaRequest:
+    """
+    Retrieve the active schema for a given import name.
+
+    This endpoint fetches the currently active JSON schema associated with
+    the specified import name from the database.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        project_id: Unique identifier for the schema to retrieve.
+        table_name: The name of the table associated with the schema
+            (used to construct import_name).
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema found and returned in data.schema
+        - 404: Schema not found
+        - 500: Database operation failed
+
+    Raises:
+        AppException: If project_id is empty.
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.view,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    import_name = f"{project_id}__{table_name}"
+    try:
+        # Retrieve schema from database
+        active_schema = await SchemaService.get_active_schema(
+            import_name=import_name,
+            database_client=database_client,
+        )
+    except Exception as e:
+        raise AppException(message=f"Failed to retrieve schema: {repr(e)}") from e
+
+    # Raise AppException for 404 to match FastAPI conventions
+    if active_schema is None:
+        raise SchemaNotFoundException()
+
+    return active_schema
+
+
+@router.delete("/{project_id}")
+async def delete_schema(
+    project_id: str,
+    current_user: CurrentUser,
+    database_client: DatabaseClientDep,
+    table_name: str,
+) -> dtypes.ApiResponse:
+    """
+    Delete or revert a schema.
+
+    This endpoint removes a schema from the system. If the schema has release
+    history, it reverts to the previous version. If no releases exist, the
+    schema is completely deleted.
+
+    Args:
+        database_client: Database client dependency for MongoDB operations.
+        import_name: Unique identifier for the schema to remove.
+        table_name (str): The name of the table associated with the schema
+            (used to construct import_name).
+
+    Returns:
+        ApiResponse with:
+        - 200: Schema deleted or reverted successfully
+        - 404: Schema not found
+        - 500: Database operation failed
+
+    Raises:
+        AppException: If import_name is empty or schema not found.
+    """
+    has_permission = PermissionService.has_permission(
+        user=current_user,
+        action=Action.delete,
+        model_key=ModelKeys.schemas,
+        model=models.UserProject(user_id=current_user.id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    import_name = f"{project_id}__{table_name}"
+    try:
+        # Remove schema from database
+        db_response = await SchemaService.remove_schema(
+            import_name=import_name,
+            database_client=database_client,
+        )
+    except Exception as e:
+        raise AppException(message=f"Failed to remove schema: {repr(e)}") from e
+
+    # Map database response to API response
+    response = SchemaService.map_db_response_to_api(
+        db_response=db_response,
+        operation="remove",
+        import_name=import_name,
+    )
+
+    # Raise AppException for 404 to match FastAPI conventions
+    if response["code"] == 404:
+        raise SchemaNotFoundException()
+
     return response

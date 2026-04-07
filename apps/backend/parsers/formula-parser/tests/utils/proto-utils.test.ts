@@ -1,5 +1,5 @@
 // tests/utils/proto-utils.test.ts
-import { dtypes } from "@etl-design/packages-proto-utils-js";
+import { dtypes } from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { getAstTypeEnum, getRefTypeEnum } from "@/utils/proto-utils.ts";

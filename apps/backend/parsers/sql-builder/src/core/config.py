@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     def SQL_BUILDER_CHANNEL(self) -> str:
         return f"{self.SQL_BUILDER_HOST}:{self.SQL_BUILDER_PORT}"
 
+    ENABLE_PROMETHEUS_METRICS: bool = False
+    PROMETHEUS_METRICS_PORT: str = "9090"
+
+    SQL_TRACE_CONTEXT_ENABLED: bool = True
+    SQL_TRACE_CONTEXT_LOG_HEADERS: bool = False
+    OTEL_SERVICE_NAME: str = "sql-builder"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+
 
 settings = Settings()
 

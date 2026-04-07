@@ -1,6 +1,6 @@
 {
     "devDependencies": {
-        "@etl-design/tools-eslint": "workspace:*",
-        "eslint": "^9.39.1"
+        "@sloth/tools-eslint": "workspace:*",
+        "eslint": "^10.2.0"
     }
 }

@@ -1,0 +1,19 @@
+import { withConfig } from "@sloth/tools-eslint";
+import withNuxt from "./.nuxt/eslint.config.mjs";
+
+export default withNuxt(
+    withConfig({
+        type: "app",
+        typescript: true,
+        vue: true,
+    }),
+    {
+        files: ["**/*.vue"],
+        rules: {
+            "vue/script-indent": ["error", 4, { baseIndent: 1 }],
+            "style/indent": "off",
+            "vue/singleline-html-element-content-newline": "off",
+            "vue/operator-linebreak": "off",
+        },
+    },
+);

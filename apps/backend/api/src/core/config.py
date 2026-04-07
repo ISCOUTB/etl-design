@@ -1,4 +1,3 @@
-import secrets
 from typing import Annotated, Any
 
 from dotenv import load_dotenv
@@ -47,9 +46,24 @@ class Settings(BaseSettings):
     SERVER_PORT: int
     SERVER_DEBUG: bool
 
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    AUTH_INFO: str
+    SECRET_KEY: str
 
-    FIRST_SUPERUSER: str
+    # Encryption configuration for database credentials in projects
+    CREDENTIALS_SECRET_KEY: str
+    CREDENTIALS_SIGN: str
+
+    # OTel Configuration
+    OTEL_SERVICE_NAME: str = "api-server"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+
+    # For pending status
+    IDEMPOTENCY_TTL_DEFAULT_SECONDS: int = 60 * 10  # 10 minutes
+    IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: int = 60 * 1  # 1 minute
+    IDEMPOTENCY_TTL_PUBLISHED_SECONDS: int = 60 * 30  # 30 minutes
+
+    FIRST_SUPERUSER_NAME: str
+    FIRST_SUPERUSER_EMAIL: str
     FIRST_SUPERUSER_PASSWORD: str
 
     # RabbitMQ Configuration
@@ -65,7 +79,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def RABBITMQ_URI(self) -> AmqpDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="amqp",
             username=self.RABBITMQ_USER,
             password=self.RABBITMQ_PASSWORD,
@@ -84,7 +98,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def POSTGRES_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
+        return MultiHostUrl.build(  # type: ignore
             scheme="postgresql+psycopg2",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
@@ -99,11 +113,22 @@ class Settings(BaseSettings):
     DATABASE_MAX_RETRIES: int = 5
     DATABASE_RETRY_DELAY_SECONDS: float = 1.0
     DATABASE_BACKOFF_MULTIPLIER: float = 2.0
+    DATABASE_TRACE_CONTEXT_ENABLED: bool = True
 
     @computed_field
     @property
     def DATABASE_CONNECTION_CHANNEL(self) -> str:
         return f"{self.DATABASE_CONNECTION_HOST}:{self.DATABASE_CONNECTION_PORT}"
 
+    # Excel-Reader configuration
+    EXCEL_READER_HOST: str = "localhost"
+    EXCEL_READER_PORT: int = 8001
+    EXCEL_READER_TIMEOUT_SECONDS: int = 30
 
-settings = Settings()
+    @computed_field
+    @property
+    def EXCEL_READER_URL(self) -> str:
+        return f"http://{self.EXCEL_READER_HOST}:{self.EXCEL_READER_PORT}"
+
+
+settings = Settings()  # type: ignore

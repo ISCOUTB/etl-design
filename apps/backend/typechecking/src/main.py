@@ -26,6 +26,7 @@ Example:
 """
 
 import asyncio
+import os
 import signal
 import sys
 import threading
@@ -34,11 +35,20 @@ from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
+from proto_utils.telemetry import configure_otel_tracing
 
 from src.core.config import settings
+from src.core.events import failure_event
 from src.utils import create_component_logger
-from src.workers.schemas import SchemaWorker
+from src.workers.insertion import InsertionWorker
+from src.workers.results import ResultWorker
 from src.workers.validation import ValidationWorker
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.MINIMAL_SERVER_DEBUG else "production",
+)
 
 # Create logger with [main] prefix
 logger = create_component_logger("main")
@@ -74,7 +84,8 @@ class WorkerManager:
             settings.RABBITMQ_THRESHOLD_SECONDS,
         )
         self.validation_worker = ValidationWorker(*retry_options)
-        self.schema_worker = SchemaWorker(*retry_options)
+        self.schema_worker = InsertionWorker(*retry_options)
+        self.result_worker = ResultWorker(*retry_options)
         self.workers_running = True
 
     async def start_workers(self):
@@ -112,10 +123,16 @@ class WorkerManager:
             )
             schema_thread.start()
 
+            # Start result worker in a separate thread
+            result_thread = threading.Thread(
+                target=self._run_result_worker, name="ResultWorker", daemon=True
+            )
+            result_thread.start()
+
             logger.info("All workers started successfully")
 
             # Keep main thread alive
-            while self.workers_running:
+            while self.workers_running and not failure_event.is_set():
                 await asyncio.sleep(0.5)
 
         except KeyboardInterrupt:
@@ -136,7 +153,12 @@ class WorkerManager:
         try:
             self.validation_worker.start_consuming()
         except Exception as e:
-            logger.error(f"Validation worker error: {e}")
+            logger.critical(
+                "Validation worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
 
     def _run_schema_worker(self):
         """Run schema worker.
@@ -152,7 +174,33 @@ class WorkerManager:
         try:
             self.schema_worker.start_consuming()
         except Exception as e:
-            logger.error(f"Schema worker error: {e}")
+            logger.critical(
+                "Schema worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
+
+    def _run_result_worker(self):
+        """Run result worker.
+
+        Internal method that starts the result worker's message consumption.
+        This method is executed in a separate thread and handles any exceptions
+        that occur during worker execution.
+
+        Exceptions are logged but do not stop other workers, allowing the
+        system to continue operating with reduced functionality if one
+        worker fails.
+        """
+        try:
+            self.result_worker.start_consuming()
+        except Exception as e:
+            logger.critical(
+                "Result worker crashed. Exiting process so supervisor can "
+                "restart the service cleanly. Error: %s",
+                e,
+            )
+            os._exit(1)
 
     def stop_workers(self):
         """Stop all workers gracefully.

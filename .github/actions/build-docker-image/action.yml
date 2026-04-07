@@ -35,7 +35,7 @@ runs:
   steps:
     - uses: moonrepo/setup-toolchain@v0
       with:
-        auto-install: true
+        auto-install: false
 
     - uses: actions/cache@v4
       with:

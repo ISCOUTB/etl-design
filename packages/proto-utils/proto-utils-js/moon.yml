@@ -1,24 +1,22 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: proto-utils-js
-    description: Shared utilities for working with protobufs in JavaScript/TypeScript projects.
+    description: |
+        Shared utilities for working with protobufs in 
+        JavaScript/TypeScript projects.
 
-toolchain:
-    node:
+layer: library
 
 tasks:
     generate:
         command: bash ./scripts/generate.sh
         options:
-            runFromWorkspaceRoot: false
             cache: false
 
     pnpm:
         command: pnpm
         args:
             - --filter
-            - "@etl-design/packages-proto-utils-js"
+            - "@sloth/packages-proto-utils-js"
         options:
             runFromWorkspaceRoot: true
             cache: false
@@ -27,14 +25,11 @@ tasks:
         command: noop
         deps:
             - eslint:build
-        options:
-            runDepsInParallel: true
 
     build:
-        command: npx
+        command: pnpm
         args:
+            - exec
             - tsup
         deps:
             - ^:generate
-        options:
-            runFromWorkspaceRoot: false

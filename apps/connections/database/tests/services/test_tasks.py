@@ -297,3 +297,165 @@ def test_get_tasks_by_import_name_empty_result(
 
     # Assert the response
     assert len(response["tasks"]) == 0
+
+
+def test_remove_task_id_from_both_storage(
+    redis_db: RedisConnection,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Test removing a task from both Redis and MongoDB."""
+    task_id = str(uuid4())
+    task = "test_task"
+
+    # First, set up a task in both storage systems
+    api_response = dtypes.ApiResponse(
+        status="success",
+        code=200,
+        message="Task to be removed",
+        data={"import_name": "test_import", "processing_status": "completed"},
+    )
+
+    DatabaseTasksService.set_task_id(
+        dtypes.SetTaskIdRequest(task_id=task_id, value=api_response, task=task),
+        redis_db=redis_db,
+        mongo_tasks_connection=mongo_tasks_connection,
+    )
+
+    # Verify the task exists in both systems
+    redis_task_before = redis_db.get_task_id(task_id, task)
+    mongo_task_before = mongo_tasks_connection.find_one(
+        {"task_id": task_id, "task": task}
+    )
+    assert redis_task_before is not None
+    assert mongo_task_before is not None
+
+    # Remove the task
+    response = DatabaseTasksService().remove_task_id(
+        dtypes.RemoveTaskIdRequest(task_id=task_id, task=task),
+        redis_db=redis_db,
+        mongo_tasks_connection=mongo_tasks_connection,
+    )
+
+    # Assert the response
+    assert response["success"] is True
+    assert (
+        response["message"] == "Task removed successfully from both Redis and MongoDB"
+    )
+
+    # Verify the task was removed from Redis
+    redis_task_after = redis_db.get_task_id(task_id, task)
+    assert redis_task_after is None
+
+    # Verify the task was removed from MongoDB
+    mongo_task_after = mongo_tasks_connection.find_one(
+        {"task_id": task_id, "task": task}
+    )
+    assert mongo_task_after is None
+
+
+def test_remove_task_id_nonexistent_task(
+    redis_db: RedisConnection,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Test removing a task that doesn't exist."""
+    task_id = str(uuid4())
+    task = "test_task"
+
+    # Try to remove a non-existent task
+    response = DatabaseTasksService().remove_task_id(
+        dtypes.RemoveTaskIdRequest(task_id=task_id, task=task),
+        redis_db=redis_db,
+        mongo_tasks_connection=mongo_tasks_connection,
+    )
+
+    # Removing a non-existent task should still succeed (idempotent operation)
+    # The response may vary based on implementation, but should not crash
+    assert "success" in response
+    assert "message" in response
+
+
+def test_remove_task_id_only_in_redis(
+    redis_db: RedisConnection,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Test removing a task that exists only in Redis."""
+    task_id = str(uuid4())
+    task = "test_task"
+
+    # Set up a task only in Redis
+    api_response = dtypes.ApiResponse(
+        status="success",
+        code=200,
+        message="Task only in Redis",
+        data={"import_name": "test_import", "source": "redis_only"},
+    )
+
+    redis_db.set_task_id(task_id, api_response, task)
+
+    # Verify the task exists in Redis but not in MongoDB
+    redis_task_before = redis_db.get_task_id(task_id, task)
+    mongo_task_before = mongo_tasks_connection.find_one(
+        {"task_id": task_id, "task": task}
+    )
+    assert redis_task_before is not None
+    assert mongo_task_before is None
+
+    # Remove the task
+    response = DatabaseTasksService().remove_task_id(
+        dtypes.RemoveTaskIdRequest(task_id=task_id, task=task),
+        redis_db=redis_db,
+        mongo_tasks_connection=mongo_tasks_connection,
+    )
+
+    # Assert the response - should succeed even if only in one storage
+    assert response["success"] is True
+
+    # Verify the task was removed from Redis
+    redis_task_after = redis_db.get_task_id(task_id, task)
+    assert redis_task_after is None
+
+
+def test_remove_task_id_only_in_mongodb(
+    redis_db: RedisConnection,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Test removing a task that exists only in MongoDB."""
+    task_id = str(uuid4())
+    task = "test_task"
+
+    # Set up a task only in MongoDB
+    mongo_document = {
+        "task_id": task_id,
+        "task": task,
+        "import_name": "test_import",
+        "status": "success",
+        "code": 200,
+        "message": "Task only in MongoDB",
+        "data": {"import_name": "test_import", "source": "mongodb_only"},
+    }
+
+    mongo_tasks_connection.insert_one(mongo_document)
+
+    # Verify the task exists in MongoDB but not in Redis
+    redis_task_before = redis_db.get_task_id(task_id, task)
+    mongo_task_before = mongo_tasks_connection.find_one(
+        {"task_id": task_id, "task": task}
+    )
+    assert redis_task_before is None
+    assert mongo_task_before is not None
+
+    # Remove the task
+    response = DatabaseTasksService().remove_task_id(
+        dtypes.RemoveTaskIdRequest(task_id=task_id, task=task),
+        redis_db=redis_db,
+        mongo_tasks_connection=mongo_tasks_connection,
+    )
+
+    # Assert the response
+    assert response["success"] is True
+
+    # Verify the task was removed from MongoDB
+    mongo_task_after = mongo_tasks_connection.find_one(
+        {"task_id": task_id, "task": task}
+    )
+    assert mongo_task_after is None

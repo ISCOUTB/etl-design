@@ -1,14 +1,25 @@
 import time
-from typing import Callable
+from typing import Protocol, runtime_checkable
 
 import redis.exceptions
 from proto_utils.database.redis_serde import RedisSerde
 from proto_utils.generated.database import redis_pb2
 
 from src.core.database_redis import RedisConnection
-from src.handlers.base import BaseHandler, Request, T
+from src.handlers.base import BaseHandler, RequestT, ResponseT
 from src.services.redis import RedisService
 from src.utils.logger import logger
+
+
+@runtime_checkable
+class RedisOperation(Protocol[RequestT, ResponseT]):
+    def __call__(
+        self,
+        request: RequestT,
+        /,
+        *,
+        redis_db: RedisConnection,
+    ) -> ResponseT: ...
 
 
 class RedisHandler(BaseHandler):
@@ -17,13 +28,16 @@ class RedisHandler(BaseHandler):
 
     def _execute_with_retry(
         self,
-        operation: Callable[[Request, RedisConnection], T],
-        request: Request,
-    ) -> T:
+        operation: RedisOperation[RequestT, ResponseT],
+        request: RequestT,
+        retry_on_failure: bool = False,
+    ) -> ResponseT:
         current_delay = self.retry_delay_redis
         last_exception = None
+        retries = self.max_retries_redis if retry_on_failure else 1
+        operation_name = getattr(operation, "__name__", operation.__class__.__name__)
 
-        for attempt in range(1, self.max_retries_redis + 1):
+        for attempt in range(1, retries + 1):
             try:
                 redis_db = self.manager.get_redis_connection(attempt > 1)
                 return operation(request, redis_db=redis_db)
@@ -33,23 +47,25 @@ class RedisHandler(BaseHandler):
                 redis.exceptions.ResponseError,
             ) as e:
                 last_exception = e
-                if attempt == self.max_retries_redis:
+                if attempt == retries:
                     logger.error(
-                        f"Redis operation '{operation.__name__}' failed after "
-                        f"{self.max_retries_redis} attempts: {e}"
+                        f"Redis operation '{operation_name}' failed after "
+                        f"{retries} attempts: {e}"
                     )
                     raise
 
                 logger.warning(
-                    f"Redis operation '{operation.__name__}' failed "
-                    f"(attempt {attempt}/{self.max_retries_redis}): {e}. "
+                    f"Redis operation '{operation_name}' failed "
+                    f"(attempt {attempt}/{retries}): {e}. "
                     f"Retrying in {current_delay}s..."
                 )
                 time.sleep(current_delay)
                 current_delay *= self.backoff_redis
 
         # just in case
-        raise last_exception
+        if last_exception:
+            raise last_exception
+        raise Exception("Unknown error during Redis operation")
 
     def get_keys(
         self,

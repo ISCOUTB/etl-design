@@ -9,11 +9,15 @@ from pika.exceptions import (
     AMQPChannelError,
     AMQPConnectionError,
     AMQPError,
+    ConnectionClosedByBroker,
     StreamLostError,
 )
 
+from src.exceptions import AppException
+from src.utils.logger import logger
 
-async def grpc_exception_handler(request: Request, exc: grpc.RpcError) -> JSONResponse:
+
+async def grpc_exception_handler(request: Request, exc: grpc.RpcError):
     """Handle gRPC errors with appropriate HTTP status codes."""
 
     # Map gRPC status codes to HTTP status codes
@@ -33,46 +37,77 @@ async def grpc_exception_handler(request: Request, exc: grpc.RpcError) -> JSONRe
         grpc_code, status.HTTP_500_INTERNAL_SERVER_ERROR
     )
 
-    return JSONResponse(
-        status_code=http_status,
-        content={
-            "error": "Database service error",
-            "code": grpc_code.name,
-            "message": exc.details(),
+    logger.warning(
+        "gRPC exception handled",
+        extra={
             "path": str(request.url.path),
+            "grpc_code": grpc_code.name,
+            "grpc_message": exc.details(),
+            "http_status": http_status,
         },
     )
 
+    # return JSONResponse(
+    #     status_code=http_status,
+    #     content={
+    #         "error": "Database service error",
+    #         "code": grpc_code.name,
+    #         "message": exc.details(),
+    #         "path": str(request.url.path),
+    #     },
+    # )
+    raise AppException(
+        status_code=http_status,
+        message=f"Database service error: {grpc_code.name} - {exc.details()}",
+    )
 
-async def rabbitmq_exception_handler(request: Request, exc: AMQPError) -> JSONResponse:
+
+async def rabbitmq_exception_handler(request: Request, exc: AMQPError):
     """Handle RabbitMQ errors."""
     status_code_mapping = {
         AMQPConnectionError: status.HTTP_503_SERVICE_UNAVAILABLE,
         StreamLostError: status.HTTP_504_GATEWAY_TIMEOUT,
         AMQPChannelError: status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ConnectionClosedByBroker: status.HTTP_503_SERVICE_UNAVAILABLE,
     }
 
     http_status = status_code_mapping.get(
         type(exc), status.HTTP_500_INTERNAL_SERVER_ERROR
     )
 
-    return JSONResponse(
+    logger.warning(
+        "RabbitMQ exception handled",
+        extra={
+            "path": str(request.url.path),
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "http_status": http_status,
+        },
+    )
+
+    # return JSONResponse(
+    #     status_code=http_status,
+    #     content={
+    #         "error": "Message broker service unavailable",
+    #         "message": str(exc),
+    #         "path": str(request.url.path),
+    #     },
+    # )
+    raise AppException(
         status_code=http_status,
-        content={
-            "error": "Message broker service unavailable",
-            "message": str(exc),
-            "path": str(request.url.path),
-        },
+        message=f"Message broker service error: {type(exc).__name__} - {str(exc)}",
     )
 
 
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all handler for unexpected errors."""
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "error": "Internal server error",
-            "message": str(exc),
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    """Catch-all handler for AppException errors."""
+    logger.info(
+        "AppException handled",
+        extra={
             "path": str(request.url.path),
+            "exception_type": type(exc).__name__,
+            "http_status": exc.status_code,
         },
     )
+
+    return JSONResponse(status_code=exc.status_code, content=exc._make_response_body())

@@ -1,0 +1,10 @@
+.nuxt
+.output
+.gitignore
+node_modules
+*.log
+.DS_Store
+.vscode
+.idea
+coverage
+dist

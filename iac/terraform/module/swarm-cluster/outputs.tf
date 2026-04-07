@@ -29,7 +29,7 @@ output "manager_ips" {
 
 output "manager_public_ips" {
   description = "Public IPs of all manager nodes"
-  value = aws_instance.managers[*].public_ip
+  value       = aws_instance.managers[*].public_ip
 }
 
 output "manager_private_ips" {
@@ -60,7 +60,7 @@ output "worker_ips" {
 
 output "worker_public_ips" {
   description = "Public IPs of all worker nodes"
-  value = aws_instance.workers[*].public_ip
+  value       = aws_instance.workers[*].public_ip
 }
 
 output "worker_private_ips" {
@@ -109,4 +109,23 @@ output "cluster_name" {
 output "region" {
   description = "AWS region where resources are deployed"
   value       = data.aws_region.current.region
+}
+
+# ============================================
+# Shared filesystem outputs
+# ============================================
+
+output "shared_fs_id" {
+  description = "EFS filesystem ID (null when disabled)"
+  value       = var.enable_shared_fs ? aws_efs_file_system.shared[0].id : null
+}
+
+output "shared_fs_dns_name" {
+  description = "EFS DNS name to mount from nodes (null when disabled)"
+  value       = var.enable_shared_fs ? aws_efs_file_system.shared[0].dns_name : null
+}
+
+output "shared_fs_security_group_id" {
+  description = "Security group ID attached to EFS mount targets (null when disabled)"
+  value       = var.enable_shared_fs ? aws_security_group.efs[0].id : null
 }

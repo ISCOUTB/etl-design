@@ -1,5 +1,5 @@
 import type { Node } from "excel-formula-ast";
-import { dtypes } from "@etl-design/packages-proto-utils-js";
+import { dtypes } from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

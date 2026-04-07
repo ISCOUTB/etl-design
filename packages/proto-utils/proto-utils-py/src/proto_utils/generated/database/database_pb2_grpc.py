@@ -10,7 +10,7 @@ from . import database_pb2 as database_dot_database__pb2
 from . import mongo_pb2 as database_dot_mongo__pb2
 from . import redis_pb2 as database_dot_redis__pb2
 
-GRPC_GENERATED_VERSION = '1.74.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -23,7 +23,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in database/database_pb2_grpc.py depends on'
+        + ' but the generated code in database/database_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -85,6 +85,16 @@ class DatabaseServiceStub(object):
                 request_serializer=database_dot_mongo__pb2.MongoPingRequest.SerializeToString,
                 response_deserializer=database_dot_mongo__pb2.MongoPingResponse.FromString,
                 _registered_method=True)
+        self.MongoGetRawSchemas = channel.unary_unary(
+                '/database_service.DatabaseService/MongoGetRawSchemas',
+                request_serializer=database_dot_mongo__pb2.MongoGetRawSchemasRequest.SerializeToString,
+                response_deserializer=database_dot_mongo__pb2.MongoGetRawSchemasResponse.FromString,
+                _registered_method=True)
+        self.MongoGetSchemasByImportRegex = channel.unary_unary(
+                '/database_service.DatabaseService/MongoGetSchemasByImportRegex',
+                request_serializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.SerializeToString,
+                response_deserializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.FromString,
+                _registered_method=True)
         self.MongoInsertOneSchema = channel.unary_unary(
                 '/database_service.DatabaseService/MongoInsertOneSchema',
                 request_serializer=database_dot_mongo__pb2.MongoInsertOneSchemaRequest.SerializeToString,
@@ -134,6 +144,11 @@ class DatabaseServiceStub(object):
                 '/database_service.DatabaseService/GetTasksByImportName',
                 request_serializer=database_dot_database__pb2.GetTasksByImportNameRequest.SerializeToString,
                 response_deserializer=database_dot_database__pb2.GetTasksByImportNameResponse.FromString,
+                _registered_method=True)
+        self.RemoveTaskId = channel.unary_unary(
+                '/database_service.DatabaseService/RemoveTaskId',
+                request_serializer=database_dot_database__pb2.RemoveTaskIdRequest.SerializeToString,
+                response_deserializer=database_dot_database__pb2.RemoveTaskIdResponse.FromString,
                 _registered_method=True)
 
 
@@ -196,6 +211,18 @@ class DatabaseServiceServicer(object):
         MongoDB operations specifically for JSON schema management
 
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MongoGetRawSchemas(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MongoGetSchemasByImportRegex(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -264,6 +291,12 @@ class DatabaseServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RemoveTaskId(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_DatabaseServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -306,6 +339,16 @@ def add_DatabaseServiceServicer_to_server(servicer, server):
                     servicer.MongoPing,
                     request_deserializer=database_dot_mongo__pb2.MongoPingRequest.FromString,
                     response_serializer=database_dot_mongo__pb2.MongoPingResponse.SerializeToString,
+            ),
+            'MongoGetRawSchemas': grpc.unary_unary_rpc_method_handler(
+                    servicer.MongoGetRawSchemas,
+                    request_deserializer=database_dot_mongo__pb2.MongoGetRawSchemasRequest.FromString,
+                    response_serializer=database_dot_mongo__pb2.MongoGetRawSchemasResponse.SerializeToString,
+            ),
+            'MongoGetSchemasByImportRegex': grpc.unary_unary_rpc_method_handler(
+                    servicer.MongoGetSchemasByImportRegex,
+                    request_deserializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.FromString,
+                    response_serializer=database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.SerializeToString,
             ),
             'MongoInsertOneSchema': grpc.unary_unary_rpc_method_handler(
                     servicer.MongoInsertOneSchema,
@@ -356,6 +399,11 @@ def add_DatabaseServiceServicer_to_server(servicer, server):
                     servicer.GetTasksByImportName,
                     request_deserializer=database_dot_database__pb2.GetTasksByImportNameRequest.FromString,
                     response_serializer=database_dot_database__pb2.GetTasksByImportNameResponse.SerializeToString,
+            ),
+            'RemoveTaskId': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveTaskId,
+                    request_deserializer=database_dot_database__pb2.RemoveTaskIdRequest.FromString,
+                    response_serializer=database_dot_database__pb2.RemoveTaskIdResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -580,6 +628,60 @@ class DatabaseService(object):
             '/database_service.DatabaseService/MongoPing',
             database_dot_mongo__pb2.MongoPingRequest.SerializeToString,
             database_dot_mongo__pb2.MongoPingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MongoGetRawSchemas(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/database_service.DatabaseService/MongoGetRawSchemas',
+            database_dot_mongo__pb2.MongoGetRawSchemasRequest.SerializeToString,
+            database_dot_mongo__pb2.MongoGetRawSchemasResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MongoGetSchemasByImportRegex(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/database_service.DatabaseService/MongoGetSchemasByImportRegex',
+            database_dot_mongo__pb2.MongoGetSchemasByImportRegexRequest.SerializeToString,
+            database_dot_mongo__pb2.MongoGetSchemasByImportRegexResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -850,6 +952,33 @@ class DatabaseService(object):
             '/database_service.DatabaseService/GetTasksByImportName',
             database_dot_database__pb2.GetTasksByImportNameRequest.SerializeToString,
             database_dot_database__pb2.GetTasksByImportNameResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveTaskId(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/database_service.DatabaseService/RemoveTaskId',
+            database_dot_database__pb2.RemoveTaskIdRequest.SerializeToString,
+            database_dot_database__pb2.RemoveTaskIdResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -1,18 +1,15 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: proto-utils-py
-    description: Shared utilities for working with protobufs in Python projects.
+    description: |
+        Shared utilities for working with protobufs in 
+        Python projects.
 
-toolchain:
-    python:
-        version: "3.12.10"
+layer: library
 
 tasks:
     generate:
         command: bash ./scripts/generate.sh
         options:
-            runFromWorkspaceRoot: false
             cache: false
 
     build:
@@ -21,5 +18,3 @@ tasks:
             - build
         deps:
             - ^:generate
-        options:
-            runFromWorkspaceRoot: false

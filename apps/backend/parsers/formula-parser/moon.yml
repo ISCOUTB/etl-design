@@ -1,13 +1,12 @@
 project:
     name: formula-parser
-    description: A Node.js gRPC service that parses Excel formulas into Abstract Syntax Trees (AST) and token representations. This service is responsible for analyzing Excel formula syntax and providing structured data that can be consumed by other services in the Excel Parsing system.
+    description: |
+        A Node.js gRPC service that parses Excel formulas into 
+        Abstract Syntax Trees (AST) and token representations.
 
-type: application
+layer: application
 
 language: typescript
-
-toolchain:
-    node:
 
 tasks:
     test:
@@ -19,15 +18,16 @@ tasks:
             - --coverage
         deps:
             - proto-utils-js:build
-        toolchain: node
+        toolchains: node
 
     pnpm:
         command: pnpm
         args:
             - --filter
             - "@etl-design/apps-formula-parser"
-        toolchain: node
+        toolchains: node
         options:
+            runFromWorkspaceRoot: true
             cache: false
 
     lint:
@@ -36,7 +36,7 @@ tasks:
             - eslint
             - .
             - --fix
-        toolchain: node
+        toolchains: node
 
     run:
         command: node
@@ -45,14 +45,14 @@ tasks:
             - dist/server.cjs
         deps:
             - formula-parser:build
-        local: true
-        toolchain: node
+        toolchains: node
+        preset: server
 
     client-run:
         command: node
         args:
             - src/client.js
-        toolchain: node
+        toolchains: node
         options:
             runFromWorkspaceRoot: false
 
@@ -62,7 +62,7 @@ tasks:
             - tsup
         deps:
             - proto-utils-js:build
-        toolchain: node
+        toolchains: node
         options:
             runFromWorkspaceRoot: false
 
@@ -73,7 +73,7 @@ tasks:
             - -f
             - apps/backend/parsers/formula-parser/Dockerfile
             - .
-        local: true
-        platform: system
+        toolchains: system
         options:
             runFromWorkspaceRoot: true
+            cache: false

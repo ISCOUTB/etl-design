@@ -12,28 +12,28 @@ for reliable delivery and processing.
 import json
 import logging
 import time
-import uuid
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import pika
+from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import (
     AMQPChannelError,
     AMQPConnectionError,
     StreamLostError,
 )
+from uuidv7 import uuid7
 
 from messaging_utils.core.connection_params import messaging_params
 from messaging_utils.messaging.connection_factory import (
     RabbitMQConnectionFactory,
 )
-from messaging_utils.schemas.connection import (
+from messaging_utils.schemas import (
     AllConnectionParams,
     ConnectionParams,
     ExchangeInfo,
-)
-from messaging_utils.schemas.schemas import SchemaMessage, SchemasTasks
-from messaging_utils.schemas.validation import (
+    InsertionMessage,
+    InsertionTasks,
     Metadata,
     ValidationMessage,
     ValidationTasks,
@@ -99,14 +99,12 @@ class Publisher:
             or not RabbitMQConnectionFactory._params
         ):
             RabbitMQConnectionFactory.configure(
-                AllConnectionParams(**params, exchange=self.exchange_info)
+                AllConnectionParams(**params, exchange=self.exchange_info)  # type: ignore
             )
 
         self._channel = RabbitMQConnectionFactory.get_thread_channel()
 
-    def _get_healthy_channel(
-        self, force_new: bool = False
-    ) -> pika.channel.Channel:
+    def _get_healthy_channel(self, force_new: bool = False) -> BlockingChannel:
         """Get a healthy RabbitMQ channel.
 
         Ensures that the channel is open and the connection is healthy.
@@ -116,11 +114,27 @@ class Publisher:
             force_new (bool): Force retrieval of a new channel.
 
         Returns:
-            pika.channel.Channel: Healthy RabbitMQ channel.
+            BlockingChannel: Healthy RabbitMQ channel.
         """
         if force_new or not self._channel or not self._channel.is_open:
             self._channel = RabbitMQConnectionFactory.get_thread_channel()
         return self._channel
+
+    def is_healthy_channel(self) -> bool:
+        """Check if the current channel is healthy.
+
+        A channel is considered healthy if it is open and the underlying
+        connection is open.
+
+        Returns:
+            bool: True if the channel is healthy, False otherwise.
+        """
+        return (
+            self._channel
+            and self._channel.is_open
+            and self._channel.connection
+            and self._channel.connection.is_open
+        )
 
     def _execute_with_retry(
         self,
@@ -185,15 +199,30 @@ class Publisher:
                 current_delay *= self.backoff
 
         # Should never reach here, but just in case
+        if last_exception is None:
+            last_exception = Exception(
+                f"{operation_name} failed without exception."
+            )
+
         raise last_exception
 
     def publish_validation_request(
         self,
         routing_key: str,
         file_data: bytes,
-        import_name: str,
+        project_id: str,
+        table_name: str,
         metadata: Metadata,
         task: ValidationTasks,
+        insert: bool = False,
+        insert_table_name: Optional[str] = None,
+        insert_overwrite: Optional[bool] = None,
+        insert_db_uri: Optional[str] = None,
+        task_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+        traceparent: Optional[str] = None,
+        tracestate: Optional[str] = None,
+        baggage: Optional[str] = None,
         **kwargs: str,
     ) -> str:
         """Publish a validation request message to the RabbitMQ exchange.
@@ -205,11 +234,23 @@ class Publisher:
         Args:
             routing_key (str): The routing key to route the message to the appropriate queue.
             file_data (bytes): Raw binary data of the file to be validated.
-            import_name (str): Schema identifier to validate the file against.
+            project_id (str): Schema identifier to validate the file against.
             metadata (Metadata): Additional metadata including filename, priority, and
                 other processing parameters.
             task (Validation Tasks): Task type for the validation request (e.g.,
                 "sample_validation").
+            insert (bool): Whether this validation request is for an insertion operation.
+            insert_table_name (Optional[str]): If provided, indicates that the validation is for an insertion
+                operation and specifies the target table name for the insertion.
+            insert_overwrite (Optional[bool]): If True, indicates that the validation is for an overwrite
+                operation.
+            insert_db_uri (Optional[str]): If provided, indicates that the validation is for an insertion
+                operation and specifies the database URI for the insertion.
+            task_id (Optional[str]): Optional unique task ID (UUID) for tracking the validation request. If not provided, a new UUID will be generated.
+            idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the validation request.
+            traceparent (Optional[str]): W3C Trace Context traceparent header for distributed tracing.
+            tracestate (Optional[str]): W3C Trace Context tracestate header for distributed tracing.
+            baggage (Optional[str]): Baggage header for distributed context propagation.
             kwargs (str): Additional key-value pairs to include in the message.
 
         Returns:
@@ -220,26 +261,59 @@ class Publisher:
             - id: Unique task identifier (UUID)
             - task: Task type (e.g., "sample_validation", "add_data")
             - file_data: Hexadecimal-encoded file content
-            - import_name: Schema identifier for validation
+            - project_id: Schema identifier for validation
             - metadata: Additional processing metadata
+            - traceparent: W3C Trace Context traceparent header
+            - tracestate: W3C Trace Context tracestate header
+            - baggage: Baggage header for context propagation
 
         Raises:
             Exception: If message publishing fails due to connection issues
                 or serialization problems.
         """
 
-        def _publish() -> str:
-            task_id = str(uuid.uuid4())
+        if insert:
+            if insert_overwrite is None:
+                raise TypeError(
+                    "insert_overwrite must be provided when insert is True"
+                )
+            if insert_db_uri is None:
+                raise TypeError(
+                    "insert_db_uri must be provided when insert is True"
+                )
 
-            message = ValidationMessage(
-                id=task_id,
-                task=task,
-                file_data=file_data.hex(),
-                import_name=import_name,
-                metadata=metadata,
-                date=datetime.now().isoformat(),
-                extra=kwargs,
-            )
+        def _publish() -> str:
+            nonlocal task_id
+            if task_id is None:
+                # actually, it is already str, but for type clarity
+                task_id = str(uuid7())
+
+            # Build base message
+            message_data: dict = {
+                "id": task_id,
+                "task": task,
+                "file_data": file_data.hex(),
+                "project_id": project_id,
+                "table_name": table_name,
+                "metadata": metadata,
+                "date": datetime.now().isoformat(),
+                "extra": kwargs,
+                "insert": insert,
+                "insert_table_name": insert_table_name,
+                "insert_overwrite": insert_overwrite,
+                "insert_db_uri": insert_db_uri,
+                "idempotency_key": idempotency_key,
+            }
+            
+            # Add trace context headers only if provided
+            if traceparent:
+                message_data["traceparent"] = traceparent
+            if tracestate:
+                message_data["tracestate"] = tracestate
+            if baggage:
+                message_data["baggage"] = baggage
+            
+            message = ValidationMessage(**message_data)  # type: ignore
 
             self._channel.basic_publish(
                 exchange=self.exchange_info["exchange"],
@@ -259,58 +333,70 @@ class Publisher:
             operation_name="publish_validation_request",
         )
 
-    def publish_schema_update(
+    def publish_insertion_request(
         self,
         routing_key: str,
-        schema: Dict[str, Any] = None,
-        import_name: str = None,
-        raw: bool = False,
-        task: SchemasTasks = None,
+        file_data: bytes,
+        project_id: str,
+        metadata: Metadata,
+        task: InsertionTasks,
+        db_uri: str,
+        table_name: str,
+        overwrite: bool = False,
+        task_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+        traceparent: Optional[str] = None,
+        tracestate: Optional[str] = None,
+        baggage: Optional[str] = None,
         **kwargs: str,
     ) -> str:
-        """Publish a schema update message to the RabbitMQ exchange.
+        """Publish an insertion request message to the RabbitMQ exchange.
 
-        Creates and sends a schema update message containing schema definition
-        and metadata to be processed by schema workers. The schema is stored
-        and associated with the specified import name.
+        Creates and sends an insertion request message containing file data
+        and metadata to be processed by insertion workers. The file data is converted to
+        hexadecimal format for safe JSON transmission. The message includes an "overwrite"
+        flag to indicate whether the insertion should overwrite to existing data or overwrite it.
 
         Args:
-            routing_key: The routing key to route the message to the appropriate queue.
-            schema: Dictionary containing the schema definition with validation
-                rules, field types, and constraints.
-            import_name: Unique identifier for the schema to be created or updated.
-            raw: Boolean flag indicating if the schema is in raw format
-                requiring processing or is already processed.
-            task: Task type for the schema operation (e.g., "upload_schema").
-            kwargs: Additional key-value pairs to include in the message.
-
-        Returns:
-            str: Unique task ID (UUID) for tracking the schema update request.
-
-        Message Format:
-            Creates a SchemaMessage with the following structure:
-            - id: Unique task identifier (UUID)
-            - timestamp: ISO format timestamp of message creation
-            - schema: Schema definition dictionary
-            - import_name: Schema identifier for storage
-            - raw: Flag indicating schema processing requirements
-
-        Raises:
-            Exception: If message publishing fails due to connection issues
-                or serialization problems.
+            routing_key (str): The routing key to route the message to the appropriate queue.
+            file_data (bytes): Raw binary data of the file to be inserted.
+            project_id (str): Schema identifier to insert the file against.
+            metadata (Metadata): Additional metadata including filename, priority, and
+                other processing parameters.
+            task (InsertionTasks): Task type for the insertion request (e.g.,
+                "sample_insertion").
+            table_name (Optional[str]): Optional name of the target table for the insertion.
+            overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
+            db_uri (str): The URI for connecting to the database where the data should be inserted.
+            task_id (Optional[str]): Optional unique task ID (UUID) for tracking the insertion request. If not provided, a new UUID will be generated.
+            idempotency_key (Optional[str]): Optional idempotency key for ensuring idempotent processing of the insertion request.
+            traceparent (Optional[str]): W3C Trace Context traceparent header for distributed tracing.
+            tracestate (Optional[str]): W3C Trace Context tracestate header for distributed tracing.
+            baggage (Optional[str]): Baggage header for distributed context propagation.
+            kwargs (str): Additional key-value pairs to include in the message.
         """
 
         def _publish() -> str:
-            task_id = str(uuid.uuid4())
+            nonlocal task_id
+            if task_id is None:
+                # actually, it is already str, but for type clarity
+                task_id = str(uuid7())
 
-            message = SchemaMessage(
+            message = InsertionMessage(
                 id=task_id,
-                schema=schema,
-                import_name=import_name,
-                raw=raw,
-                tasks=task,
+                task=task,
+                file_data=file_data.hex(),
+                project_id=project_id,
+                table_name=table_name,
+                metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,
+                overwrite=overwrite,
+                db_uri=db_uri,
+                idempotency_key=idempotency_key,
+                traceparent=traceparent,
+                tracestate=tracestate,
+                baggage=baggage,
             )
 
             self._channel.basic_publish(
@@ -328,7 +414,7 @@ class Publisher:
 
         return self._execute_with_retry(
             _publish,
-            operation_name="publish_schema_update",
+            operation_name="publish_validation_request",
         )
 
     def close(self) -> None:

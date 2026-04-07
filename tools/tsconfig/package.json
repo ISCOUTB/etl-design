@@ -1,5 +1,5 @@
 {
-    "name": "@etl-design/tools-tsconfig",
+    "name": "@sloth/tools-tsconfig",
     "version": "1.0.0",
     "description": "Shared Typescript config",
     "exports": {

@@ -1,20 +1,35 @@
-import { formula_parser } from "@etl-design/packages-proto-utils-js";
+import { formula_parser } from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { settings } from "@/core/";
 import { parseFormula } from "@/services/parse";
 import { Convert, logger } from "@/utils/";
 
-export function handler(formula: string) {
+interface TraceLogContext {
+    trace_id: string;
+    span_id: string;
+    trace_flags: string;
+}
+
+export function handler(formula: string, traceLogContext: Partial<TraceLogContext> = {}) {
     return Effect.gen(function* () {
         const response = new formula_parser.FormulaParserResponse();
+
+        logger.info("[HANDLER] Parsing formula", {
+            module: "handler",
+            funcName: "handler",
+            formula,
+            ...traceLogContext,
+        });
 
         const { tokens, ast, error } = yield* parseFormula(formula);
 
         const { DEBUG_FORMULA_PARSER } = yield* settings;
 
         if (DEBUG_FORMULA_PARSER) {
-            logger.debug(`received formula: ${formula}`);
-            logger.debug(`AST: ${JSON.stringify(ast, null, 2)}`);
+            logger.debug("received formula", { formula });
+            logger.debug("AST", {
+                AST: JSON.stringify(ast, null, 2),
+            });
         }
 
         response.formula = formula;

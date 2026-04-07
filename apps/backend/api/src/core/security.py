@@ -1,32 +1,8 @@
-from datetime import datetime, timedelta, timezone
+import hashlib
+import hmac
 
-import jwt
-from passlib.context import CryptContext
-
-from src.core.config import settings
-from src.schemas.users import Roles
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ALGORITHM = "HS256"
-
-
-def create_access_token(username: str, rol: Roles, expires_delta: timedelta) -> str:
-    """
-    Generates an access token (JWT) for a user.
-
-    Args:
-        username (str): User's document number.
-        rol (str): User's role (e.g. administrator, doctor).
-        expires_delta (datetime.timedelta): Token duration before it expires.
-
-    Returns:
-        str: Generated JWT token.
-    """
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "username": username, "rol": rol}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-
-    return encoded_jwt
+import bcrypt
+from pyaegis import Aegis256
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -40,7 +16,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True if passwords match, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def get_password_hash(password: str) -> str:
@@ -53,4 +29,91 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: Encrypted hash of the password.
     """
-    return pwd_context.hash(password)
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode(), salt=salt)
+    return hashed.decode()
+
+
+def derive_key(
+    secret: str,
+    info: str,
+    length: int = 32,
+) -> bytes:
+    salt = b""
+    prk = hmac.new(
+        salt if salt else (b"\x00" * hashlib.sha256().digest_size),
+        secret.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+
+    info_bytes = info.encode("utf-8")
+
+    okm = b""
+    previous = b""
+
+    for i in range(
+        (length + hashlib.sha256().digest_size - 1) // hashlib.sha256().digest_size
+    ):
+        previous = hmac.new(
+            prk, previous + info_bytes + bytes([i + 1]), hashlib.sha256
+        ).digest()
+        okm += previous
+
+    return okm[:length]
+
+
+def encrypt_aegis256(
+    plaintext: str,
+    secret_key: str,
+    secret_sign: str,
+    *,
+    project_id: str,
+    field_name: str,
+) -> str:
+    nbytes = 32
+
+    cipher = Aegis256(nbytes)
+    key = derive_key(secret_key, secret_sign, nbytes)
+    nonce = cipher.random_nonce()
+
+    ciphertext = cipher.encrypt(
+        key=key,
+        nonce=nonce,
+        plaintext=plaintext.encode("utf-8"),
+        associated_data=f"{project_id}:{field_name}".encode("utf-8"),
+    )
+    return (nonce + ciphertext).hex()
+
+
+def decrypt_aegis256(
+    ciphertext_hex: str,
+    secret_key: str,
+    secret_sign: str,
+    *,
+    project_id: str,
+    field_name: str,
+) -> str:
+    nbytes = 32
+
+    cipher = Aegis256(nbytes)
+    key = derive_key(secret_key, secret_sign, nbytes)
+
+    # @dosquisd
+    try:
+        ciphertext_bytes = bytes.fromhex(ciphertext_hex)
+    except ValueError:
+        return ciphertext_hex
+
+    if len(ciphertext_bytes) < nbytes:
+        return ciphertext_hex
+
+    nonce = ciphertext_bytes[:nbytes]
+    ciphertext = ciphertext_bytes[nbytes:]
+
+    plaintext_bytes = cipher.decrypt(
+        key=key,
+        nonce=nonce,
+        ciphertext=ciphertext,
+        associated_data=f"{project_id}:{field_name}".encode("utf-8"),
+    )
+    return plaintext_bytes.decode("utf-8")

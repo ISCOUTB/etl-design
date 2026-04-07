@@ -1,4 +1,4 @@
-import { dtypes, formula_parser } from "@etl-design/packages-proto-utils-js";
+import { dtypes, formula_parser } from "@sloth/packages-proto-utils-js";
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

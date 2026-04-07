@@ -37,6 +37,7 @@ The DDL Generator service provides:
 - **SQL Expression Generation**: Creates valid SQL expressions from Excel formulas
 - **Type Safety**: Preserves and converts data types appropriately
 - **Operator Translation**: Maps Excel operators to SQL equivalents
+- **Null-safe Comparisons**: Uses PostgreSQL null-safe operators for `=` and `<>`
 - **Function Support**: Converts Excel functions to SQL functions
 - **Range Handling**: Processes Excel cell ranges for aggregate operations
 
@@ -65,31 +66,31 @@ message DDLResponse {
 
 ### Cell References
 
-| Excel    | SQL Column Mapping   | Result      |
-| -------- | -------------------- | ----------- |
-| `A1`   | `{"A": "user_id"}` | `user_id` |
-| `B2`   | `{"B": "name"}`    | `name`    |
-| `$C$1` | `{"C": "amount"}`  | `amount`  |
+| Excel | SQL Column Mapping | Result |
+| ----- | ------------------ | ------ |
+| `A1` | `{"A": "user_id"}` | `user_id` |
+| `B2` | `{"B": "name"}` | `name` |
+| `$C$1` | `{"C": "amount"}` | `amount` |
 
 ### Mathematical Operators
 
-| Excel Operator | SQL Operator | Example                             |
-| -------------- | ------------ | ----------------------------------- |
-| `+`          | `+`        | `A1 + B1` → `user_id + amount` |
-| `-`          | `-`        | `A1 - B1` → `user_id - amount` |
-| `*`          | `*`        | `A1 * B1` → `user_id * amount` |
-| `/`          | `/`        | `A1 / B1` → `user_id / amount` |
+| Excel Operator | SQL Operator | Example |
+| -------------- | ------------ | ------- |
+| `+` | `+` | `A1 + B1` → `user_id + amount` |
+| `-` | `-` | `A1 - B1` → `user_id - amount` |
+| `*` | `*` | `A1 * B1` → `user_id * amount` |
+| `/` | `/` | `A1 / B1` → `user_id / amount` |
 
 ### Comparison Operators
 
-| Excel Operator | SQL Operator | Example                               |
-| -------------- | ------------ | ------------------------------------- |
-| `=`          | `=`        | `A1 = B1` → `user_id = amount`   |
-| `<>`         | `!=`       | `A1 <> B1` → `user_id != amount` |
-| `>`          | `>`        | `A1 > B1` → `user_id > amount`   |
-| `>=`         | `>=`       | `A1 >= B1` → `user_id >= amount` |
-| `<`          | `<`        | `A1 < B1` → `user_id < amount`   |
-| `<=`         | `<=`       | `A1 <= B1` → `user_id <= amount` |
+| Excel Operator | SQL Operator | Example |
+| -------------- | ------------ | ------- |
+| `=` | `IS NOT DISTINCT FROM` | `A1 = B1` → `user_id IS NOT DISTINCT FROM amount` |
+| `<>` | `IS DISTINCT FROM` | `A1 <> B1` → `user_id IS DISTINCT FROM amount` |
+| `>` | `>` | `A1 > B1` → `user_id > amount` |
+| `>=` | `>=` | `A1 >= B1` → `user_id >= amount` |
+| `<` | `<` | `A1 < B1` → `user_id < amount` |
+| `<=` | `<=` | `A1 <= B1` → `user_id <= amount` |
 
 ### Functions
 
@@ -99,11 +100,16 @@ message DDLResponse {
 
 > **Note**: These functions work with same-row cell references only.
 
-| Excel Function        | SQL Equivalent                          | Example                                            |
-| --------------------- | --------------------------------------- | -------------------------------------------------- |
-| `IF(A1>0, B1, C1)`  | `CASE WHEN ... THEN ... ELSE ... END` | `CASE WHEN user_id > 0 THEN name ELSE email END` |
-| `AND(A1>0, B1<100)` | `... AND ...`                         | `user_id > 0 AND amount < 100`                   |
-| `OR(A1>0, B1<100)`  | `... OR ...`                          | `user_id > 0 OR amount < 100`                    |
+| Excel Function | SQL Equivalent | Example |
+| -------------- | -------------- | ------- |
+| `IF(A1>0, B1, C1)` | `CASE WHEN ... THEN ... ELSE ... END` | `CASE WHEN user_id > 0 THEN name ELSE email END` |
+| `AND(A1>0, B1<100)` | `... AND ...` | `user_id > 0 AND amount < 100` |
+
+Current implemented function map in code:
+
+- `SUM`
+- `IF`
+- `AND`
 
 ## Current Limitations & Pending Features
 
@@ -198,22 +204,30 @@ Currently, the system has significant limitations with range operations:
 
 1. Install dependencies:
 
-   ```bash
-   uv sync
-   ```
+  ```bash
+  uv sync
+  ```
 
 2. Configure environment:
 
-   ```bash
-   cp ../.env.example .env
-   # Edit .env with your configuration
-   ```
+  ```bash
+  cp .env.example .env
+  # Edit .env with your configuration
+  ```
 
 3. Start the service:
 
-   ```bash
-   uv run python src/server.py
-   ```
+  ```bash
+  uv run -m src.server
+  ```
+
+## Running Tests
+
+Run unit tests and coverage reports:
+
+```bash
+uv run -m pytest -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
+```
 
 ## Configuration
 
@@ -231,35 +245,42 @@ DDL_GENERATOR_DEBUG=True
 ### Project Structure
 
 ```text
-
-
-ddl-generator/
-├── src/
-│   ├── server.py                    # gRPC server setup
-│   ├── client.py                    # Test client
-│   ├── clients/                     # Generated Protocol Buffer files
-│   │   ├── ddl_generator_pb2.py
-│   │   ├── ddl_generator_pb2.pyi
-│   │   ├── ddl_generator_pb2_grpc.py
-│   │   ├── dtypes_pb2.py
-│   │   ├── dtypes_pb2.pyi
-│   │   ├── dtypes_pb2_grpc.py
-│   │   └── utils.py                 # Protocol Buffer utilities
-│   ├── core/
-│   │   └── config.py                # Configuration management
-│   ├── handlers/
-│   │   └── ddl_generator.py         # Request handling logic
-│   ├── services/
-│   │   ├── ddl_generator.py         # Main service logic
-│   │   ├── dtypes.py                # Type definitions
-│   │   └── generator.py             # Core generation logic
-│   │   └── sql.py                   # SQL Generation based on functions
-│   │   └── utils.py
-│   └── tests/                       # Test files
-├── scripts/                         # Utility scripts
-├── pyproject.toml                   # Project configuration
+ddl-generator
+├── src
+│   ├── core
+│   │   ├── config.py                # Configuration management
+│   │   └── __init__.py
+│   ├── handlers
+│   │   ├── ddl_generator.py         # Request handling logic
+│   │   └── __init__.py
+│   ├── services
+│   │   ├── ddl_generator.py         # Main service logic
+│   │   ├── generator.py             # Core generation logic
+│   │   ├── __init__.py
+│   │   ├── sql.py                   # SQL generation for functions
+│   │   └── utils.py                 # Column/cell helper functions
+│   ├── utils
+│   │   ├── formula_parser_cli.py
+│   │   ├── __init__.py
+│   │   ├── logger.py
+│   │   ├── rootdir.py
+│   │   └── watch_files.py
+│   └── server.py                    # gRPC server setup
+├── tests
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── test_generator.py
+│   │   └── test_sql_from_function.py
+│   ├── utils
+│   │   ├── __init__.py
+│   │   ├── test_formula_parser_cli.py
+│   │   └── test_.py
+│   └── test_server.py
 ├── Dockerfile                       # Container configuration
-└── README.md                        # This file
+├── moon.yml
+├── pyproject.toml                   # Project configuration
+├── README.md                        # This file
+└── uv.lock
 ```
 
 ### Key Components
@@ -269,22 +290,15 @@ ddl-generator/
 The entry point that processes input data and routes to appropriate generators:
 
 ```python
-def generate_ddl(data: InputData) -> AllOutputs:
-    ast: AST = data["ast"]
-    columns: Dict[str, str] = data["columns"]
-    return MAPS[ast["type"]](ast, columns)
+def generate_ddl(data: DDLRequest) -> AllASTs:
+  ast = data["ast"]
+  columns = data["columns"]
+  return MAPS[ast["type"]](ast, columns)
 ```
 
 #### Generator Maps
 
-The service uses a mapping system to route different AST node types to their corresponding generators:
-
-- **Cell References** → `cell.py`
-- **Binary Expressions** → `binary_expression.py`
-- **Functions** → `function.py`
-- **Literals** → `literals.py`
-- **Cell Ranges** → `cell_range.py`
-- **Unary Expressions** → `unary_expression.py`
+The service uses a mapping system in `src/services/generator.py` to route AST node types (`cell`, `binary-expression`, `function`, etc.) to the corresponding handler functions.
 
 #### Type System
 
@@ -313,7 +327,7 @@ The service provides comprehensive error handling:
 {
   "ast": {
     "type": "cell",
-    "name": "A1",
+    "key": "A1",
     "refType": "relative"
   },
   "columns": {
@@ -343,7 +357,7 @@ The service provides comprehensive error handling:
   "ast": {
     "type": "binary-expression",
     "operator": "+",
-    "left": {"type": "cell", "name": "A1"},
+    "left": {"type": "cell", "key": "A1", "refType": "relative"},
     "right": {"type": "number", "value": 10}
   },
   "columns": {
@@ -357,7 +371,7 @@ The service provides comprehensive error handling:
 ```json
 {
   "type": "binary-expression",
-  "sql": "amount + 10",
+  "sql": "(amount) + (10)",
   "operator": "+",
   "left": {"sql": "amount", "type": "cell"},
   "right": {"sql": "10", "type": "number"}
