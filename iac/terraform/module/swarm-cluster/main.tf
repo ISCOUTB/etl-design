@@ -227,7 +227,6 @@ resource "aws_instance" "managers" {
 
   subnet_id              = aws_subnet.swarm[count.index % length(aws_subnet.swarm)].id
   vpc_security_group_ids = [aws_security_group.swarm.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   associate_public_ip_address = true
 
@@ -264,7 +263,6 @@ resource "aws_instance" "workers" {
 
   subnet_id              = aws_subnet.swarm[count.index % length(aws_subnet.swarm)].id
   vpc_security_group_ids = [aws_security_group.swarm.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   associate_public_ip_address = true
 
@@ -320,6 +318,8 @@ resource "aws_iam_role_policy_attachment" "ssm_policy" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${local.cluster_name}-ec2-profile"
   role = aws_iam_role.ec2_role.name
+
+  depends_on = [aws_iam_role_policy_attachment.ssm_policy]
 }
 
 # ============================================
