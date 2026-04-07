@@ -4,6 +4,9 @@
 # using an ansible playbook. For development, we can use NFS or bind mounts, but these are not recommended for production. Damn...
 
 services:
+    # =============================================================================
+    # Traefik Reverse Proxy & Load Balancer
+    # =============================================================================
     traefik:
         image: traefik:v3.6
         networks:
@@ -105,6 +108,9 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - ${TRAEFIK_CERTS_PATH?Variable not set}:/certificates
 
+    # =============================================================================
+    # Monitoring Stack: Prometheus, Grafana, Loki, Tempo, Alloy, cAdvisor, Node Exporter
+    # =============================================================================
     prometheus:
         image: prom/prometheus:latest
         user: root
@@ -286,7 +292,7 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock
         environment:
             NODE_ENV: staging
-            PROMETHEUS_URL: ${SCALER_PROMETHEUS_URL}
+            PROMETHEUS_URL: http://prometheus:9090
             STACK_NAME: ${GLOBAL_STACK_NAME}
             CHECK_INTERVAL: ${SCALER_CHECK_INTERVAL}
             COOLDOWN_PERIOD: ${SCALER_COOLDOWN_PERIOD}
@@ -298,6 +304,9 @@ services:
                 constraints:
                     - node.role == manager
 
+    # =============================================================================
+    # Parsers: Formula Parser, DDL Generator, SQL Builder, Excel Reader
+    # =============================================================================
     formula-parser:
         image: vulcan99/formula-parser:latest
         environment:
@@ -481,6 +490,9 @@ services:
                 - prometheus-port=${PARSERS_EXCEL_READER_PORT?Variable not set}
                 - prometheus-path=/metrics
 
+    # =============================================================================
+    # Databases & Message Brokers: RabbitMQ, MongoDB, Redis, PostgreSQL + pgAdmin, ETL Database
+    # =============================================================================
     rabbitmq:
         image: rabbitmq:4-management
         environment:
@@ -731,6 +743,9 @@ services:
                 - prometheus-port=9090
                 - prometheus-path=/metrics
 
+    # =============================================================================
+    # Application Services: API Server, Web, Type Checking Worker, Pre‑start Initialization
+    # =============================================================================
     typechecking:
         image: vulcan99/typechecking:latest
         environment:
@@ -961,9 +976,15 @@ services:
     web:
         image: vulcan99/web:latest
         environment:
-            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
-            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            NUXT_SITE_ENV: staging
             API_BASE_URL: ${API_V1_STR-/api/v1}
+            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
+            NUXT_SITE_URL: https://web.swarm.${DOMAIN}
+            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            AUTH_SECRET: ${AUTH_SECRET?Variable not set}
+            AUTH_SIGN: ${AUTH_SIGN?Variable not set}
+            NUXT_SITE_NAME: ${NUXT_SITE_NAME-"S.L.O.T.H"}
+            NUXT_OG_IMAGE_SECRET: ${NUXT_OG_IMAGE_SECRET?Variable not set}
         depends_on:
             - api
         networks:
@@ -987,6 +1008,9 @@ services:
                 - "traefik.http.routers.web.tls.certresolver=le"
                 - "traefik.http.services.web.loadbalancer.server.port=3000"
 
+# =============================================================================
+# Networks, Configs, Volumes
+# =============================================================================
 networks:
     monitoring:
         driver: overlay
