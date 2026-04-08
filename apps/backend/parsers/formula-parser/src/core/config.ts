@@ -32,14 +32,24 @@ const booleanEnv = (keys: string[], fallback: boolean) =>
                 continue;
             }
 
-            return ["true", "1", "yes", "on"].includes(value.toLowerCase());
+            const normalized = value.toLowerCase();
+
+            if (["true", "1", "yes", "on"].includes(normalized)) {
+                return true;
+            }
+
+            if (["false", "0", "no", "off"].includes(normalized)) {
+                return false;
+            }
+
+            return value;
         }
 
         return fallback;
     }, z.boolean());
 
 const EnvSchema = z.object({
-    FORMULA_PARSER_HOST: stringEnv(["FORMULA_PARSER_HOST"], "0.0.0.0"),
+    FORMULA_PARSER_HOST: stringEnv(["FORMULA_PARSER_HOST"], "localhost"),
     FORMULA_PARSER_PORT: numberEnv(["FORMULA_PARSER_PORT"], 50052).pipe(
         z.number().min(1).max(65535),
     ),
