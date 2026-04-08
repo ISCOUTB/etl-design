@@ -17,6 +17,7 @@ COPY tools/tsconfig /workspace/tools/tsconfig/
 RUN --mount=type=cache,target=/pnpm/store \
     pnpm install --frozen-lockfile --ignore-scripts
 
+RUN pnpm --filter @sloth/packages-proto-utils-js exec tsup
 RUN pnpm --filter @etl-design/apps-formula-parser build
 
 FROM node:lts-alpine AS runner
