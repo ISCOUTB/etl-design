@@ -4,10 +4,11 @@ Covers the new results queue consumer behavior and idempotency paths.
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.schemas.workers import ResultsMessage
 from src.workers.results import ResultWorker
 
 
@@ -32,15 +33,18 @@ def result_worker(mock_db_client):
 
 
 @pytest.fixture
-def sample_results_message():
-    return {
-        "task_id": "task_result_1",
-        "results": {"status": "success", "details": {"error_count": 0}},
-        "status": "success",
-        "traceparent": None,
-        "tracestate": None,
-        "baggage": None,
-    }
+def sample_results_message() -> ResultsMessage:
+    return ResultsMessage(
+        task_id="task_result_1",
+        project_id="project_1",
+        import_name="test_import",
+        results={"status": "success", "details": {"error_count": 0}},
+        status="success",
+        error="",
+        traceparent=None,
+        tracestate=None,
+        baggage=None,
+    )
 
 
 class TestResultQueueWorker:
