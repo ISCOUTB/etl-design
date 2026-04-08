@@ -179,7 +179,7 @@ jobs:
       - name: Show detection results
         run: |
           echo "=== CHANGED SERVICES ==="
-          echo "Web: ${{ needs.detect-services.outputs.web }}""
+          echo "Web: ${{ needs.detect-services.outputs.web }}"
           echo "API: ${{ needs.detect-services.outputs.api }}"
           echo "Database: ${{ needs.detect-services.outputs.database }}"
           echo "Typechecking: ${{ needs.detect-services.outputs.typechecking }}"
@@ -308,7 +308,7 @@ jobs:
 
           # Web
           if [ "${{ needs.deploy-web.result }}" == "success" ]; then
-            echo "Updating Web image to ${DOCKERHUB_USERNAME}/etl-web:${VERSION}"
+            echo "Updating Web image to ${DOCKERHUB_USERNAME}/web:${VERSION}"
             yq eval -i ".services.web.image=\"${DOCKERHUB_USERNAME}/web:${VERSION}\"" "$STACK_FILE" -I 4
             UPDATED=true
           fi
