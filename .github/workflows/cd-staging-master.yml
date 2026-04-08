@@ -179,7 +179,7 @@ jobs:
       - name: Show detection results
         run: |
           echo "=== CHANGED SERVICES ==="
-          echo "Web: ${{ needs.detect-services.outputs.web }}""
+          echo "Web: ${{ needs.detect-services.outputs.web }}"
           echo "API: ${{ needs.detect-services.outputs.api }}"
           echo "Database: ${{ needs.detect-services.outputs.database }}"
           echo "Typechecking: ${{ needs.detect-services.outputs.typechecking }}"
