@@ -66,7 +66,7 @@ async def task_completed(
         )
 
     parsed_raw_data = (
-        dict(map(lambda item: (item[0], json.dumps(item[1])), payload.raw_data))
+        dict(map(lambda item: (item[0], json.dumps(item[1])), payload.raw_data.items()))
         if payload.raw_data is not None
         else {}
     )

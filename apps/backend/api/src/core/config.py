@@ -10,7 +10,7 @@ from pydantic import (
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 def split_list(v: Any) -> list[str] | str:
