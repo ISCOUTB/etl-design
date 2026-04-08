@@ -5,8 +5,8 @@ import winston from "winston";
 const serviceName = "formula-parser";
 const serviceVersion = process.env["OTEL_SERVICE_VERSION"] ?? "1.0.0";
 const isDebugEnabled =
-    process.env["DEBUG_FORMULA_PARSER"]?.toLowerCase() === "true"
-    || process.env["FORMULA_PARSER_DEBUG"]?.toLowerCase() === "true";
+    process.env["DEBUG_FORMULA_PARSER"]?.toLowerCase() === "true" ||
+    process.env["FORMULA_PARSER_DEBUG"]?.toLowerCase() === "true";
 const environment = isDebugEnabled ? "debug" : "production";
 const loggerName = "FormulaParserServer";
 
@@ -18,7 +18,17 @@ const productionFormat = winston.format.combine(
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss,SSS" }),
     winston.format((info) => {
         const record = info as Record<string, unknown>;
-        const { timestamp, level, message, trace_id, span_id, trace_flags, module, funcName, ...meta } = record;
+        const {
+            timestamp,
+            level,
+            message,
+            trace_id,
+            span_id,
+            trace_flags,
+            module,
+            funcName,
+            ...meta
+        } = record;
         const activeSpanContext = trace.getActiveSpan()?.spanContext();
 
         return {

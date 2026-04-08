@@ -57,9 +57,7 @@ def _encode_multipart_form_data(
     for key, value in data.items():
         body.extend(separator)
         body.extend(
-            f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode(
-                "utf-8"
-            )
+            f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8")
         )
         body.extend(str(value).encode("utf-8"))
         body.extend(b"\r\n")
@@ -129,9 +127,7 @@ def post_json_http_with_ssl_fallback(
         return response.status_code
     except Exception as exc:
         if not _is_ssl_error(exc):
-            raise RuntimeError(
-                f"{context}: {type(exc).__name__}: {repr(exc)}"
-            ) from exc
+            raise RuntimeError(f"{context}: {type(exc).__name__}: {repr(exc)}") from exc
 
         logger.warning(
             f"{context}: httpx raised SSLError on plain HTTP. "
@@ -199,9 +195,7 @@ def post_multipart_http(
         return response
     except Exception as exc:
         if not _is_ssl_error(exc):
-            raise RuntimeError(
-                f"{context}: {type(exc).__name__}: {repr(exc)}"
-            ) from exc
+            raise RuntimeError(f"{context}: {type(exc).__name__}: {repr(exc)}") from exc
 
         logger.warning(
             f"{context}: httpx raised SSLError on plain HTTP multipart request. "
@@ -219,9 +213,7 @@ def post_multipart_http(
         boundary = f"----typechecking-{uuid.uuid4().hex}"
         body = _encode_multipart_form_data(files=files, data=data, boundary=boundary)
         multipart_headers = dict(headers)
-        multipart_headers["Content-Type"] = (
-            f"multipart/form-data; boundary={boundary}"
-        )
+        multipart_headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
         multipart_headers["Content-Length"] = str(len(body))
 
         path = _build_http_path(url, params)
