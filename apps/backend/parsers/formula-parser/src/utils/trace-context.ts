@@ -7,7 +7,7 @@ export function extractTraceHeadersFromCall(
     call: ServerUnaryCall<unknown, unknown>,
 ): Record<string, string> {
     const headers: Record<string, string> = {};
-    const metadata = call.metadata.getMap();
+    const metadata = call.metadata?.getMap?.() ?? {};
 
     for (const [key, value] of Object.entries(metadata)) {
         const normalizedKey = key.toLowerCase();

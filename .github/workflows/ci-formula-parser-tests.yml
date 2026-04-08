@@ -6,10 +6,9 @@ on:
             - staging
             - development
         paths:
-            - apps/backend/parsers/formula-parser/src/**
-            - apps/backend/parsers/formula-parser/tests/**
-            - packages/proto-utils/proto-utils-js/src/**
-            - tools/eslint/src/**
+            - apps/backend/parsers/formula-parser/**
+            - packages/proto-utils/proto-utils-js/**
+            - tools/eslint/**
             - tools/tsconfig/**
             - .github/workflows/ci-formula-parser-tests.yml
 
@@ -23,6 +22,9 @@ jobs:
 
             - name: Enable corepack for pnpm
               run: corepack enable
+
+            - name: Install Node dependencies
+              run: pnpm install --frozen-lockfile --ignore-scripts
 
             - name: Run tests
               uses: ./.github/actions/run-unit-tests

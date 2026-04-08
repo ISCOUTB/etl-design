@@ -48,5 +48,6 @@ tasks:
             - -f
             - ./apps/backend/parsers/sql-builder/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true

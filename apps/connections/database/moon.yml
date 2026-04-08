@@ -53,5 +53,6 @@ tasks:
             - -f
             - apps/connections/database/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true

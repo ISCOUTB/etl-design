@@ -50,5 +50,6 @@ tasks:
             - -f
             - ./apps/backend/parsers/excel-reader/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true
