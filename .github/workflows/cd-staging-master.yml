@@ -179,7 +179,7 @@ jobs:
       - name: Show detection results
         run: |
           echo "=== CHANGED SERVICES ==="
-          echo WEB: ${{ needs.detect-services.outputs.web }}
+          echo "Web: ${{ needs.detect-services.outputs.web }}""
           echo "API: ${{ needs.detect-services.outputs.api }}"
           echo "Database: ${{ needs.detect-services.outputs.database }}"
           echo "Typechecking: ${{ needs.detect-services.outputs.typechecking }}"
@@ -261,6 +261,7 @@ jobs:
     needs:
       - create-version
       - detect-services
+      - deploy-web
       - deploy-api
       - deploy-database
       - deploy-typechecking
@@ -273,6 +274,7 @@ jobs:
       always() && 
       !contains(needs.*.result, 'cancelled') &&
       (
+        needs.deploy-web.result == 'success' ||
         needs.deploy-api.result == 'success' ||
         needs.deploy-database.result == 'success' ||
         needs.deploy-typechecking.result == 'success' ||
@@ -303,6 +305,13 @@ jobs:
           UPDATED=false
 
           echo "=== Applying docker-stack updates ==="
+
+          # Web
+          if [ "${{ needs.deploy-web.result }}" == "success" ]; then
+            echo "Updating Web image to ${DOCKERHUB_USERNAME}/etl-web:${VERSION}"
+            yq eval -i ".services.web.image=\"${DOCKERHUB_USERNAME}/web:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
 
           # API
           if [ "${{ needs.deploy-api.result }}" == "success" ]; then
@@ -382,6 +391,7 @@ jobs:
           # Commit with version info
           git commit -m "chore(staging): update docker stack images to version ${{ needs.create-version.outputs.version }}" \
                      -m "Updated services:" \
+                     -m "- WEB: ${{ needs.deploy-web.result == 'success' && '✓' || '✗' }}" \
                      -m "- API: ${{ needs.deploy-api.result == 'success' && '✓' || '✗' }}" \
                      -m "- Database: ${{ needs.deploy-database.result == 'success' && '✓' || '✗' }}" \
                      -m "- Typechecking: ${{ needs.deploy-typechecking.result == 'success' && '✓' || '✗' }}" \
@@ -389,7 +399,6 @@ jobs:
                      -m "- Excel Reader: ${{ needs.deploy-excel-reader.result == 'success' && '✓' || '✗' }}" \
                      -m "- Formula Parser: ${{ needs.deploy-formula-parser.result == 'success' && '✓' || '✗' }}" \
                      -m "- SQL Builder: ${{ needs.deploy-sql-builder.result == 'success' && '✓' || '✗' }}"
-                     -m "[skip ci]"
 
           # Push changes
           git push origin ${{ github.ref_name }}
