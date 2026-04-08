@@ -308,7 +308,7 @@ jobs:
 
           # Web
           if [ "${{ needs.deploy-web.result }}" == "success" ]; then
-            echo "Updating Web image to ${DOCKERHUB_USERNAME}/etl-web:${VERSION}"
+            echo "Updating Web image to ${DOCKERHUB_USERNAME}/web:${VERSION}"
             yq eval -i ".services.web.image=\"${DOCKERHUB_USERNAME}/web:${VERSION}\"" "$STACK_FILE" -I 4
             UPDATED=true
           fi
