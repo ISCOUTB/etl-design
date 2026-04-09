@@ -6,6 +6,7 @@ on:
     paths:
       - iac/swarm/production/docker-stack.yml
       - .github/workflows/cd-production.yml
+      - .github/actions/deploy-cluster/**
 
 jobs:
   deploy:
