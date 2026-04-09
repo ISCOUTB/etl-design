@@ -7,7 +7,7 @@ class TaskCompletionNotification(BaseModel):
     task_id: str
     status: str
     message: str
-    results: Dict[str, str]
+    results: Optional[Dict[str, Any]] = None
     idempotency_key: Optional[str] = None
     raw_data: Optional[Dict[str, Any]] = None
 

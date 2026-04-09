@@ -1,6 +1,14 @@
 <script setup lang="ts">
     import { filesize } from "filesize";
-    import { AlertCircle, Download, ExternalLink, FileIcon, Rocket, X } from "lucide-vue-next";
+    import {
+        AlertCircle,
+        Download,
+        ExternalLink,
+        FileIcon,
+        Rocket,
+        Trash2,
+        X,
+    } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
     const {
@@ -82,13 +90,20 @@
             project.value.id,
             TableUtils.getTableName(tables.state.value.selectedSchema.import_name),
         )
-            .then(() => {
+            .then(async () => {
                 selectedFile.value = undefined;
                 toast.success($t("projects.id.sections.tables.details.events.task_created.title"), {
                     description: $t(
                         "projects.id.sections.tables.details.events.task_created.description",
                     ),
                 });
+
+                await refreshNuxtData(
+                    NuxtKeys.Projects.Tables.Tasks(
+                        project.value.id,
+                        TableUtils.getTableName(tables.state.value.selectedSchema?.import_name),
+                    ),
+                );
             })
             .catch((error) => errorToast.handleServer(error));
     }
@@ -151,8 +166,16 @@
                                 </Button>
                             </ItemActions>
                         </Item>
-                        <div class="flex justify-end">
-                            <Button variant="outline" @click="handleSubmit">
+                        <div class="flex justify-end space-x-2">
+                            <Button
+                                variant="destructive"
+                                class="cursor-pointer"
+                                @click="selectedFile = undefined"
+                            >
+                                <Trash2 />
+                                {{ $t("common.actions.cancel") }}
+                            </Button>
+                            <Button variant="outline" class="cursor-pointer" @click="handleSubmit">
                                 <Rocket />
                                 {{ $t("projects.id.sections.tables.details.upload.submit") }}
                             </Button>

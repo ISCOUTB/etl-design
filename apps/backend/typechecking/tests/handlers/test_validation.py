@@ -103,7 +103,10 @@ class TestValidateDataParallel:
         mock_pool.map.side_effect = run_validation
         mock_pool_cls.return_value.__enter__.return_value = mock_pool
 
-        data = [{"precio_promedio_ponderado": None}, {"precio_promedio_ponderado": "10.5"}]
+        data = [
+            {"precio_promedio_ponderado": None},
+            {"precio_promedio_ponderado": "10.5"},
+        ]
         schema = {
             "type": "object",
             "required": [],

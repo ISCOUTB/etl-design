@@ -1,6 +1,7 @@
 import type {
     JsonSchema as _JsonSchema,
     JsonSchemaPropertyConstraints as _JsonSchemaPropertyConstraints,
+    ProjectTask as _ProjectTask,
     ColumnDtypesSchema,
     CreateTableFromJsonSchema,
     DtypesEnum,
@@ -18,3 +19,4 @@ export type CreateTableFromJson = z.infer<typeof CreateTableFromJsonSchema>;
 export type MongoRaw = z.infer<typeof MongoRawSchema>;
 export type JsonSchema = z.infer<typeof _JsonSchema>;
 export type JsonSchemaPropertyConstraints = z.infer<typeof _JsonSchemaPropertyConstraints>;
+export type ProjectTask = z.infer<typeof _ProjectTask>;

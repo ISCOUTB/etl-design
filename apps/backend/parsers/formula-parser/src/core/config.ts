@@ -66,7 +66,10 @@ const EnvSchema = z.object({
     OTEL_TRACING_ENABLED: booleanEnv(["OTEL_TRACING_ENABLED"], true),
     OTEL_SERVICE_NAME: stringEnv(["OTEL_SERVICE_NAME"], "formula-parser"),
     OTEL_SERVICE_VERSION: stringEnv(["OTEL_SERVICE_VERSION"], "1.0.0"),
-    OTEL_EXPORTER_OTLP_ENDPOINT: stringEnv(["OTEL_EXPORTER_OTLP_ENDPOINT"], "http://localhost:4318"),
+    OTEL_EXPORTER_OTLP_ENDPOINT: stringEnv(
+        ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        "http://localhost:4318",
+    ),
 });
 
 export const settings: Effect.Effect<Settings, EnvParseError> = Effect.try({

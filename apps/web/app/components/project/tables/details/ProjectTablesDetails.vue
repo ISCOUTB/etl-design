@@ -101,6 +101,7 @@
 
             <ProjectTablesDetailsOverview />
             <ProjectTablesDetailsUploadFile />
+            <ProjectTablesDetailsTasks />
             <ProjectTablesDetailsVersionHistory />
         </div>
     </div>

@@ -13,6 +13,7 @@ import pytest
 from fastapi import UploadFile
 
 import src.workers.validation as validation_module
+from src.schemas.workers import ResultsMessage
 from src.workers.validation import ValidationWorker
 
 
@@ -304,11 +305,17 @@ class TestPublishResult:
         validation_worker,
     ):
         validation_worker.channel = MagicMock()
-        result = {
-            "task_id": "task_pub",
-            "status": "success",
-            "results": {"status": "success"},
-        }
+        result = ResultsMessage(
+            task_id="task_pub",
+            project_id="project_a",
+            import_name="project_a__customers",
+            status="success",
+            results={"status": "success"},
+            error="",
+            traceparent=None,
+            tracestate=None,
+            baggage=None,
+        )
 
         validation_worker._publish_result(
             "task_pub", result, db_client=validation_worker.db_client

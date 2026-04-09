@@ -34,7 +34,9 @@ const grpcServerStartedTotal = new Counter<"grpc_type" | "grpc_service" | "grpc_
     registers: [metricsRegistry],
 });
 
-const grpcServerHandledTotal = new Counter<"grpc_type" | "grpc_service" | "grpc_method" | "grpc_code">({
+const grpcServerHandledTotal = new Counter<
+    "grpc_type" | "grpc_service" | "grpc_method" | "grpc_code"
+>({
     name: "grpc_server_handled_total",
     help: "Total number of RPCs completed on the server, regardless of success or failure.",
     labelNames: ["grpc_type", "grpc_service", "grpc_method", "grpc_code"],
@@ -62,15 +64,19 @@ const grpcServerHandlingSeconds = new Histogram<"grpc_type" | "grpc_service" | "
     registers: [metricsRegistry],
 });
 
-const grpcServerHandledLatencySeconds =
-    new Histogram<"grpc_type" | "grpc_service" | "grpc_method" | "grpc_code">({
-        name: "grpc_server_handled_latency_seconds",
-        help: "Histogram of response latency (seconds) of gRPC that had been application-level handled by the server",
-        labelNames: ["grpc_type", "grpc_service", "grpc_method", "grpc_code"],
-        registers: [metricsRegistry],
-    });
+const grpcServerHandledLatencySeconds = new Histogram<
+    "grpc_type" | "grpc_service" | "grpc_method" | "grpc_code"
+>({
+    name: "grpc_server_handled_latency_seconds",
+    help: "Histogram of response latency (seconds) of gRPC that had been application-level handled by the server",
+    labelNames: ["grpc_type", "grpc_service", "grpc_method", "grpc_code"],
+    registers: [metricsRegistry],
+});
 
-export function getGrpcMetricBaseLabels(methodPath: string, grpcType = "unary"): GrpcMetricBaseLabels {
+export function getGrpcMetricBaseLabels(
+    methodPath: string,
+    grpcType = "unary",
+): GrpcMetricBaseLabels {
     const cleanedPath = methodPath.startsWith("/") ? methodPath.slice(1) : methodPath;
     const [grpcService = "unknown", grpcMethod = "unknown"] = cleanedPath.split("/");
 
@@ -105,7 +111,9 @@ export function startGrpcServerHandlingTimer(
 
 export function startGrpcServerHandledLatencyTimer(
     labels: GrpcMetricBaseLabels,
-): ReturnType<HistogramType<"grpc_type" | "grpc_service" | "grpc_method" | "grpc_code">["startTimer"]> {
+): ReturnType<
+    HistogramType<"grpc_type" | "grpc_service" | "grpc_method" | "grpc_code">["startTimer"]
+> {
     return grpcServerHandledLatencySeconds.startTimer(labels);
 }
 
@@ -113,7 +121,10 @@ export function recordGrpcServerHandling(labels: GrpcMetricBaseLabels, seconds: 
     grpcServerHandlingSeconds.observe(labels, seconds);
 }
 
-export function recordGrpcServerHandledLatency(labels: GrpcMetricHandledLabels, seconds: number): void {
+export function recordGrpcServerHandledLatency(
+    labels: GrpcMetricHandledLabels,
+    seconds: number,
+): void {
     grpcServerHandledLatencySeconds.observe(labels, seconds);
 }
 

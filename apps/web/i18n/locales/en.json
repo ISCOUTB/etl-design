@@ -399,6 +399,7 @@
                     },
                     "events": {
                         "upload_file": {
+                            "label": "Upload",
                             "confirmation": "Confirm"
                         },
                         "table_created": {
@@ -530,6 +531,19 @@
                             "task_created": {
                                 "title": "A new task has been created succesfully",
                                 "description": "Depending on the file, it may take some time. Please wait."
+                            }
+                        },
+                        "tasks": {
+                            "title": "Tasks",
+                            "description": "Track processing tasks for this table and inspect any errors reported by the workers.",
+                            "empty": {
+                                "title": "No tasks yet",
+                                "description": "Tasks will appear here once a file processing job is created for this table."
+                            },
+                            "item": "Task",
+                            "errors": "Errors",
+                            "events": {
+                                "bad_payload": "Invalid response while loading tasks"
                             }
                         }
                     }

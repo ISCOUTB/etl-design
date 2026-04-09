@@ -4,6 +4,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /workspace/apps/backend/api/
 
+# Install clang to compile pyaegis dependency
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
 COPY --from=ghcr.io/astral-sh/uv:0.7.6 /uv /uvx /bin/

@@ -5,11 +5,12 @@ removed, it now validates the insertion worker behavior (insert queue).
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import src.workers.insertion as insertion_module
+from src.schemas.workers import ResultsMessage
 from src.workers.insertion import InsertionWorker
 
 
@@ -152,11 +153,17 @@ class TestInsertionPublishResult:
         insertion_worker,
     ):
         insertion_worker.channel = MagicMock()
-        result = {
-            "task_id": "task_insert_pub",
-            "results": {"sheet1": "INSERT INTO customers VALUES (1)"},
-            "status": "success",
-        }
+        result = ResultsMessage(
+            task_id="task_insert_pub",
+            project_id="project_a",
+            import_name="project_a__customers",
+            results={"sheet1": "INSERT INTO customers VALUES (1)"},
+            status="success",
+            error="",
+            traceparent=None,
+            tracestate=None,
+            baggage=None,
+        )
 
         insertion_worker._publish_result(
             "task_insert_pub", result, db_client=insertion_worker.db_client
