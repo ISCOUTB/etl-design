@@ -35,8 +35,30 @@ runs:
     - name: Configure SSH known hosts
       shell: bash
       run: |
+        set -euo pipefail
+
+        if [ -z "${{ inputs.ssh_host }}" ]; then
+          echo "::error title=Missing SSH host::Input 'ssh_host' is empty. Check your secret configuration."
+          exit 1
+        fi
+
         mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ inputs.ssh_host }} >> ~/.ssh/known_hosts
+        chmod 700 ~/.ssh
+        touch ~/.ssh/known_hosts
+        chmod 600 ~/.ssh/known_hosts
+
+        for attempt in 1 2 3; do
+          if ssh-keyscan -T 15 -H "${{ inputs.ssh_host }}" >> ~/.ssh/known_hosts 2>/dev/null; then
+            exit 0
+          fi
+
+          if [ "$attempt" -eq 3 ]; then
+            echo "::error title=SSH keyscan failed::Could not fetch SSH host key for the configured host. Verify DNS/IP, network access from GitHub runners, and that port 22 is reachable."
+            exit 1
+          fi
+
+          sleep 3
+        done
 
     - name: Setup basic files
       id: setup-files
