@@ -115,7 +115,17 @@
 
 <template>
     <Collapsible v-model:open="open">
-        <Card class="shadow-sm" @dblclick="handleSelect">
+        <Card
+            class="shadow-sm"
+            @click="
+                () => {
+                    if (!open) {
+                        open = !open;
+                    }
+                }
+            "
+            @dblclick="handleSelect"
+        >
             <CardHeader>
                 <Item class="p-0">
                     <ItemMedia>
@@ -170,11 +180,14 @@
                                 </TooltipProvider>
                             </Tooltip>
                         </template>
-                        <CollapsibleTrigger as-child class="data-[state=open]:rotate-90">
-                            <Button variant="ghost" size="icon">
-                                <ChevronRight class="size-4" />
-                            </Button>
-                        </CollapsibleTrigger>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            :class="cn(open && 'rotate-90')"
+                            @click.stop="() => (open = !open)"
+                        >
+                            <ChevronRight class="size-4" />
+                        </Button>
                     </ItemActions>
                 </Item>
             </CardHeader>

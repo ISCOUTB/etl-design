@@ -399,6 +399,7 @@
                     },
                     "events": {
                         "upload_file": {
+                            "label": "Subir",
                             "confirmation": "Confirmar"
                         },
                         "table_created": {
@@ -530,6 +531,19 @@
                             "task_created": {
                                 "title": "Se ha creado una nueva tarea exitosamente",
                                 "description": "Dependiendo del archivo, esto puede tomar algo de tiempo. Por favor espera."
+                            }
+                        },
+                        "tasks": {
+                            "title": "Tareas",
+                            "description": "Consulta las tareas de procesamiento de esta tabla y revisa los errores reportados por los workers.",
+                            "empty": {
+                                "title": "Aún no hay tareas",
+                                "description": "Las tareas aparecerán aquí cuando se cree un proceso de carga para esta tabla."
+                            },
+                            "item": "Tarea",
+                            "errors": "Errores",
+                            "events": {
+                                "bad_payload": "Respuesta inválida al cargar las tareas"
                             }
                         }
                     }

@@ -293,4 +293,6 @@ async def delete_schema(
     if response["code"] == 404:
         raise SchemaNotFoundException()
 
+    # TODO: Remove Tasks related to the import_name
+
     return response

@@ -348,7 +348,7 @@
             </div>
             <div v-else class="space-y-6">
                 <div v-if="uploadSchema.errors.value.length > 0">
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" class="bg-muted/10">
                         <TriangleAlert />
                         <AlertTitle>Warnings</AlertTitle>
                         <AlertDescription>

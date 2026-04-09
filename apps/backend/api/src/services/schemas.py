@@ -8,6 +8,7 @@ The handlers manage JSON schema validation, creation, storage, and retrieval
 using the DatabaseClient to communicate with the MongoDB service via gRPC.
 """
 
+import json
 from typing import Any, Dict, Literal, Optional
 
 from jsonschema import (
@@ -61,11 +62,19 @@ class SchemaService:
 
         # Transform properties back to API format
         for prop_name, prop_info in raw_schema.get("properties", {}).items():
+            extra = {}
+            for k, v in prop_info.get("extra", {}).items():
+                try:
+                    extra[k] = json.loads(v)
+                except (json.JSONDecodeError, TypeError):
+                    # Fallback for old schemas stored as plain strings
+                    extra[k] = v
+
             api_schema["properties"][prop_name] = {
                 "type": prop_info.get(
                     "type", "string"
                 ),  # Default to string if type is missing
-                **prop_info.get("extra", {}),  # Include any extra properties
+                **extra,  # Include any extra properties
             }
 
         return api_schema
@@ -237,7 +246,9 @@ class SchemaService:
                     item[0],
                     {
                         "type": item[1]["type"],
-                        "extra": {k: str(v) for k, v in item[1].items() if k != "type"},
+                        "extra": {
+                            k: json.dumps(v) for k, v in item[1].items() if k != "type"
+                        },
                     },
                 ),
                 schema["properties"].items(),

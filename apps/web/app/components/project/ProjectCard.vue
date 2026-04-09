@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { Check, Database, ExternalLink } from "lucide-vue-next";
+    import { Check, Database, Edit, ExternalLink } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
@@ -12,6 +12,8 @@
 
     const props = defineProps<Props>();
     const project = computed(() => toValue(props.project));
+
+    const config = useAppConfig();
 </script>
 
 <template>
@@ -41,13 +43,30 @@
                         }}
                     </CardDescription>
                 </FieldContent>
-                <Button variant="ghost" size="icon" as-child>
-                    <NuxtLink
-                        :to="$localeRoute({ name: 'projects-id', params: { id: project.id } })"
-                    >
-                        <ExternalLink />
-                    </NuxtLink>
-                </Button>
+                <div class="space-x-2">
+                    <Button variant="ghost" size="icon-sm" as-child>
+                        <NuxtLink
+                            :to="$localeRoute({ name: 'projects-id', params: { id: project.id } })"
+                        >
+                            <ExternalLink />
+                        </NuxtLink>
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" as-child>
+                        <NuxtLink
+                            :to="
+                                $localeRoute({
+                                    name: 'projects-id-edit',
+                                    params: { id: project.id },
+                                    query: {
+                                        [config.constants.CALLBACK_KEY]: $route.fullPath,
+                                    },
+                                })
+                            "
+                        >
+                            <Edit />
+                        </NuxtLink>
+                    </Button>
+                </div>
             </Field>
         </CardHeader>
         <CardContent class="cursor-default select-none">

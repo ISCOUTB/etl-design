@@ -212,3 +212,18 @@ export const API_CONSTANTS = {
         INSERTION_TASK: "insertion",
     },
 } as const;
+
+export const ProjectTask = ApiResponse(
+    z
+        .object({
+            task_id: z.string(),
+            project_id: z.string(),
+            import_name: z.string(),
+            error: z.string().optional(),
+            upload_date: z.string(),
+            update_date: z.string(),
+        })
+        .catchall(z.unknown()),
+);
+
+export const ProjectTaskResponse = z.array(ProjectTask);

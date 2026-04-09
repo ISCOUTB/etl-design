@@ -53,8 +53,8 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                     onDelimiterError() {
                         addSchemaError({
                             key: "error:invalid-delimiter",
-                            message: t("projects.id.sections.schema.validation.delimiter", {
-                                delimiter: t("projects.id.sections.schema.validation.comma"),
+                            message: t("projects.id.sections.upload_schema.validation.delimiter", {
+                                delimiter: t("projects.id.sections.upload_schema.validation.comma"),
                             }),
                         });
                     },
@@ -73,7 +73,6 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             const fileContent = await state.value.uploadedFile.blob.text();
             const parseResult = JsonSchema.safeParse(JSON.parse(fileContent));
             if (!parseResult.success) {
-                console.warn("Invalid JSON schema format");
                 return;
             }
 
