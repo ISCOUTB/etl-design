@@ -120,7 +120,8 @@ services:
                 - "traefik.http.middlewares.secure-headers.headers.stspreload=true"
                 - "traefik.http.middlewares.secure-headers.headers.contenttypenosniff=true"
                 - "traefik.http.middlewares.secure-headers.headers.framedeny=true"
-                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.middlewares.internal-maintenance.chain.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-maintenance@swarm"
 
                 # Service hint
                 - "traefik.http.services.traefik.loadbalancer.server.port=8080"
@@ -162,7 +163,7 @@ services:
                 - "traefik.http.routers.prometheus.entrypoints=websecure"
                 - "traefik.http.routers.prometheus.tls=true"
                 - "traefik.http.routers.prometheus.tls.certresolver=le"
-                - "traefik.http.routers.prometheus.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.prometheus.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
     grafana:
@@ -203,7 +204,7 @@ services:
                 - "traefik.http.routers.grafana.entrypoints=websecure"
                 - "traefik.http.routers.grafana.tls=true"
                 - "traefik.http.routers.grafana.tls.certresolver=le"
-                - "traefik.http.routers.grafana.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.grafana.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
     loki:
@@ -563,7 +564,7 @@ services:
                 - "traefik.http.routers.rabbitmq.entrypoints=websecure"
                 - "traefik.http.routers.rabbitmq.tls=true"
                 - "traefik.http.routers.rabbitmq.tls.certresolver=le"
-                - "traefik.http.routers.rabbitmq.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.rabbitmq.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
 
     mongo:
@@ -699,7 +700,7 @@ services:
                 - "traefik.http.routers.pgadmin.entrypoints=websecure"
                 - "traefik.http.routers.pgadmin.tls=true"
                 - "traefik.http.routers.pgadmin.tls.certresolver=le"
-                - "traefik.http.routers.pgadmin.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.pgadmin.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
     database:
@@ -1108,11 +1109,14 @@ services:
             labels:
                 - scaler.enabled=true
                 - "traefik.enable=true"
-                - "traefik.http.routers.web.rule=Host(`web.swarm.${DOMAIN}`)"
+                - "traefik.docker.network=${GLOBAL_STACK_NAME}_traefik_proxy"
+                - "traefik.http.routers.web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`/`)"
                 - "traefik.http.routers.web.entrypoints=websecure"
+                - "traefik.http.routers.web.priority=1"
                 - "traefik.http.routers.web.tls=true"
                 - "traefik.http.routers.web.tls.certresolver=le"
                 - "traefik.http.routers.web.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.web.service=web"
                 - "traefik.http.services.web.loadbalancer.server.port=3000"
 
 # =============================================================================
@@ -1128,7 +1132,7 @@ networks:
                 - subnet: 10.210.10.0/24
 
     parsers:
-        driver: overlay
+        driver: overlaytraefik
         attachable: true
         ipam:
             driver: default
