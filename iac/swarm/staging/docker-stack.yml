@@ -13,7 +13,7 @@ services:
             - monitoring
             - traefik_proxy
         ports:
-            # Expose Traefik's entry points to the Swarm
+            # Expose Traefik's entry points to the Swarm.
             # Swarm requires the long syntax for ports.
             - target: 80 # Container port (Traefik web entry point)
               published: 80 # Host port exposed on the nodes
@@ -21,12 +21,12 @@ services:
               # 'host' mode binds directly to the node's IP where the task runs.
               # 'ingress' mode uses Swarm's Routing Mesh (load balances across nodes).
               # Choose based on your load balancing strategy. 'host' is often simpler if using an external LB.
-              mode: host
+              mode: ${TRAEFIK_PORT_PUBLISH_MODE-host}
 
             - target: 443 # Container port (Traefik websecure entry point)
               published: 443 # Host port
               protocol: tcp
-              mode: host
+              mode: ${TRAEFIK_PORT_PUBLISH_MODE-host}
 
         command:
             # HTTP EntryPoint
@@ -77,17 +77,32 @@ services:
 
         deploy:
             mode: replicated
-            replicas: 1
+            replicas: ${STG_REPLICAS_TRAEFIK-1}
+            update_config:
+                parallelism: 1
+                order: stop-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             placement:
                 # Placement constraints restrict where Traefik tasks can run.
                 # Running on manager nodes is common for accessing the Swarm API via the socket.
                 constraints:
                     - node.role == manager
+                max_replicas_per_node: 1
+                preferences:
+                    - spread: node.id
 
             # Traefik Dynamic configuration via labels
             # In Swarm, labels on the service definition configure Traefik routing for that service.
             labels:
-                - "traefik.enable=true"
+                - "traefik.enable=${TRAEFIK_EXPOSE_DASHBOARD-false}"
                 - "traefik.metrics.prometheus=true"
 
                 # Dashboard router
@@ -99,7 +114,13 @@ services:
 
                 # Basic‑auth middleware
                 - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USERNAME?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
-                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm"
+                - "traefik.http.middlewares.internal-allowlist.ipallowlist.sourcerange=${TRAEFIK_ALLOWED_CIDRS?Variable not set}"
+                - "traefik.http.middlewares.secure-headers.headers.stsseconds=31536000"
+                - "traefik.http.middlewares.secure-headers.headers.stsincludesubdomains=true"
+                - "traefik.http.middlewares.secure-headers.headers.stspreload=true"
+                - "traefik.http.middlewares.secure-headers.headers.contenttypenosniff=true"
+                - "traefik.http.middlewares.secure-headers.headers.framedeny=true"
+                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-allowlist@swarm,secure-headers@swarm"
 
                 # Service hint
                 - "traefik.http.services.traefik.loadbalancer.server.port=8080"
@@ -136,11 +157,12 @@ services:
                 limits:
                     memory: 512M
             labels:
-                - "traefik.enable=true"
+                - "traefik.enable=${TRAEFIK_EXPOSE_PROMETHEUS-false}"
                 - "traefik.http.routers.prometheus.rule=Host(`prometheus.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.prometheus.entrypoints=websecure"
                 - "traefik.http.routers.prometheus.tls=true"
                 - "traefik.http.routers.prometheus.tls.certresolver=le"
+                - "traefik.http.routers.prometheus.middlewares=internal-allowlist@swarm,secure-headers@swarm"
                 - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
     grafana:
@@ -161,11 +183,12 @@ services:
               target: /etc/grafana/provisioning/dashboards/dashboards.yml
         deploy:
             labels:
-                - "traefik.enable=true"
+                - "traefik.enable=${TRAEFIK_EXPOSE_GRAFANA-false}"
                 - "traefik.http.routers.grafana.rule=Host(`grafana.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.grafana.entrypoints=websecure"
                 - "traefik.http.routers.grafana.tls=true"
                 - "traefik.http.routers.grafana.tls.certresolver=le"
+                - "traefik.http.routers.grafana.middlewares=internal-allowlist@swarm,secure-headers@swarm"
                 - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
     loki:
@@ -520,11 +543,12 @@ services:
                     memory: "1024m"
                     cpus: "1.0"
             labels:
-                - "traefik.enable=true"
+                - "traefik.enable=${TRAEFIK_EXPOSE_RABBITMQ-false}"
                 - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.rabbitmq.entrypoints=websecure"
                 - "traefik.http.routers.rabbitmq.tls=true"
                 - "traefik.http.routers.rabbitmq.tls.certresolver=le"
+                - "traefik.http.routers.rabbitmq.middlewares=internal-allowlist@swarm,secure-headers@swarm"
                 - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
 
     mongo:
@@ -655,11 +679,12 @@ services:
                 limits:
                     memory: "512m"
             labels:
-                - "traefik.enable=true"
+                - "traefik.enable=${TRAEFIK_EXPOSE_PGADMIN-false}"
                 - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.swarm.${DOMAIN}`)"
                 - "traefik.http.routers.pgadmin.entrypoints=websecure"
                 - "traefik.http.routers.pgadmin.tls=true"
                 - "traefik.http.routers.pgadmin.tls.certresolver=le"
+                - "traefik.http.routers.pgadmin.middlewares=internal-allowlist@swarm,secure-headers@swarm"
                 - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
     database:
@@ -730,6 +755,22 @@ services:
             - grpc
         deploy:
             replicas: ${STG_REPLICAS_DATABASE-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "512m"
@@ -802,6 +843,22 @@ services:
             - grpc
         deploy:
             replicas: ${STG_REPLICAS_TYPECHECKING-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "768m"
@@ -948,6 +1005,22 @@ services:
             - traefik_proxy
         deploy:
             replicas: ${STG_REPLICAS_API-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "768m"
@@ -968,6 +1041,8 @@ services:
                 - "traefik.http.routers.api-web.tls.certresolver=le"
                 - "traefik.http.routers.api-web.priority=100"
                 - "traefik.http.routers.api-web.service=api@swarm"
+                - "traefik.http.routers.api.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.api-web.middlewares=secure-headers@swarm"
                 - "traefik.http.services.api.loadbalancer.server.port=${SERVER_PORT?Variable not set}"
                 - prometheus-job=api
                 - prometheus-port=${SERVER_PORT?Variable not set}
@@ -992,6 +1067,22 @@ services:
             - traefik_proxy
         deploy:
             replicas: ${STG_REPLICAS_WEB-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "512m"
@@ -1006,6 +1097,7 @@ services:
                 - "traefik.http.routers.web.entrypoints=websecure"
                 - "traefik.http.routers.web.tls=true"
                 - "traefik.http.routers.web.tls.certresolver=le"
+                - "traefik.http.routers.web.middlewares=secure-headers@swarm"
                 - "traefik.http.services.web.loadbalancer.server.port=3000"
 
 # =============================================================================
@@ -1014,7 +1106,7 @@ services:
 networks:
     monitoring:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1022,7 +1114,7 @@ networks:
 
     parsers:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1030,7 +1122,7 @@ networks:
 
     redis:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1038,7 +1130,7 @@ networks:
 
     postgres:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1046,7 +1138,7 @@ networks:
 
     mongo:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1054,7 +1146,7 @@ networks:
 
     rabbit:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
@@ -1062,7 +1154,7 @@ networks:
 
     grpc:
         driver: overlay
-        attachable: true
+        attachable: false
         ipam:
             driver: default
             config:
