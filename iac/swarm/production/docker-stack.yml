@@ -1019,7 +1019,7 @@ networks:
             config:
                 - subnet: 10.210.10.0/24
     parsers:
-        driver: overlaytraefik
+        driver: overlay
         attachable: true
         ipam:
             driver: default
