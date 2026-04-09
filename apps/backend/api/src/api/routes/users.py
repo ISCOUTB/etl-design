@@ -1,264 +1,253 @@
-import json
+# TODO: check other types of paginations, such as cursor-based pagination
+# for better performance on large datasets, is also worth considering in the future.
 
-from fastapi import APIRouter, Depends, HTTPException
-from proto_utils.database import DatabaseClient, dtypes
+from typing import Optional
 
-import src.schemas as schemas
-from src.api.deps import Admin, CurrentUser, SessionDep, get_db_client
-from src.api.utils import invalidate_user_cache, is_superuser
-from src.controllers.users import ControllerUsers
+from fastapi import APIRouter, status
+
+from src import models, schemas
+from src.api.deps import (
+    CurrentUser,
+    DatabaseClientDep,
+    UserProjectServiceDep,
+    UserServiceDep,
+)
+from src.exceptions import ForbiddenException
+from src.services.permissions import Action, PermissionService
 
 router = APIRouter()
 
+# ============== User routes ==============
 
-@router.get("/info")
-def get_user_info(
+
+@router.get(
+    "/me", response_model=schemas.ResponseUserSchema, status_code=status.HTTP_200_OK
+)
+async def get_current_user(
     current_user: CurrentUser,
-    db: SessionDep,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> schemas.users.BaseUser:
-    """
-    Get current user information.
-
-    Args:
-        current_user (CurrentUser): Current user dependency.
-        db (SessionDep): Database session dependency.
-
-    Returns:
-        BaseUser: Current user information.
-    """
-    cache_key = f"{current_user.username}:user_info"
-    cached_response = database_client.redis_get(dtypes.RedisGetRequest(key=cache_key))
-    if cached_response["found"]:
-        return schemas.users.BaseUser(**json.loads(cached_response["value"]))
-
-    user = ControllerUsers.get_user(current_user.username, db, active=True, rol=False)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    response = schemas.users.BaseUser.model_validate(user)
-    database_client.redis_set(
-        dtypes.RedisSetRequest(
-            key=cache_key,
-            value=json.dumps(response.model_dump()),
-            expiration=None,
-        )
-    )
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    response = user_service.get_user_by_id(current_user.sub)
     return response
 
 
-@router.get("/search/{username}")
-def get_user(
-    admin: Admin,
-    db: SessionDep,
-    username: str,
-    all: bool = False,
+@router.get(
+    "/search",
+    response_model=schemas.PaginatedResponse[schemas.ResponseUserSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def search_users(
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+    name: Optional[str] = None,
+    email: Optional[str] = None,
     active: bool = True,
-    use_cache: bool = True,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> schemas.users.AllUser | schemas.users.BaseUser:
-    """
-    Get user information by username and role.
-
-    Args:
-        admin (Admin): Admin dependency to check permissions.
-        db (SessionDep): Database session dependency.
-        username (str): Username of the user to retrieve.
-        all (bool): If True, return all user information including roles.
-        active (bool): If True, only return active users.
-
-    Returns:
-        BaseUser or AllUser: User information based on the request.
-    """
-    cache_key = f"{admin.username}:user_info:{username}:{active}:{all}"
-    cached_response = database_client.redis_get(dtypes.RedisGetRequest(key=cache_key))
-    model = schemas.users.AllUser if all else schemas.users.BaseUser
-    if cached_response and use_cache:
-        return model(**json.loads(cached_response))
-
-    user = ControllerUsers.get_user(username, db, active=active, rol=all)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    response = model.model_validate(user)
-    database_client.redis_set(
-        dtypes.RedisSetRequest(
-            key=cache_key,
-            value=json.dumps(response.model_dump()),
-            expiration=None,
-        )
+    role: Optional[models.UserRole] = None,
+    skip: int = 0,
+    limit: int = 10,
+) -> schemas.PaginatedResponse[schemas.ResponseUserSchema]:
+    has_permission = PermissionService.has_permission(
+        action=Action.search, user=current_user, model_key=models.ModelKeys.user
     )
+    if not has_permission:
+        raise ForbiddenException()
+
+    page = (skip // limit) + 1
+    users = user_service.search_users(
+        active_only=active,
+        role=role,
+        name=name,
+        email=email,
+        skip=skip,
+        limit=limit,
+    )
+    total = user_service.count_users(
+        active_only=True,
+        name=name,
+        email=email,
+    )
+    response = schemas.PaginatedResponse(
+        items=users,
+        total=total,
+        page=page,
+        limit=limit,
+        total_pages=(total // limit) + (1 if total % limit > 0 else 0),
+        has_next=(skip + limit) < total,
+        has_prev=skip > 0,
+    )
+
     return response
 
 
-@router.get("/search")
-def get_all_users(
-    _: Admin,
-    db: SessionDep,
-    active: bool = True,
-    rol: bool = False,
-    limit: int = 100,
-    page: int = 1,
-    use_cache: bool = True,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> schemas.api.Paginated[schemas.users.AllUser | schemas.users.BaseUser]:
-    """
-    Get all users with pagination and filtering options.
-
-    Args:
-        _: Admin: Admin dependency to check permissions.
-        db (SessionDep): Database session dependency.
-        active (bool): If True, only return active users.
-        rol (bool): If True, include user roles in the response.
-        limit (int): Number of users to return per page.
-        page (int): Page number for pagination.
-        use_cache (bool): If True, use cached response if available.
-
-    Returns:
-        schemas.api.Paginated[AllUser | BaseUser]: Paginated list of users.
-    """
-    cache_key = f"all_users:active={active}:rol={rol}:limit={limit}:page={page}"
-    model = schemas.users.AllUser if rol else schemas.users.BaseUser
-    cached_response = database_client.redis_get(dtypes.RedisGetRequest(key=cache_key))
-    if use_cache and cached_response:
-        return json.loads(cached_response)
-
-    users = ControllerUsers.get_users(
-        db, active=active, rol=rol, limit=limit, page=page
+@router.get(
+    "/id/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_by_id(
+    user_id: str,
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.view,
+        user=current_user,
+        model_key=models.ModelKeys.user,
+        model=models.User(id=user_id),
     )
-    response = [model.model_validate(user) for user in users["items"]]
-    database_client.redis_set(
-        dtypes.RedisSetRequest(
-            key=cache_key,
-            value=json.dumps(response.model_dump()),
-            expiration=None,
-        )
+    if not has_permission:
+        raise ForbiddenException()
+
+    response = user_service.get_user_by_id(user_id)
+    return response
+
+
+@router.get(
+    "/search/{email}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_by_email(
+    email: str,
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.search, user=current_user, model_key=models.ModelKeys.user
     )
-    return {**users, "items": response}
+    if not has_permission:
+        raise ForbiddenException()
+
+    response = user_service.get_user_by_email(email)
+    return response
 
 
-@router.post("/create")
-def create_user(
-    user: schemas.users.CreateUser,
-    db: SessionDep,
-    admin: Admin,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> dtypes.ApiResponse:
-    """
-    Create a new user.
+@router.post(
+    "/", response_model=schemas.ResponseUserSchema, status_code=status.HTTP_201_CREATED
+)
+async def create_user(
+    user_data: schemas.CreateUserSchema,
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.create, user=current_user, model_key=models.ModelKeys.user
+    )
+    if not has_permission:
+        raise ForbiddenException()
 
-    Args:
-        user (CreateUser): User data to create.
-        db (SessionDep): Database session dependency.
-        admin (Admin): Admin dependency to check permissions.
-    Returns:
-        ApiResponse: Response indicating success or error.
-    """
-    admin_bool = is_superuser(admin)
-    response = ControllerUsers.create_user(new_user=user, db=db, admin=admin_bool)
+    new_user = user_service.create_user(user_data)
+    return new_user
 
-    if response["number"] != 0:
-        raise HTTPException(
-            status_code=response["status"],
-            detail=response["message"],
-        )
 
-    invalidate_user_cache(database_client, invalidate_lists=True)
-    return dtypes.ApiResponse(
-        status="success",
-        code=response["status"],
-        message=response["message"],
-        data=user.model_dump(),
+@router.patch(
+    "/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def update_user(
+    user_id: str,
+    update_data: schemas.UpdateUserSchema,
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.update,
+        user=current_user,
+        model_key=models.ModelKeys.user,
+        model=models.User(id=user_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    updated_user = user_service.update_user(update_data=update_data, user_id=user_id)
+    return updated_user
+
+
+@router.delete(
+    "/{user_id}",
+    response_model=schemas.ResponseUserSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def delete_user(
+    user_id: str,
+    current_user: CurrentUser,
+    user_service: UserServiceDep,
+) -> schemas.ResponseUserSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.delete,
+        user=current_user,
+        model_key=models.ModelKeys.user,
+        model=models.User(id=user_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    deleted_user = user_service.delete_user(user_id)
+    return deleted_user
+
+
+# ============== UserProject routes ==============
+
+
+@router.get(
+    "/{user_id}/projects/{project_id}",
+    response_model=schemas.ResponseUserProjectSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_project(
+    user_id: str,
+    project_id: str,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+    db_client: DatabaseClientDep,
+) -> schemas.ResponseUserProjectSchema:
+    has_permission = PermissionService.has_permission(
+        action=Action.view,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(user_id=user_id, project_id=project_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    response = user_project_service.get_user_type_for_project(user_id, project_id)
+    return response
+
+
+@router.get(
+    "/{user_id}/projects",
+    response_model=schemas.PaginatedResponse[schemas.ResponseUserProjectSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_projects_for_user(
+    user_id: str,
+    current_user: CurrentUser,
+    user_project_service: UserProjectServiceDep,
+    order_column: Optional[str] = None,
+    asc: Optional[bool] = None,
+) -> schemas.PaginatedResponse[schemas.ResponseUserProjectSchema]:
+    has_permission = PermissionService.has_permission(
+        action=Action.view,
+        user=current_user,
+        model_key=models.ModelKeys.user_project,
+        model=models.UserProject(user_id=user_id),
+    )
+    if not has_permission:
+        raise ForbiddenException()
+
+    projects = user_project_service.get_projects_for_user(
+        user_id, order_column=order_column, asc=asc
+    )
+    total = len(projects)
+    response = schemas.PaginatedResponse(
+        items=projects,
+        total=total,
+        page=1,
+        limit=total,
+        total_pages=1,
+        has_next=False,
+        has_prev=False,
     )
 
-
-@router.patch("/update/{username}")
-def update_user(
-    username: str,
-    user: schemas.users.UpdateUser,
-    rol: schemas.users.Roles,
-    db: SessionDep,
-    admin: Admin,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> dtypes.ApiResponse:
-    """
-    Update user information.
-
-    Args:
-        username (str): Username of the user to update.
-        user (UpdateUser): User data to update.
-        rol (Roles): User roles to update.
-        db (SessionDep): Database session dependency.
-        admin (Admin): Current user dependency.
-
-    Returns:
-        ApiResponse: Response indicating success or error.
-    """
-    search_user = schemas.users.SearchUser(username=username, rol=rol)
-    response = ControllerUsers.update_user(
-        search_user=search_user,
-        updated_info=user,
-        db=db,
-        admin=is_superuser(admin),
-    )
-
-    if response["number"] != 0:
-        raise HTTPException(
-            status_code=response["status"],
-            detail=response["message"],
-        )
-
-    invalidate_user_cache(database_client, username=username, invalidate_lists=True)
-    return dtypes.ApiResponse(
-        status="success",
-        code=response["status"],
-        message=response["message"],
-        data=user.model_dump(exclude_none=True, exclude_unset=True),
-    )
-
-
-@router.delete("/delete/{username}")
-def delete_user(
-    username: str,
-    rol: schemas.users.Roles,
-    db: SessionDep,
-    admin: Admin,
-    complete: bool = False,
-    database_client: DatabaseClient = Depends(get_db_client),
-) -> dtypes.ApiResponse:
-    """
-    Delete a user by username.
-
-    Args:
-        username (str): Username of the user to delete.
-        rol (Roles): User roles to check permissions.
-        db (SessionDep): Database session dependency.
-        admin (Admin): Current user dependency.
-        complete (bool): If True, delete user completely, otherwise just mark as inactive.
-
-    Returns:
-        ApiResponse: Response indicating success or error.
-    """
-    search_user = schemas.users.SearchUser(username=username, rol=rol)
-    if complete:
-        response = ControllerUsers.delete_completely_user(
-            search_user=search_user, db=db, admin=is_superuser(admin)
-        )
-    else:
-        response = ControllerUsers.delete_user(
-            search_user=search_user, db=db, admin=is_superuser(admin)
-        )
-
-    if response["number"] != 0:
-        raise HTTPException(
-            status_code=response["status"],
-            detail=response["message"],
-        )
-
-    invalidate_user_cache(database_client, username=username, invalidate_lists=True)
-    return dtypes.ApiResponse(
-        status="success",
-        code=response["status"],
-        message=response["message"],
-        data={},
-    )
+    return response

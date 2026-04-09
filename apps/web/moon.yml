@@ -1,0 +1,65 @@
+project:
+    name: web
+    description: web side application for end-users
+
+layer: application
+
+language: typescript
+
+tasks:
+    pnpm:
+        command: pnpm
+        args:
+            - --filter
+            - "@sloth/apps-web"
+        toolchains: node
+        options:
+            runFromWorkspaceRoot: true
+            cache: false
+
+    nuxt:
+        command: pnpm
+        args:
+            - exec
+            - nuxt
+        toolchains: node
+        preset: server
+
+    dev:
+        command: pnpm
+        args:
+            - exec
+            - nuxt
+            - dev
+        toolchains: node
+        preset: server
+
+    build:
+        command: pnpm
+        args:
+            - exec
+            - nuxt
+            - build
+        toolchains: node
+        options:
+            cache: false
+        env:
+            NODE_OPTIONS: "--max-old-space-size=4096"
+
+    shadcn:
+        command: pnpm
+        args:
+            - dlx
+            - shadcn-vue@latest
+        toolchains: node
+
+    docker-build:
+        command: docker
+        args:
+            - build
+            - -f
+            - apps/web/Dockerfile
+            - .
+        options:
+            runFromWorkspaceRoot: true
+            cache: false

@@ -1,10 +1,13 @@
-from typing import List, TypedDict
+from typing import List, NotRequired, TypedDict
 
 
 class QueueInfo(TypedDict):
     queue: str
     durable: bool
     routing_key: str
+    queue_type: NotRequired[str]
+    delivery_limit: NotRequired[int]
+    message_ttl_ms: NotRequired[int]
 
 
 class ExchangeInfo(TypedDict):

@@ -6,6 +6,8 @@ Contains the MongoSerde class with methods for converting between Python diction
 and Protocol Buffer messages for MongoDB schema operations.
 """
 
+from typing import Optional
+
 from proto_utils.database import dtypes
 from proto_utils.database.utils_serde import DatabaseUtilsSerde
 from proto_utils.generated.database import mongo_pb2
@@ -22,7 +24,7 @@ class MongoSerde:
 
     @staticmethod
     def serialize_ping_request(
-        request: dtypes.MongoPingRequest = None,
+        request: Optional[dtypes.MongoPingRequest] = None,
     ) -> mongo_pb2.MongoPingRequest:
         """Serialize a MongoPingRequest dictionary to Protocol Buffer format.
 
@@ -48,6 +50,7 @@ class MongoSerde:
         """
         return dtypes.MongoPingRequest()
 
+    @staticmethod
     def serialize_ping_response(
         response: dtypes.MongoPingResponse,
     ) -> mongo_pb2.MongoPingResponse:
@@ -77,6 +80,180 @@ class MongoSerde:
         """
         return dtypes.MongoPingResponse(
             pong=proto.pong,
+        )
+
+    @staticmethod
+    def serialize_get_raw_schemas_request(
+        request: dtypes.MongoGetRawSchemasRequest,
+    ) -> mongo_pb2.MongoGetRawSchemasRequest:
+        """Serialize a MongoGetRawSchemasRequest dictionary to Protocol Buffer format.
+
+        Args:
+            request: The MongoDB get raw schemas request dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetRawSchemasRequest message.
+        """
+        return mongo_pb2.MongoGetRawSchemasRequest(
+            import_name=request["import_name"],
+        )
+
+    @staticmethod
+    def deserialize_get_raw_schemas_request(
+        proto: mongo_pb2.MongoGetRawSchemasRequest,
+    ) -> dtypes.MongoGetRawSchemasRequest:
+        """Deserialize a Protocol Buffer MongoGetRawSchemasRequest to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetRawSchemasRequest message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get raw schemas request dictionary.
+        """
+        return dtypes.MongoGetRawSchemasRequest(
+            import_name=proto.import_name,
+        )
+
+    @staticmethod
+    def serialize_get_raw_schemas_response(
+        response: dtypes.MongoGetRawSchemasResponse,
+    ) -> mongo_pb2.MongoGetRawSchemasResponse:
+        """Serialize a MongoGetRawSchemasResponse dictionary to Protocol Buffer format.
+
+        Args:
+            response: The MongoDB get raw schemas response dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetRawSchemasResponse message.
+        """
+        return mongo_pb2.MongoGetRawSchemasResponse(
+            id=response["id"],
+            import_name=response["import_name"],
+            created_at=response["created_at"],
+            active_schema=DatabaseUtilsSerde.serialize_jsonschema(
+                response["active_schema"]
+            ),
+            schemas_releases=list(
+                map(
+                    lambda schema: mongo_pb2.MongoGetRawSchemasResponse.SchemaRelease(
+                        created_at=schema["created_at"],
+                        schema=DatabaseUtilsSerde.serialize_jsonschema(
+                            schema["schema"]
+                        ),
+                    ),
+                    response["schemas_releases"],
+                )
+            ),
+        )
+
+    @staticmethod
+    def deserialize_get_raw_schemas_response(
+        proto: mongo_pb2.MongoGetRawSchemasResponse,
+    ) -> dtypes.MongoGetRawSchemasResponse:
+        """Deserialize a Protocol Buffer MongoGetRawSchemasResponse to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetRawSchemasResponse message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get raw schemas response dictionary.
+        """
+        return dtypes.MongoGetRawSchemasResponse(
+            id=proto.id,
+            import_name=proto.import_name,
+            created_at=proto.created_at,
+            active_schema=DatabaseUtilsSerde.deserialize_jsonschema(
+                proto.active_schema
+            ),
+            schemas_releases=list(
+                map(
+                    lambda schema_proto: dtypes.MongoGetRawSchemasResponseSchemaRelease(
+                        created_at=schema_proto.created_at,
+                        schema=DatabaseUtilsSerde.deserialize_jsonschema(
+                            schema_proto.schema
+                        ),
+                    ),
+                    proto.schemas_releases,
+                )
+            ),
+        )
+
+    @staticmethod
+    def serialize_get_schemas_by_import_regex_request(
+        request: dtypes.MongoGetSchemasByImportRegexRequest,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexRequest:
+        """Serialize a MongoGetSchemasByImportRegexRequest dictionary to Protocol Buffer format.
+
+        Args:
+            request: The MongoDB get schemas by import regex request dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetSchemasByImportRegexRequest message.
+        """
+        return mongo_pb2.MongoGetSchemasByImportRegexRequest(
+            import_name=request["import_name"],
+        )
+
+    @staticmethod
+    def deserialize_get_schemas_by_import_regex_request(
+        proto: mongo_pb2.MongoGetSchemasByImportRegexRequest,
+    ) -> dtypes.MongoGetSchemasByImportRegexRequest:
+        """Deserialize a Protocol Buffer MongoGetSchemasByImportRegexRequest to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetSchemasByImportRegexRequest message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get schemas by import regex request dictionary.
+        """
+        return dtypes.MongoGetSchemasByImportRegexRequest(
+            import_name=proto.import_name,
+        )
+
+    @staticmethod
+    def serialize_get_schemas_by_import_regex_response(
+        response: dtypes.MongoGetSchemasByImportRegexResponse,
+    ) -> mongo_pb2.MongoGetSchemasByImportRegexResponse:
+        """Serialize a MongoGetSchemasByImportRegexResponse dictionary to Protocol Buffer format.
+
+        Args:
+            response: The MongoDB get schemas by import regex response dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer MongoGetSchemasByImportRegexResponse message.
+        """
+        return mongo_pb2.MongoGetSchemasByImportRegexResponse(
+            schemas=list(
+                map(
+                    lambda schema: MongoSerde.serialize_get_raw_schemas_response(
+                        schema
+                    ),
+                    response["schemas"],
+                )
+            ),
+        )
+
+    @staticmethod
+    def deserialize_get_schemas_by_import_regex_response(
+        proto: mongo_pb2.MongoGetSchemasByImportRegexResponse,
+    ) -> dtypes.MongoGetSchemasByImportRegexResponse:
+        """Deserialize a Protocol Buffer MongoGetSchemasByImportRegexResponse to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer MongoGetSchemasByImportRegexResponse message to deserialize.
+
+        Returns:
+            The deserialized MongoDB get schemas by import regex response dictionary.
+        """
+        return dtypes.MongoGetSchemasByImportRegexResponse(
+            schemas=list(
+                map(
+                    lambda schema_proto: MongoSerde.deserialize_get_raw_schemas_response(
+                        schema_proto
+                    ),
+                    proto.schemas,
+                )
+            ),
         )
 
     @staticmethod
@@ -167,7 +344,7 @@ class MongoSerde:
 
     @staticmethod
     def serialize_count_all_documents_request(
-        request: dtypes.MongoCountAllDocumentsRequest = None,
+        request: Optional[dtypes.MongoCountAllDocumentsRequest] = None,
     ) -> mongo_pb2.MongoCountAllDocumentsRequest:
         """Serialize a MongoCountAllDocumentsRequest dictionary to Protocol Buffer format.
 
@@ -267,7 +444,7 @@ class MongoSerde:
         Returns:
             The serialized Protocol Buffer MongoFindJsonSchemaResponse message.
         """
-        # Handle None schema case (when schema is not found)
+        # Handle None schema case (when schema is not foundOptional[)
         schema_proto = None
         if response["schema"] is not None:
             schema_proto = DatabaseUtilsSerde.serialize_jsonschema(response["schema"])
@@ -410,11 +587,12 @@ class MongoSerde:
         Returns:
             The serialized Protocol Buffer MongoDeleteOneJsonSchemaResponse message.
         """
+        extra = response.get("extra", {})
         return mongo_pb2.MongoDeleteOneJsonSchemaResponse(
             success=response["success"],
             message=response["message"],
             status=response["status"],
-            extra=response["extra"],
+            extra={str(k): str(v) for k, v in extra.items()},
         )
 
     @staticmethod
@@ -480,11 +658,12 @@ class MongoSerde:
         Returns:
             The serialized Protocol Buffer MongoDeleteImportNameResponse message.
         """
+        extra = response.get("extra") or {}
         return mongo_pb2.MongoDeleteImportNameResponse(
             success=response["success"],
             message=response["message"],
             status=response["status"],
-            extra=response["extra"],
+            extra={str(k): str(v) for k, v in extra.items()},
         )
 
     @staticmethod

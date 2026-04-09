@@ -2,25 +2,28 @@ project:
     name: api
     description: api layer service
 
-type: application
+layer: application
 
 language: python
 
-toolchain:
-    python:
-
 tasks:
+    uv:
+        command: uv
+        toolchains: python
+        options:
+            cache: false
+
     run:
+        deps:
+            - prestart
         command: uv
         args:
             - run
             - python
             - -m
             - src.main
-        toolchain: python
-        local: true
-        options:
-            runFromWorkspaceRoot: false
+        toolchains: python
+        preset: server
 
     format:
         command: uv
@@ -29,11 +32,29 @@ tasks:
             - ruff
             - format
             - .
-        options:
-            runFromWorkspaceRoot: false
+        toolchains: python
 
     test:
-        command: echo "No tests defined"
+        command: uv
+        args:
+            - run
+            - pytest
+            - --cov=src
+            - --cov-report=term-missing
+            - --cov-report=html
+            - --cov-report=xml
+        toolchain: python
+        options:
+            runFromWorkspaceRoot: false
+            cache: false
+
+    prestart:
+        command: bash
+        args:
+            - scripts/prestart.sh
+        toolchains: system
+        options:
+            cache: false
 
     docker-build:
         command: docker
@@ -42,5 +63,6 @@ tasks:
             - -f
             - ./apps/backend/api/Dockerfile
             - .
+        toolchains: system
         options:
             runFromWorkspaceRoot: true

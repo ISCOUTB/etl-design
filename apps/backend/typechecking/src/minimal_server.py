@@ -1,9 +1,11 @@
-from typing import Annotated, Any, Dict, Generator
+from typing import Annotated, AsyncGenerator, Dict
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.core.config import settings
 from src.core.database_client import DatabaseClient, get_database_client
+from src.schemas.healthcheck import OverallHealthCheckResult
 from src.services.healthcheck import check_databases_connection
 from src.utils.logger import create_component_logger
 from src.utils.uvicorn_logger import LOGGING_CONFIG
@@ -13,16 +15,18 @@ logger = create_component_logger("http-server")
 
 app = FastAPI()
 
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-def generate_new_db_client() -> Generator[DatabaseClient, None, None]:
+
+async def generate_db_client() -> AsyncGenerator[DatabaseClient, None]:
     db_client = get_database_client()
     try:
         yield db_client
     finally:
-        db_client.close()
+        await db_client.aclose()
 
 
-DatabaseClientDep = Annotated[DatabaseClient, Depends(generate_new_db_client)]
+DatabaseClientDep = Annotated[DatabaseClient, Depends(generate_db_client)]
 
 
 @app.get("/")
@@ -35,16 +39,17 @@ async def root() -> Dict[str, str]:
 @app.get("/health")
 async def health_check(
     database_client: DatabaseClientDep,
-) -> Dict[str, Any]:
+) -> OverallHealthCheckResult:
     """Health check endpoint for service monitoring."""
     logger.debug("Health check endpoint accessed")
-    health_status = await check_databases_connection(database_client)
+    health_status = await check_databases_connection(database_client, awaitable=True)
 
     # Log health check results
-    if health_status["status"] == "healthy":
+    if health_status.status == "healthy":
         logger.debug("Health check passed: all systems healthy")
     else:
-        logger.warning(f"Health check failed: {health_status}")
+        logger.warning(f"Health check failed: {health_status.model_dump_json()}")
+        raise HTTPException(status_code=503, detail="Service is unhealthy")
 
     return health_status
 

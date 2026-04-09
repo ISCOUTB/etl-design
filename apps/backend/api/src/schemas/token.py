@@ -11,7 +11,7 @@ The module includes:
 
 from pydantic import BaseModel
 
-from src.schemas.users import Roles
+from src.models.dtypes import UserRole
 
 
 class TokenPayload(BaseModel):
@@ -26,21 +26,14 @@ class TokenPayload(BaseModel):
         rol: User's role for permission validation
     """
 
-    username: str
-    rol: Roles
+    # === USER FIELDS ===
+    id: str
+    name: str
+    email: str
+    role: UserRole
 
-
-class Token(BaseModel):
-    """Authentication token response model.
-
-    Standard structure for token responses returned after successful
-    authentication. Contains the JWT access token and token type
-    information for API client usage.
-
-    Attributes:
-        access_token: JWT access token string
-        token_type: Type of token (defaults to "bearer")
-    """
-
-    access_token: str
-    token_type: str = "bearer"
+    # === TOKEN INFORMATION ===
+    sub: str
+    iat: int
+    exp: int
+    jti: str

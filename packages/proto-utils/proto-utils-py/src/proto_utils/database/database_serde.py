@@ -40,7 +40,9 @@ class DatabaseSerde:
             task=request["task"],
             message=request["message"],
             data=request["data"],
-            reset_data=request["reset_data"],
+            reset_data=(
+                request["reset_data"] if request["reset_data"] is not None else False
+            ),
         )
 
     @staticmethod
@@ -311,4 +313,72 @@ class DatabaseSerde:
         """
         return dtypes.GetTasksByImportNameResponse(
             tasks=list(map(DatabaseUtilsSerde.deserialize_api_response, proto.tasks))
+        )
+
+    @staticmethod
+    def serialize_remove_task_id_request(
+        request: dtypes.RemoveTaskIdRequest,
+    ) -> database_pb2.RemoveTaskIdRequest:
+        """Serialize a RemoveTaskIdRequest dictionary to Protocol Buffer format.
+
+        Args:
+            request: The remove task ID request dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer RemoveTaskIdRequest message.
+        """
+        return database_pb2.RemoveTaskIdRequest(
+            task_id=request["task_id"],
+            task=request["task"],
+        )
+
+    @staticmethod
+    def deserialize_remove_task_id_request(
+        proto: database_pb2.RemoveTaskIdRequest,
+    ) -> dtypes.RemoveTaskIdRequest:
+        """Deserialize a Protocol Buffer RemoveTaskIdRequest to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer RemoveTaskIdRequest message to deserialize.
+
+        Returns:
+            The deserialized remove task ID request dictionary.
+        """
+        return dtypes.RemoveTaskIdRequest(
+            task_id=proto.task_id,
+            task=proto.task,
+        )
+
+    @staticmethod
+    def serialize_remove_task_id_response(
+        response: dtypes.RemoveTaskIdResponse,
+    ) -> database_pb2.RemoveTaskIdResponse:
+        """Serialize a RemoveTaskIdResponse dictionary to Protocol Buffer format.
+
+        Args:
+            response: The remove task ID response dictionary to serialize.
+
+        Returns:
+            The serialized Protocol Buffer RemoveTaskIdResponse message.
+        """
+        return database_pb2.RemoveTaskIdResponse(
+            success=response["success"],
+            message=response["message"],
+        )
+
+    @staticmethod
+    def deserialize_remove_task_id_response(
+        proto: database_pb2.RemoveTaskIdResponse,
+    ) -> dtypes.RemoveTaskIdResponse:
+        """Deserialize a Protocol Buffer RemoveTaskIdResponse to dictionary format.
+
+        Args:
+            proto: The Protocol Buffer RemoveTaskIdResponse message to deserialize.
+
+        Returns:
+            The deserialized remove task ID response dictionary.
+        """
+        return dtypes.RemoveTaskIdResponse(
+            success=proto.success,
+            message=proto.message,
         )

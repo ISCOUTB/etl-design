@@ -5,12 +5,23 @@ import polars as pl
 from fastapi import UploadFile
 
 from src.schemas.services import FileInfo
+from src.utils import standardize_string
 
 
 class FileProcessor:
     """Service class for processing uploaded files."""
 
     SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+
+    @staticmethod
+    def preprocess_dataframe(df: pl.DataFrame) -> pl.DataFrame:
+        """Preprocess the DataFrame by standardizing column names and trimming whitespace."""
+        # Standardize column names
+        df = df.rename(
+            dict(map(lambda col: (col, standardize_string(col)), df.columns))
+        )
+
+        return df
 
     @classmethod
     async def process_file(cls, file: UploadFile) -> Tuple[bool, List[Dict], str]:
@@ -91,7 +102,7 @@ class FileProcessor:
             if df.height == 0:
                 return True, [], ""
 
-            data = df.to_dicts()
+            data = cls.preprocess_dataframe(df).to_dicts()
             return True, data, ""
 
         except Exception as e:
@@ -115,7 +126,7 @@ class FileProcessor:
             if df.height == 0:
                 return True, [], ""
 
-            data = df.to_dicts()
+            data = cls.preprocess_dataframe(df).to_dicts()
             return True, data, ""
 
         except Exception as e:

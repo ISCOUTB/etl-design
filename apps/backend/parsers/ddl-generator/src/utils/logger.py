@@ -1,12 +1,77 @@
 import logging
 import logging.handlers
+import sys
 from pathlib import Path
+
+from opentelemetry import trace
+from pythonjsonlogger import json
 
 from src.core.config import settings
 
 # Ensure logs directory exists for file handlers
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
+
+
+class OTelContextFilter(logging.Filter):
+    """Logging filter to inject OpenTelemetry context into log records.
+
+    This filter extracts tracing information from the current OpenTelemetry
+    context and adds it to log records. This allows for enhanced observability
+    by correlating logs with distributed traces in a consistent format.
+
+    The filter adds the following attributes to log records:
+    - trace_id: The unique identifier for the current trace
+    - span_id: The unique identifier for the current span
+    - trace_flags: Flags associated with the trace (e.g., sampled)
+
+    Usage:
+        Add this filter to any logger or handler to automatically include
+        OpenTelemetry context in all log messages.
+    """
+
+    def __init__(
+        self,
+        *,
+        service_name: str,
+        service_version: str,
+        environment: str,
+        name: str = "",
+    ) -> None:
+        super().__init__(name)
+
+        self.service_name = service_name
+        self.service_version = service_version
+        self.environment = environment
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Inject OpenTelemetry context into the log record.
+
+        Args:
+            record (logging.LogRecord): The log record being processed.
+
+        Returns:
+            bool: Always returns True to allow the log record to be emitted.
+        """
+        # Add service metadata to the log record
+        record.service_name = self.service_name
+        record.service_version = self.service_version
+        record.environment = self.environment
+
+        # Add tracing information if available, otherwise set to None
+        span = trace.get_current_span()
+        span_context = span.get_span_context()
+
+        if span is not None and span_context is not None:
+            record.trace_id = format(span_context.trace_id, "032x")
+            record.span_id = format(span_context.span_id, "016x")
+            record.trace_flags = format(span_context.trace_flags, "02x")
+        else:
+            record.trace_id = None
+            record.span_id = None
+            record.trace_flags = None
+
+        return True
 
 
 def setup_logger() -> logging.Logger:
@@ -37,66 +102,86 @@ def setup_logger() -> logging.Logger:
         The logger's propagate setting is disabled to prevent duplicate
         messages from parent loggers.
     """
-    # File formatter with timestamp and detailed context
-    file_formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [server] [ddl-generator] %(message)s"
-    )
-
-    # Console formatter with simplified format for readability
-    console_formatter = logging.Formatter(
-        "[%(levelname)s] [server] [ddl-generator] %(message)s"
-    )
 
     # Create main logger instance
     logger = logging.getLogger("DDLGeneratorServer")
 
     # Adjust log level based on debug configuration
-    if settings.DDL_GENERATOR_DEBUG:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Clear any existing handlers to prevent duplication
     logger.handlers.clear()
 
-    # 1. Rotating File Handler - Size-based rotation for main logs
-    rotating_handler = logging.handlers.RotatingFileHandler(
-        log_dir / "ddlgenerator_server.log",
-        maxBytes=10 * 1024 * 1024,  # 10MB per file
-        backupCount=5,  # Keep 5 backup files
-        encoding="utf-8",
-    )
-    rotating_handler.setLevel(logging.DEBUG)
-    rotating_handler.setFormatter(file_formatter)
+    # Just add file handlers in debug mode, console handler always active
+    if settings.DDL_GENERATOR_DEBUG:
+        # File formatter with timestamp and detailed context
+        file_formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s] [server] [ddl-generator] %(message)s"
+        )
 
-    # 2. Daily Rotating Handler - Time-based rotation for daily logs
-    daily_handler = logging.handlers.TimedRotatingFileHandler(
-        log_dir / "ddlgenerator_server_daily.log",
-        when="midnight",  # Rotate at midnight
-        interval=1,  # Every day
-        backupCount=30,  # Keep 30 days of logs
-        encoding="utf-8",
-    )
-    daily_handler.setLevel(logging.INFO)
-    daily_handler.setFormatter(file_formatter)
+        # 1. Rotating File Handler - Size-based rotation for main logs
+        rotating_handler = logging.handlers.RotatingFileHandler(
+            log_dir / "ddlgenerator_server.log",
+            maxBytes=10 * 1024 * 1024,  # 10MB per file
+            backupCount=5,  # Keep 5 backup files
+            encoding="utf-8",
+        )
+        rotating_handler.setLevel(logging.DEBUG)
+        rotating_handler.setFormatter(file_formatter)
 
-    # 3. Error File Handler - Dedicated error logging
-    error_handler = logging.FileHandler(
-        log_dir / "ddlgenerator_server_errors.log", encoding="utf-8"
+        # 2. Daily Rotating Handler - Time-based rotation for daily logs
+        daily_handler = logging.handlers.TimedRotatingFileHandler(
+            log_dir / "ddlgenerator_server_daily.log",
+            when="midnight",  # Rotate at midnight
+            interval=1,  # Every day
+            backupCount=30,  # Keep 30 days of logs
+            encoding="utf-8",
+        )
+        daily_handler.setLevel(logging.INFO)
+        daily_handler.setFormatter(file_formatter)
+
+        # 3. Error File Handler - Dedicated error logging
+        error_handler = logging.FileHandler(
+            log_dir / "ddlgenerator_server_errors.log", encoding="utf-8"
+        )
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(file_formatter)
+
+        # Attach file handlers only in debug mode to avoid unnecessary file I/O in production
+        logger.addHandler(rotating_handler)
+        logger.addHandler(daily_handler)
+        logger.addHandler(error_handler)
+
+    # Console formatter with simplified format for readability
+    console_log_format = "[%(levelname)s] [server] [ddl-generator] %(message)s"
+    json_format = (
+        "%(asctime)s %(levelname)s %(name)s %(message)s "
+        "%(service_name)s %(service_version)s %(environment)s "
+        "%(trace_id)s %(span_id)s %(trace_flags)s "
+        "%(module)s %(funcName)s"
     )
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(file_formatter)
+
+    console_formatter = (
+        json.JsonFormatter(json_format)  # type: ignore
+        if not settings.DDL_GENERATOR_DEBUG
+        else logging.Formatter(console_log_format)
+    )
 
     # 4. Console Handler - Real-time console output
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)  # Set explicit level for console
     console_handler.setFormatter(console_formatter)
 
     # Attach all handlers to the logger
-    logger.addHandler(rotating_handler)
-    logger.addHandler(daily_handler)
-    logger.addHandler(error_handler)
     logger.addHandler(console_handler)
+
+    # Add OpenTelemetry context filter to all handlers for enhanced observability
+    otel_filter = OTelContextFilter(
+        service_name=settings.OTEL_SERVICE_NAME,
+        service_version=settings.OTEL_SERVICE_VERSION,
+        environment="debug" if settings.DDL_GENERATOR_DEBUG else "production",
+    )
+    logger.addFilter(otel_filter)
 
     # Disable propagation to prevent duplicate log messages
     logger.propagate = False

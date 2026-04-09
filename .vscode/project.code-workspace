@@ -2,64 +2,76 @@
     "folders": [
         {
             "name": "ROOT",
-            "path": ".."
+            "path": "..",
         },
         {
             "name": "Github",
-            "path": "../.github/"
+            "path": "../.github/",
         },
         {
             "name": "[ IAC ] Code",
-            "path": "../iac"
+            "path": "../iac",
         },
         {
             "name": "[ App ] Formula-Parser",
-            "path": "../apps/backend/parsers/formula-parser"
+            "path": "../apps/backend/parsers/formula-parser",
         },
         {
             "name": "[ App ] DDL-Generator",
-            "path": "../apps/backend/parsers/ddl-generator"
+            "path": "../apps/backend/parsers/ddl-generator",
         },
         {
             "name": "[ App ] SQL-Builder",
-            "path": "../apps/backend/parsers/sql-builder"
+            "path": "../apps/backend/parsers/sql-builder",
         },
         {
             "name": "[ App ] Excel-Reader",
-            "path": "../apps/backend/parsers/excel-reader"
+            "path": "../apps/backend/parsers/excel-reader",
         },
         {
             "name": "[ App ] Typechecking",
-            "path": "../apps/backend/typechecking"
+            "path": "../apps/backend/typechecking",
         },
         {
             "name": "[ App ] API",
-            "path": "../apps/backend/api"
+            "path": "../apps/backend/api",
         },
         {
             "name": "[ App ] Connections -> Database",
-            "path": "../apps/connections/database"
+            "path": "../apps/connections/database",
+        },
+        {
+            "name": "[ App ] Web",
+            "path": "../apps/web",
+        },
+        {
+            "name": "[ Package ] Proto-Files",
+            "path": "../packages/proto",
         },
         {
             "name": "[ Package ] Proto-Javascript",
-            "path": "../packages/proto-utils/proto-utils-js"
+            "path": "../packages/proto-utils/proto-utils-js",
         },
         {
             "name": "[ Package ] Proto-Python",
-            "path": "../packages/proto-utils/proto-utils-py"
+            "path": "../packages/proto-utils/proto-utils-py",
+        },
+        {
+            "name": "[ Package ] Messaging-Python",
+            "path": "../packages/messaging-utils/messaging-utils-py",
         },
         {
             "name": "[ Package ] [ IAC ] AutoScaler",
-            "path": "../packages/autoscaler"
+            "path": "../packages/autoscaler",
         },
         {
             "name": "[ Tool ] Eslint",
-            "path": "../tools/eslint"
+            "path": "../tools/eslint",
         },
         {
             "name": "[ Tool ] TS-Config",
-            "path": "../tools/tsconfig"
-        }
+            "path": "../tools/tsconfig",
+        },
     ],
     "settings": {
         "files.exclude": {
@@ -67,7 +79,7 @@
             "**/.git": true,
             "**/.hg": true,
             "**/.svn": true,
-            "**/Thumbs.db": true
-        }
-    }
+            "**/Thumbs.db": true,
+        },
+    },
 }

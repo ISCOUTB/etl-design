@@ -1,24 +1,16 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: messaging-utils-py
     description: Utilities for publishing messages to a messaging system.
 
-toolchain:
-    python:
-        version: "3.12.10"
+layer: library
 
 tasks:
-    sync:
+    uv:
         command: uv
-        args:
-            - sync
         options:
-            runFromWorkspaceRoot: false
+            cache: false
 
     build:
         command: uv
         args:
             - build
-        options:
-            runFromWorkspaceRoot: false

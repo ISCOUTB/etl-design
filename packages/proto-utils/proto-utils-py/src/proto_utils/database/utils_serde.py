@@ -105,9 +105,23 @@ class DatabaseUtilsSerde:
         Returns:
             The serialized Protocol Buffer Properties message.
         """
+        prop_type = properties.get("type", "string")
+
+        final_extra = {}
+        for k, v in properties.items():
+            if k == "type":
+                continue
+            if k == "extra" and isinstance(v, dict):
+                # Grouped format (from incoming request)
+                for sub_k, sub_v in v.items():
+                    final_extra[sub_k] = str(sub_v)
+            else:
+                # Flattened format (retrieved directly from MongoDB)
+                final_extra[k] = str(v)
+
         return utils_pb2.Properties(
-            type=DatabaseUtilsSerde.serialize_property_type(properties["type"]),
-            extra=properties.get("extra", {}),
+            type=DatabaseUtilsSerde.serialize_property_type(prop_type),
+            extra=final_extra,
         )
 
     @staticmethod

@@ -1,0 +1,598 @@
+{
+    "layouts": {
+        "title": "S.L.O.T.H",
+        "tagline": "PostgreSQL Schema Manager & Logic Migrator",
+        "description": "Framework for migrating business logic from spreadsheets to SQL database engines."
+    },
+    "home": {
+        "title": "Home",
+        "hero": {
+            "badge": "Optimized for PostgreSQL",
+            "title_prefix": "Manage your Postgres clusters with",
+            "title_accent": "confidence",
+            "description": "{app} is the specialized environment to organize, validate, and version control your PostgreSQL schemas. Deep integration for professional data engineering.",
+            "cta": "Start Managing Postgres"
+        },
+        "preview_projects": {
+            "window_title": "PostgreSQL Projects",
+            "connected": "Connected",
+            "tables_label": "{count} tables",
+            "production_main": {
+                "name": "production-main",
+                "provider": "AWS"
+            },
+            "analytics_replica": {
+                "name": "analytics-replica",
+                "provider": "Azure"
+            },
+            "staging_dev": {
+                "name": "staging-dev",
+                "provider": "Local"
+            }
+        },
+        "features": {
+            "title": "Specialized PostgreSQL Toolset",
+            "description": "Stop using generic managers. {app} understands the nuances of Postgres schemas and data types.",
+            "native_support": {
+                "title": "PostgreSQL Native Support",
+                "description": "Deep integration with Postgres features: schemas, enums, and native geometric types."
+            },
+            "jsonb_validation": {
+                "title": "JSONB Validation",
+                "description": "Validate your JSONB columns against strict JSON Schema standards directly in the editor."
+            },
+            "type_integrity": {
+                "title": "Strict Type Integrity",
+                "description": "Manage constraints, foreign keys, and custom types to ensure your data stays consistent."
+            },
+            "schema_organization": {
+                "title": "Schema Organization",
+                "description": "Group your tables into logical projects and namespaces for better navigation."
+            },
+            "versioning": {
+                "title": "Migration Versioning",
+                "description": "Track how your Postgres schema evolves. Version control for your DDL statements."
+            },
+            "one_click_import": {
+                "title": "One-Click Import",
+                "description": "Import existing schemas from SQL dumps or external files and map them to Postgres in seconds."
+            }
+        },
+        "footer": {
+            "copyright": "\u00a9 2026 {app}. All rights reserved."
+        }
+    },
+    "common": {
+        "validation": {
+            "required": "Field is required",
+            "min_length": "Must have at least {min} characters",
+            "max_length": "Must have a maximum length of {max} characters",
+            "password_mismatch": "Passwords do not match"
+        },
+        "actions": {
+            "cancel": "Cancel",
+            "go_back": "Go Back",
+            "go_home": "Go Home",
+            "remove": "Remove",
+            "reset": "Reset",
+            "save_changes": "Save Changes"
+        },
+        "pagination": {
+            "previous": "Previous Page",
+            "next": "Next Page"
+        },
+        "visibility": {
+            "show": "Show",
+            "hide": "Hide",
+            "toggle": "Click to toggle visibility"
+        },
+        "clipboard": {
+            "copy": "Copy",
+            "copied": "Copied to clipboard"
+        }
+    },
+    "settings": {
+        "label": "Settings",
+        "color_mode": {
+            "label": "Color mode",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System",
+            "changed_to": "Color scheme changed to {mode}"
+        },
+        "locale": {
+            "description": "Change Locale",
+            "changed_to": "Locale changed to {locale}"
+        }
+    },
+    "auth": {
+        "fields": {
+            "username": {
+                "label": "Username",
+                "placeholder": "Enter your username"
+            },
+            "email": {
+                "label": "Email",
+                "placeholder": "Enter your email"
+            },
+            "password": {
+                "label": "Password",
+                "placeholder": "Enter your password"
+            },
+            "confirm_password": {
+                "label": "Confirm Password",
+                "placeholder": "Re-enter your password"
+            }
+        },
+        "sign_up": {
+            "title": "Create Account",
+            "subtitle": "Enter your details to get started.",
+            "submit": "Create Account",
+            "has_account": "Already have an account?",
+            "sign_in_link": "Sign In"
+        },
+        "sign_in": {
+            "title": "Sign In",
+            "subtitle": "Access to your account",
+            "submit": "Sign In",
+            "create_account": "Don't have an account?",
+            "sign_up_link": "Sign Up"
+        },
+        "sign_out": {
+            "title": "Sign out"
+        },
+        "validation": {
+            "name_min": "Name must have at least {length} characters",
+            "email_invalid": "Please type a valid email",
+            "password_min": "Password must have at least {length} characters",
+            "passwords_mismatch": "Passwords don't match"
+        },
+        "events": {
+            "user_created": {
+                "title": "User created succesfully",
+                "description": "Email: {email}"
+            },
+            "user_logged": {
+                "title": "User Logged!",
+                "description": "Email: {email}"
+            },
+            "user_signout": {
+                "title": "Session closed"
+            }
+        }
+    },
+    "errors": {
+        "404": {
+            "title": "Page Not Found",
+            "description": "The page you are looking for does not exist or has been moved."
+        },
+        "500": {
+            "title": "Internal Server Error",
+            "description": "An unexpected error occurred on the server. Please try again later."
+        },
+        "unknown": {
+            "title": "An unknown error ocurred",
+            "description": "Please try again later"
+        },
+        "bad_payload": {
+            "title": "Invalid Server Response",
+            "description": "The data received from the server was malformed and could not be processed. Please try again later."
+        },
+        "auth": {
+            "invalid_credentials": {
+                "title": "Invalid credentials"
+            },
+            "user_not_found": {
+                "title": "Account was not found",
+                "description": "Did you type it correctly?"
+            },
+            "unauthorized": {
+                "title": "Unauthorized!",
+                "description": "You don't have enought permissions to view the resource"
+            },
+            "unauthenticated": {
+                "title": "Unauthenticated",
+                "description": "Please login to view the resource"
+            }
+        },
+        "project": {
+            "not_found": {
+                "title": "The Project requested does not exists",
+                "description": "Review your projects and try again"
+            },
+            "file_not_supported": {
+                "title": "The given file format is not supported",
+                "description": "Please provide a valid one"
+            },
+            "file_not_provided": {
+                "title": "Please provide a file before submiting"
+            }
+        }
+    },
+    "projects": {
+        "title": "Projects",
+        "create": {
+            "title": "Create",
+            "header": {
+                "title": "Create Project",
+                "description": "Set up a new project and configure the database connection."
+            },
+            "sections": {
+                "general": {
+                    "title": "General Information"
+                },
+                "database": {
+                    "title": "Database Information"
+                },
+                "missing_args": {
+                    "text": "Keep in mind that the database parameters are all optional. In case you wan't to apply the changes directly, you must update your project first with the appropiate credentials."
+                },
+                "encryption_notice": {
+                    "text": "All database credentials are encrypted using AEGIS-256 before being stored. Your data is protected."
+                }
+            },
+            "fields": {
+                "name": {
+                    "label": "Project Name",
+                    "placeholder": "My Awesome Project",
+                    "description": "This is the display name for your project"
+                },
+                "description": {
+                    "label": "Description",
+                    "placeholder": "My Business Project",
+                    "description": "A brief description of your project"
+                },
+                "provider": {
+                    "label": "Provider",
+                    "placeholder": "AWS",
+                    "description": "Your database provider"
+                },
+                "db_host": {
+                    "label": "Host"
+                },
+                "db_port": {
+                    "label": "Port"
+                },
+                "db_user": {
+                    "label": "Username"
+                },
+                "db_password": {
+                    "label": "Password"
+                },
+                "db_name": {
+                    "label": "Database Name",
+                    "placeholder": "MyDatabaseName"
+                },
+                "db_params": {
+                    "label": "Extra Parameters",
+                    "placeholder": "sslmode=require&connect_timeout=10",
+                    "description": "Extra parameters required to connect to your database"
+                }
+            },
+            "validation": {
+                "name_empty": "Project Name cannot be empty",
+                "port_number": "Must be a valid port number"
+            },
+            "events": {
+                "project_created": {
+                    "title": "New Project created",
+                    "description": "Name: {projectName}"
+                }
+            }
+        },
+        "view": {
+            "title": "My Projects",
+            "header": {
+                "title": "Projects",
+                "description": "Manage your database connections and projects."
+            },
+            "dropdown": {
+                "view": {
+                    "label": "View"
+                },
+                "edit": {
+                    "label": "Edit"
+                },
+                "delete": {
+                    "label": "Delete"
+                }
+            },
+            "search_input": {
+                "placeholder": "Search projects..."
+            },
+            "content": {
+                "no_description": "This Project has no description",
+                "no_db_host": "No Host",
+                "no_db_port": "No Port",
+                "no_db_name": "No Database",
+                "no_provider": "No Provider",
+                "no_field": "This project has no ({field}) configured.\nPlease review your config."
+            },
+            "empty": {
+                "header": {
+                    "title": "No Proyect yet",
+                    "description": "You haven't created any projects yet. Get started by creating your first project."
+                }
+            }
+        },
+        "id": {
+            "fallback_title": "My Project",
+            "title": "{projectName} Project",
+            "description": "Manage your project configuration, import schemas, data and more",
+            "sections": {
+                "overview": {
+                    "tab": "General",
+                    "header": {
+                        "title": "Overview",
+                        "description": "General details about this project."
+                    },
+                    "connection_details": {
+                        "title": "Connection Details",
+                        "description": "Database connection parameters for this project."
+                    },
+                    "connection_string": {
+                        "title": "Connection String",
+                        "description": "Use this URI to connect from your application.",
+                        "invalid": "Could not generate a valid connection string with the given parameters"
+                    },
+                    "fields": {
+                        "id": "Project ID",
+                        "created_at": "Created"
+                    }
+                },
+                "settings": {
+                    "tab": "Settings",
+                    "overview": {
+                        "title": "Project Settings",
+                        "description": "Update your project configuration and connection details."
+                    },
+                    "edit": {
+                        "title": "Edit Project",
+                        "description": "Modify your project name, description, and database connection.",
+                        "label": "Edit"
+                    },
+                    "ownership": {
+                        "title": "Ownership",
+                        "description": "Transfer this project to another user or organization.",
+                        "transfer": {
+                            "title": "Transfer Project",
+                            "description": "Move this project to a owner. You will lose access unless the new owner grants it.",
+                            "label": "Transfer"
+                        }
+                    },
+                    "delete": {
+                        "title": "Delete this project",
+                        "description": "Once you delete a project, there no going back. This action is irreversible.",
+                        "label": "Delete",
+                        "validation": "delete {project}",
+                        "modal": {
+                            "title": "Are you absolutely sure?",
+                            "description": "This action cannot be undone. This will permanently delete the {project} project, its connections, and all asociated data.",
+                            "type_project": "Please type {validation} to confirm."
+                        }
+                    },
+                    "danger_zone": {
+                        "title": "Danger Zone"
+                    }
+                },
+                "upload_schema": {
+                    "tab": "Upload Schema",
+                    "header": {
+                        "title": "Schema Configuration",
+                        "description": "Upload your database schema to get started. You can provide an Excel file or a JSON schema definition."
+                    },
+                    "cards": {
+                        "json_schema": "JSON Schema",
+                        "upload_json": "Upload a .json file with your schema structure",
+                        "supported_formats": "Upload .xlsx, .xls, or .csv files with your table definitions"
+                    },
+                    "dropzone": {
+                        "title": "Drop your file here, or ",
+                        "browse": "browse",
+                        "supported": "Supports {formats} formats"
+                    },
+                    "expected_json": {
+                        "title": "Schema Format",
+                        "description": "Learn how to structure your schema file for optimal import",
+                        "expected": "Expected JSON Structure",
+                        "example_filename": "schema.example.json"
+                    },
+                    "events": {
+                        "upload_file": {
+                            "label": "Upload",
+                            "confirmation": "Confirm"
+                        },
+                        "table_created": {
+                            "title": "Table Created Succesfully",
+                            "description": "You can review it in the {tab} tab"
+                        }
+                    },
+                    "datatype_table": {
+                        "title": "Configure Column Types",
+                        "description": "Review the detected columns and adjust their data types as needed.",
+                        "header": {
+                            "column": "Column",
+                            "sample_value": "Sample Value",
+                            "data_type": "Data Type"
+                        },
+                        "datatype": {
+                            "string": "Text",
+                            "int": "Integer",
+                            "float": "Float",
+                            "double": "Double",
+                            "boolean": "Boolean"
+                        }
+                    },
+                    "table_name": {
+                        "title": "Table Name",
+                        "description": "Configure the name of the generated table",
+                        "placeholder": "users"
+                    },
+                    "upload": {
+                        "title": "Are you sure?",
+                        "description": "Make sure you have reviewed all the settings before uploading the file."
+                    },
+                    "validation": {
+                        "table_name_not_empty": "Table Name cannot be empty",
+                        "delimiter": "File delimiter is not valid. Please use {delimiter}.",
+                        "comma": "comma"
+                    }
+                },
+                "tables": {
+                    "tab": "Tables",
+                    "header": {
+                        "title": "Tables",
+                        "description": "{length} Table(s) in this project"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "No Tables Found"
+                        },
+                        "events": {
+                            "create_new": "Create a new one"
+                        }
+                    },
+                    "card": {
+                        "n_columns": "{length} columns",
+                        "n_versions": "{length} versions",
+                        "required_column": "required",
+                        "selected_schema": {
+                            "description": "JSON Schema validation definition"
+                        },
+                        "dropdown": {
+                            "view_schema": "View",
+                            "edit": "Edit",
+                            "revert": "Revert",
+                            "delete": "Delete"
+                        }
+                    },
+                    "default_table_name": "column_name",
+                    "delete": {
+                        "validation": {
+                            "delete": "delete {value}",
+                            "revert": "revert {value}"
+                        },
+                        "modal": {
+                            "title": "Are you absolutely sure?",
+                            "description": {
+                                "delete": "This action cannot be undone. This will permanently delete the {table} table and all its data.",
+                                "revert": "This action will step back in the history and revert the schema to a previous version."
+                            },
+                            "type_table": "Please type {validation} to confirm."
+                        }
+                    },
+                    "events": {
+                        "table_reverted": {
+                            "title": "Table reverted successfully",
+                            "description": "The table has been reverted to a previous validation schema."
+                        },
+                        "table_deleted": {
+                            "title": "Validation schema deleted",
+                            "description": "The validation schema for this table has been removed."
+                        }
+                    },
+                    "details": {
+                        "back": "Back to tables",
+                        "edit": "Edit Schema",
+                        "delete": "Delete",
+                        "overview": {
+                            "active": "Active",
+                            "columns": "{count} columns",
+                            "schema": "Schema:",
+                            "raw_json": "Raw JSON Schema"
+                        },
+                        "upload": {
+                            "title": "Import Data",
+                            "description": "Select a file to import records into your database",
+                            "submit": "Submit",
+                            "disabled": {
+                                "title": "Missing project configuration",
+                                "description": "You need to define {fields} brefore you can upload any data."
+                            }
+                        },
+                        "version_history": {
+                            "title": "Version History",
+                            "releases": "{count} Releases",
+                            "revert": "Revert",
+                            "no_versions": {
+                                "title": "No previous versions",
+                                "description": "Version history will appear here after updates."
+                            }
+                        },
+                        "properties_table": {
+                            "column": "Column",
+                            "type": "Type",
+                            "constraints": "Constraints",
+                            "primary": "Primary",
+                            "unique": "Unique",
+                            "optional": "Optional"
+                        },
+                        "events": {
+                            "task_created": {
+                                "title": "A new task has been created succesfully",
+                                "description": "Depending on the file, it may take some time. Please wait."
+                            }
+                        },
+                        "tasks": {
+                            "title": "Tasks",
+                            "description": "Track processing tasks for this table and inspect any errors reported by the workers.",
+                            "empty": {
+                                "title": "No tasks yet",
+                                "description": "Tasks will appear here once a file processing job is created for this table."
+                            },
+                            "item": "Task",
+                            "errors": "Errors",
+                            "events": {
+                                "bad_payload": "Invalid response while loading tasks"
+                            }
+                        }
+                    }
+                },
+                "file": {
+                    "tab": "File"
+                }
+            },
+            "tables": {
+                "edit": {
+                    "header": {
+                        "title": "Edit Table",
+                        "description": "Modify the schema definition for this table"
+                    },
+                    "project_information": "Project Information",
+                    "fields": {
+                        "table_name": "Table Name",
+                        "table_id": "ID: {id}"
+                    },
+                    "columns": {
+                        "title": "Columns",
+                        "add": "Add Column",
+                        "name": "Column Name",
+                        "type": "Column Type"
+                    },
+                    "buttons": {
+                        "reset": "Reset",
+                        "save": "Save Changes"
+                    },
+                    "validation": {
+                        "table_name_format": "Format is not valid",
+                        "column_name_format": "Invalid Column Name",
+                        "invalid_type": "Unsopported Type",
+                        "min_columns": "At least {min} columns is required"
+                    }
+                }
+            }
+        },
+        "edit": {
+            "title": "Edit",
+            "header": {
+                "title": "Edit Project",
+                "description": "Review your configuration"
+            },
+            "events": {
+                "project_updated": {
+                    "title": "Project Updated!"
+                }
+            }
+        }
+    }
+}

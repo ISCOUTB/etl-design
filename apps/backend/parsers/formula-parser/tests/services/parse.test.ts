@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { isEqual } from "lodash";
+import { isEqual } from "es-toolkit/compat";
 import { describe, expect, it } from "vitest";
 import { parseFormula } from "@/services/parse.ts";
 

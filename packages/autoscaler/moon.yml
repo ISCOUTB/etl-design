@@ -1,18 +1,15 @@
-$schema: https://moonrepo.dev/schemas/project.json
-
 project:
     name: autoscaler
     description: AutoScaler utility for deployment
 
-toolchain:
-    python:
-        version: "3.13.7"
+layer: tool
+
+language: python
 
 tasks:
     uv:
         command: uv
         toolchain: python
-        local: true
 
     run:
         command: uv
@@ -22,7 +19,7 @@ tasks:
             - src.main
         env:
             PYTHONPATH: .
-        toolchain: python
+        toolchains: python
         options:
             runFromWorkspaceRoot: false
 

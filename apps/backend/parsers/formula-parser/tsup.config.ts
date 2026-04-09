@@ -13,7 +13,7 @@ export default defineConfig(() => {
     const isProduction = process.env.NODE_ENV === "production";
 
     return {
-        entry: ["src/server.ts"],
+        entry: ["src/server.ts", "src/cli.ts"],
         outDir: "dist",
         format: ["cjs"],
         clean: true,
@@ -22,7 +22,8 @@ export default defineConfig(() => {
         minify: isProduction,
         platform: "node",
         external: ["@grpc/grpc-js", "google-protobuf"],
-        noExternal: ["@etl-design/packages-proto-utils-js"],
+        noExternal: ["@sloth/packages-proto-utils-js"],
+        treeshake: false,
         outExtension({ format }) {
             if (format === "esm") {
                 return {

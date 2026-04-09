@@ -1,0 +1,31 @@
+- name: Mount shared FS (EFS)
+  hosts: swarm
+  remote_user: ubuntu
+  become: yes
+  tasks:
+  - name: Install NFS client
+    ansible.builtin.apt:
+      name: nfs-common
+      state: present
+      update_cache: yes
+
+  - name: Ensure shared mountpoint exists
+    ansible.builtin.file:
+      path: "/mnt/shared"
+      state: directory
+      mode: "0755"
+
+  - name: Mount EFS on /mnt/shared and persist in fstab
+    ansible.posix.mount:
+      path: /mnt/shared
+      src: "{{ efs_dns }}:/"
+      fstype: nfs4
+      opts: "defaults,_netdev,nofail"
+      state: mounted
+    when: efs_dns | length > 0
+
+  - name: Ensure Traefik cert path exists
+    ansible.builtin.file:
+      path: "{{ traefik_cert_path }}"
+      state: directory
+      mode: "0755"

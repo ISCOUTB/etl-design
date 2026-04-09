@@ -27,6 +27,20 @@ class Settings(BaseSettings):
     MAX_WORKERS: int = 1
     WORKER_PREFETCH_COUNT: int = 1
 
+    # Main API configuration
+    API_REQUEST_URL: str
+    API_TIMEOUT_SECONDS: float = 30.0
+
+    # Excel-Reader configuration
+    EXCEL_READER_HOST: str
+    EXCEL_READER_PORT: int
+    EXCEL_READER_TIMEOUT_SECONDS: float = 60.0
+
+    @computed_field
+    @property
+    def EXCEL_READER_INSERT_URL(self) -> str:
+        return f"http://{self.EXCEL_READER_HOST}:{self.EXCEL_READER_PORT}/insert-sql"
+
     # Database connection configuration
     DATABASE_CONNECTION_HOST: str
     DATABASE_CONNECTION_PORT: int
@@ -39,5 +53,12 @@ class Settings(BaseSettings):
     def DATABASE_CONNECTION_CHANNEL(self) -> str:
         return f"{self.DATABASE_CONNECTION_HOST}:{self.DATABASE_CONNECTION_PORT}"
 
+    OTEL_SERVICE_NAME: str = "typechecking-server"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
 
-settings = Settings()
+
+settings = Settings()  # type: ignore
+
+
+if __name__ == "__main__":
+    print(settings.model_dump_json(indent=4))

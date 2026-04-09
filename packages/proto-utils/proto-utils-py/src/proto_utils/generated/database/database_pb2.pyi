@@ -1,6 +1,6 @@
-from ..database import utils_pb2 as _utils_pb2
-from ..database import redis_pb2 as _redis_pb2
-from ..database import mongo_pb2 as _mongo_pb2
+from database import utils_pb2 as _utils_pb2
+from database import redis_pb2 as _redis_pb2
+from database import mongo_pb2 as _mongo_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -89,3 +89,19 @@ class GetTasksByImportNameResponse(_message.Message):
     TASKS_FIELD_NUMBER: _ClassVar[int]
     tasks: _containers.RepeatedCompositeFieldContainer[_utils_pb2.ApiResponse]
     def __init__(self, tasks: _Optional[_Iterable[_Union[_utils_pb2.ApiResponse, _Mapping]]] = ...) -> None: ...
+
+class RemoveTaskIdRequest(_message.Message):
+    __slots__ = ("task_id", "task")
+    TASK_ID_FIELD_NUMBER: _ClassVar[int]
+    TASK_FIELD_NUMBER: _ClassVar[int]
+    task_id: str
+    task: str
+    def __init__(self, task_id: _Optional[str] = ..., task: _Optional[str] = ...) -> None: ...
+
+class RemoveTaskIdResponse(_message.Message):
+    __slots__ = ("success", "message")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    def __init__(self, success: bool = ..., message: _Optional[str] = ...) -> None: ...

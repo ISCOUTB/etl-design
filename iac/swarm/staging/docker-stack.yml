@@ -1,31 +1,251 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
+# TODO: Configure a FS such as GlusterFS, CephFS. This configuration is external the cluster, and in our case, must be done
+# using an ansible playbook. For development, we can use NFS or bind mounts, but these are not recommended for production. Damn...
+
 services:
+    # =============================================================================
+    # Traefik Reverse Proxy & Load Balancer
+    # =============================================================================
+    traefik:
+        image: traefik:v3.6
+        networks:
+            - monitoring
+            - traefik_proxy
+        ports:
+            # Expose Traefik's entry points to the Swarm.
+            # Swarm requires the long syntax for ports.
+            - target: 80 # Container port (Traefik web entry point)
+              published: 80 # Host port exposed on the nodes
+              protocol: tcp
+              # 'host' mode binds directly to the node's IP where the task runs.
+              # 'ingress' mode uses Swarm's Routing Mesh (load balances across nodes).
+              # Choose based on your load balancing strategy. 'host' is often simpler if using an external LB.
+              mode: ${TRAEFIK_PORT_PUBLISH_MODE-host}
+            - target: 443 # Container port (Traefik websecure entry point)
+              published: 443 # Host port
+              protocol: tcp
+              mode: ${TRAEFIK_PORT_PUBLISH_MODE-host}
+        command:
+            # HTTP EntryPoint
+            - "--entrypoints.web.address=:80"
+            # Configure HTTP to HTTPS Redirection
+            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+            - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+            # HTTPS EntryPoint
+            - "--entrypoints.websecure.address=:443"
+            # Internal metrics entrypoint (private, only inside the cluster)
+            - "--entrypoints.metrics.address=:8082"
+            - "--entrypoints.websecure.http.tls=true"
+            - "--entrypoints.websecure.http.tls.certresolver=le"
+            - "--certificatesresolvers.le.acme.tlschallenge=true"
+            - "--certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL?Variable not set}"
+            - "--certificatesresolvers.le.acme.storage=/certificates/acme.json"
+            - "--certificatesresolvers.le.acme.caserver=${LETSENCRYPT_CA_SERVER-https://acme-v02.api.letsencrypt.org/directory}"
+            # Providers
+
+            # Enable the Docker Swarm provider (instead of Docker provider)
+            - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+            # Watch for Swarm service changes (requires socket access)
+            - "--providers.swarm.watch=true"
+            # Recommended: Don't expose services by default; require explicit labels
+            - "--providers.swarm.exposedbydefault=false"
+            # Specify the default network for Traefik to connect to services
+            - "--providers.swarm.network=${GLOBAL_STACK_NAME}_traefik_proxy"
+            # API & Dashboard
+            - "--api.dashboard=true" # Enable the dashboard
+            - "--api.insecure=false" # Explicitly disable insecure API mod
+            # Observability
+            - "--log.level=INFO" # Set the Log Level e.g INFO, DEBUG
+            - "--accesslog=true" # Enable Access Logs
+            - "--metrics.prometheus=true" # Enable Prometheus metrics
+            - "--metrics.prometheus.entrypoint=metrics"
+            - "--tracing.servicename=traefik"
+            - "--tracing.otlp.http.endpoint=http://alloy:4318/v1/traces"
+        deploy:
+            mode: replicated
+            replicas: ${STG_REPLICAS_TRAEFIK-1}
+            update_config:
+                parallelism: 1
+                order: stop-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                # Placement constraints restrict where Traefik tasks can run.
+                # Running on manager nodes is common for accessing the Swarm API via the socket.
+                constraints:
+                    - node.role == manager
+                max_replicas_per_node: 1
+                preferences:
+                    - spread: node.id
+            # Traefik Dynamic configuration via labels
+            # In Swarm, labels on the service definition configure Traefik routing for that service.
+            labels:
+                - "traefik.enable=${TRAEFIK_EXPOSE_DASHBOARD-false}"
+                - "traefik.metrics.prometheus=true"
+                # Dashboard router
+                - "traefik.http.routers.dashboard.rule=Host(`dashboard.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.dashboard.entrypoints=websecure"
+                - "traefik.http.routers.dashboard.service=api@internal"
+                - "traefik.http.routers.dashboard.tls=true"
+                - "traefik.http.routers.dashboard.tls.certresolver=le"
+                # Basic‑auth middleware
+                - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USERNAME?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
+                - "traefik.http.middlewares.internal-allowlist.ipallowlist.sourcerange=${TRAEFIK_ALLOWED_CIDRS?Variable not set}"
+                - "traefik.http.middlewares.secure-headers.headers.stsseconds=31536000"
+                - "traefik.http.middlewares.secure-headers.headers.stsincludesubdomains=true"
+                - "traefik.http.middlewares.secure-headers.headers.stspreload=true"
+                - "traefik.http.middlewares.secure-headers.headers.contenttypenosniff=true"
+                - "traefik.http.middlewares.secure-headers.headers.framedeny=true"
+                - "traefik.http.middlewares.internal-maintenance.chain.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-maintenance@swarm"
+                # Service hint
+                - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ${TRAEFIK_CERTS_PATH?Variable not set}:/certificates
+    # =============================================================================
+    # Monitoring Stack: Prometheus, Grafana, Loki, Tempo, Alloy, cAdvisor, Node Exporter
+    # =============================================================================
     prometheus:
         image: prom/prometheus:latest
         user: root
         volumes:
             - prometheus-data:/prometheus
-            - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
             - /var/run/docker.sock:/var/run/docker.sock:ro
+        configs:
+            - source: prometheus_config
+              target: /etc/prometheus/prometheus.yml
         command:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
             - "--storage.tsdb.retention.time=3d"
+            - "--web.enable-remote-write-receiver"
         networks:
             - monitoring
-        ports:
-            - published: 9090
-              target: 9090
-              protocol: tcp
-              mode: ingress
+            - traefik_proxy
         deploy:
             placement:
                 constraints:
                     - node.role == manager
             resources:
                 limits:
+                    memory: 512M
+            labels:
+                - "traefik.enable=${TRAEFIK_EXPOSE_PROMETHEUS-false}"
+                - "traefik.http.routers.prometheus.rule=Host(`prometheus.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.prometheus.entrypoints=websecure"
+                - "traefik.http.routers.prometheus.tls=true"
+                - "traefik.http.routers.prometheus.tls.certresolver=le"
+                - "traefik.http.routers.prometheus.middlewares=internal-maintenance@swarm"
+                - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    grafana:
+        image: grafana/grafana:latest
+        networks:
+            - monitoring
+            - traefik_proxy
+        environment:
+            GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD?Variable not set}
+            GF_SERVER_DOMAIN: grafana.swarm.${DOMAIN}
+            GF_SERVER_ROOT_URL: https://grafana.swarm.${DOMAIN}
+        volumes:
+            - grafana-data:/var/lib/grafana
+        configs:
+            - source: grafana_datasources
+              target: /etc/grafana/provisioning/datasources/datasources.yml
+            - source: grafana_dashboards_provider
+              target: /etc/grafana/provisioning/dashboards/dashboards.yml
+        deploy:
+            labels:
+                - "traefik.enable=${TRAEFIK_EXPOSE_GRAFANA-false}"
+                - "traefik.http.routers.grafana.rule=Host(`grafana.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.grafana.entrypoints=websecure"
+                - "traefik.http.routers.grafana.tls=true"
+                - "traefik.http.routers.grafana.tls.certresolver=le"
+                - "traefik.http.routers.grafana.middlewares=internal-maintenance@swarm"
+                - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    loki:
+        image: grafana/loki:2.9.3
+        command:
+            - "-config.file=/etc/loki/loki-config.yaml"
+        networks:
+            - monitoring
+        volumes:
+            - loki-data:/loki
+        configs:
+            - source: loki_config
+              target: /etc/loki/loki-config.yaml
+        deploy:
+            placement:
+                constraints:
+                    - node.role == manager
+            resources:
+                reservations:
+                    memory: "256m"
+                limits:
                     memory: "512m"
+            labels:
+                - prometheus-job=loki
+                - prometheus-port=3100
+                - prometheus-path=/metrics
+    tempo:
+        image: grafana/tempo:2.7.1
+        command:
+            - "-config.file=/etc/tempo.yml"
+        networks:
+            - monitoring
+        volumes:
+            - tempo-data:/var/tempo
+        configs:
+            - source: tempo_config
+              target: /etc/tempo.yml
+        deploy:
+            placement:
+                constraints:
+                    - node.role == manager
+            resources:
+                reservations:
+                    memory: "256m"
+                limits:
+                    memory: "512m"
+            labels:
+                - prometheus-job=tempo
+                - prometheus-port=3200
+                - prometheus-path=/metrics
+    alloy:
+        image: grafana/alloy:latest
+        command:
+            - "run"
+            - "/etc/alloy/config.alloy"
+            - "--server.http.listen-addr=0.0.0.0:12345"
+            - "--storage.path=/var/lib/alloy/data"
+        networks:
+            - monitoring
+        configs:
+            - source: alloy_config
+              target: /etc/alloy/config.alloy
+        volumes:
+            - alloy-data:/var/lib/alloy
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        deploy:
+            mode: global
+            resources:
+                reservations:
+                    memory: "128m"
+                limits:
+                    memory: "256m"
+            labels:
+                - prometheus-job=alloy
+                - prometheus-port=12345
+                - prometheus-path=/metrics
     cadvisor:
         image: gcr.io/cadvisor/cadvisor:latest
         volumes:
@@ -42,9 +262,11 @@ services:
             mode: global
             labels:
                 - prometheus-job=cadvisor
+                - prometheus-port=8080
+                - prometheus-path=/metrics
             resources:
                 limits:
-                    memory: "256m"
+                    memory: 256M
     node-exporter:
         image: prom/node-exporter:latest
         volumes:
@@ -59,41 +281,55 @@ services:
             - monitoring
         deploy:
             mode: global
-            resources:
-                limits:
-                    memory: "256m"
             labels:
                 - prometheus-job=node-exporter
+                - prometheus-port=9100
+                - prometheus-path=/metrics
     scaler:
         image: vulcan99/autoscaler:latest
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
         environment:
             NODE_ENV: staging
-            PROMETHEUS_URL: ${SCALER_PROMETHEUS_URL}
+            PROMETHEUS_URL: http://prometheus:9090
             STACK_NAME: ${GLOBAL_STACK_NAME}
             CHECK_INTERVAL: ${SCALER_CHECK_INTERVAL}
             COOLDOWN_PERIOD: ${SCALER_COOLDOWN_PERIOD}
             METRIC_WINDOW_MULTIPLIER: ${SCALER_METRIC_WINDOW_MULTIPLIER}
-            DEFAULT_MIN_REPLICAS: ${SCALER_DEFAULT_MIN_REPLICAS}
-            DEFAULT_MAX_REPLICAS: ${SCALER_DEFAULT_MAX_REPLICAS}
         networks:
             - monitoring
         deploy:
             placement:
                 constraints:
                     - node.role == manager
+    # =============================================================================
+    # Parsers: Formula Parser, DDL Generator, SQL Builder, Excel Reader
+    # =============================================================================
     formula-parser:
-        image: vulcan99/etl-formula-parser:1.06-rc
+        image: vulcan99/formula-parser:1.00-rc
         environment:
-            FORMULA_PARSER_HOST: ${PARSERS_FORMULA_PARSER_HOST}
-            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT}
-            DEBUG_FORMULA_PARSER: ${PARSERS_DEBUG_FORMULA_PARSER}
+            FORMULA_PARSER_HOST: "0.0.0.0"
+            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
+            DEBUG_FORMULA_PARSER: "false"
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
+            FORMULA_TRACE_CONTEXT_ENABLED: "true"
+            FORMULA_TRACE_CONTEXT_LOG_HEADERS: "false"
+            OTEL_SERVICE_NAME: formula-parser
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
         networks:
             - monitoring
             - parsers
+        healthcheck:
+            test: ["CMD", "node", "-e", "const net=require('net');const port=Number(process.env.FORMULA_PARSER_PORT);const s=net.connect({host:'127.0.0.1',port});s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),3000);"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         deploy:
-            replicas: 1
+            replicas: ${STG_REPLICAS_FORMULA_PARSER-2}
             resources:
                 reservations:
                     memory: "128m"
@@ -103,23 +339,37 @@ services:
                     cpus: "0.5"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=medium
-                - scaler.min=1
-                - scaler.max=5
-                - scaler.metric=cpu
-                - scaler.up=75
-                - scaler.down=25
+                - prometheus-job=formula-parser
+                - prometheus-port=9090
+                - prometheus-path=/metrics
     ddl-generator:
-        image: vulcan99/etl-ddl-generator:1.06-rc
+        image: vulcan99/ddl-generator:latest
         environment:
-            DDL_GENERATOR_HOST: ${PARSERS_DDL_GENERATOR_HOST}
-            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT}
-            DDL_GENERATOR_DEBUG: ${PARSERS_DDL_GENERATOR_DEBUG}
+            DDL_GENERATOR_HOST: "0.0.0.0"
+            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
+            DDL_GENERATOR_DEBUG: "false"
+            OTEL_SERVICE_NAME: ddl-generator
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
         networks:
             - monitoring
             - parsers
+        healthcheck:
+            test: ["CMD", "python", "-c", "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ['DDL_GENERATOR_PORT'])), 3); s.close()"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         deploy:
-            replicas: 1
+            replicas: ${STG_REPLICAS_DDL_GENERATOR-2}
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "256m"
@@ -129,23 +379,32 @@ services:
                     cpus: "1.0"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=medium
-                - scaler.min=1
-                - scaler.max=5
-                - scaler.metric=cpu
-                - scaler.up=75
-                - scaler.down=25
+                - prometheus-job=ddl-generator
+                - prometheus-port=9090
+                - prometheus-path=/metrics
     sql-builder:
-        image: vulcan99/etl-sql-builder:1.06-rc
+        image: vulcan99/sql-builder:latest
         environment:
-            SQL_BUILDER_HOST: ${PARSERS_SQL_BUILDER_HOST}
-            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT}
-            SQL_BUILDER_DEBUG: ${PARSERS_SQL_BUILDER_DEBUG}
+            SQL_BUILDER_HOST: "0.0.0.0"
+            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT?Variable not set}
+            SQL_BUILDER_DEBUG: "false"
+            OTEL_SERVICE_NAME: sql-builder
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
         networks:
             - monitoring
             - parsers
+        healthcheck:
+            test: ["CMD", "python", "-c", "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ['SQL_BUILDER_PORT'])), 3); s.close()"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         deploy:
-            replicas: 1
+            replicas: ${STG_REPLICAS_SQL_BUILDER-2}
             resources:
                 reservations:
                     memory: "256m"
@@ -155,29 +414,40 @@ services:
                     cpus: "1.0"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=medium
-                - scaler.min=1
-                - scaler.max=5
-                - scaler.metric=cpu
-                - scaler.up=75
-                - scaler.down=25
+                - prometheus-job=sql-builder
+                - prometheus-port=9090
+                - prometheus-path=/metrics
     excel-reader:
-        image: vulcan99/etl-excel-reader:1.06-rc
+        image: vulcan99/excel-reader:latest
         environment:
-            FORMULA_PARSER_HOST: "formula-parser"
-            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT}
-            DDL_GENERATOR_HOST: "ddl-generator"
-            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT}
-            SQL_BUILDER_HOST: "sql-builder"
-            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT}
-            EXCEL_READER_HOST: ${PARSERS_EXCEL_READER_HOST}
-            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT}
-            EXCEL_READER_DEBUG: ${PARSERS_EXCEL_READER_DEBUG}
+            FORMULA_PARSER_HOST: formula-parser
+            FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
+            DDL_GENERATOR_HOST: ddl-generator
+            DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
+            SQL_BUILDER_HOST: sql-builder
+            SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT?Variable not set}
+            EXCEL_READER_HOST: "0.0.0.0"
+            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT?Variable not set}
+            EXCEL_READER_DEBUG: "false"
+            OTEL_SERVICE_NAME: excel-reader
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+        depends_on:
+            - formula-parser
+            - ddl-generator
+            - sql-builder
         networks:
             - monitoring
             - parsers
+        healthcheck:
+            test: ["CMD", "python", "-c", "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ['EXCEL_READER_PORT'])), 3); s.close()"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         deploy:
-            replicas: 1
+            replicas: ${STG_REPLICAS_EXCEL_READER-2}
             resources:
                 reservations:
                     memory: "512m"
@@ -187,34 +457,31 @@ services:
                     cpus: "1.5"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=medium
-                - scaler.min=1
-                - scaler.max=5
-                - scaler.metric=memory
-                - scaler.up=75
-                - scaler.down=25
+                - prometheus-job=excel-reader
+                - prometheus-port=${PARSERS_EXCEL_READER_PORT?Variable not set}
+                - prometheus-path=/metrics
+    # =============================================================================
+    # Databases & Message Brokers: RabbitMQ, MongoDB, Redis, PostgreSQL + pgAdmin, ETL Database
+    # =============================================================================
     rabbitmq:
         image: rabbitmq:4-management
         environment:
-            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST}
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST-/}
         networks:
             - monitoring
             - rabbit
-        ports:
-            - published: 5672
-              target: 5672
-              protocol: tcp
-              mode: ingress
-            - published: 15672
-              target: 15672
-              protocol: tcp
-              mode: ingress
+            - traefik_proxy
         volumes:
             - rabbitmq-data:/var/lib/rabbitmq
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "512m"
@@ -223,24 +490,36 @@ services:
                     memory: "1024m"
                     cpus: "1.0"
             labels:
-                - scaler.enabled=false
+                - "traefik.enable=${TRAEFIK_EXPOSE_RABBITMQ-false}"
+                - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.rabbitmq.entrypoints=websecure"
+                - "traefik.http.routers.rabbitmq.tls=true"
+                - "traefik.http.routers.rabbitmq.tls.certresolver=le"
+                - "traefik.http.routers.rabbitmq.middlewares=internal-maintenance@swarm"
+                - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
     mongo:
         image: mongo:7.0
+        healthcheck:
+            test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         environment:
-            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME?Variable not set}
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD?Variable not set}
         networks:
             - monitoring
             - mongo
-        ports:
-            - published: 27017
-              target: 27017
-              protocol: tcp
-              mode: ingress
         volumes:
             - mongo-data:/data/db
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "512m"
@@ -248,28 +527,32 @@ services:
                 limits:
                     memory: "1024m"
                     cpus: "1.0"
-            labels:
-                - scaler.enabled=false
     redis:
         image: redis:7-alpine
         command:
             - "redis-server"
             - "--requirepass"
             - "${REDIS_PASSWORD}"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         environment:
-            REDIS_PASSWORD: ${REDIS_PASSWORD}
+            REDIS_PASSWORD: ${REDIS_PASSWORD?Variable not set}
         networks:
             - monitoring
             - redis
-        ports:
-            - published: 6379
-              target: 6379
-              protocol: tcp
-              mode: ingress
         volumes:
             - redis-data:/data
         deploy:
             replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
             resources:
                 reservations:
                     memory: "256m"
@@ -277,60 +560,99 @@ services:
                 limits:
                     memory: "512m"
                     cpus: "0.5"
-            labels:
-                - scaler.enabled=true
     postgres:
-        image: postgres:17
+        image: postgres:18
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            interval: 10s
+            retries: 5
+            start_period: 30s
+            timeout: 10s
         environment:
-            POSTGRES_USER: ${POSTGRES_USER}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
             PGDATA: /var/lib/postgresql/data/pgdata
         networks:
             - monitoring
             - postgres
-        ports:
-            - published: 5431
-              target: 5432
-              protocol: tcp
-              mode: ingress
         volumes:
             - postgres-data:/var/lib/postgresql/data
+        deploy:
+            replicas: 1
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            resources:
+                reservations:
+                    memory: "256m"
+                limits:
+                    memory: "512m"
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL?Variable not set}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD?Variable not set}
+        depends_on:
+            - postgres
+        networks:
+            - monitoring
+            - postgres
+            - traefik_proxy
+        volumes:
+            - pgadmin-data:/var/lib/pgadmin
         deploy:
             replicas: 1
             resources:
                 reservations:
                     memory: "256m"
-                    cpus: "0.25"
                 limits:
                     memory: "512m"
-                    cpus: "0.5"
             labels:
-                - scaler.enabled=true
+                - "traefik.enable=${TRAEFIK_EXPOSE_PGADMIN-false}"
+                - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.pgadmin.entrypoints=websecure"
+                - "traefik.http.routers.pgadmin.tls=true"
+                - "traefik.http.routers.pgadmin.tls.certresolver=le"
+                - "traefik.http.routers.pgadmin.middlewares=internal-maintenance@swarm"
+                - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     database:
-        image: vulcan99/etl-database:1.06-rc
+        image: vulcan99/etl-database:latest
+        healthcheck:
+            test: ["CMD", "python", "-c", "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ['DATABASE_CONNECTION_PORT'])), 3); s.close()"]
+            interval: 10s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
         environment:
             MONGO_HOST: mongo
             MONGO_PORT: 27017
-            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+            MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME?Variable not set}
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD?Variable not set}
+            MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE-admin}
             MONGO_DB: ${MONGO_DB}
-            MONGO_SCHEMAS_COLLECTION: ${MONGO_SCHEMAS_COLLECTION}
-            MONGO_TASKS_COLLECTION: ${MONGO_TASKS_COLLECTION}
-            MONGO_MAX_RETRIES: ${MONGO_MAX_RETRIES}
-            MONGO_RETRY_DELAY_SECONDS: ${MONGO_RETRY_DELAY_SECONDS}
-            MONGO_RETRY_BACKOFF_FACTOR: ${MONGO_RETRY_BACKOFF_FACTOR}
+            MONGO_SCHEMAS_COLLECTION: ${MONGO_SCHEMAS_COLLECTION?Variable not set}
+            MONGO_TASKS_COLLECTION: ${MONGO_TASKS_COLLECTION?Variable not set}
+            MONGO_MAX_RETRIES: ${MONGO_MAX_RETRIES-5}
+            MONGO_RETRY_DELAY_SECONDS: ${MONGO_RETRY_DELAY_SECONDS-1}
+            MONGO_RETRY_BACKOFF_FACTOR: ${MONGO_RETRY_BACKOFF_FACTOR-2}
             REDIS_HOST: redis
             REDIS_PORT: 6379
-            REDIS_DB: ${REDIS_DB}
-            REDIS_PASSWORD: ${REDIS_PASSWORD}
-            REDIS_EXPIRE_SECONDS: ${REDIS_EXPIRE_SECONDS}
-            REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES}
-            REDIS_RETRY_DELAY_SECONDS: ${REDIS_RETRY_DELAY_SECONDS}
-            REDIS_RETRY_BACKOFF_FACTOR: ${REDIS_RETRY_BACKOFF_FACTOR}
-            DATABASE_CONNECTION_HOST: ${DATABASE_CONNECTION_HOST}
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
-            DATABASE_CONNECTION_DEBUG: ${DATABASE_CONNECTION_DEBUG}
+            REDIS_DB: ${REDIS_DB?Variable not set}
+            REDIS_PASSWORD: ${REDIS_PASSWORD?Variable not set}
+            REDIS_EXPIRE_SECONDS: ${REDIS_EXPIRE_SECONDS?Variable not set}
+            REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES-5}
+            REDIS_RETRY_DELAY_SECONDS: ${REDIS_RETRY_DELAY_SECONDS-1}
+            REDIS_RETRY_BACKOFF_FACTOR: ${REDIS_RETRY_BACKOFF_FACTOR-2}
+            DATABASE_CONNECTION_HOST: "0.0.0.0"
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_CONNECTION_DEBUG: "false"
+            OTEL_SERVICE_NAME: database-server
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
             TASK_TTL_PENDING_SECONDS: ${TASK_TTL_PENDING_SECONDS}
             TASK_TTL_PROCESSING_SECONDS: ${TASK_TTL_PROCESSING_SECONDS}
             TASK_TTL_COMPLETED_SECONDS: ${TASK_TTL_COMPLETED_SECONDS}
@@ -340,13 +662,34 @@ services:
             USER_LIST_CACHE_TTL_SECONDS: ${USER_LIST_CACHE_TTL_SECONDS}
             SCHEMA_CACHE_TTL_SECONDS: ${SCHEMA_CACHE_TTL_SECONDS}
             DEFAULT_TTL_SECONDS: ${DEFAULT_TTL_SECONDS}
+            ENABLE_PROMETHEUS_METRICS: "true"
+            PROMETHEUS_METRICS_PORT: 9090
+        depends_on:
+            - mongo
+            - redis
         networks:
             - monitoring
             - mongo
             - redis
             - grpc
         deploy:
-            replicas: 2
+            replicas: ${STG_REPLICAS_DATABASE-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "512m"
@@ -356,40 +699,75 @@ services:
                     cpus: "1.0"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=high
-                - scaler.min=2
-                - scaler.max=5
-                - scaler.metric=cpu
-                - scaler.up=70
-                - scaler.down=30
+                - prometheus-job=database
+                - prometheus-port=9090
+                - prometheus-path=/metrics
+    # =============================================================================
+    # Application Services: API Server, Web, Type Checking Worker, Pre‑start Initialization
+    # =============================================================================
     typechecking:
-        image: vulcan99/etl-typechecking:1.06-rc
+        image: vulcan99/typechecking:1.00-rc
         environment:
-            MINIMAL_SERVER_HOST: ${DATABASE_CONNECTION_HOST}
-            MINIMAL_SERVER_PORT: ${DATABASE_CONNECTION_PORT}
-            MINIMAL_SERVER_DEBUG: ${DATABASE_CONNECTION_DEBUG}
+            MINIMAL_SERVER_HOST: "0.0.0.0"
+            MINIMAL_SERVER_PORT: ${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}
+            MINIMAL_SERVER_DEBUG: "false"
+            OTEL_SERVICE_NAME: typechecking-server
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
             RABBITMQ_HOST: rabbitmq
             RABBITMQ_PORT: 5672
-            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST}
-            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES}
-            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS}
-            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER}
-            RABBITMQ_THRESHOLD_SECONDS: ${RABBITMQ_THRESHOLD_SECONDS}
-            MAX_WORKERS: ${MAX_WORKERS}
-            WORKER_PREFETCH_COUNT: ${WORKER_PREFETCH_COUNT}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
+            RABBITMQ_THRESHOLD_SECONDS: ${RABBITMQ_THRESHOLD_SECONDS-60}
+            WORKER_PREFETCH_COUNT: ${WORKER_PREFETCH_COUNT-1}
             DATABASE_CONNECTION_HOST: database
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
-            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
-            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
-            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES-5}
+            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS-1}
+            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER-2}
+            API_REQUEST_URL: http://api:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}/events/task-completed
+            API_TIMEOUT_SECONDS: ${API_TIMEOUT_SECONDS-30}
+            EXCEL_READER_HOST: excel-reader
+            EXCEL_READER_PORT: ${PARSERS_EXCEL_READER_PORT}
+            EXCEL_READER_TIMEOUT_SECONDS: ${EXCEL_READER_TIMEOUT_SECONDS-30}
+        depends_on:
+            - database
+            - rabbitmq
+            - excel-reader
+            - api
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}/health || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
         networks:
             - monitoring
             - rabbit
             - grpc
         deploy:
-            replicas: 2
+            replicas: ${STG_REPLICAS_TYPECHECKING-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "768m"
@@ -399,48 +777,141 @@ services:
                     cpus: "2.0"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=high
-                - scaler.min=2
-                - scaler.max=8
-                - scaler.metric=cpu
-                - scaler.up=70
-                - scaler.down=30
-    api:
-        image: vulcan99/etl-api:1.06-rc
+                - prometheus-job=typechecking
+                - prometheus-port=${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}
+                - prometheus-path=/metrics
+    prestart:
+        image: vulcan99/etl-api:latest
         environment:
-            API_V1_STR: ${API_V1_STR}
-            CORS_ORIGINS: ${CORS_ORIGINS}
-            SERVER_HOST: ${SERVER_HOST}
-            SERVER_PORT: ${SERVER_PORT}
-            SERVER_DEBUG: ${SERVER_DEBUG}
-            SECRET_KEY: ${SECRET_KEY}
-            FIRST_SUPERUSER: ${FIRST_SUPERUSER}
-            FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD}
+            API_V1_STR: ${API_V1_STR-/api/v1}
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set}
+            SERVER_HOST: "0.0.0.0"
+            SERVER_PORT: ${SERVER_PORT?Variable not set}
+            SERVER_DEBUG: "false"
+            SECRET_KEY: ${AUTH_SECRET?Variable not set}
+            AUTH_INFO: ${AUTH_SIGN?Variable not set}
+            CREDENTIALS_SECRET_KEY: ${CREDENTIALS_SECRET_KEY?Variable not set}
+            CREDENTIALS_SIGN: ${CREDENTIALS_SIGN?Variable not set}
+            IDEMPOTENCY_TTL_DEFAULT_SECONDS: ${IDEMPOTENCY_TTL_DEFAULT_SECONDS-600}
+            IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: ${IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS-60}
+            IDEMPOTENCY_TTL_PUBLISHED_SECONDS: ${IDEMPOTENCY_TTL_PUBLISHED_SECONDS-1800}
+            FIRST_SUPERUSER_NAME: ${FIRST_SUPERUSER_NAME?Variable not set}
+            FIRST_SUPERUSER_EMAIL: ${FIRST_SUPERUSER_EMAIL?Variable not set}
+            FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD?Variable not set}
             DATABASE_CONNECTION_HOST: database
-            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT}
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
             DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
             DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
             DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
             RABBITMQ_HOST: rabbitmq
             RABBITMQ_PORT: 5672
-            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST}
-            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES}
-            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS}
-            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER}
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
             POSTGRES_HOST: postgres
-            POSTGRES_PORT: 5431
-            POSTGRES_USER: ${POSTGRES_USER}
-            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-            POSTGRES_DB: ${POSTGRES_DB}
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
+        depends_on:
+            - postgres
         networks:
             - monitoring
             - postgres
             - grpc
             - rabbit
+            - traefik_proxy
+        command: bash scripts/prestart.sh
         deploy:
-            replicas: 2
+            mode: replicated-job
+            replicas: 1
+            resources:
+                reservations:
+                    memory: "768m"
+                limits:
+                    memory: "1536m"
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 3
+    api:
+        image: vulcan99/etl-api:1.00-rc
+        environment:
+            API_V1_STR: ${API_V1_STR-/api/v1}
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web,https://web.swarm.${DOMAIN}
+            SERVER_HOST: "0.0.0.0"
+            SERVER_PORT: ${SERVER_PORT?Variable not set}
+            SERVER_DEBUG: "false"
+            OTEL_SERVICE_NAME: api-server
+            OTEL_SERVICE_VERSION: 1.0.0
+            OTEL_TRACING_ENABLED: "true"
+            OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+            SECRET_KEY: ${AUTH_SECRET?Variable not set}
+            AUTH_INFO: ${AUTH_SIGN?Variable not set}
+            CREDENTIALS_SECRET_KEY: ${CREDENTIALS_SECRET_KEY?Variable not set}
+            CREDENTIALS_SIGN: ${CREDENTIALS_SIGN?Variable not set}
+            IDEMPOTENCY_TTL_DEFAULT_SECONDS: ${IDEMPOTENCY_TTL_DEFAULT_SECONDS-600}
+            IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS: ${IDEMPOTENCY_TTL_RETRY_DELAY_SECONDS-60}
+            IDEMPOTENCY_TTL_PUBLISHED_SECONDS: ${IDEMPOTENCY_TTL_PUBLISHED_SECONDS-1800}
+            FIRST_SUPERUSER_NAME: ${FIRST_SUPERUSER_NAME?Variable not set}
+            FIRST_SUPERUSER_EMAIL: ${FIRST_SUPERUSER_EMAIL?Variable not set}
+            FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD?Variable not set}
+            DATABASE_CONNECTION_HOST: database
+            DATABASE_CONNECTION_PORT: ${DATABASE_CONNECTION_PORT?Variable not set}
+            DATABASE_MAX_RETRIES: ${DATABASE_MAX_RETRIES}
+            DATABASE_RETRY_DELAY_SECONDS: ${DATABASE_RETRY_DELAY_SECONDS}
+            DATABASE_BACKOFF_MULTIPLIER: ${DATABASE_BACKOFF_MULTIPLIER}
+            RABBITMQ_HOST: rabbitmq
+            RABBITMQ_PORT: 5672
+            RABBITMQ_VHOST: ${RABBITMQ_DEFAULT_VHOST?Variable not set}
+            RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER?Variable not set}
+            RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS?Variable not set}
+            RABBITMQ_MAX_RETRIES: ${RABBITMQ_MAX_RETRIES-5}
+            RABBITMQ_RETRY_DELAY_SECONDS: ${RABBITMQ_RETRY_DELAY_SECONDS-1}
+            RABBITMQ_BACKOFF_MULTIPLIER: ${RABBITMQ_BACKOFF_MULTIPLIER-2}
+            POSTGRES_HOST: postgres
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: ${POSTGRES_USER?Variable not set}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
+            POSTGRES_DB: ${POSTGRES_DB?Variable not set}
+        depends_on:
+            - database
+            - rabbitmq
+            - postgres
+            - prestart
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:${SERVER_PORT?Variable not set}${API_V1_STR-/api/v1}/healthcheck/ || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+        networks:
+            - monitoring
+            - postgres
+            - grpc
+            - rabbit
+            - traefik_proxy
+        deploy:
+            replicas: ${STG_REPLICAS_API-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
             resources:
                 reservations:
                     memory: "768m"
@@ -450,23 +921,158 @@ services:
                     cpus: "1.5"
             labels:
                 - scaler.enabled=true
-                - scaler.priority=medium
-                - scaler.min=2
-                - scaler.max=6
-                - scaler.metric=cpu
-                - scaler.up=75
-                - scaler.down=25
+                - "traefik.enable=${TRAEFIK_EXPOSE_API-false}"
+                - "traefik.http.routers.api.rule=Host(`api.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.api.entrypoints=websecure"
+                - "traefik.http.routers.api.tls=true"
+                - "traefik.http.routers.api.tls.certresolver=le"
+                - "traefik.http.routers.api-web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`${API_V1_STR-/api/v1}`)"
+                - "traefik.http.routers.api-web.entrypoints=websecure"
+                - "traefik.http.routers.api-web.tls=true"
+                - "traefik.http.routers.api-web.tls.certresolver=le"
+                - "traefik.http.routers.api-web.priority=100"
+                - "traefik.http.routers.api-web.service=api@swarm"
+                - "traefik.http.routers.api.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.api-web.middlewares=secure-headers@swarm"
+                - "traefik.http.services.api.loadbalancer.server.port=${SERVER_PORT?Variable not set}"
+                - prometheus-job=api
+                - prometheus-port=${SERVER_PORT?Variable not set}
+                - prometheus-path=/api/v1/metrics
+    web:
+        image: vulcan99/web:1.00-rc
+        environment:
+            NUXT_SITE_ENV: staging
+            API_BASE_URL: ${API_V1_STR-/api/v1}
+            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
+            NUXT_SITE_URL: https://web.swarm.${DOMAIN}
+            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            AUTH_SECRET: ${AUTH_SECRET?Variable not set}
+            AUTH_SIGN: ${AUTH_SIGN?Variable not set}
+            NUXT_SITE_NAME: ${NUXT_SITE_NAME-"S.L.O.T.H"}
+            NUXT_OG_IMAGE_SECRET: ${NUXT_OG_IMAGE_SECRET?Variable not set}
+        depends_on:
+            - api
+        networks:
+            - monitoring
+            - traefik_proxy
+        deploy:
+            replicas: ${STG_REPLICAS_WEB-2}
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first
+                failure_action: rollback
+            rollback_config:
+                parallelism: 1
+                order: stop-first
+            restart_policy:
+                condition: on-failure
+                delay: 5s
+                max_attempts: 5
+                window: 60s
+            placement:
+                preferences:
+                    - spread: node.id
+            resources:
+                reservations:
+                    memory: "512m"
+                    cpus: "0.25"
+                limits:
+                    memory: "1024m"
+                    cpus: "0.5"
+            labels:
+                - scaler.enabled=true
+                - "traefik.enable=true"
+                - "traefik.docker.network=${GLOBAL_STACK_NAME}_traefik_proxy"
+                - "traefik.http.routers.web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`/`)"
+                - "traefik.http.routers.web.entrypoints=websecure"
+                - "traefik.http.routers.web.priority=1"
+                - "traefik.http.routers.web.tls=true"
+                - "traefik.http.routers.web.tls.certresolver=le"
+                - "traefik.http.routers.web.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.web.service=web"
+                - "traefik.http.services.web.loadbalancer.server.port=3000"
+# =============================================================================
+# Networks, Configs, Volumes
+# =============================================================================
 networks:
     monitoring:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.10.0/24
     parsers:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.11.0/24
     redis:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.12.0/24
     postgres:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.13.0/24
     mongo:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.14.0/24
     rabbit:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.15.0/24
     grpc:
+        driver: overlay
+        attachable: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.16.0/24
+    traefik_proxy:
+        driver: overlay
+        attachable: true
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.210.17.0/24
+configs:
+    prometheus_config:
+        file: ./prometheus.yml
+    grafana_datasources:
+        file: ./grafana/provisioning/datasources/datasources.yml
+    grafana_dashboards_provider:
+        file: ./grafana/provisioning/dashboards/dashboards.yml
+    tempo_config:
+        file: ./tempo/tempo.yml
+    loki_config:
+        file: ./loki/loki-config.yaml
+    alloy_config:
+        file: ./alloy/config.alloy
 volumes:
     prometheus-data:
+    grafana-data:
+    pgadmin-data:
     rabbitmq-data:
     mongo-data:
     redis-data:
     postgres-data:
+    loki-data:
+    tempo-data:
+    alloy-data:

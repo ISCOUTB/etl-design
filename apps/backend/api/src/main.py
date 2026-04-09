@@ -1,21 +1,57 @@
+import shutil
+from contextlib import asynccontextmanager
+
 import grpc
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pika.exceptions import AMQPError
+from prometheus_fastapi_instrumentator import Instrumentator
+from proto_utils.telemetry import configure_otel_tracing
 
 from src.api.exceptions import (
-    general_exception_handler,
+    app_exception_handler,
     grpc_exception_handler,
     rabbitmq_exception_handler,
 )
 from src.api.main import router as api_router
+from src.api.middlewares import LogsMiddleware
 from src.core.config import settings
-from src.utils.uvicorn_logger import LOGGING_CONFIG
+from src.exceptions import AppException
+from src.utils.logger import LOGGING_CONFIG
+
+configure_otel_tracing(
+    service_name="api-server",
+    service_version="1.0.0",
+    environment="debug" if settings.SERVER_DEBUG else "production",
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    def _separator(char: str = "=", width: int = shutil.get_terminal_size().columns):
+        print(char * width)
+
+    if settings.SERVER_DEBUG:
+        _separator()
+        print("URL MAP - Registered Routes")
+        _separator()
+        for route in app.routes:
+            if hasattr(route, "methods"):
+                methods = ", ".join(sorted(route.methods))  # type: ignore
+                print(f"{methods:8} -> {route.path}")  # type: ignore
+        _separator()
+
+    yield
+
 
 app = FastAPI(
-    title="ETL Design API",
+    title="S.L.O.T.H API",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
+
+# Register Prometheus middleware and metrics route before startup.
+Instrumentator().instrument(app).expose(app, endpoint=f"{settings.API_V1_STR}/metrics")
 
 if settings.CORS_ORIGINS:
     app.add_middleware(
@@ -30,7 +66,9 @@ app.include_router(api_router, prefix=settings.API_V1_STR, tags=["api"])
 
 app.add_exception_handler(grpc.RpcError, grpc_exception_handler)
 app.add_exception_handler(AMQPError, rabbitmq_exception_handler)
-app.add_exception_handler(Exception, general_exception_handler)
+app.add_exception_handler(AppException, app_exception_handler)
+
+app.add_middleware(LogsMiddleware)
 
 if __name__ == "__main__":
     import uvicorn

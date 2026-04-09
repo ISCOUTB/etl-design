@@ -1,0 +1,393 @@
+name: CD Production - Master Orchestrator
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/**
+      - packages/**
+      - .github/workflows/cd-*-production.yml
+      - .github/workflows/cd-production-master.yml
+      - .github/actions/build-docker-image/**
+      - .github/actions/create-production-version/**
+      - .github/actions/update-docker-stack/**
+  workflow_dispatch:
+    inputs:
+      staging_version:
+        description: "Staging version to promote (optional, e.g., 2.00-rc). Leave empty to use latest"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry run (calculate version but don't create tag)"
+        required: false
+        type: boolean
+        default: false
+
+# Prevent multiple simultaneous orchestrations
+concurrency:
+  group: production-orchestrator-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # to create tags
+  actions: write # to allow tagging commits that modify workflows
+
+jobs:
+  # Step 1: Create a single global production version tag
+  create-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Global Production Version
+        id: version
+        uses: ./.github/actions/create-production-version
+        with:
+          staging_version: ${{ inputs.staging_version || '' }}
+          dry_run: ${{ inputs.dry_run || 'false' }}
+
+      - name: Verify version output
+        run: |
+          echo "Version created: ${{ steps.version.outputs.version }}"
+          if [ -z "${{ steps.version.outputs.version }}" ]; then
+            echo "ERROR: Version is empty!"
+            exit 1
+          fi
+
+  # Step 1.5: Debug version output
+  debug-version:
+    needs: [create-version]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show version details
+        run: |
+          echo "=== VERSION OUTPUT ==="
+          echo "Version: '${{ needs.create-version.outputs.version }}'"
+          echo "Version length: ${#version}"
+          echo "Is empty: $([[ -z '${{ needs.create-version.outputs.version }}' ]] && echo 'YES' || echo 'NO')"
+          echo ""
+          if [ -z "${{ needs.create-version.outputs.version }}" ]; then
+            echo "ERROR: Version is empty!"
+            exit 1
+          else
+            echo "SUCCESS: Version is set to '${{ needs.create-version.outputs.version }}'"
+          fi
+
+  # Step 2: Detect which services were modified
+  detect-services:
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.changes.outputs.web }}
+      api: ${{ steps.changes.outputs.api }}
+      database: ${{ steps.changes.outputs.database }}
+      typechecking: ${{ steps.changes.outputs.typechecking }}
+      ddl-generator: ${{ steps.changes.outputs.ddl-generator }}
+      excel-reader: ${{ steps.changes.outputs.excel-reader }}
+      formula-parser: ${{ steps.changes.outputs.formula-parser }}
+      sql-builder: ${{ steps.changes.outputs.sql-builder }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          base: ${{ github.event.before }} # Compare against previous commit
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tools/tsconfig/**'
+              - 'tools/eslint/**'
+              - '.github/workflows/cd-web-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            api:
+              - 'apps/backend/api/**'
+              - 'packages/messaging-utils/messaging-utils-py/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-api-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            database:
+              - 'apps/connections/database/**'
+              - 'packages/proto/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-database-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            typechecking:
+              - 'apps/backend/typechecking/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-typechecking-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            ddl-generator:
+              - 'apps/backend/parsers/ddl-generator/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-ddl-generator-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            excel-reader:
+              - 'apps/backend/parsers/excel-reader/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-excel-reader-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            formula-parser:
+              - 'apps/backend/parsers/formula-parser/**'
+              - 'packages/proto-utils/proto-utils-js/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tools/tsconfig/**'
+              - 'tools/eslint/**'
+              - '.github/workflows/cd-formula-parser-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+            sql-builder:
+              - 'apps/backend/parsers/sql-builder/**'
+              - 'packages/proto-utils/proto-utils-py/**'
+              - '.github/workflows/cd-sql-builder-production.yml'
+              - '.github/actions/build-docker-image/**'
+              - '.github/actions/create-production-version/**'
+
+  # Step 3: Debug detection results
+  debug-detection:
+    needs: [create-version, detect-services]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show detection results
+        run: |
+          echo "=== CHANGED SERVICES ==="
+          echo "Web: ${{ needs.detect-services.outputs.web }}"
+          echo "API: ${{ needs.detect-services.outputs.api }}"
+          echo "Database: ${{ needs.detect-services.outputs.database }}"
+          echo "Typechecking: ${{ needs.detect-services.outputs.typechecking }}"
+          echo "DDL Generator: ${{ needs.detect-services.outputs.ddl-generator }}"
+          echo "Excel Reader: ${{ needs.detect-services.outputs.excel-reader }}"
+          echo "Formula Parser: ${{ needs.detect-services.outputs.formula-parser }}"
+          echo "SQL Builder: ${{ needs.detect-services.outputs.sql-builder }}"
+          echo ""
+          echo "=== VERSION TO USE ==="
+          echo "Version: '${{ needs.create-version.outputs.version }}'"
+
+  # Step 4: Call individual service workflows (only if service changed)
+  deploy-web:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.web == 'true'
+    uses: ./.github/workflows/cd-web-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-api:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.api == 'true'
+    uses: ./.github/workflows/cd-api-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-database:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.database == 'true'
+    uses: ./.github/workflows/cd-database-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-typechecking:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.typechecking == 'true'
+    uses: ./.github/workflows/cd-typechecking-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-ddl-generator:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.ddl-generator == 'true'
+    uses: ./.github/workflows/cd-ddl-generator-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-excel-reader:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.excel-reader == 'true'
+    uses: ./.github/workflows/cd-excel-reader-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-formula-parser:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.formula-parser == 'true'
+    uses: ./.github/workflows/cd-formula-parser-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  deploy-sql-builder:
+    needs: [create-version, detect-services, debug-version, debug-detection]
+    if: needs.detect-services.outputs.sql-builder == 'true'
+    uses: ./.github/workflows/cd-sql-builder-production.yml
+    with:
+      version_tag: ${{ needs.create-version.outputs.version }}
+    secrets: inherit
+
+  # Step 5: Commit and push all docker-stack.yml changes
+  commit-stack-changes:
+    needs:
+      - create-version
+      - detect-services
+      - deploy-web
+      - deploy-api
+      - deploy-database
+      - deploy-typechecking
+      - deploy-ddl-generator
+      - deploy-excel-reader
+      - deploy-formula-parser
+      - deploy-sql-builder
+    # Run if at least one deploy job succeeded (even if others failed or were skipped)
+    if: |
+      always() && 
+      !contains(needs.*.result, 'cancelled') &&
+      (
+        needs.deploy-web.result == 'success' ||
+        needs.deploy-api.result == 'success' ||
+        needs.deploy-database.result == 'success' ||
+        needs.deploy-typechecking.result == 'success' ||
+        needs.deploy-ddl-generator.result == 'success' ||
+        needs.deploy-excel-reader.result == 'success' ||
+        needs.deploy-formula-parser.result == 'success' ||
+        needs.deploy-sql-builder.result == 'success'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Apply docker-stack updates
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          VERSION: ${{ needs.create-version.outputs.version }}
+        run: |
+          STACK_FILE="iac/swarm/production/docker-stack.yml"
+          UPDATED=false
+
+          echo "=== Applying docker-stack updates ==="
+
+          # Web
+          if [ "${{ needs.deploy-web.result }}" == "success" ]; then
+            echo "Updating Web image to ${DOCKERHUB_USERNAME}/web:${VERSION}"
+            yq eval -i ".services.web.image=\"${DOCKERHUB_USERNAME}/web:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # API
+          if [ "${{ needs.deploy-api.result }}" == "success" ]; then
+            echo "Updating API image to ${DOCKERHUB_USERNAME}/etl-api:${VERSION}"
+            yq eval -i ".services.api.image=\"${DOCKERHUB_USERNAME}/etl-api:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # Database
+          if [ "${{ needs.deploy-database.result }}" == "success" ]; then
+            echo "Updating Database image to ${DOCKERHUB_USERNAME}/etl-database:${VERSION}"
+            yq eval -i ".services.database.image=\"${DOCKERHUB_USERNAME}/etl-database:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # Typechecking
+          if [ "${{ needs.deploy-typechecking.result }}" == "success" ]; then
+            echo "Updating Typechecking image to ${DOCKERHUB_USERNAME}/typechecking:${VERSION}"
+            yq eval -i ".services.typechecking.image=\"${DOCKERHUB_USERNAME}/typechecking:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # DDL Generator
+          if [ "${{ needs.deploy-ddl-generator.result }}" == "success" ]; then
+            echo "Updating DDL Generator image to ${DOCKERHUB_USERNAME}/ddl-generator:${VERSION}"
+            yq eval -i ".services.ddl-generator.image=\"${DOCKERHUB_USERNAME}/ddl-generator:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # Excel Reader
+          if [ "${{ needs.deploy-excel-reader.result }}" == "success" ]; then
+            echo "Updating Excel Reader image to ${DOCKERHUB_USERNAME}/excel-reader:${VERSION}"
+            yq eval -i ".services.excel-reader.image=\"${DOCKERHUB_USERNAME}/excel-reader:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # Formula Parser
+          if [ "${{ needs.deploy-formula-parser.result }}" == "success" ]; then
+            echo "Updating Formula Parser image to ${DOCKERHUB_USERNAME}/formula-parser:${VERSION}"
+            yq eval -i ".services.formula-parser.image=\"${DOCKERHUB_USERNAME}/formula-parser:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          # SQL Builder
+          if [ "${{ needs.deploy-sql-builder.result }}" == "success" ]; then
+            echo "Updating SQL Builder image to ${DOCKERHUB_USERNAME}/sql-builder:${VERSION}"
+            yq eval -i ".services.sql-builder.image=\"${DOCKERHUB_USERNAME}/sql-builder:${VERSION}\"" "$STACK_FILE" -I 4
+            UPDATED=true
+          fi
+
+          if [ "$UPDATED" = false ]; then
+            echo "No updates were applied"
+            exit 0
+          fi
+
+          echo "=== Changes applied successfully ==="
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push changes
+        run: |
+          # Check if there are any changes to commit
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          echo "Changes detected in docker-stack files"
+          git status
+
+          # Add only docker-stack.yml files
+          git add iac/swarm/production/docker-stack.yml
+
+          # Commit with version info
+          git commit -m "chore(production): update docker stack images to version ${{ needs.create-version.outputs.version }}" \
+                     -m "Updated services:" \
+                     -m "- WEB: ${{ needs.deploy-web.result == 'success' && '✓' || '✗' }}" \
+                     -m "- API: ${{ needs.deploy-api.result == 'success' && '✓' || '✗' }}" \
+                     -m "- Database: ${{ needs.deploy-database.result == 'success' && '✓' || '✗' }}" \
+                     -m "- Typechecking: ${{ needs.deploy-typechecking.result == 'success' && '✓' || '✗' }}" \
+                     -m "- DDL Generator: ${{ needs.deploy-ddl-generator.result == 'success' && '✓' || '✗' }}" \
+                     -m "- Excel Reader: ${{ needs.deploy-excel-reader.result == 'success' && '✓' || '✗' }}" \
+                     -m "- Formula Parser: ${{ needs.deploy-formula-parser.result == 'success' && '✓' || '✗' }}" \
+                     -m "- SQL Builder: ${{ needs.deploy-sql-builder.result == 'success' && '✓' || '✗' }}"
+
+          # Push changes
+          git push origin ${{ github.ref_name }}

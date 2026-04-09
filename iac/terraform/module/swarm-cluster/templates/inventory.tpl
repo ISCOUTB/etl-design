@@ -23,3 +23,5 @@ ansible_ssh_private_key_file=${ssh_key_file}
 ansible_python_interpreter=/usr/bin/python3
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 environment=${environment}
+traefik_cert_path=${traefik_cert_path}
+efs_dns=${efs_dns}

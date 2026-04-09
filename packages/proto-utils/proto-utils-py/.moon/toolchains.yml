@@ -1,0 +1,4 @@
+$schema: https://moonrepo.dev/schemas/toolchain.json
+
+unstable_python:
+    version: 3.12.10

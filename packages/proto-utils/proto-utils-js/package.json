@@ -1,5 +1,5 @@
 {
-    "name": "@etl-design/packages-proto-utils-js",
+    "name": "@sloth/packages-proto-utils-js",
     "type": "module",
     "version": "1.0.0",
     "description": "Protobuf utilities for JavaScript",
@@ -11,22 +11,29 @@
             "require": "./dist/index.cjs"
         }
     },
+    "types": "./dist/index.d.ts",
     "files": [
         "dist"
     ],
+    "scripts": {
+        "generate": "bash scripts/generate.sh",
+        "prebuild": "pnpm run generate",
+        "build": "tsup",
+        "prepare": "pnpm build"
+    },
     "dependencies": {
         "@grpc/grpc-js": "^1.14.3",
-        "google-protobuf": "^4.0.1",
-        "protoc": "^33.5.0",
+        "google-protobuf": "^4.0.2",
+        "protoc": "^34.0.0",
         "protoc-gen-ts": "^0.8.7"
     },
     "devDependencies": {
-        "@etl-design/tools-eslint": "workspace:*",
-        "@etl-design/tools-tsconfig": "workspace:*",
+        "@sloth/tools-eslint": "workspace:*",
+        "@sloth/tools-tsconfig": "workspace:*",
         "@types/google-protobuf": "^3.15.12",
-        "@types/node": "^25.3.0",
-        "eslint": "^10.0.1",
+        "@types/node": "^25.5.2",
+        "eslint": "^10.2.0",
         "tsup": "^8.5.1",
-        "typescript": "^5.9.3"
+        "typescript": "^6.0.2"
     }
 }

@@ -23,14 +23,33 @@ import signal
 
 import grpc
 from grpc._typing import Any  # type: ignore
+from opentelemetry import trace
+from prometheus_client import start_http_server
 from proto_utils.generated.parsers import (
     ddl_generator_pb2,
     ddl_generator_pb2_grpc,
+)
+from proto_utils.telemetry import configure_otel_tracing
+from py_async_grpc_prometheus.prometheus_async_server_interceptor import (
+    PromAsyncServerInterceptor,
 )
 
 from src.core.config import settings
 from src.handlers.ddl_generator import generate_ddl_handler
 from src.utils.logger import logger
+from src.utils.trace_context import (
+    attach_trace_context,
+    detach_trace_context,
+    extract_trace_headers_from_context,
+)
+from src.utils.watch_files import main_debug
+
+configure_otel_tracing(
+    service_name=settings.OTEL_SERVICE_NAME,
+    service_version=settings.OTEL_SERVICE_VERSION,
+    environment="debug" if settings.DDL_GENERATOR_DEBUG else "production",
+)
+tracer = trace.get_tracer("ddl_generator.grpc")
 
 
 class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
@@ -63,11 +82,29 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
             f"Debug Mode: {settings.DDL_GENERATOR_DEBUG}"
         )
 
-    def GenerateDDL(
+    async def GenerateDDL(
         self,
         request: ddl_generator_pb2.DDLRequest,
         context: grpc.aio.ServicerContext[Any, Any],
     ) -> ddl_generator_pb2.DDLResponse:
+        trace_context_token = None
+        inbound_trace_headers: dict[str, str] = {}
+
+        if settings.DDL_TRACE_CONTEXT_ENABLED:
+            inbound_trace_headers = extract_trace_headers_from_context(context)
+            trace_context_token = attach_trace_context(inbound_trace_headers)
+
+        if (
+            settings.DDL_TRACE_CONTEXT_LOG_HEADERS
+            and settings.DDL_GENERATOR_DEBUG
+            and inbound_trace_headers
+        ):
+            logger.info(
+                "[TRACE_CONTEXT] Inbound gRPC trace headers received - "
+                f"traceparent: {inbound_trace_headers.get('traceparent')}, "
+                f"tracestate: {inbound_trace_headers.get('tracestate')}"
+            )
+
         column_count = len(request.columns)
         ast_type = request.ast.type if request.HasField("ast") else "NO_AST"
 
@@ -77,7 +114,11 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
         )
 
         try:
-            response = generate_ddl_handler(request)
+            with tracer.start_as_current_span("grpc.GenerateDDL") as span:
+                span.set_attribute("rpc.system", "grpc")
+                span.set_attribute("rpc.method", "GenerateDDL")
+                span.set_attribute("ddl.column_count", column_count)
+                response = generate_ddl_handler(request)
             sql_length = len(response.sql) if response.sql else 0
 
             logger.info(
@@ -89,6 +130,9 @@ class DDLGeneratorServicer(ddl_generator_pb2_grpc.DDLGeneratorServicer):
         except Exception as e:
             logger.error(f"[DDL_GENERATE] Operation failed: {e}")
             raise
+        finally:
+            if trace_context_token is not None:
+                detach_trace_context(trace_context_token)
 
 
 async def serve() -> None:
@@ -97,7 +141,23 @@ async def serve() -> None:
     servicer = DDLGeneratorServicer()
 
     # Create and configure server
-    server = grpc.aio.server()
+
+    # Interceptor for Prometheus metrics if enabled
+    if settings.ENABLE_PROMETHEUS_METRICS:
+        logger.info("[SERVER] Prometheus metrics enabled")
+
+        # Create prometheus metrics server
+        start_http_server(int(settings.PROMETHEUS_METRICS_PORT))
+        logger.info(
+            "[SERVER] Prometheus metrics rest server started on port "
+            f"{settings.PROMETHEUS_METRICS_PORT}"
+        )
+
+        logger.info("[SERVER] Starting gRPC server with Prometheus interceptor")
+        server = grpc.aio.server(interceptors=(PromAsyncServerInterceptor(),))
+    else:
+        server = grpc.aio.server()
+
     ddl_generator_pb2_grpc.add_DDLGeneratorServicer_to_server(servicer, server)
     server.add_insecure_port(settings.DDL_GENERATOR_CHANNEL)
 
@@ -129,7 +189,7 @@ async def serve() -> None:
         logger.info("[SERVER] Server stopped")
 
 
-if __name__ == "__main__":
+def main() -> None:
     """Main entry point for the DDL generator server."""
     try:
         logger.info("[MAIN] Initializing DDL Generator Server...")
@@ -139,3 +199,13 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"[MAIN] Fatal error: {e}")
         raise
+
+
+if __name__ == "__main__":
+    if settings.DDL_GENERATOR_DEBUG:
+        try:
+            asyncio.run(main_debug(main))
+        except KeyboardInterrupt:
+            logger.info("[MAIN] Application terminated by user")
+    else:
+        main()

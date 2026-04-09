@@ -40,5 +40,8 @@ class Settings(BaseSettings):
     EXCEL_READER_PORT: int = 8001
     EXCEL_READER_DEBUG: bool = False
 
+    OTEL_SERVICE_NAME: str = "excel-reader"
+    OTEL_SERVICE_VERSION: str = "1.0.0"
+
 
 settings = Settings()

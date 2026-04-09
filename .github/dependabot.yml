@@ -12,8 +12,7 @@ updates:
           dependencies:
               patterns:
                   - "*"
-              exclude-patterns:
-                  - next-auth
+
       ignore:
           - dependency-name: next-auth
             update-types:

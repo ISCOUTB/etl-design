@@ -16,7 +16,8 @@ locals {
     var.tags
   )
 
-  cluster_name = "${var.project_name}-${var.environment}"
+  cluster_name        = "${var.project_name}-${var.environment}"
+  effective_cert_path = coalesce(var.traefik_cert_path, "/mnt/shared/traefik/${var.environment}")
 }
 
 # ============================================
@@ -226,7 +227,6 @@ resource "aws_instance" "managers" {
 
   subnet_id              = aws_subnet.swarm[count.index % length(aws_subnet.swarm)].id
   vpc_security_group_ids = [aws_security_group.swarm.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   associate_public_ip_address = true
 
@@ -263,7 +263,6 @@ resource "aws_instance" "workers" {
 
   subnet_id              = aws_subnet.swarm[count.index % length(aws_subnet.swarm)].id
   vpc_security_group_ids = [aws_security_group.swarm.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   associate_public_ip_address = true
 
@@ -319,6 +318,72 @@ resource "aws_iam_role_policy_attachment" "ssm_policy" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${local.cluster_name}-ec2-profile"
   role = aws_iam_role.ec2_role.name
+
+  depends_on = [aws_iam_role_policy_attachment.ssm_policy]
+}
+
+# ============================================
+# Shared filesystem (EFS)
+# ============================================
+
+resource "aws_security_group" "efs" {
+  count = var.enable_shared_fs ? 1 : 0
+
+  name        = "${local.cluster_name}-efs-sg"
+  description = "Security group for shared EFS - ${var.environment}"
+  vpc_id      = aws_vpc.swarm.id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-efs-sg"
+    }
+  )
+
+  ingress {
+    description     = "NFS from swarm nodes"
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.swarm.id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_efs_file_system" "shared" {
+  count = var.enable_shared_fs ? 1 : 0
+
+  creation_token = "${local.cluster_name}-${var.shared_fs_name}"
+  encrypted      = var.shared_fs_encrypted
+
+  performance_mode = var.shared_fs_performance_mode
+  throughput_mode  = var.shared_fs_throughput_mode
+
+  provisioned_throughput_in_mibps = var.shared_fs_throughput_mode == "provisioned" ? var.shared_fs_provisioned_throughput : null
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-${var.shared_fs_name}"
+    }
+  )
+}
+
+resource "aws_efs_mount_target" "shared" {
+  for_each = var.enable_shared_fs ? {
+    for idx, subnet in aws_subnet.swarm : idx => subnet.id
+  } : {}
+
+  file_system_id  = aws_efs_file_system.shared[0].id
+  subnet_id       = each.value
+  security_groups = [aws_security_group.efs[0].id]
 }
 
 # ============================================
@@ -328,11 +393,13 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # Generate dynamic inventory for Ansible
 resource "local_file" "ansible_inventory" {
   content = templatefile("${path.module}/templates/inventory.tpl", {
-    managers     = aws_instance.managers
-    workers      = aws_instance.workers
-    ssh_key_file = local_sensitive_file.ssh_key_pem.filename
-    ssh_user     = "ubuntu"
-    environment  = var.environment
+    managers          = aws_instance.managers
+    workers           = aws_instance.workers
+    ssh_key_file      = local_sensitive_file.ssh_key_pem.filename
+    ssh_user          = "ubuntu"
+    environment       = var.environment
+    traefik_cert_path = local.effective_cert_path
+    efs_dns           = var.enable_shared_fs ? aws_efs_file_system.shared[0].dns_name : null
   })
 
   filename        = abspath("${path.root}/inventories/${var.environment}-inventory.ini")

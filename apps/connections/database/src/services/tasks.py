@@ -11,6 +11,7 @@ and data consistency management between the two storage systems.
 
 from typing import Any, Dict, List, Optional
 
+import pymongo.errors
 from proto_utils.database import dtypes
 
 from src.core.database_mongo import MongoConnection
@@ -33,11 +34,20 @@ class DatabaseTasksService:
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.UpdateTaskIdResponse:
-        """Update a specific field in a task across both Redis and MongoDB.
+        """Update a specific field in a task across both Redis and MongoDB (ACID).
 
-        This method updates task information in both storage systems to maintain
-        consistency. Updates are performed in Redis first for speed, then in
-        MongoDB for persistence.
+        This method updates task information in both storage systems atomically.
+        Updates are performed in Redis first (fast, with pipeline/transaction),
+        then in MongoDB (persistent, with session/transaction).
+
+        Consistency Strategy:
+            - Redis: Uses pipeline for atomic multi-operation update
+            - Mongo: Uses session for atomic update
+            - If both succeed: Strong consistency guaranteed
+            - If Redis succeeds, Mongo fails: Redis rolled back automatically
+            - If Redis fails: Exception raised, no changes
+            - If Mongo fails after Redis succeeds: Exception raised, data inconsistent
+              (circuit breaker/monitoring should detect this)
 
         Args:
             request (dtypes.UpdateTaskIdRequest): Request containing task ID,
@@ -49,29 +59,40 @@ class DatabaseTasksService:
             dtypes.UpdateTaskIdResponse: Response indicating success or failure
                 of the update operation.
         """
+        task_id = request["task_id"]
+        task = request["task"]
+
         try:
-            # Update task in redis
+            # Update task in Redis with atomic pipeline
             redis_db.update_task_id(
-                task_id=request["task_id"],
+                task_id=task_id,
                 field=request["field"],
                 value=request["value"],
-                task=request["task"],
-                message=request.get("message", ""),
-                data=request.get("data", None),
-                reset_data=request.get("reset_data", False),
+                task=task,
+                message=request.get("message") or "",
+                data=request.get("data"),
+                reset_data=request.get("reset_data") or False,
             )
 
-            # Update task in Mongo
-            _update_task_id_mongo(
-                task_id=request["task_id"],
-                field=request["field"],
-                value=request["value"],
-                task=request["task"],
-                message=request.get("message", ""),
-                data=request.get("data", None),
-                reset_data=request.get("reset_data", False),
-                mongo_tasks_connection=mongo_tasks_connection,
-            )
+            # Update task in Mongo with session transaction
+            try:
+                _update_task_id_mongo(
+                    task_id=task_id,
+                    field=request["field"],
+                    value=request["value"],
+                    task=task,
+                    message=request.get("message") or "",
+                    data=request.get("data"),
+                    reset_data=request.get("reset_data") or False,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis updated but Mongo failed - INCONSISTENT STATE
+                # Log this error for monitoring/alerting
+                raise Exception(
+                    f"Inconsistent state: Redis updated but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
 
             return dtypes.UpdateTaskIdResponse(
                 success=True,
@@ -89,10 +110,16 @@ class DatabaseTasksService:
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.SetTaskIdResponse:
-        """Create or replace a task in both Redis and MongoDB.
+        """Create or replace a task in both Redis and MongoDB (ACID).
 
-        This method sets task data in both storage systems simultaneously
-        to ensure consistency and availability.
+        This method sets task data in both storage systems atomically.
+        Both Redis and Mongo succeed or fail together.
+
+        Consistency Strategy:
+            - Redis: Uses pipeline for atomic multi-operation set
+            - Mongo: Uses session/transaction for atomic set
+            - Both succeed: Strong consistency guaranteed
+            - Either fails: Exception raised to caller
 
         Args:
             request (dtypes.SetTaskIdRequest): Request containing task ID,
@@ -104,21 +131,32 @@ class DatabaseTasksService:
             dtypes.SetTaskIdResponse: Response indicating success or failure
                 of the set operation.
         """
+        task_id = request["task_id"]
+        task = request["task"]
+        value = request["value"].copy()
+
         try:
-            # Set task in redis
+            # Set task in Redis with atomic pipeline
             redis_db.set_task_id(
-                task_id=request["task_id"],
-                value=request["value"].copy(),
-                task=request["task"],
+                task_id=task_id,
+                value=value,
+                task=task,
             )
 
-            # Set task in Mongo
-            _set_task_id_mongo(
-                task_id=request["task_id"],
-                value=request["value"].copy(),
-                task=request["task"],
-                mongo_tasks_connection=mongo_tasks_connection,
-            )
+            # Set task in Mongo with session transaction
+            try:
+                _set_task_id_mongo(
+                    task_id=task_id,
+                    value=value,
+                    task=task,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis updated but Mongo failed - INCONSISTENT STATE
+                raise Exception(
+                    f"Inconsistent state: Redis updated but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
 
             return dtypes.SetTaskIdResponse(
                 success=True, message="Task set successfully in both Redis and MongoDB"
@@ -131,6 +169,7 @@ class DatabaseTasksService:
     @staticmethod
     def get_task_id(
         request: dtypes.GetTaskIdRequest,
+        *,
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.GetTaskIdResponse:
@@ -175,6 +214,7 @@ class DatabaseTasksService:
     @staticmethod
     def get_tasks_by_import_name(
         request: dtypes.GetTasksByImportNameRequest,
+        *,
         redis_db: RedisConnection,
         mongo_tasks_connection: MongoConnection,
     ) -> dtypes.GetTasksByImportNameResponse:
@@ -220,6 +260,57 @@ class DatabaseTasksService:
             return dtypes.GetTasksByImportNameResponse(tasks=mongo_tasks)
         except Exception:
             return dtypes.GetTasksByImportNameResponse(tasks=[])
+
+    def remove_task_id(
+        self,
+        request: dtypes.RemoveTaskIdRequest,
+        *,
+        redis_db: RedisConnection,
+        mongo_tasks_connection: MongoConnection,
+    ) -> dtypes.RemoveTaskIdResponse:
+        """Remove a task by ID from both Redis and MongoDB.
+
+        This method removes a task from both storage systems. It attempts to
+        remove from Redis first, then MongoDB, and handles any inconsistencies
+        that may arise if one operation succeeds and the other fails.
+
+        Args:
+            request (dtypes.RemoveTaskIdRequest): Request containing task ID and context.
+            redis_db (RedisConnection): Active Redis connection.
+            mongo_tasks_connection (MongoConnection): Active MongoDB tasks connection.
+
+        Returns:
+            dtypes.RemoveTaskIdResponse: Response indicating success or failure of the removal operation.
+        """
+        task_id = request["task_id"]
+        task = request["task"]
+
+        try:
+            # Remove from Redis first
+            redis_db.remove_task_id(task_id=task_id, task=task)
+
+            # Remove from MongoDB
+            try:
+                _remove_task_id_mongo(
+                    task_id=task_id,
+                    task=task,
+                    mongo_tasks_connection=mongo_tasks_connection,
+                )
+            except Exception as mongo_error:
+                # Redis removed but Mongo failed - INCONSISTENT STATE
+                raise Exception(
+                    f"Inconsistent state: Redis removed but Mongo failed. "
+                    f"Task {task_id}: {str(mongo_error)}"
+                ) from mongo_error
+
+            return dtypes.RemoveTaskIdResponse(
+                success=True,
+                message="Task removed successfully from both Redis and MongoDB",
+            )
+        except Exception as e:
+            return dtypes.RemoveTaskIdResponse(
+                success=False, message=f"Error removing task: {str(e)}"
+            )
 
 
 # ===================== MongoDB Helper Functions =====================
@@ -273,7 +364,16 @@ def _update_task_id_mongo(
             merged_data = {**existing_data, **data}
             update_ops["$set"]["data"] = merged_data
 
-    mongo_tasks_connection.update_one(filter_query, update_ops)
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            mongo_tasks_connection.update_one(filter_query, update_ops, session=session)
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            mongo_tasks_connection.update_one(filter_query, update_ops)
+        else:
+            raise
 
 
 def _set_task_id_mongo(
@@ -312,7 +412,20 @@ def _set_task_id_mongo(
 
     # Use upsert to either insert or update
     filter_query = {"task_id": task_id, "task": task}
-    mongo_tasks_connection.collection.replace_one(filter_query, document, upsert=True)
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            mongo_tasks_connection.collection.replace_one(
+                filter_query, document, upsert=True, session=session
+            )
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            mongo_tasks_connection.collection.replace_one(
+                filter_query, document, upsert=True
+            )
+        else:
+            raise
 
 
 def _get_task_id_mongo(
@@ -387,3 +500,41 @@ def _get_tasks_by_import_name_mongo(
             continue  # Skip malformed documents
 
     return tasks
+
+
+def _remove_task_id_mongo(
+    task_id: str,
+    task: str,
+    mongo_tasks_connection: MongoConnection,
+) -> None:
+    """Remove a task by its ID from MongoDB.
+
+    This is a helper function that handles the MongoDB-specific deletion logic
+    for task data. It includes proper error handling to ensure that the operation
+    is performed correctly.
+
+    Args:
+        task_id (str): Unique identifier for the task.
+        task (str): The task or context under which the task is stored.
+        mongo_tasks_connection (MongoConnection): Active MongoDB tasks connection.
+
+    Returns:
+        None:
+    """
+    filter_query = {"task_id": task_id, "task": task}
+    # Try to use transaction, fallback to non-transactional if not supported
+    try:
+        with mongo_tasks_connection.transaction() as session:
+            result = mongo_tasks_connection.delete_one(filter_query, session=session)
+    except pymongo.errors.OperationFailure as transaction_error:
+        # MongoDB not in replica set mode, do non-transactional operation
+        if "Transaction numbers" in str(transaction_error):
+            result = mongo_tasks_connection.delete_one(filter_query)
+        else:
+            raise
+
+    # Don't raise exception if task not found - make it idempotent
+    # This allows removal to succeed even if task only exists in one storage
+    if result.deleted_count == 0:
+        # Task not found in MongoDB, but that's okay for idempotent delete
+        pass

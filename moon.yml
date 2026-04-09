@@ -2,24 +2,68 @@ project:
     name: etl-design
     description: project root
 
-toolchain:
-    defaults:
+id: source
 
 tasks:
-    parsers:
-        command: "noop"
+    run-parsers:
+        command: noop
         deps:
             - formula-parser:run
             - ddl-generator:run
             - sql-builder:run
             - excel-reader:run
-        local: true
+        preset: server
 
-    test:
+    deploy-mongo:
+        command: sh
+        args:
+            - scripts/deploy_mongo_docker.sh
+        options:
+            cache: false
+
+    deploy-postgres:
+        command: sh
+        args:
+            - scripts/deploy_postgres_docker.sh
+        options:
+            cache: false
+
+    deploy-rabbit:
+        command: sh
+        args:
+            - scripts/deploy_rabbitmq_docker.sh
+        options:
+            cache: false
+
+    deploy-redis:
+        command: sh
+        args:
+            - scripts/deploy_redis_docker.sh
+        options:
+            cache: false
+
+    backend:
         command: noop
         deps:
-            - formula-parser:test
-            - ddl-generator:test
-            - sql-builder:test
-            - excel-reader:test
-        local: true
+            - source:run-parsers
+            - source:deploy-postgres
+            - source:deploy-mongo
+            - source:deploy-redis
+            - source:deploy-rabbit
+            - database:run
+            - typechecking:run
+            - api:run
+        preset: server
+        options:
+            runDepsInParallel: true
+            cache: false
+
+    development:
+        command: noop
+        deps:
+            - source:backend
+            - web:dev
+        preset: server
+        options:
+            runDepsInParallel: true
+            cache: false

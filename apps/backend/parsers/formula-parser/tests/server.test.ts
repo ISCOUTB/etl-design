@@ -1,6 +1,6 @@
 /* eslint-disable dot-notation */
 import type { sendUnaryData, ServerUnaryCall } from "@grpc/grpc-js";
-import { formula_parser } from "@etl-design/packages-proto-utils-js";
+import { formula_parser } from "@sloth/packages-proto-utils-js";
 import { credentials } from "@grpc/grpc-js";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

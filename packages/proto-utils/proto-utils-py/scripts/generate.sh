@@ -1,6 +1,7 @@
 #!/bin/bash
 
-PROTO_PATH="../../proto"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROTO_PATH="$SCRIPT_DIR/../../../proto"
 
 if [ ! -d "$PROTO_PATH" ]; then
     echo "[error] directory not found $PROTO_PATH"

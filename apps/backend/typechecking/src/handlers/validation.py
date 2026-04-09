@@ -4,21 +4,24 @@ from typing import Any, Dict, List, Tuple
 
 import jsonschema
 from fastapi import UploadFile
-from proto_utils.database import dtypes
+from proto_utils.database import DatabaseClient, dtypes
 
 from src.core.config import settings
 from src.handlers.schemas import get_active_schema
 from src.schemas.handlers import (
+    SummaryDetails,
     ValidationResult,
     ValidationResults,
     ValidationSummary,
 )
 from src.services.file_processor import FileProcessor
+from src.utils import standardize_string
 
 
 async def validate_file_against_schema(
     file: UploadFile,
     import_name: str,
+    database_client: DatabaseClient,
     n_workers: int = settings.MAX_WORKERS,
 ) -> ValidationResult:
     """
@@ -35,13 +38,22 @@ async def validate_file_against_schema(
     n_workers = min(n_workers, settings.MAX_WORKERS)
 
     # Get the active schema for the import
-    schema = get_active_schema(import_name)
+    schema = get_active_schema(import_name, database_client)
     if not schema:
         return {
             "success": False,
             "error": f"No active schema found for import name: {import_name}",
             "validation_results": None,
         }
+
+    # Standardize schema to ensure consistent validation (e.g., handle case sensitivity)
+    schema["properties"] = dict(
+        map(
+            lambda kv: (standardize_string(kv[0]), kv[1]),
+            schema.get("properties", {}).items(),
+        )
+    )
+    schema["required"] = list(map(standardize_string, schema.get("required", [])))
 
     # Process the uploaded file using FileProcessor service
     file_processed, data, error_message = await FileProcessor.process_file(file)
@@ -53,18 +65,18 @@ async def validate_file_against_schema(
         }
 
     if not data:
-        return {
-            "success": False,
-            "error": None,
-            "validation_results": {
-                "is_valid": False,
-                "total_items": 0,
-                "valid_items": 0,
-                "invalid_items": 0,
-                "errors": [],
-                "message": "File is empty but valid",
-            },
-        }
+        return ValidationResult(
+            success=True,
+            error=None,
+            validation_results=ValidationResults(
+                is_valid=False,
+                total_items=0,
+                valid_items=0,
+                invalid_items=0,
+                errors=[],
+                message="File is empty but valid",
+            ),
+        )
 
     # Verify that the columns in data match the schema properties
     schema_properties = set(schema.get("properties", {}).keys())
@@ -99,11 +111,11 @@ async def validate_file_against_schema(
         }
     )
 
-    return {
-        "success": True,
-        "error": None,
-        "validation_results": validation_results,
-    }
+    return ValidationResult(
+        success=True,
+        error=None,
+        validation_results=validation_results,
+    )
 
 
 def get_validation_summary(
@@ -119,9 +131,19 @@ def get_validation_summary(
         Dict: A summary of the validation results.
     """
     if not validation_results.get("validation_results"):
-        return {"status": "error", "summary": "No validation results available"}
+        return ValidationSummary(
+            status="error",
+            summary="No validation results available",
+            details=None,
+        )
 
     results = validation_results["validation_results"]
+    if results is None:
+        return ValidationSummary(
+            status="error",
+            summary="Validation results are None",
+            details=None,
+        )
 
     if results["is_valid"]:
         status = "success"
@@ -130,38 +152,39 @@ def get_validation_summary(
         status = "warning"
         summary = f"{results['invalid_items']} out of {results['total_items']} items failed validation"
 
-    return {
-        "status": status,
-        "summary": summary,
-        "details": {
-            "total_items": results["total_items"],
-            "valid_items": results["valid_items"],
-            "invalid_items": results["invalid_items"],
-            "error_count": len(results.get("errors", [])),
-            "file_name": results.get("file_name"),
-            "validated_at": results.get("validated_at"),
-        },
-    }
+    return ValidationSummary(
+        status=status,
+        summary=summary,
+        details=SummaryDetails(
+            total_items=results["total_items"],
+            valid_items=results["valid_items"],
+            invalid_items=results["invalid_items"],
+            error_count=len(results.get("errors", [])),
+            file_name=results.get("file_name"),
+            validated_at=results.get("validated_at"),
+        ),
+    )
 
 
 def validate_chunks(
     args: Tuple[List[Dict], Dict[str, Any], int],
 ) -> Tuple[int, bool, list[str]]:
-    data, schema, index = args
+    data, schema, chunk_start = args
     errors = []
 
     for i, item in enumerate(data):
         try:
             jsonschema.validate(instance=item, schema=schema)
         except jsonschema.ValidationError as e:
-            errors.append(f"Item {i}: {str(e)}")
+            # Report spreadsheet line number
+            errors.append(f"Item {chunk_start + i + 1}: {str(e)}")
 
-    return index, len(errors) == 0, errors
+    return chunk_start, len(errors) == 0, errors
 
 
 def validate_data_parallel(
     data: List[Dict[str, Any]],
-    schema: Dict,
+    schema: dtypes.JsonSchema,
     n_workers: int = settings.MAX_WORKERS,
 ) -> ValidationResults:
     """
@@ -169,7 +192,7 @@ def validate_data_parallel(
 
     Args:
         data (List[Dict]): The data to validate.
-        schema (Dict): The JSON schema to validate against.
+        schema (dtypes.JsonSchema): The JSON schema to validate against.
         n_workers (int): Number of worker threads to use.
 
     Returns:
@@ -177,13 +200,37 @@ def validate_data_parallel(
               total items, valid items, and error details.
     """
     if not data:
-        return {
-            "is_valid": True,
-            "total_items": 0,
-            "valid_items": 0,
-            "invalid_items": 0,
-            "errors": [],
+        return ValidationResults(
+            is_valid=True,
+            total_items=0,
+            valid_items=0,
+            invalid_items=0,
+            errors=[],
+            message="File is empty but valid",
+        )
+    # Convert to JsonSchema standard and allow null values in optional fields.
+    required_fields = set(schema.get("required", []))
+    converted_properties: Dict[str, Dict[str, Any]] = {}
+
+    for field_name, field_schema in schema.get("properties", {}).items():
+        converted_field_schema: Dict[str, Any] = {
+            "type": field_schema["type"],
+            **field_schema.get("extra", {}),
         }
+
+        if field_name not in required_fields and "type" in converted_field_schema:
+            field_type = converted_field_schema["type"]
+            if isinstance(field_type, list):
+                if "null" not in field_type:
+                    converted_field_schema["type"] = [*field_type, "null"]
+            elif isinstance(field_type, str) and field_type != "null":
+                converted_field_schema["type"] = [field_type, "null"]
+
+        converted_properties[field_name] = converted_field_schema
+
+    schema["properties"] = converted_properties  # type: ignore
+    schema_draft = schema.pop("schema", "http://json-schema.org/draft-07/schema#")
+    schema["$schema"] = schema_draft  # type: ignore
 
     # Split data into chunks for parallel processing
     chunk_size = max(1, len(data) // n_workers)
@@ -192,57 +239,52 @@ def validate_data_parallel(
             lambda idx: (
                 data[idx : idx + chunk_size],
                 schema,
-                idx // chunk_size,
+                idx,
             ),
             range(0, len(data), chunk_size),
         )
     )
+    chunk_lengths = {
+        chunk_start: len(chunk_data) for chunk_data, _, chunk_start in chunks
+    }
 
     actual_processes = min(n_workers, len(chunks))
     with mp.Pool(processes=actual_processes) as pool:
-        results = pool.map(validate_chunks, chunks)
+        results = pool.map(validate_chunks, chunks)  # type: ignore
 
     # Process results
     all_errors = []
     total_valid_items = 0
 
-    for index, is_valid, errors in results:
-        chunk_size_actual = len(chunks[index])
+    for chunk_start, is_valid, errors in results:
+        chunk_size_actual = chunk_lengths[chunk_start]
         if is_valid:
             total_valid_items += chunk_size_actual
             continue
 
-        # Adjust error indices to reflect their position in the original data
-        chunk_start = sum(len(chunks[j]) for j in range(index))
-        adjusted_errors = []
-        for error in errors:
-            # Extract the item number and adjust it
-            if error.startswith("Item "):
-                try:
-                    item_num = int(error.split(":")[0].replace("Item ", ""))
-                    adjusted_error = error.replace(
-                        f"Item {item_num}:", f"Item {chunk_start + item_num}:"
-                    )
-                    adjusted_errors.append(adjusted_error)
-                except Exception:
-                    adjusted_errors.append(error)
-            else:
-                adjusted_errors.append(error)
-        all_errors.extend(adjusted_errors)
+        all_errors.extend(errors)
         total_valid_items += chunk_size_actual - len(errors)
 
-    # Assuming all rows the same number of fields (should be always true for CSV/Excel at least)
-    total_items = len(data) * len(data[0])
+    # Keep row-level counters consistent with row-level validation.
+    total_items = len(data)
     invalid_items = total_items - total_valid_items
 
+    # Ensure deterministic ordering by the original row index.
+    all_errors.sort(
+        key=lambda err: int(err.split(":", 1)[0].replace("Item ", ""))
+        if err.startswith("Item ")
+        else float("inf")
+    )
+
     # Limit errors to first 50 to avoid overwhelming response
-    return {
-        "is_valid": len(all_errors) == 0,
-        "total_items": total_items,
-        "valid_items": total_valid_items,
-        "invalid_items": invalid_items,
-        "errors": all_errors[:50],
-    }
+    return ValidationResults(
+        is_valid=len(all_errors) == 0,
+        total_items=total_items,
+        valid_items=total_valid_items,
+        invalid_items=invalid_items,
+        errors=all_errors[:50],
+        message=f"{invalid_items} out of {total_items} items failed validation",
+    )
 
 
 def _convert_data_types(

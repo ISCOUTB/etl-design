@@ -4,13 +4,13 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.6 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV PYTHONPATH=.
 
-COPY . /app/
+COPY packages/autoscaler/ /app/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
