@@ -1,6 +1,8 @@
 version: 2
+
 updates:
     - package-ecosystem: npm
+      target-branch: development
       schedule:
           interval: weekly
       directory: /
@@ -10,6 +12,7 @@ updates:
           dependencies:
               patterns:
                   - "*"
+
       ignore:
           - dependency-name: next-auth
             update-types:
@@ -18,6 +21,7 @@ updates:
                 - version-update:semver-patch
 
     - package-ecosystem: uv
+      target-branch: development
       schedule:
           interval: weekly
       directories:
