@@ -1,3 +1,4 @@
+import json
 import multiprocessing as mp
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
@@ -212,10 +213,20 @@ def validate_data_parallel(
     required_fields = set(schema.get("required", []))
     converted_properties: Dict[str, Dict[str, Any]] = {}
 
+    # @dosquisd review this snippet
+
     for field_name, field_schema in schema.get("properties", {}).items():
+        extra = {}
+        for k, v in field_schema.get("extra", {}).items():
+            try:
+                extra[k] = json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                # Fallback for old schemas stored as plain strings
+                extra[k] = v
+
         converted_field_schema: Dict[str, Any] = {
             "type": field_schema["type"],
-            **field_schema.get("extra", {}),
+            **extra,
         }
 
         if field_name not in required_fields and "type" in converted_field_schema:

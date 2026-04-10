@@ -541,6 +541,11 @@
                                 "description": "Tasks will appear here once a file processing job is created for this table."
                             },
                             "item": "Task",
+                            "updated": "Updated: {when}",
+                            "status": {
+                                "failed": "Failed",
+                                "completed": "Completed"
+                            },
                             "errors": "Errors",
                             "events": {
                                 "bad_payload": "Invalid response while loading tasks"

@@ -232,6 +232,7 @@ export default defineNuxtConfig({
         payloadExtraction: false,
         appManifest: false,
         scanPageMeta: true,
+        buildCache: true,
     },
     nitro: {
         experimental: {
