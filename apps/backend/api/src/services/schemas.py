@@ -23,14 +23,17 @@ from jsonschema import (
 from proto_utils.database import dtypes
 from proto_utils.database.base_client import DatabaseClient
 
-from src import schemas
+from src import models, schemas
+from src.core.constants import INSERTION_TASK, VALIDATION_TASK
+from src.core.domain import get_import_name
 from src.exceptions import (
     InvalidJsonSchemaDraftException,
     InvalidJsonSchemaException,
     InvalidJsonSchemaTypeException,
     MissingJsonSchemaDraftException,
 )
-from src.utils import utc_now_iso
+from src.repositories.uploads import UploadRepository
+from src.utils import logger, utc_now_iso
 
 
 class SchemaService:
@@ -184,9 +187,12 @@ class SchemaService:
 
         # TODO: Make this more robust to handle different URL formats and potential variations in the $schema field
         # This is a simplified parsing logic that assumes the $schema field follows the standard format.
-        draft_version = schema_value.split("json-schema.org/", 1)[-1].split(
-            "/schema", 1
-        )[0]
+        draft_version = (
+            schema_value.split("json-schema.org/", 1)[-1]
+            .split("/schema", 1)[0]
+            .strip()
+            .lower()
+        )
 
         validator_cls = {
             "draft-07": Draft7Validator,
@@ -266,8 +272,10 @@ class SchemaService:
 
     @staticmethod
     async def remove_schema(
-        import_name: str,
+        project_id: str,
+        table_name: str,
         database_client: DatabaseClient,
+        upload_repository: UploadRepository,
     ) -> dtypes.MongoDeleteOneJsonSchemaResponse:
         """
         Remove or revert a schema based on its import name.
@@ -287,9 +295,56 @@ class SchemaService:
                 - message (str): Description of the result
                 - extra (dict): Additional metadata
         """
-        return await database_client.mongo_delete_one_jsonschema_async(
-            dtypes.MongoDeleteOneJsonSchemaRequest(import_name=import_name)
+        import_name = get_import_name(project_id=project_id, table_name=table_name)
+        delete_jsonschema_result = (
+            await database_client.mongo_delete_one_jsonschema_async(
+                dtypes.MongoDeleteOneJsonSchemaRequest(import_name=import_name)
+            )
         )
+
+        # If the schema was successfully deleted, we need to find all associated tasks and mark them as deleted as well
+        if delete_jsonschema_result["status"] == "deleted":
+            try:
+                response_validation_tasks = (
+                    database_client.get_tasks_by_import_name_async(
+                        dtypes.GetTasksByImportNameRequest(
+                            import_name=import_name, task=VALIDATION_TASK
+                        )
+                    )
+                )
+
+                response_insertion_tasks = (
+                    database_client.get_tasks_by_import_name_async(
+                        dtypes.GetTasksByImportNameRequest(
+                            import_name=import_name, task=INSERTION_TASK
+                        )
+                    )
+                )
+
+                response_validation_tasks, response_insertion_tasks = (
+                    await response_validation_tasks,
+                    await response_insertion_tasks,
+                )
+
+                validation_tasks = response_validation_tasks.get("tasks") or []
+                insertion_tasks = response_insertion_tasks.get("tasks") or []
+                tasks = validation_tasks + insertion_tasks
+                tasks_id = list(
+                    map(lambda task: task["data"].get("task_id", "default"), tasks)
+                )
+
+                for task_id in tasks_id:
+                    upload_repository.update_upload_task_status(
+                        task_id=task_id, status=models.TaskStatus.DELETED
+                    )
+
+                # Complete the transaction (commit the status updates) before returning the response
+                upload_repository.db.commit()
+            except Exception as e:
+                logger.error(f"Error updating upload tasks after schema deletion: {e}")
+                upload_repository.db.rollback()  # Rollback if there's an error during task status updates
+
+        return delete_jsonschema_result
 
     @staticmethod
     def map_db_response_to_api(

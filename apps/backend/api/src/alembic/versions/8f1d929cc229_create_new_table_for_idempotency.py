@@ -37,6 +37,7 @@ def upgrade() -> None:
                 "PROCESSING",
                 "COMPLETED",
                 "FAILED",
+                "DELETED",
                 name="task_status_enum",
                 schema="public",
             ),

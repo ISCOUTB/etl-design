@@ -1,4 +1,5 @@
 import time
+from uuid import uuid4
 
 from proto_utils.database import dtypes
 
@@ -141,3 +142,47 @@ def test_clear_cache(redis_db: RedisConnection) -> None:
     )
     assert isinstance(cache_response["cache"], dict)
     assert len(cache_response["cache"]) == 0
+
+
+def test_remove_tasks_by_import_name_removes_task_and_import_keys(
+    redis_db: RedisConnection,
+) -> None:
+    import_name = f"test_import_cleanup_{uuid4()}"
+
+    tasks = [
+        ("validation", str(uuid4()), "Validation request published successfully"),
+        (
+            "validation",
+            str(uuid4()),
+            "Validation/Insertion request published successfully",
+        ),
+        ("insertion", str(uuid4()), "Insertion request published successfully"),
+    ]
+
+    for task_type, task_id, message in tasks:
+        redis_db.set_task_id(
+            task_id,
+            dtypes.ApiResponse(
+                status="published",
+                code=202,
+                message=message,
+                data={
+                    "project_id": str(uuid4()),
+                    "task_id": task_id,
+                    "import_name": import_name,
+                },
+            ),
+            task_type,
+        )
+
+    keys_before = redis_db.keys(f"*:{import_name}:*")
+    assert len(keys_before) >= 2
+
+    deleted_tasks_count = redis_db.remove_tasks_by_import_name(import_name)
+    assert deleted_tasks_count == 3
+
+    keys_after = redis_db.keys(f"*:{import_name}:*")
+    assert keys_after == []
+
+    for task_type, task_id, _ in tasks:
+        assert redis_db.get_task_id(task_id, task_type) is None

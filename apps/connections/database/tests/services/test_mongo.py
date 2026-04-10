@@ -1,11 +1,50 @@
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
+import pymongo.errors
 from proto_utils.database import dtypes
 
 from src.core.database_mongo import MongoConnection
 from src.services.mongo import MongoSchemasService
+
+
+def test_delete_one_schema_fallback_without_transactions_cleans_redis() -> None:
+    import_name = f"import_name_test-{uuid4()}"
+
+    mongo_schemas_connection = Mock()
+    mongo_task_connection = Mock()
+    redis_task_connection = Mock()
+
+    mongo_schemas_connection.find_one.return_value = {
+        "import_name": import_name,
+        "active_schema": {"type": "object", "properties": {}, "required": []},
+        "schemas_releases": [],
+    }
+
+    mongo_schemas_connection.transaction.side_effect = pymongo.errors.OperationFailure(
+        "Transaction numbers are only allowed on a replica set member or mongos"
+    )
+
+    delete_result = Mock()
+    delete_result.raw_result = {"ok": 1.0, "n": 1}
+    mongo_schemas_connection.delete_one.return_value = delete_result
+
+    tasks_delete_result = Mock()
+    tasks_delete_result.deleted_count = 3
+    mongo_task_connection.delete_many.return_value = tasks_delete_result
+
+    response = MongoSchemasService.delete_one_schema(
+        request=dtypes.MongoDeleteOneJsonSchemaRequest(import_name=import_name),
+        mongo_schemas_connection=mongo_schemas_connection,
+        mongo_task_connection=mongo_task_connection,
+        redis_task_connection=redis_task_connection,
+    )
+
+    assert response["status"] == "deleted"
+    redis_task_connection.remove_tasks_by_import_name.assert_called_once_with(
+        import_name, None
+    )
 
 
 def test_compare_different_schemas() -> None:

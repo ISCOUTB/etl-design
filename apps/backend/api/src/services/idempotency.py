@@ -23,8 +23,9 @@ from src.exceptions import (
     ContentTypeEmptyException,
     FileContentEmptyException,
     FilenameEmptyException,
+    ProjectNotFoundException,
 )
-from src.repositories import UploadRepository
+from src.repositories import ProjectRepository, UploadRepository
 from src.utils import logger, utc_now
 
 
@@ -84,6 +85,11 @@ class IdempotencyService:
         table_name: str,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -114,7 +120,6 @@ class IdempotencyService:
 
         # First, create the task in database with status "pending"
         try:
-            # Save the task in the database with status "pending"
             db_task = self.upload_repository.create_upload_task(
                 upload_task_create=schemas.UploadTaskCreateSchema(
                     task_id=task_id,
@@ -158,6 +163,9 @@ class IdempotencyService:
                             "idempotency_key": idempotency_key,
                         },
                     )
+            else:
+                logger.error("Database integrity error during task creation", e)
+            raise AppException() from e
         except OperationalError as e:
             # If the problem is the postgres database, roll back the transaction and raise an AppException.
             logger.error("Database operation failed, rolling back task creation", e)
@@ -266,6 +274,11 @@ class IdempotencyService:
         overwrite: bool = False,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -447,6 +460,11 @@ class IdempotencyService:
         overwrite: bool = False,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -463,7 +481,7 @@ class IdempotencyService:
             project_id=project_id,
             table_name=table_name,
             file_hash=file_hash,
-            metadata=VALIDATION_TASK,
+            metadata=f"{VALIDATION_TASK}&{INSERTION_TASK}",
         )
 
         task_id = str(uuid7())
