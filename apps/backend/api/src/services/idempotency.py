@@ -17,6 +17,7 @@ from uuidv7 import uuid7
 from src import models, schemas
 from src.core.config import settings
 from src.core.constants import INSERTION_TASK, VALIDATION_TASK
+from src.core.domain import get_import_name
 from src.exceptions import (
     AppException,
     ContentTypeEmptyException,
@@ -232,7 +233,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=VALIDATION_TASK,
@@ -411,7 +414,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=INSERTION_TASK,
@@ -592,7 +597,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=VALIDATION_TASK,

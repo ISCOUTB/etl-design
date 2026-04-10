@@ -5,6 +5,7 @@ from proto_utils.database import dtypes
 
 from src.api.deps import CurrentUser, DatabaseClientDep, IdempotencyServiceDep
 from src.core.constants import INSERTION_TASK, VALIDATION_TASK
+from src.core.domain import get_import_name
 from src.exceptions import ForbiddenException, TaskNotFoundException
 from src.models import Project
 from src.services.permissions import Action, ModelKeys, PermissionService
@@ -78,17 +79,17 @@ async def list_tasks(
     if not has_permission:
         raise ForbiddenException()
 
+    import_name = get_import_name(project_id=project_id, table_name=table_name)
     if task is None:
-        print(task)
         response_validation_tasks = database_client.get_tasks_by_import_name_async(
             dtypes.GetTasksByImportNameRequest(
-                import_name=f"{project_id}__{table_name}", task=VALIDATION_TASK
+                import_name=import_name, task=VALIDATION_TASK
             )
         )
 
         response_insertion_tasks = database_client.get_tasks_by_import_name_async(
             dtypes.GetTasksByImportNameRequest(
-                import_name=f"{project_id}__{table_name}", task=INSERTION_TASK
+                import_name=import_name, task=INSERTION_TASK
             )
         )
 
@@ -102,9 +103,7 @@ async def list_tasks(
         tasks = validation_tasks + insertion_tasks
     else:
         response = await database_client.get_tasks_by_import_name_async(
-            dtypes.GetTasksByImportNameRequest(
-                import_name=f"{project_id}__{table_name}", task=task
-            )
+            dtypes.GetTasksByImportNameRequest(import_name=import_name, task=task)
         )
         tasks = response.get("tasks") or []
 

@@ -20,6 +20,7 @@ from src.api.deps import (
     PublisherDep,
 )
 from src.core.config import settings
+from src.core.domain import get_import_name
 from src.exceptions import (
     DtypesInvalidContentException,
     DtypesInvalidJsonObjectException,
@@ -422,7 +423,7 @@ async def create_table_from_json_schema(
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_response = await SchemaService.save_schema(
-        import_name=f"{project_id}__{table_name}",
+        import_name=get_import_name(project_id=project_id, table_name=table_name),
         orig_schema=payload.jsonschema,
         database_client=db_client,
     )
