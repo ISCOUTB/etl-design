@@ -4,12 +4,13 @@ export const [useProvideProjectState, _useProjectState] = createInjectionState(
 
         const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(initialId));
 
-        const VIEWS = computed<Views.Project.ProjectSections>(() => ({
+        const VIEWS = computed(() => ({
             Overview: t("projects.id.sections.overview.tab"),
             UploadFile: t("projects.id.sections.upload_schema.tab"),
             Tables: t("projects.id.sections.tables.tab"),
             Settings: t("projects.id.sections.settings.tab"),
             File: t("projects.id.sections.file.tab"),
+            QueryBuilder: t("projects.id.sections.query_builder.tab"),
         }));
 
         const view = useRouteQuery<string>("tab", VIEWS.value.Overview, {
@@ -44,8 +45,8 @@ export function useProject() {
     const state = _useProjectState();
     if (!state) {
         throw createError({
-            statusCode: 500,
-            statusMessage:
+            status: 500,
+            statusText:
                 "Project state not injected. Ensure useProvideProjectState is called in a parent component.",
             fatal: true,
         });

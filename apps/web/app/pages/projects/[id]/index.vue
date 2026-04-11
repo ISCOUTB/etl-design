@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { FileIcon, Info, Settings, Table, Upload } from "lucide-vue-next";
+    import { FileIcon, Info, Pickaxe, Settings, Table, Upload } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     definePageMeta({
@@ -93,6 +93,16 @@
             },
             {
                 meta: {
+                    label: "projects.id.sections.query_builder.tab",
+                    value: state.VIEWS.value.QueryBuilder,
+                    icon: Pickaxe,
+                },
+                component: () =>
+                    import("@/components/project/query-builder/ProjectQueryBuilder.vue"),
+                props: {},
+            },
+            {
+                meta: {
                     label: "projects.id.sections.settings.tab",
                     value: state.VIEWS.value.Settings,
                     icon: Settings,
@@ -101,7 +111,7 @@
                 props: {},
             },
         ],
-        { model: state.view },
+        { key: "project-views", model: state.view },
     );
 
     watch(
@@ -170,7 +180,6 @@
                     :key="entry.meta.value"
                     :value="entry.meta.value"
                     :class="entry.meta.class"
-                    @click="views.dispatch.setActive(entry.meta.value)"
                 >
                     <component :is="entry.meta.icon" v-if="entry.meta.icon" />
                     <span>

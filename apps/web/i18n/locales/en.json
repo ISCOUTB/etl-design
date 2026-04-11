@@ -555,6 +555,65 @@
                 },
                 "file": {
                     "tab": "File"
+                },
+                "query_builder": {
+                    "tab": "Query Builder",
+                    "title": "Query Builder",
+                    "description": "Build SQL queries block by block and inspect the generated output.",
+                    "schema": {
+                        "placeholder": "Select a schema",
+                        "empty": "No schema available yet. Upload or create one first."
+                    },
+                    "cards": {
+                        "columns": {
+                            "title": "Columns",
+                            "description": "Choose the columns that should be part of the SELECT clause."
+                        },
+                        "where": {
+                            "title": "Conditions",
+                            "description": "Build nested WHERE groups with AND/OR operators."
+                        },
+                        "options": {
+                            "title": "Options",
+                            "description": "Configure ORDER BY and LIMIT for this query."
+                        },
+                        "output": {
+                            "title": "Output",
+                            "description": "Inspect SQL, native output, and query tree."
+                        }
+                    },
+                    "actions": {
+                        "add_column": "Add Column",
+                        "select_all": "Select All",
+                        "add_condition": "Add Condition",
+                        "add_group": "Add Group"
+                    },
+                    "labels": {
+                        "read_only": "SELECT - READ ONLY",
+                        "dtype": "dtype",
+                        "order_by": "Order By",
+                        "limit": "Limit",
+                        "group": "Group"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "No columns where selected",
+                            "description": "By default it will select all the columns when executing the query"
+                        },
+                        "no_selection": "No column selected",
+                        "no_conditions": "No conditions"
+                    },
+                    "placeholders": {
+                        "select_column": "Select a column",
+                        "value": "Value",
+                        "multi_values": "val1, val2, ...",
+                        "order_none": "No order"
+                    },
+                    "output": {
+                        "sql": "SQL",
+                        "native": "Native",
+                        "tree": "Tree"
+                    }
                 }
             },
             "tables": {

@@ -94,10 +94,33 @@ export const NuxtKeys = {
                     both: (id, name) => `project:${id}:tables:${name}:edit:columns`,
                 }),
         },
+        QueryBuilder: {
+            SelectedOutput: (
+                projectId: ResponseProject["id"] | undefined,
+                tableName: MongoRaw["import_name"] | undefined,
+            ) =>
+                $$(projectId, tableName, {
+                    none: "project:query-builder:selected-output",
+                    onlyA: (id) => `project:${id}:query-builder:selected-output`,
+                    both: (id, name) => `project:${id}:query-builder:${name}:selected-output`,
+                }),
+        },
     },
     Components: {
         DataTable: {
             Sorting: (route: string) => `data-table:sorting-state:${route}`,
+        },
+        QueryBuilder: {
+            SelectedColumns: (schema: MongoRaw) => `query-builder:${schema.id}:selected-columns`,
+            WhereTree: (schema: MongoRaw) => `query-builder:${schema.id}:where-tree`,
+            OrderBy: (schema: MongoRaw) => `query-builder:${schema.id}:order-by`,
+            Limit: (schema: MongoRaw) => `query-builder:${schema.id}:limit`,
+        },
+    },
+    Composables: {
+        ViewManager: {
+            StateKey: (route: string) => `view-manager:${route}:state-key`,
+            ActiveView: (stateKey: string) => `${stateKey}:active-view`,
         },
     },
     Sidebar: {

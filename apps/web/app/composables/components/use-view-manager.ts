@@ -19,7 +19,7 @@ export interface Entry {
 export interface UseTabsManagerOptions {
     key?: string;
     initialActive?: string;
-    model: Ref<string>;
+    model?: Ref<string>;
 }
 
 export default function (
@@ -27,7 +27,7 @@ export default function (
     options?: UseTabsManagerOptions,
 ) {
     const route = useRoute();
-    const stateKey = options?.key ?? `use-view-manager:${route.path}`;
+    const stateKey = NuxtKeys.Composables.ViewManager.StateKey(options?.key ?? route.path);
     const componentCache = shallowRef(new Map<Meta["value"], Raw<Component>>());
 
     const initial = computed(() => toValue(initialViews));
@@ -41,14 +41,17 @@ export default function (
 
     const firstViewValue = computed(() => filteredViews.value[0]?.meta.value ?? "");
 
-    const activeView = useState<Meta["value"]>(`${stateKey}:active-active-view`, () => {
-        const candidate = options?.initialActive;
-        if (candidate && filteredViews.value.some((entry) => entry.meta.value === candidate)) {
-            return candidate;
-        }
+    const activeView = useState<Meta["value"]>(
+        NuxtKeys.Composables.ViewManager.ActiveView(stateKey),
+        () => {
+            const candidate = options?.initialActive;
+            if (candidate && filteredViews.value.some((entry) => entry.meta.value === candidate)) {
+                return candidate;
+            }
 
-        return firstViewValue.value;
-    });
+            return firstViewValue.value;
+        },
+    );
     const currentView = computed(() => {
         const found = filteredViews.value.find((entry) => entry.meta.value === activeView.value);
         if (found) {
