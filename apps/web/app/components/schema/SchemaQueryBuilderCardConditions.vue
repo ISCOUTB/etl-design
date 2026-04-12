@@ -23,7 +23,7 @@
                         class="cursor-pointer"
                         @click="qb.dispatch.removeAllNodes()"
                     >
-                        <RotateCcw /> Reset
+                        <RotateCcw /> {{ $t("common.actions.reset") }}
                     </Button>
                 </div>
             </div>

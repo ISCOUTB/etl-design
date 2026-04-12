@@ -108,7 +108,7 @@
                             @click="qb.dispatch.selectAllColumns()"
                         >
                             <Grid2x2Check />
-                            Select All
+                            {{ $t("projects.id.sections.query_builder.actions.select_all") }}
                         </Button>
                     </div>
                 </div>

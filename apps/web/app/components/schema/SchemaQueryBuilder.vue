@@ -19,6 +19,6 @@
         <SchemaQueryBuilderCardSelectColumn />
         <SchemaQueryBuilderCardConditions />
         <SchemaQueryBuilderCardOptions />
-        <SchemaQueryBuilderOutput :schema="schema" />
+        <SchemaQueryBuilderOutput />
     </div>
 </template>

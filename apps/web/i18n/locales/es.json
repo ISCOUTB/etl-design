@@ -586,7 +586,8 @@
                         "add_column": "Agregar columna",
                         "select_all": "Seleccionar todas",
                         "add_condition": "Agregar condicion",
-                        "add_group": "Agregar grupo"
+                        "add_group": "Agregar grupo",
+                        "toggle_conjunction": "Alternar conjuncion"
                     },
                     "labels": {
                         "read_only": "SELECT - SOLO LECTURA",
@@ -596,6 +597,10 @@
                         "group": "Grupo"
                     },
                     "empty": {
+                        "header": {
+                            "title": "No se seleccionaron columnas",
+                            "description": "Por defecto se seleccionaran todas las columnas al ejecutar la consulta."
+                        },
                         "no_selection": "Ninguna columna seleccionada",
                         "no_conditions": "Sin condiciones"
                     },

@@ -586,7 +586,8 @@
                         "add_column": "Add Column",
                         "select_all": "Select All",
                         "add_condition": "Add Condition",
-                        "add_group": "Add Group"
+                        "add_group": "Add Group",
+                        "toggle_conjunction": "Toggle conjunction"
                     },
                     "labels": {
                         "read_only": "SELECT - READ ONLY",
@@ -597,8 +598,8 @@
                     },
                     "empty": {
                         "header": {
-                            "title": "No columns where selected",
-                            "description": "By default it will select all the columns when executing the query"
+                            "title": "No columns were selected",
+                            "description": "By default, all columns will be selected when executing the query."
                         },
                         "no_selection": "No column selected",
                         "no_conditions": "No conditions"

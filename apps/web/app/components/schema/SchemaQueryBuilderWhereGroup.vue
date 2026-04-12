@@ -140,7 +140,13 @@
                                         {{ node.conj }}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="right"> Toggle Conjunction </TooltipContent>
+                                <TooltipContent side="right">
+                                    {{
+                                        $t(
+                                            "projects.id.sections.query_builder.actions.toggle_conjunction",
+                                        )
+                                    }}
+                                </TooltipContent>
                             </TooltipProvider>
                         </Tooltip>
                     </div>

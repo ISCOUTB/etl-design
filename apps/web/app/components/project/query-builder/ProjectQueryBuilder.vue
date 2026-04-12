@@ -61,7 +61,7 @@
                             @click="events.emit('event:projects:query-builder:reset', undefined)"
                         >
                             <RotateCcw />
-                            Reset
+                            {{ $t("common.actions.reset") }}
                         </Button>
                     </ItemActions>
                 </Item>
