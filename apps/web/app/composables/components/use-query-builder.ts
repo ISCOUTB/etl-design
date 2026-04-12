@@ -235,9 +235,12 @@ function applyLikeCondition(
         return false;
     }
 
-    useOr
-        ? builder.orWhereRaw(`?? ${op} ?`, [col, val])
-        : builder.whereRaw(`?? ${op} ?`, [col, val]);
+    if (useOr) {
+        builder.orWhereRaw(`?? ${op} ?`, [col, val]);
+        return true;
+    }
+
+    builder.whereRaw(`?? ${op} ?`, [col, val]);
     return true;
 }
 
