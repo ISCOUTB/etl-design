@@ -115,7 +115,7 @@ class TestRetryBehavior:
             with patch("src.handlers.mongo_handler.time.sleep"):
                 request = dtypes.MongoCountAllDocumentsRequest()
                 response = handler._execute_with_retry(
-                    lambda req, mongo_schemas_connection: (
+                    lambda req, mongo_schemas_connection, **_: (
                         dtypes.MongoCountAllDocumentsResponse(
                             amount=mongo_schemas_connection.count_documents()
                         )
