@@ -26,4 +26,9 @@ class TestHealthcheckEndpoint:
 
         # Check that response has basic health status fields
         assert isinstance(data, dict)
-        assert "status" in data or "error" in data
+        assert "mongo_status" in data
+        assert "redis_status" in data
+        assert "message_queue" in data
+        assert isinstance(data["mongo_status"], bool)
+        assert isinstance(data["redis_status"], bool)
+        assert isinstance(data["message_queue"], bool)
