@@ -206,6 +206,12 @@
             },
             "file_not_provided": {
                 "title": "Please provide a file before submiting"
+            },
+            "query_builder": {
+                "generate_error": {
+                    "title": "Could not generate a valid query",
+                    "description": "Please be more specific or try again later."
+                }
             }
         }
     },
@@ -567,7 +573,7 @@
                     "cards": {
                         "columns": {
                             "title": "Columns",
-                            "description": "Choose the columns that should be part of the SELECT clause."
+                            "description": "Choose specific columns for SELECT. If none are selected, all of them will be selected"
                         },
                         "where": {
                             "title": "Conditions",
@@ -589,6 +595,34 @@
                         "add_group": "Add Group",
                         "toggle_conjunction": "Toggle conjunction"
                     },
+                    "generate": {
+                        "button": "Generate",
+                        "events": {
+                            "request_sent": {
+                                "title": "Generation request sent",
+                                "description": "We are generating your query builder state. This may take a few seconds."
+                            },
+                            "query_created": {
+                                "title": "Query ready",
+                                "description": "Your generated query is ready. Import it now or wait and it will be imported automatically.",
+                                "action": "Import now"
+                            }
+                        },
+                        "modal": {
+                            "title": "Generate Query Builder State",
+                            "description": "Describe exactly the query you want to build. Include filters, conditions, and the columns you want to return. If columns are unclear, all schema columns will be selected.",
+                            "form": {
+                                "message": {
+                                    "label": "What should be generated?",
+                                    "placeholder": "Example: Show active adult users with name containing 'acme', and include name, age, and is_adult."
+                                }
+                            },
+                            "actions": {
+                                "generate": "Generate",
+                                "cancel": "Cancel"
+                            }
+                        }
+                    },
                     "labels": {
                         "read_only": "SELECT - READ ONLY",
                         "dtype": "dtype",
@@ -598,10 +632,10 @@
                     },
                     "empty": {
                         "header": {
-                            "title": "No columns were selected",
-                            "description": "By default, all columns will be selected when executing the query."
+                            "title": "Using all columns (*)",
+                            "description": "No specific columns are selected. This query will use SELECT * by default."
                         },
-                        "no_selection": "No column selected",
+                        "no_selection": "All columns (*)",
                         "no_conditions": "No conditions"
                     },
                     "placeholders": {

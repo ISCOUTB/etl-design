@@ -28,6 +28,7 @@ export const [useProvideProjectState, _useProjectState] = createInjectionState(
 
         const tables = useProvideProjectTablesState(initialId);
         const uploadSchema = useProvideProjectUploadSchemaState(initialId);
+        const queryBuilder = useProvideProjectQueryBuilder(project.value, undefined);
 
         return {
             state: {
@@ -37,6 +38,7 @@ export const [useProvideProjectState, _useProjectState] = createInjectionState(
             },
             tables,
             uploadSchema,
+            queryBuilder,
         };
     },
 );

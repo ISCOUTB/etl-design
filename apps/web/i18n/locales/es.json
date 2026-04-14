@@ -206,6 +206,12 @@
             },
             "file_not_provided": {
                 "title": "Por favor proporciona un archivo antes de enviar"
+            },
+            "query_builder": {
+                "generate_error": {
+                    "title": "No se pudo generar una consulta valida",
+                    "description": "Por favor, se mas especifico, o intenta mas tarde."
+                }
             }
         }
     },
@@ -567,7 +573,7 @@
                     "cards": {
                         "columns": {
                             "title": "Columnas",
-                            "description": "Elige las columnas que formarán parte del SELECT."
+                            "description": "Elige columnas especificas para el SELECT. Si no seleccionas ninugna, se usara por defecto todas."
                         },
                         "where": {
                             "title": "Condiciones",
@@ -589,6 +595,34 @@
                         "add_group": "Agregar grupo",
                         "toggle_conjunction": "Alternar conjuncion"
                     },
+                    "generate": {
+                        "button": "Generar",
+                        "events": {
+                            "request_sent": {
+                                "title": "Solicitud de generacion enviada",
+                                "description": "Estamos generando el estado del constructor de consultas. Esto puede tardar unos segundos."
+                            },
+                            "query_created": {
+                                "title": "Consulta lista",
+                                "description": "La consulta generada esta lista. Puedes importarla ahora o esperar a que se importe automaticamente.",
+                                "action": "Importar ahora"
+                            }
+                        },
+                        "modal": {
+                            "title": "Generar estado del Constructor SQL",
+                            "description": "Describe con precision la consulta que quieres construir. Incluye filtros, condiciones y las columnas que deseas devolver. Si no se pueden inferir columnas especificas, se seleccionaran todas las del esquema.",
+                            "form": {
+                                "message": {
+                                    "label": "Que deseas generar?",
+                                    "placeholder": "Ejemplo: Muestrame usuarios adultos activos cuyo nombre contenga 'acme', e incluye name, age e is_adult."
+                                }
+                            },
+                            "actions": {
+                                "generate": "Generar",
+                                "cancel": "Cancelar"
+                            }
+                        }
+                    },
                     "labels": {
                         "read_only": "SELECT - SOLO LECTURA",
                         "dtype": "tipo",
@@ -598,10 +632,10 @@
                     },
                     "empty": {
                         "header": {
-                            "title": "No se seleccionaron columnas",
-                            "description": "Por defecto se seleccionaran todas las columnas al ejecutar la consulta."
+                            "title": "Usando todas las columnas (*)",
+                            "description": "No hay columnas especificas seleccionadas. Esta consulta usara todas por defecto"
                         },
-                        "no_selection": "Ninguna columna seleccionada",
+                        "no_selection": "Todas las columnas (*)",
                         "no_conditions": "Sin condiciones"
                     },
                     "placeholders": {

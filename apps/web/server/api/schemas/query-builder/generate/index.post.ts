@@ -1,4 +1,5 @@
 import { getServerSession } from "#auth";
+import { ModelResponse } from "#shared/utils/schemas/model";
 import { z } from "zod";
 
 const BodySchema = z.object({
@@ -21,29 +22,32 @@ export default defineWrappedResponseHandler(async (event) => {
     }));
 
     const runtimeConfig = useRuntimeConfig(event);
-    const completion = await $fetch("https://api.openai.com/v1/chat/completions", {
+    const completion = await $fetch(runtimeConfig.keys.MODEL_ENDPOINT, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${runtimeConfig.keys.MODEL_API_KEY}`,
+            Authorization: `Bearer ollama`,
             "Content-Type": "application/json",
         },
         body: {
-            model: "gpt-4o-mini",
-            messages: [
-                {
-                    role: "system",
-                    content: PROMPTS.QUERY_BUILDER_GENERATE.SYSTEM,
-                },
-                {
-                    role: "user",
-                    content: PROMPTS.interpolate(PROMPTS.QUERY_BUILDER_GENERATE.USER, {
-                        userMessage,
-                        schemas,
-                    }),
-                },
-            ],
+            model: "gemma4",
+            system: PROMPTS.QUERY_BUILDER_GENERATE.SYSTEM,
+            prompt: PROMPTS.interpolate(PROMPTS.QUERY_BUILDER_GENERATE.USER, {
+                userMessage,
+                schemas,
+            }),
+            stream: false,
         },
     });
 
-    console.warn(completion);
+    const parsed = ModelResponse.safeParse(completion);
+    if (!parsed.success) {
+        throw createError({
+            status: 500,
+            statusMessage: ResponseCodesRecord.Server.BadPayload,
+        });
+    }
+
+    return {
+        response: parsed.data.response,
+    };
 });

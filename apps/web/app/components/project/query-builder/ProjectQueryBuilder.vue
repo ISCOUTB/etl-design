@@ -1,25 +1,25 @@
 <script setup lang="ts">
     import { RotateCcw } from "lucide-vue-next";
 
-    const { tables } = useProject();
-    const schema = useState<MongoRaw | undefined>("project:query-builder:schema", () => undefined);
+    const { tables, queryBuilder } = useProject();
 
-    const selectedSchemaName = computed(() => schema.value?.import_name ?? "");
+    const qb = useProvideQueryBuilder(queryBuilder.state.schema);
+    const selectedSchemaName = computed(() => queryBuilder.state.schema.value?.import_name ?? "");
 
     watchEffect(() => {
         const list = tables.state.value.tableSchemas;
         if (!list.length) {
-            schema.value = undefined;
+            queryBuilder.state.schema.value = undefined;
             return;
         }
 
-        const current = schema.value;
+        const current = queryBuilder.state.schema.value;
         const stillExists = current
             ? list.some((s) => s.import_name === current.import_name)
             : false;
 
         if (!stillExists) {
-            schema.value = list[0];
+            queryBuilder.state.schema.value = list[0];
         }
     });
 
@@ -33,11 +33,14 @@
         );
 
         if (found) {
-            schema.value = found;
+            queryBuilder.state.schema.value = found;
         }
     }
 
     const events = useAppEvents();
+    onMounted(() => {
+        events.on("event:projects:query-builder:reset", () => qb.dispatch.reset());
+    });
 </script>
 
 <template>
@@ -56,13 +59,19 @@
                         </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                        <Button
-                            variant="outline"
-                            @click="events.emit('event:projects:query-builder:reset', undefined)"
-                        >
-                            <RotateCcw />
-                            {{ $t("common.actions.reset") }}
-                        </Button>
+                        <div class="space-x-2">
+                            <Button
+                                variant="outline"
+                                class="cursor-pointer"
+                                @click="
+                                    events.emit('event:projects:query-builder:reset', undefined)
+                                "
+                            >
+                                <RotateCcw />
+                                {{ $t("common.actions.reset") }}
+                            </Button>
+                            <ProjectQueryBuilderGenerate />
+                        </div>
                     </ItemActions>
                 </Item>
             </CardHeader>
@@ -88,8 +97,8 @@
                 </Select>
             </CardContent>
         </Card>
-        <template v-if="schema">
-            <SchemaQueryBuilder :schema="schema" />
+        <template v-if="queryBuilder.state.schema.value">
+            <SchemaQueryBuilder />
         </template>
         <template v-else>
             <p class="text-sm text-muted-foreground">

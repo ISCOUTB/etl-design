@@ -59,6 +59,36 @@ export const PROMPTS = {
             You MUST return a JSON object with the following keys:
             1. "import_name": The 'import_name' of the selected table.
             2. "tree": A 'GroupNode' object representing the filter logic.
+            3. "columns": An array of 'ColumnSelection' objects representing the columns
+                to return.
+
+        Output Rules (STRICT):
+            - Respond with ONLY the raw JSON object.
+            - Do NOT wrap in markdown code blocks.
+            - Do NOT use backticks.
+            - Do NOT add any explanation before or after the JSON.
+            - Your entire response must be parseable by JSON.parse() directly.
+            - You must follow the Output Types Definition, do not add or remove
+                any field.
+            - Every 'GroupNode' must always include 'conj'.
+                The root group is still a 'GroupNode', so it must also include 'conj'.
+                Default to 'AND' when there is only one child.
+            - Every child in 'tree.children' must be either a valid 'condition' or a valid 'group'.
+            - Use uppercase values for operators and conjunctions (e.g., 'LIKE', 'AND').
+            - Avoid unnecessary deep nesting. Prefer a single root group with direct condition children.
+            - If you create nested groups, every nested group must include: id, type, logic, children, conj.
+            - For 'condition' nodes, always include: id, type, col, op, val, conj.
+            - Always return 'val' as string, even for booleans or numbers.
+
+        Column Selection Rules:
+            - Analyse the user's intent to determie which columns are relevant.
+            - If the user explicitly mentions columns (e.g. "show me the name and email"),
+                include only those.
+            - If the intent implies specific columns (e.g. "show me the adults" implies
+                'is_adult', but the user probably wants all columns), be permissive.
+            - If the relevant columns cannot be determined from the intent,
+                return ALL columns from the schema.
+            - Never invent columns that don't exist in the schema.
 
         Output Types Definition (Reference):
             type LogicOperator = "AND" | "OR";
@@ -84,10 +114,14 @@ export const PROMPTS = {
                 children: (ConditionNode | GroupNode)[];
                 conj: LogicOperator; // The external conjunction logic
             }
+
+            export interface ColumnSelection {
+                id: string;
+                col: string;
+            }
         `,
         USER: `
             User Message: {{ userMessage }}
-
             Schemas: {{ schemas }}
         `,
     },

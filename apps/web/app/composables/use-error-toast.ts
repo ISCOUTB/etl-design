@@ -94,6 +94,13 @@ export default function () {
                 };
             }
 
+            case ResponseCodesRecord.Server.Project.QueryBuilder.GenerateError: {
+                return {
+                    title: "errors.project.query_builder.generate_error.title",
+                    description: "errors.project.query_builder.generate_error.description",
+                };
+            }
+
             default: {
                 return {
                     title: "errors.unknown.title",
@@ -116,7 +123,7 @@ export default function () {
         });
     }
 
-    function handle(payload: unknown, props?: Props) {
+    function handle(payload: unknown, props?: Props): ToastNotification {
         const { handler, ...rest } = props ?? {};
 
         const options = Object.fromEntries(
@@ -136,6 +143,8 @@ export default function () {
         };
 
         show(merged);
+
+        return merged;
     }
 
     function handleServer(error: unknown) {

@@ -259,11 +259,16 @@ function applyCondition(builder: QB, node: ConditionNode, useOr: boolean): void 
         return;
     }
 
-    useOr ? builder.orWhere(col, op, val) : builder.andWhere(col, op, val);
+    if (useOr) {
+        builder.orWhere(col, op, val);
+        return;
+    }
+
+    builder.andWhere(col, op, val);
 }
 
 export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionState(
-    (schema: MaybeRefOrGetter<MongoRaw>) => {
+    (schema: MaybeRefOrGetter<MongoRaw | undefined>) => {
         const activeSchema = computed(() => toValue(schema));
 
         const importName = computed(() => activeSchema.value?.import_name ?? "");
@@ -293,7 +298,7 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
 
         const selectedCols = useState<ColumnSelection[]>(
             NuxtKeys.Components.QueryBuilder.SelectedColumns(activeSchema.value),
-            () => [],
+            () => columnNames.value.map<ColumnSelection>((col) => ({ id: uid(), col })),
         );
         const whereTree = useState<GroupNode>(
             NuxtKeys.Components.QueryBuilder.WhereTree(activeSchema.value),
@@ -311,16 +316,6 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
             () => undefined,
         );
 
-        watch(
-            () => importName.value,
-            () => {
-                selectedCols.value = [];
-                whereTree.value = makeGroup("AND");
-                orderBy.value = { col: "", dir: "ASC" };
-                limit.value = 100;
-            },
-        );
-
         // ── Column actions ───────────────────────────────────────────────────────
 
         function addColumn() {
@@ -332,7 +327,10 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
         }
 
         function selectAllColumns() {
-            selectedCols.value.length = 0;
+            selectedCols.value = columnNames.value.map<ColumnSelection>((col) => ({
+                id: uid(),
+                col,
+            }));
         }
 
         function updateColumn(id: string, col: string | undefined) {
@@ -416,7 +414,7 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
             selectedCols.value = [];
             whereTree.value = makeGroup("AND");
             orderBy.value = { col: "", dir: "ASC" };
-            limit.value = 100;
+            limit.value = 0;
         }
 
         // ── Outputs ──────────────────────────────────────────────────────────────
@@ -469,6 +467,23 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
                 limit: limit.value,
             };
         });
+
+        watch(
+            [importName, columnNames],
+            ([_, names]) => {
+                reset();
+
+                if (!names.length) {
+                    return;
+                }
+
+                selectedCols.value = names.map<ColumnSelection>((col) => ({
+                    id: uid(),
+                    col,
+                }));
+            },
+            { immediate: true },
+        );
 
         return {
             state: {
@@ -536,7 +551,7 @@ export const [useProvideQueryBuilderView, _useQueryBuilderView] = createInjectio
 );
 
 export const [useProvideQueryBuilder, _useQueryBuilder] = createInjectionState(
-    (schema: MaybeRefOrGetter<MongoRaw>) => {
+    (schema: MaybeRefOrGetter<MongoRaw | undefined>) => {
         const api = useProvideQueryBuilderApi(schema);
         const view = useProvideQueryBuilderView(api);
 

@@ -95,6 +95,12 @@ export const NuxtKeys = {
                 }),
         },
         QueryBuilder: {
+            SelectedSchema: (projectId: ResponseProject["id"]) =>
+                $(
+                    projectId,
+                    "project:query-builder:selected-schema",
+                    (value) => `project:${value}:selected-schema`,
+                ),
             SelectedOutput: (
                 projectId: ResponseProject["id"] | undefined,
                 tableName: MongoRaw["import_name"] | undefined,
@@ -111,10 +117,26 @@ export const NuxtKeys = {
             Sorting: (route: string) => `data-table:sorting-state:${route}`,
         },
         QueryBuilder: {
-            SelectedColumns: (schema: MongoRaw) => `query-builder:${schema.id}:selected-columns`,
-            WhereTree: (schema: MongoRaw) => `query-builder:${schema.id}:where-tree`,
-            OrderBy: (schema: MongoRaw) => `query-builder:${schema.id}:order-by`,
-            Limit: (schema: MongoRaw) => `query-builder:${schema.id}:limit`,
+            SelectedColumns: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:selected-columns",
+                    (value) => `query-builder:${value.id}:selected-columns`,
+                ),
+            WhereTree: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:where-tree",
+                    (value) => `query-builder:${value.id}:where-tree`,
+                ),
+            OrderBy: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:order-by",
+                    (value) => `query-builder:${value.id}:order-by`,
+                ),
+            Limit: (schema: MongoRaw | undefined) =>
+                $(schema, "query-builder:limit", (value) => `query-builder:${value.id}:limit`),
         },
     },
     Composables: {
@@ -145,6 +167,9 @@ export const ModalKeys = {
         },
         Tables: {
             Delete: "projects:tables:delete-schema",
+        },
+        QueryBuilder: {
+            Generate: "project:query-builder:generate",
         },
     },
 } as const;

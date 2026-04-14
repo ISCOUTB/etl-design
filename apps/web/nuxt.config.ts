@@ -84,6 +84,7 @@ export default defineNuxtConfig({
         },
         keys: {
             MODEL_API_KEY: process.env.MODEL_API_KEY,
+            MODEL_ENDPOINT: process.env.MODEL_ENDPOINT,
         },
     },
 
