@@ -20,7 +20,7 @@ from src.api.deps import (
     PublisherDep,
 )
 from src.core.config import settings
-from src.core.domain import get_import_name
+from src.core.domain import get_import_name, table_name_from_create_sql_response
 from src.exceptions import (
     DtypesInvalidContentException,
     DtypesInvalidJsonObjectException,
@@ -38,6 +38,7 @@ from src.schemas import (
 )
 from src.services import SchemaService
 from src.services.permissions import Action, ModelKeys, PermissionService
+from src.utils import logger
 
 router = APIRouter()
 
@@ -241,7 +242,7 @@ async def create_table(
             )
             for sheet_name, sheet_json in dtypes_json.items()
         }
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError):
         raise DtypesInvalidJsonStringException()
     except ValidationError:
         raise DtypesInvalidContentException()
@@ -294,9 +295,24 @@ async def create_table(
     # But, first, is neccesary create the jsonschema instance and save it in the db, because the worker
     # will need it to validate the data before insert it.
 
+    if len(sql_per_sheet) == 1:
+        sheet_table_names_mapping = {}
+        sheet_name = list(dtypes.keys())[0]
+        if sheet_name != table_name:
+            sheet_table_names_mapping[sheet_name] = table_name
+    else:
+        # Match table name for each sheet
+        sheet_table_names_mapping = {}
+        for sheet in sql_per_sheet.keys():
+            try:
+                sheet_table_names_mapping[sheet] = table_name_from_create_sql_response(sql_per_sheet[sheet])
+            except ValueError:
+                sheet_table_names_mapping[sheet] = sheet  # Fallback to sheet name if parsing fails
+
     # Create the JSON Schema for the table and save it in the database
     save_schema_responses = {}
     for sheet_name, sheet_data in dtypes.items():
+        table_sheet_name = sheet_table_names_mapping.get(sheet_name, sheet_name)
         required_fields = [
             field_name for field_name, dtype in sheet_data.items() if not dtype.optional
         ]
@@ -315,12 +331,12 @@ async def create_table(
         }
 
         save_schema_response = await SchemaService.save_schema(
-            import_name=f"{project_id}__{sheet_name}",
+            import_name=get_import_name(project_id=project_id, table_name=table_sheet_name),
             orig_schema=jsonschema,
             database_client=db_client,
         )
 
-        save_schema_responses[sheet_name] = save_schema_response
+        save_schema_responses[table_sheet_name] = save_schema_response
 
     # Execute the generated SQL statements to create the table in the database if requested
     if execute_sql:
@@ -328,7 +344,7 @@ async def create_table(
             _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         except InvalidDBCredentialsException:
             raise
-        except psycopg2.OperationalError as e:
+        except psycopg2.Error as e:
             raise Psycopg2ErrorException(
                 message="An error occurred while processing the database operation.\n"
                 f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
@@ -420,10 +436,16 @@ async def create_table_from_json_schema(
         )
 
     sql_per_sheet = response.json()
+    if len(sql_per_sheet) == 1:
+        table_name_in_sql = list(sql_per_sheet.keys())[0]
+        logger.info(f"Using table name '{table_name_in_sql}' from generated SQL for schema saving and execution.")
+    else:
+        table_name_in_sql = table_name
+        logger.warning(f"Multiple sheets detected. Using requested table name '{table_name}' for schema saving and execution.")
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_response = await SchemaService.save_schema(
-        import_name=get_import_name(project_id=project_id, table_name=table_name),
+        import_name=get_import_name(project_id=project_id, table_name=table_name_in_sql),
         orig_schema=payload.jsonschema,
         database_client=db_client,
     )
@@ -433,7 +455,7 @@ async def create_table_from_json_schema(
             _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         except InvalidDBCredentialsException:
             raise
-        except Exception as e:
+        except psycopg2.Error as e:
             raise Psycopg2ErrorException(
                 message="An error occurred while processing the database operation.\n"
                 f"Error details: {str(e)}\nSQL attempted: {sql_per_sheet}"
@@ -442,11 +464,11 @@ async def create_table_from_json_schema(
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
-            schema_saved={"Sheet1": save_schema_response},
+            schema_saved={table_name_in_sql: save_schema_response},
         )
 
     return CreateTableResponse(
         message="SQL generated successfully (execution skipped)",
         sql_per_sheet=sql_per_sheet,
-        schema_saved={"Sheet1": save_schema_response},
+        schema_saved={table_name_in_sql: save_schema_response},
     )

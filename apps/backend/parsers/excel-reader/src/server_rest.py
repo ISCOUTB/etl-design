@@ -102,8 +102,7 @@ async def read_json(
         logger.debug(f"Received JSON schema for table: {payload.table_name}")
 
     table_name = payload.table_name.strip()
-    if not table_name:
-        raise HTTPException(status_code=400, detail="'table_name' is required")
+    table_name = standardize_string(table_name, fill_spaces=fill_spaces)
 
     try:
         cols, dtypes = json_schema_to_sql_builder_payload(
@@ -180,8 +179,8 @@ async def read_excel(
             detail="Dtypes JSON does not match the expected schema",
         )
 
-    if not table_name:
-        table_name = ""
+    # Standardize table name format to avoid issues in SQL generation
+    table_name = standardize_string(table_name, fill_spaces=fill_spaces)
 
     # Parse dtypes to use OPTIONAL, PRIMARY KEY, etc. in SQL generation
     dtypes = {
@@ -240,7 +239,11 @@ async def read_excel(
             sql_builder_stub,
             ddls[sheet],  # type: ignore
             dtypes[sheet],
-            (f"{table_name}_{sheet}" if len(ddls) > 1 else table_name),
+            (
+                f"{table_name}_{standardize_string(sheet)}"
+                if len(ddls) > 1
+                else table_name
+            ),
         )
         for sheet in ddls.keys()
     }
