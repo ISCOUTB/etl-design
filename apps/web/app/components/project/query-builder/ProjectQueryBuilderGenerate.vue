@@ -4,6 +4,7 @@
     import { toast } from "vue-sonner";
     import { z } from "zod";
 
+    const { $logger } = useNuxtApp();
     const {
         state: { project },
         tables,
@@ -142,7 +143,7 @@
                                 });
                             }
                         })
-                        .catch((error) => console.warn(error))
+                        .catch((error) => $logger.warn(error))
                         .finally(() => (loading.value = false));
                 },
             },

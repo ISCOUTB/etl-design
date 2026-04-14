@@ -27,6 +27,7 @@ type Props = Partial<ToastNotification> & {
 };
 
 export default function () {
+    const { $logger } = useNuxtApp();
     const { t, te } = useI18n();
 
     function resolveI18nText<T>(value?: T) {
@@ -152,10 +153,9 @@ export default function () {
             return;
         }
 
-        console.warn(error);
+        $logger.warn(error);
         if (error instanceof FetchError && error.data) {
             const parsedError = ApiErrorSchema.safeParse(error.data);
-            console.warn(parsedError);
             if (!parsedError.success) {
                 handle(ResponseCodesRecord.Server.UnknownError);
 
