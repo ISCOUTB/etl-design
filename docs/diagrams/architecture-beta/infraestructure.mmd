@@ -4,7 +4,7 @@ architecture-beta
     group compute(logos:aws-ec2)[EC2 Swarm Nodes] in aws
     group storage(logos:aws)[EFS Shared Storage] in aws
     group security(logos:aws-iam)[Security and IAM] in aws
-    group iac(logos:terraform)[IaC Tooling]
+    %% group iac(logos:terraform)[IaC Tooling]
 
     service client(internet)[Internet Traffic]
 
@@ -20,8 +20,8 @@ architecture-beta
     service iam(logos:aws-iam)[IAM Instance Profile] in security
     service ssm(aws:arch-aws-systems-manager)[Systems Manager] in security
 
-    service terraform(logos:terraform)[Terraform] in iac
-    service ansible(logos:ansible)[Ansible] in iac
+    %% service terraform(logos:terraform)[Terraform] in iac
+    %% service ansible(logos:ansible)[Ansible] in iac
 
     junction j1 in storage
     junction j2 in network
@@ -43,7 +43,7 @@ architecture-beta
     worker: B --> T: j1
     j1: L --> R: efs
 
-    terraform: R --> L: manager
-    terraform: B --> T: worker
-    ansible: L --> R: manager
-    ansible: B --> T: worker
+    %% terraform: R --> L: manager
+    %% terraform: B --> T: worker
+    %% ansible: L --> R: manager
+    %% ansible: B --> T: worker
