@@ -173,7 +173,7 @@ async def read_excel(
             status_code=400, detail="Invalid JSON format for dtypes"
         )
     except ValidationError as e:
-        print(repr(e))
+        logger.error(f"Dtypes validation error: {e}")
         raise HTTPException(
             status_code=400,
             detail="Dtypes JSON does not match the expected schema",

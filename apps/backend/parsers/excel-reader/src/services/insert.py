@@ -46,7 +46,6 @@ def create_sql_for_insertion(
         sheet_data = data[sheet]
         values = [[]]
 
-        print(values)
         for col_letter in cols.keys():
             col_data = sheet_data[col_letter]
             for row_i, cell in enumerate(col_data):
