@@ -22,16 +22,24 @@ async def get_task_status(
     task: Optional[str] = None,
 ) -> dtypes.ApiResponse:
     """Get the status of a long-running task by its ID."""
+    # Load the task from the database to check if it exists and to get its project_id for permission checking
+    # it will raise a ForbiddenException if the user is not authorized to view the task overall,
+    # and a TaskNotFoundException if the task does not exist at all
+    task_obj = idempotency_service.get_task_by_id(task_id=task_id)
     has_permission = PermissionService.has_permission(
         user=current_user,
         action=Action.view,
         model_key=ModelKeys.task,
+        model=Project(id=task_obj.project_id) if task_obj is not None else None,
     )
     if not has_permission:
         raise ForbiddenException()
 
+    if task_obj is None:
+        raise TaskNotFoundException()
+
+    # If task type is not specified, check for both validation and insertion tasks
     if task is None:
-        # If task type is not specified, check for both validation and insertion tasks
         cached_response = await database_client.get_task_id_async(
             dtypes.GetTaskIdRequest(task_id=task_id, task=VALIDATION_TASK)
         )
@@ -44,18 +52,14 @@ async def get_task_status(
             dtypes.GetTaskIdRequest(task_id=task_id, task=task)
         )
 
+    # If not found in redis/mongo, search in the main database (PostgreSQL)
+    # as a fallback
     if not cached_response["found"] or cached_response["value"] is None:
-        # If not found in redis/mongo, search in the main database (PostgreSQL)
-        # as a fallback
-        task = idempotency_service.get_task_by_id(task_id=task_id)
-        if task is None:
-            raise TaskNotFoundException()
-
         return dtypes.ApiResponse(
             code=200,
-            status=task.status.value,
+            status=task_obj.status.value,
             message="Task found in main database",
-            data={"task_id": task_id, "status": task.status.value},
+            data={"task_id": task_id, "status": task_obj.status.value},
         )
 
     return cached_response["value"]

@@ -257,7 +257,13 @@ ROLES: Dict[UserRole, Dict[AnyModelKey, Dict[Action, CheckPermission]]] = {
             ),
         },
         ModelKeys.task: {
-            Action.view: False,
+            Action.view: lambda user, model: (  # model: Project
+                model is not None
+                and any(
+                    str(up.project_id) == model.id and str(up.user_id) == user.id
+                    for up in _load_user_projects_for_project(model.id)
+                )
+            ),
             Action.search: lambda user, model: (  # model: Project
                 model is not None
                 and any(
