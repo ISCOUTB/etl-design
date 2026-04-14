@@ -73,11 +73,13 @@ flowchart LR
     subgraph OBS["Observability Stack"]
         direction LR
         Alloy["Grafana Alloy</br>(Collector)"]:::obs
-        Prom["Prometheus</br>(Metrics)"]:::obs
-        Loki["Loki</br>(Logs)"]:::obs
-        Tempo["Tempo</br>(Traces  OTLP)"]:::obs
-        Graf["Grafana</br>(Dashboards)"]:::obs
-        Scaler["Autoscaler</br>(Swarm scaling)"]:::obs
+        Prom["Prometheus</br>(Metrics  :9090)"]:::obs
+        Loki["Loki</br>(Logs  :3100)"]:::obs
+        Tempo["Tempo</br>(Traces  :3200)"]:::obs
+        Graf["Grafana</br>(Dashboards  :3000)"]:::obs
+        CAdv["cAdvisor</br>────────────</br>▸ mode: global (all nodes)</br>▸ Container resource metrics</br>▸ --docker_only=true"]:::obs
+        NodeExp["Node Exporter</br>────────────</br>▸ mode: global (all nodes)</br>▸ Host CPU, memory, disk, net</br>▸ /proc and /sys mounts"]:::obs
+        Scaler["Autoscaler</br>────────────</br>▸ PromQL → prometheus:9090</br>▸ docker.sock → scale replicas</br>▸ Configurable cooldown period"]:::obs
     end
 
     %% ── External → Ingress ────────────────────────────────────────────────────
@@ -115,9 +117,9 @@ flowchart LR
     DBP -->|"TCP  persist schemas + state"| Mongo
 
     %% ── Observability ─────────────────────────────────────────────────────────
-    Alloy -.->|"scrape /metrics"| Prom
-    Alloy -.->|"collect logs"| Loki
-    Alloy -.->|"route traces OTLP"| Tempo
+    Alloy -.->|"scrape /metrics (Docker labels)"| Prom
+    Alloy -.->|"forward logs"| Loki
+    Alloy -.->|"forward traces OTLP"| Tempo
     Prom -.->|"data source"| Graf
     Loki -.->|"data source"| Graf
     Tempo -.->|"data source"| Graf

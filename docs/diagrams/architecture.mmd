@@ -48,10 +48,14 @@ flowchart TB
 
             subgraph Monitoring["Observability Stack"]
                 direction LR
-                Alloy["Grafana Alloy</br>Collector"]:::monitoring
-                Prometheus["Prometheus</br>Metrics"]:::monitoring
-                Grafana["Grafana</br>Dashboards"]:::monitoring
-                Scaler["Autoscaler</br>Swarm Scaling"]:::monitoring
+                Alloy["Grafana Alloy</br>(Collector)"]:::monitoring
+                Prometheus["Prometheus</br>(Metrics  :9090)"]:::monitoring
+                Grafana["Grafana</br>(Dashboards  :3000)"]:::monitoring
+                Loki["Loki</br>(Logs  :3100)"]:::monitoring
+                Tempo["Tempo</br>(Traces  :3200)"]:::monitoring
+                CAdvisor["cAdvisor</br>(Container metrics)"]:::monitoring
+                NodeExp["Node Exporter</br>(Host metrics)"]:::monitoring
+                Scaler["Autoscaler</br>(PromQL → Swarm)"]:::monitoring
             end
         end
     end
@@ -84,7 +88,13 @@ flowchart TB
     DBProxy -->|Persist schemas| Mongo
     DBProxy -->|Cache task state| Redis
 
-    %% Observability
-    Alloy -.->|Scrape| Prometheus
-    Prometheus -.->|Data source| Grafana
-    Scaler -.->|Query metrics| Prometheus
+    %% Observability — collection
+    Alloy -.->|"scrape /metrics (Docker labels)"| Prometheus
+    Alloy -.->|"forward traces OTLP"| Tempo
+    Alloy -.->|"forward logs"| Loki
+
+    %% Observability — visualization
+    Prometheus -.->|"data source"| Grafana
+    Loki -.->|"data source"| Grafana
+    Tempo -.->|"data source"| Grafana
+    Scaler -.->|"PromQL queries"| Prometheus
