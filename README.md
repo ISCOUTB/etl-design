@@ -1,4 +1,4 @@
-# ETL Design - Excel to Database Transformation System (MVP)
+# S.L.O.T.H - Excel to Database Transformation System (MVP)
 
 A comprehensive, enterprise-grade ETL (Extract, Transform, Load) system designed to transform Excel spreadsheets into structured databases with formula parsing, data validation, and automated SQL generation capabilities.
 
@@ -6,14 +6,19 @@ A comprehensive, enterprise-grade ETL (Extract, Transform, Load) system designed
 
 ## 🚀 Overview
 
-ETL Design is a sophisticated data transformation platform that bridges the gap between Excel-based data workflows and modern database systems. The project consists of two main subsystems that work together to provide a complete Excel-to-Database pipeline:
+S.L.O.T.H is a microservices platform for migrating business logic from spreadsheets into traditional database-backed workflows, with PostgreSQL as the primary target. The repository is organized around a small set of production-shaped services that work together to ingest spreadsheets, validate data, parse formulas, generate SQL, and persist workflow state.
 
-1. **Excel Parsing System**: A microservices architecture for parsing Excel formulas and generating SQL statements
-2. **Typechecking System**: A high-performance data validation and schema management platform
+The system is split into these main runtime areas:
+
+1. **Core API**: Orchestrates authentication, users, schemas, uploads, tasks, and events.
+2. **Web App**: Nuxt frontend for interacting with the backend.
+3. **Database Service**: gRPC proxy for MongoDB and Redis.
+4. **Parsing Subsystem**: Excel Reader plus modular formula, DDL, and SQL generation services.
+5. **Typechecking Service**: RabbitMQ consumers for validation and insertion workflows.
 
 ## ⚠️ MVP Status & Future Development
 
-**This project is currently a Minimum Viable Product (MVP)** developed as part of an degree project. While functional and demonstrating core capabilities, several aspects are planned for future development:
+**This project is currently a Minimum Viable Product (MVP)** developed as part of an engineering degree project. It is functional and demonstrates the full architecture, but there are still areas that need refinement before production use.
 
 ### Current MVP Limitations
 
@@ -26,25 +31,20 @@ ETL Design is a sophisticated data transformation platform that bridges the gap 
 
 ### Planned Refactoring & Evolution
 
-- **Architecture Review**: Complete system architecture analysis and potential redesign
-- **Language Considerations**: Programming languages may change based on performance requirements and maintainability:
-  - **Microservices**: Python services might be converted to Go or Rust for better performance
-  - **Data Processing**: Consider specialized languages like Scala for big data scenarios
-- **Database Strategy**: Potential migration to more specialized databases (e.g., TimescaleDB, ClickHouse)
-- **Cloud Native**: Kubernetes deployment and cloud-native architecture patterns
-- **Infrastructure as Code**: Terraform implementation for reproducible cloud deployments
-- **CI/CD Pipeline**: Automated testing, building, and deployment workflows
-- **API Evolution**: GraphQL integration and improved REST API design
-- **Real-time Processing**: Stream processing capabilities with Apache Kafka or similar
+- **Architecture review**: Consolidate the service boundaries and remove duplication between the API and parsing workflows.
+- **Code quality**: Improve error handling, typing, and test coverage across all services.
+- **Performance**: Optimize validation, parsing, and database access paths.
+- **Documentation**: Expand service-level docs and keep diagrams synchronized with the implementation.
+- **Delivery hardening**: Improve CI/CD consistency and release automation.
 
 ### Roadmap Highlights
 
-- 🔄 **Phase 1**: Code refactoring and test coverage improvement
-- 🏗️ **Phase 2**: Architecture redesign and technology stack evaluation
-- ☁️ **Phase 3**: Cloud-native implementation with Kubernetes orchestration and Terraform IaC
-- 🚀 **Phase 4**: CI/CD pipeline implementation and automated deployment workflows
-- ⚡ **Phase 5**: Performance optimization and scalability enhancements
-- 🎯 **Phase 6**: Production deployment and enterprise features
+- 🔄 **Phase 1**: Harden the current implementation with better tests and service-level validation.
+- 🏗️ **Phase 2**: Refine the service boundaries and keep the parsing pipeline modular.
+- ☁️ **Phase 3**: Maintain Docker Swarm deployment with Terraform + Ansible provisioning.
+- 🚀 **Phase 4**: Keep GitHub Actions workflows aligned with the release process.
+- ⚡ **Phase 5**: Improve observability, throughput, and failure handling.
+- 🎯 **Phase 6**: Prepare the platform for a production-grade deployment model.
 
 **Note**: The current implementation serves as a proof of concept and research foundation. Future versions will focus on production readiness, scalability, and enterprise-grade features.
 
@@ -69,273 +69,125 @@ ETL Design is a sophisticated data transformation platform that bridges the gap 
 
 ## 🏗️ Architecture
 
-The system follows a modern microservices architecture with clear separation of concerns:
+The current architecture is centered on Docker Swarm and a small number of clear runtime responsibilities:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                     ETL Design Platform                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │   Excel Parsing     │    │     Typechecking System     │ │
-│  │     System          │    │                             │ │
-│  │                     │    │                             │ │
-│  │ ┌─────────────────┐ │    │ ┌─────────────────────────┐ │ │
-│  │ │  Excel Reader   │ │    │ │      FastAPI Server     │ │ │
-│  │ │   (REST API)    │ │    │ │     (REST API + UI)     │ │ │
-│  │ └─────────────────┘ │    │ └─────────────────────────┘ │ │
-│  │          │          │    │            │                │ │
-│  │          ▼          │    │            ▼                │ │
-│  │ ┌─────────────────┐ │    │ ┌─────────────────────────┐ │ │
-│  │ │ Formula Parser  │ │    │ │     RabbitMQ Queue      │ │ │
-│  │ │  (Node.js gRPC) │ │    │ │   (Async Processing)    │ │ │
-│  │ └─────────────────┘ │    │ └─────────────────────────┘ │ │
-│  │          │          │    │            │                │ │
-│  │          ▼          │    │            ▼                │ │
-│  │ ┌─────────────────┐ │    │ ┌─────────────────────────┐ │ │
-│  │ │ DDL Generator   │ │    │ │    Validation Workers   │ │ │
-│  │ │ (Python gRPC)   │ │    │ │   (Schema Processing)   │ │ │
-│  │ └─────────────────┘ │    │ └─────────────────────────┘ │ │
-│  │          │          │    │                             │ │
-│  │          ▼          │    │ ┌─────────────────────────┐ │ │
-│  │ ┌─────────────────┐ │    │ │      Data Stores        │ │ │
-│  │ │  SQL Builder    │ │    │ │ PostgreSQL │ MongoDB    │ │ │
-│  │ │ (Python gRPC)   │ │    │ │   Redis    │            │ │ │
-│  │ └─────────────────┘ │    │ └─────────────────────────┘ │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+Client Browser
+  │
+  ▼
+Traefik Reverse Proxy
+  ├── Web App (Nuxt)
+  ├── Core API (FastAPI)
+  └── Observability endpoints
+
+Core API
+  ├── PostgreSQL
+  ├── RabbitMQ
+  ├── Database Service (gRPC)
+  └── Parsing Subsystem (REST + gRPC)
+
+Typechecking Service
+  ├── RabbitMQ consumers
+  ├── Database Service (gRPC)
+  └── Parsing Subsystem (insert / SQL generation)
+
+Database Service
+  ├── MongoDB
+  └── Redis
 ```
+
+The parsing subsystem is intentionally modular:
+
+1. **Excel Reader** orchestrates spreadsheet ingestion and request coordination.
+2. **Formula Parser** converts Excel formulas into ASTs.
+3. **DDL Generator** turns ASTs into SQL-ready expressions.
+4. **SQL Builder** assembles final `CREATE TABLE` and `INSERT` statements.
 
 ## 📁 Project Structure
 
 ```text
-ETL-Design/
-├── docs/                           # Project documentation
-├── apps/                           # Application services
-│   ├── backend/                    # Core backend services
-│   ├── connections/                # Database infrastructure
-│   ├── scripts/                    # Deployment scripts
-│   └── web/                        # Frontend applications (planned)
-├── packages/                       # Shared packages and utilities
-├── infrastructure/                 # DevOps and infrastructure (planned)
-│   ├── terraform/                  # Infrastructure as Code
-│   ├── k8s/                        # Kubernetes manifests
-│   ├── monitoring/                 # Observability configurations
-│   └── scripts/                    # Infrastructure automation
-├── tools/                          # Development tools and benchmarks
-└── README.md                       # This file
+S.L.O.T.H/
+├── docs/                        # Architecture diagrams and research material
+├── .github/                     # CI/CD workflows and GitHub Actions
+├── iac/                         # Terraform, Ansible, Swarm and deployment scripts
+├── apps/
+│   ├── backend/
+│   │   ├── api/                 # Core API service
+│   │   ├── parsers/             # Excel parsing subsystem
+│   │   └── typechecking/        # RabbitMQ workers
+│   ├── connections/
+│   │   └── database/            # gRPC proxy for MongoDB and Redis
+│   └── web/                     # Nuxt frontend
+├── packages/                    # Proto definitions, generated clients and shared utilities
+├── tools/                       # Development tooling
+└── README.md                    # Repository overview
 ```
 
 ## ☁️ DevOps & Cloud Infrastructure
 
-The ETL Design platform is being designed with modern DevOps practices and cloud-native architectures in mind:
+The current delivery model is based on Docker Swarm, GitHub Actions, and infrastructure provisioning with Terraform plus Ansible.
 
 ### 🚀 Infrastructure as Code (IaC)
 
-- **Terraform Modules**: Planned implementation for reproducible cloud infrastructure
-  - **Cloud Providers**: Multi-cloud support (AWS, Azure, GCP) with provider-specific optimizations
-  - **Resource Management**: Automated provisioning of databases, message queues, and compute resources
-  - **Environment Isolation**: Separate infrastructure configurations for development, staging, and production
-  - **Cost Optimization**: Intelligent resource scaling and cost monitoring integration
+- **Terraform** provisions the Swarm cluster and supporting AWS resources.
+- **Ansible** installs Docker, mounts shared storage, and initializes the Swarm cluster.
+- **Environment separation** is handled through dedicated development, staging, and production definitions.
 
 ### ⚙️ Container Orchestration
 
-- **Kubernetes Deployment**: Cloud-native orchestration with the following components:
-  - **Microservices Pods**: Each service containerized with health checks and resource limits
-  - **Service Mesh**: Istio integration for advanced traffic management and security
-  - **Auto-scaling**: Horizontal Pod Autoscaler (HPA) and Vertical Pod Autoscaler (VPA)
-  - **Storage**: Persistent volumes for databases with automated backup strategies
-  - **Monitoring**: Prometheus + Grafana stack for comprehensive observability
+- **Docker Swarm** is the active orchestrator for application deployment.
+- **Traefik** handles ingress routing and reverse proxying.
+- **Service discovery** and stack updates are managed through Swarm stack files.
 
 ### 🔄 CI/CD Pipeline
 
-- **Automated Workflows**: GitHub Actions / GitLab CI integration
-  - **Multi-stage Testing**: Unit tests, integration tests, and end-to-end validation
-  - **Code Quality**: SonarQube integration for code coverage and security scanning
-  - **Container Security**: Vulnerability scanning with Trivy and admission controllers
-  - **Progressive Deployment**: Blue-green and canary deployment strategies
-  - **Rollback Capabilities**: Automated rollback triggers based on health metrics
+- **GitHub Actions** runs service tests and image builds.
+- **Release workflows** build and publish images, update stack files, and trigger deployments.
+- **Versioning** is handled through tagged releases and commit-based stack updates.
 
 ### 📊 Observability & Monitoring
 
-- **Logging**: Centralized logging with ELK stack (Elasticsearch, Logstash, Kibana)
-- **Metrics**: Custom application metrics with Prometheus and alerting rules
-- **Tracing**: Distributed tracing with Jaeger for microservices communication analysis
-- **Health Monitoring**: Advanced health checks with dependency validation
+- **Prometheus** collects metrics.
+- **Grafana** visualizes dashboards and service health.
+- **Loki** stores logs.
+- **Tempo** provides distributed traces.
+- **Grafana Alloy** acts as the collector/forwarder in the current Swarm setup.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Docker & Docker Compose**: Latest versions for infrastructure services
-- **Python**: 3.12+ with `uv` package manager
-- **Node.js**: 18+ with npm
-- **Git**: For cloning the repository
+- **Docker** and access to the Swarm cluster
+- **Python 3.12+** with `uv`
+- **Node.js 18+** with `npm`
+- **Terraform** and **Ansible** for infrastructure provisioning
 
-### 1. Clone and Setup
+### Working Locally
 
-```bash
-git clone https://github.com/ISCOUTB/etl-design.git
-cd etl-design
-```
+1. Clone the repository and open the workspace root.
+2. Copy the `.env.example` files for the service you want to run.
+3. Start the required infrastructure services first: PostgreSQL, MongoDB, Redis, and RabbitMQ.
+4. Start the service you want to work on using its own README.
 
-### 2. Start Infrastructure Services
+### Deployment
 
-Deploy the required databases and message brokers:
+- Infrastructure provisioning and cluster bootstrap live in `iac/`.
+- Swarm deployment definitions live in `iac/swarm/`.
+- CI/CD workflows live in `.github/workflows/`.
 
-```bash
-# Deploy all infrastructure services using provided scripts
-cd apps/scripts/
+### Service Map
 
-# Start databases
-bash ./deploy_postgres_docker.sh  # PostgreSQL for user data
-bash ./deploy_mongo_docker.sh     # MongoDB for schemas
-bash ./deploy_redis_docker.sh     # Redis for caching
-
-# Start message broker
-bash ./deploy_rabbitmq_docker.sh  # RabbitMQ for async processing
-```
-
-### 3. Start Core Backend Services
-
-#### Database Service (gRPC)
-
-Centralized database connection service for MongoDB and Redis:
-
-```bash
-cd apps/connections/database/
-cp .env.example .env
-# Edit .env with your database configuration
-uv sync
-uv run python -m src.server
-```
-
-#### API Service (REST + FastAPI)
-
-Main REST API with authentication and user management:
-
-```bash
-cd apps/backend/api/
-cp .env.example .env
-# Edit .env with your configuration
-uv sync
-uv run python -m src.main
-```
-
-#### Typechecking Service (Workers)
-
-Background workers for data validation:
-
-```bash
-cd apps/backend/typechecking/
-cp .env.example .env
-# Edit .env with your configuration
-uv sync
-uv run python -m src.main
-```
-
-### 4. Start Excel Parsing Services
-
-Start each parsing microservice (in separate terminals):
-
-```bash
-cd apps/backend/parsers/
-
-# Excel Reader (REST API)
-cd excel-reader
-cp .env.example .env
-uv sync
-uv run python src/server_rest.py
-
-# Formula Parser (Node.js gRPC)
-cd ../formula-parser
-cp .env.example .env
-npm install
-moon run formula-parser:run
-
-# DDL Generator (Python gRPC)
-cd ../ddl-generator
-cp .env.example .env
-uv sync
-uv run python src/server.py
-
-# SQL Builder (Python gRPC)
-cd ../sql-builder
-cp .env.example .env
-uv sync
-uv run python src/server.py
-```
-
-### 5. Verify Installation
-
-Once all services are running, verify the installation:
-
-- **API Documentation**: <http://localhost:8000/docs>
-- **Excel Reader**: <http://localhost:8001>
-- **Health Checks**: All services should respond to their respective health endpoints
-
-### Service Architecture Overview
-
-The system consists of several independent services that work together:
-
-1. **Infrastructure Layer**: PostgreSQL, MongoDB, Redis, RabbitMQ
-2. **Database Service**: gRPC proxy for MongoDB/Redis operations (Port: 50050)
-3. **API Service**: FastAPI REST server with authentication (Port: 8000)
-4. **Typechecking Workers**: RabbitMQ consumers for validation
-5. **Excel Parsing Services**: Microservices for Excel processing (Ports: 8001, 50052-50054)
+1. **Core API**: [apps/backend/api/](./apps/backend/api/README.md)
+2. **Typechecking**: [apps/backend/typechecking/](./apps/backend/typechecking/README.md)
+3. **Parsing subsystem**: [apps/backend/parsers/](./apps/backend/parsers/README.md)
+4. **Database proxy**: [apps/connections/database/](./apps/connections/database/README.md)
+5. **Frontend**: [apps/web/](./apps/web)
 
 ## 🔧 Configuration
 
-### Environment Setup
+Each service owns its own configuration. Copy the matching `.env.example` into `.env` before running it, and keep the values aligned with your environment.
 
-Each service requires configuration through environment variables. For each service, copy the provided `.env.example` file to `.env` and customize the values according to your environment:
-
-```bash
-# For database service
-cp apps/connections/database/.env.example apps/connections/database/.env
-
-# For backend services
-cp apps/backend/api/.env.example apps/backend/api/.env
-cp apps/backend/typechecking/.env.example apps/backend/typechecking/.env
-
-# For parsing services  
-cp apps/backend/parsers/formula-parser/.env.example apps/backend/parsers/formula-parser/.env
-cp apps/backend/parsers/ddl-generator/.env.example apps/backend/parsers/ddl-generator/.env
-cp apps/backend/parsers/sql-builder/.env.example apps/backend/parsers/sql-builder/.env
-cp apps/backend/parsers/excel-reader/.env.example apps/backend/parsers/excel-reader/.env
-```
-
-**Important**: Edit each `.env` file to match your local development environment, including database connections, ports, and security settings. See the individual service README files for detailed configuration options.
-
-## 📚 Usage Examples
-
-### Excel Formula Processing
-
-```bash
-# Process an Excel file with formulas
-curl -X POST "http://localhost:8001/excel-parser" \
-  -H "Content-Type: multipart/form-data" \
-  -F "spreadsheet=@sample.xlsx" \
-  -F "table_name=users" \
-  -F 'dtypes_str={"Sheet1": {"id": {"type": "INTEGER", "extra": "PRIMARY KEY"}, "name": {"type": "TEXT"}, "age": {"type": "INTEGER"}}}'
-```
-
-**Response**:
-
-```json
-{
-  "Sheet1": "CREATE TABLE users_Sheet1 (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"
-}
-```
-
-### Data Validation
-
-```bash
-# Validate a dataset against a schema
-curl -X POST "http://localhost:8000/api/v1/validation/upload/user_schema_v1" \
-  -H "Content-Type: multipart/form-data" \
-  -F "spreadsheet_file=@data.csv"
-```
+Service-specific configuration details are documented in the README for each service.
 
 ## 📊 Performance
 
@@ -379,31 +231,30 @@ The system is designed for high performance and scalability:
 - **Error Handling**: Improved error management and recovery
 - **Testing**: Additional test coverage and testing strategies
 - **Documentation**: API documentation and usage examples
-- **DevOps & Infrastructure**: Kubernetes manifests, Terraform modules, and CI/CD pipeline improvements
+- **DevOps & Infrastructure**: Docker Swarm, Terraform, Ansible, and CI/CD pipeline improvements
 - **Cloud Architecture**: Multi-cloud deployment strategies and cost optimization
 - **Security**: Container security scanning, vulnerability assessment, and compliance frameworks
 
-## 📖 Documentation
+## 📚 Documentation
 
-- **[Applications Overview](./apps/README.md)**: Complete service directory and navigation guide
-- **[Backend Services](./apps/backend/README.md)**: Backend architecture and service guide  
-- **[Excel Parsing System](./apps/backend/parsers/README.md)**: Complete microservices documentation
-- **[API Service](./apps/backend/api/README.md)**: REST API and authentication service
-- **[Typechecking System](./apps/backend/typechecking/README.md)**: Data validation platform guide
-- **[API Documentation](http://localhost:8000/docs)**: Interactive OpenAPI docs (when running)
-- **[Kubernetes Manifests](./infrastructure/k8s/README.md)**: Container orchestration configurations (planned)
-- **Research Papers**: Available in the `docs/` directory
+- **[Applications Overview](./apps/README.md)**: High-level navigation across runtime services.
+- **[Backend Services](./apps/backend/README.md)**: Backend architecture and runtime flows.
+- **[Excel Parsing System](./apps/backend/parsers/README.md)**: Parsing pipeline and service decomposition.
+- **[API Service](./apps/backend/api/README.md)**: Authentication, orchestration, and task APIs.
+- **[Typechecking System](./apps/backend/typechecking/README.md)**: RabbitMQ worker architecture and validation flows.
+- **[Database Service](./apps/connections/database/README.md)**: gRPC proxy for MongoDB and Redis.
+- **[Architecture Diagrams](./docs/diagrams/)**: Source of truth for runtime and deployment diagrams.
+- **[Infrastructure](./iac/)**: Terraform, Ansible, and Swarm deployment assets.
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Port Conflicts**: Ensure ports 8000, 8001, 50050, 50052-50054 are available
-2. **Docker Issues**: Run `docker-compose down && docker-compose up --build`
-3. **Database Connection**: Verify database services are running and accessible
-4. **Memory Issues**: Increase Docker memory allocation for large files
-5. **Kubernetes Deployment**: Check pod status and logs using `kubectl get pods` and `kubectl logs`
-6. **Infrastructure Provisioning**: Verify Terraform state and cloud resource availability
+1. **Port conflicts**: Verify that the service ports documented in each README are free.
+2. **Missing dependencies**: Confirm that PostgreSQL, MongoDB, Redis, and RabbitMQ are reachable before starting backend services.
+3. **Environment variables**: Double-check the copied `.env` files for hostnames, ports, and credentials.
+4. **Swarm deployment issues**: Inspect the Swarm stack files and the GitHub Actions deployment logs.
+5. **Infrastructure provisioning**: Verify Terraform state and Ansible execution if nodes or shared storage are missing.
 
 ## 🏆 Academic Context
 

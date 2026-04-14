@@ -1,148 +1,96 @@
 # Excel Parsing Microservices
 
-A distributed system for parsing Excel files and converting Excel formulas into SQL expressions. This system is designed as a collection of microservices that work together to provide a complete ETL (Extract, Transform, Load) solution for Excel data processing.
+This subsystem converts Excel workbooks into SQL-oriented outputs through a modular pipeline.
 
-## Architecture Overview
-
-The Excel Parsing system consists of several specialized microservices that communicate via gRPC and REST APIs:
+## Architecture
 
 ```text
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Excel Reader  │◄──►│  Formula Parser  │    │  DDL Generator  │
-│   (REST API)    │    │   (gRPC Server)  │◄──►│  (gRPC Server)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                       │
-         └────────────────────────┼───────────────────────┘
-                                  ▼
-                         ┌─────────────────┐
-                         │   SQL Builder   │
-                         │  (gRPC Server)  │
-                         └─────────────────┘
+Excel Reader (REST)
+    ├── Formula Parser (gRPC, Node.js)
+    ├── DDL Generator (gRPC, Python)
+    └── SQL Builder (gRPC, Python)
 ```
 
-## Microservices
+The Excel Reader is the orchestration layer. It receives workbook uploads, extracts sheet data, and coordinates the gRPC services that produce SQL output.
 
-### 1. [Excel Reader](./excel-reader/README.md)
+## Services
 
-- **Type**: REST API Service (Python/FastAPI)
-- **Purpose**: Main entry point for processing Excel files
-- **Responsibilities**:
-  - Accepts Excel file uploads via REST API
-  - Extracts data and formulas from Excel sheets
-  - Orchestrates communication with other microservices
-  - Returns generated SQL statements
+### Excel Reader
 
-### 2. [Formula Parser](./formula-parser/README.md)
+- Entry point for spreadsheet processing.
+- Accepts `.xlsx`, `.xls`, and `.csv` uploads.
+- Exposes REST endpoints for workbook-to-SQL and JSON-schema-to-SQL flows.
+- Coordinates formula parsing, DDL generation, and SQL assembly.
 
-- **Type**: gRPC Server (Node.js)
-- **Purpose**: Parses Excel formulas into Abstract Syntax Trees (AST)
-- **Responsibilities**:
-  - Tokenizes Excel formulas
-  - Builds Abstract Syntax Trees from formula tokens
-  - Provides structured representation of Excel formulas
+### Formula Parser
 
-### 3. [DDL Generator](./ddl-generator/README.md)
+- Parses Excel formulas into tokens and ASTs.
+- Runs as a Node.js gRPC service.
+- Supplies structured formula data to downstream generators.
 
-- **Type**: gRPC Server (Python)
-- **Purpose**: Converts Excel formula ASTs into SQL expressions
-- **Responsibilities**:
-  - Processes AST nodes into SQL equivalents
-  - Maps Excel cell references to SQL column names
-  - Handles different types of Excel expressions (functions, operators, etc.)
+### DDL Generator
 
-### 4. [SQL Builder](./sql-builder/README.md)
+- Converts ASTs into SQL-friendly expressions.
+- Maps Excel references to SQL column names.
+- Runs as a Python gRPC service.
 
-- **Type**: gRPC Server (Python)
-- **Purpose**: Constructs final SQL statements from processed expressions
-- **Responsibilities**:
-  - Combines individual SQL expressions into complete statements
-  - Manages SQL dependencies and execution order
-  - Generates CREATE TABLE and INSERT statements
+### SQL Builder
+
+- Combines expressions into final SQL statements.
+- Resolves dependency ordering.
+- Runs as a Python gRPC service.
 
 ## Protocol Buffers
 
-The system uses Protocol Buffers for inter-service communication, defined in the [`proto/`](./proto/) directory:
+The service contracts live in `packages/proto/parsers/` and are consumed through the generated client packages in `packages/proto-utils/`.
 
-- `dtypes.proto` - Common data types (AST, tokens, enums)
-- `formula_parser.proto` - Formula parser service interface
-- `ddl_generator.proto` - DDL generator service interface  
-- `sql_builder.proto` - SQL builder service interface
+## Current Flow
 
-## Quick Start
+### Workbook to SQL
 
-### Prerequisites
+1. The client uploads a workbook to the Excel Reader.
+2. The Excel Reader extracts sheet data and formulas.
+3. The Formula Parser converts formulas to ASTs.
+4. The DDL Generator converts ASTs to SQL expressions.
+5. The SQL Builder assembles the final SQL statements.
 
-- Python 3.12.10
-- Node.js 18+
-- Docker (optional)
+### JSON Schema to SQL
 
-### Environment Setup
+1. The client submits a JSON schema payload.
+2. The Excel Reader normalizes the request.
+3. The DDL Generator and SQL Builder produce SQL without formula parsing.
 
-1. Copy environment configuration:
+## Configuration
 
-   ```bash
-   cp .env.example .env
-   ```
+Each service has its own `.env.example` file.
 
-2. Start services in order:
-
-   ```bash
-   # Start Formula Parser (Node.js)
-   cd formula-parser && npm install && moon run formula-parser:run
-
-   # Start DDL Generator (Python)
-   cd ddl-generator && uv sync && uv run python src/server.py
-
-   # Start SQL Builder (Python)  
-   cd sql-builder && uv sync && uv run python src/server.py
-
-   # Start Excel Reader (Python)
-   cd excel-reader && uv sync && uv run python src/server_rest.py
-   ```
-
-### Using the System
-
-Send a POST request to the Excel Reader service:
-
-```bash
-curl -X POST "http://localhost:8001/excel-parser" \
-  -H "Content-Type: multipart/form-data" \
-  -F "spreadsheet=@your_file.xlsx" \
-  -F "table_name=my_table" \
-  -F 'dtypes_str={"Sheet1": {"col1": {"type": "INTEGER"}, "col2": {"type": "TEXT"}}}'
-```
+- Excel Reader: `EXCEL_READER_HOST`, `EXCEL_READER_PORT`
+- Formula Parser: `FORMULA_PARSER_HOST`, `FORMULA_PARSER_PORT`
+- DDL Generator: `DDL_GENERATOR_HOST`, `DDL_GENERATOR_PORT`
+- SQL Builder: `SQL_BUILDER_HOST`, `SQL_BUILDER_PORT`
 
 ## Development
 
-### Project Structure
+### Run the services
 
-```text
-excel-parsing/
-├── proto/                 # Protocol Buffer definitions
-├── excel-reader/         # REST API service
-├── formula-parser/       # Formula parsing service
-├── ddl-generator/        # DDL generation service
-├── sql-builder/          # SQL building service
-├── .env.example          # Environment configuration template
-└── README.md            # This file
+```bash
+cd excel-reader && uv sync && uv run python src/server_rest.py
+cd ../formula-parser && pnpm install && moon run formula-parser:run
+cd ../ddl-generator && uv sync && uv run python src/server.py
+cd ../sql-builder && uv sync && uv run python src/server.py
 ```
 
-### Adding New Features
+### Testing
 
-1. Update relevant Protocol Buffer definitions in `proto/`
-2. Regenerate client code for affected services
-3. Implement feature in appropriate service(s)
-4. Update documentation
+- Excel Reader: endpoint and service tests under `excel-reader/tests/`
+- Formula Parser: Node.js tests under `formula-parser/tests/`
+- DDL Generator: Python tests under `ddl-generator/tests/`
+- SQL Builder: Python tests under `sql-builder/tests/`
 
-## Contributing
+## Related Documentation
 
-1. Follow the established code style for each language (Python: PEP 8, JavaScript: Standard)
-2. Write tests for new functionality
-3. Update documentation when adding features
-4. Use meaningful commit messages
-
-## License
-
-This project is part of an engineering thesis project at Universidad Tecnológica de Bolívar.
-
-<!-- well well well -->
+- [Backend Overview](../README.md)
+- [Excel Reader](./excel-reader/README.md)
+- [Formula Parser](./formula-parser/README.md)
+- [DDL Generator](./ddl-generator/README.md)
+- [SQL Builder](./sql-builder/README.md)
