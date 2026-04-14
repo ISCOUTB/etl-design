@@ -1,14 +1,13 @@
 <script setup lang="ts">
-    const qb = useQueryBuilder();
-
     const {
         state: { project },
     } = useProject();
+    const qb = useQueryBuilder();
 
     const view = useState(
         NuxtKeys.Projects.QueryBuilder.SelectedOutput(
             project.value.id,
-            qb.state.activeSchema.value.import_name,
+            qb.state.activeSchema.value?.import_name,
         ),
         () => "sql",
     );

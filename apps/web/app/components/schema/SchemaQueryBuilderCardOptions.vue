@@ -19,7 +19,7 @@
                         {{ $t("projects.id.sections.query_builder.labels.order_by") }}
                     </Badge>
                     <Select
-                        :model-value="qb.state.orderBy.value.col || qb.view.ORDER_NONE"
+                        :model-value="qb.state.orderBy.value.col || QB_ORDER_NONE"
                         @update:model-value="
                             qb.view.dispatch.onOrderByColChange($event?.toString())
                         "
@@ -32,7 +32,7 @@
                             />
                         </SelectTrigger>
                         <SelectContent :body-lock="false">
-                            <SelectItem :value="qb.view.ORDER_NONE">
+                            <SelectItem :value="QB_ORDER_NONE">
                                 {{
                                     $t("projects.id.sections.query_builder.placeholders.order_none")
                                 }}

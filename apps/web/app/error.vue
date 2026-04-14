@@ -45,6 +45,7 @@
 
 <template>
     <NuxtLayout name="sidebar">
+        {{ props }}
         <Empty>
             <EmptyHeader>
                 <EmptyMedia v-if="parsedError.icon" variant="icon">

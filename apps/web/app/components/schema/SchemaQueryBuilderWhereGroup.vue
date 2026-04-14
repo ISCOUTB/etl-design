@@ -1,16 +1,9 @@
 <script setup lang="ts">
-    import type {
-        ConditionNode,
-        ConditionOperator,
-        GroupNode,
-        LogicOperator,
-    } from "~/composables/components/use-query-builder";
     import { Funnel, Plus, X } from "lucide-vue-next";
-    import { OPS_MULTI_VALUE, OPS_NO_VALUE } from "~/composables/components/use-query-builder";
     import { cn } from "~/lib/utils";
 
     interface Props {
-        group: GroupNode;
+        group: Components.QueryBuilder.Nodes.GroupNode;
         columnNames: string[];
         opsForCol: (col: string) => ConditionOperator[];
         isRoot?: MaybeRefOrGetter<boolean>;
@@ -22,9 +15,14 @@
         removeNode: [groupId: string];
         updateCondition: [
             nodeId: string,
-            patch: Partial<Pick<ConditionNode, "col" | "op" | "val" | "conj">>,
+            patch: Partial<
+                Pick<Components.QueryBuilder.Nodes.ConditionNode, "col" | "op" | "val" | "conj">
+            >,
         ];
-        updateGroup: [nodeId: string, patch: Partial<Pick<GroupNode, "logic" | "conj">>];
+        updateGroup: [
+            nodeId: string,
+            patch: Partial<Pick<Components.QueryBuilder.Nodes.GroupNode, "logic" | "conj">>,
+        ];
         toggleConj: [nodeId: string];
     }
 
@@ -34,14 +32,17 @@
     const isRoot = computed(() => toValue(props.isRoot));
 
     function needsValue(op: ConditionOperator) {
-        return !OPS_NO_VALUE.includes(op);
+        return !QB_OPS_NO_VALUE.includes(op);
     }
 
     function isMultiValue(op: ConditionOperator) {
-        return OPS_MULTI_VALUE.includes(op);
+        return QB_OPS_MULTI_VALUE.includes(op);
     }
 
-    function onColChange(node: ConditionNode, col: string | undefined) {
+    function onColChange(
+        node: Components.QueryBuilder.Nodes.ConditionNode,
+        col: string | undefined,
+    ) {
         if (!col) {
             return;
         }
@@ -50,7 +51,10 @@
         emit("updateCondition", node.id, { col, op: ops[0] ?? "=", val: "" });
     }
 
-    function onOpChange(node: ConditionNode, op: ConditionOperator | undefined) {
+    function onOpChange(
+        node: Components.QueryBuilder.Nodes.ConditionNode,
+        op: ConditionOperator | undefined,
+    ) {
         if (!op) {
             return;
         }
@@ -58,7 +62,7 @@
         emit("updateCondition", node.id, { op, val: "" });
     }
 
-    function resolvePlaceholder(node: ConditionNode) {
+    function resolvePlaceholder(node: Components.QueryBuilder.Nodes.ConditionNode) {
         if (isMultiValue(node.op)) {
             return "projects.id.sections.query_builder.placeholders.multi_values";
         }
@@ -79,12 +83,17 @@
 
     function forwardUpdateCondition(
         nodeId: string,
-        patch: Partial<Pick<ConditionNode, "col" | "op" | "val" | "conj">>,
+        patch: Partial<
+            Pick<Components.QueryBuilder.Nodes.ConditionNode, "col" | "op" | "val" | "conj">
+        >,
     ) {
         emit("updateCondition", nodeId, patch);
     }
 
-    function forwardUpdateGroup(nodeId: string, patch: Partial<Pick<GroupNode, "logic" | "conj">>) {
+    function forwardUpdateGroup(
+        nodeId: string,
+        patch: Partial<Pick<Components.QueryBuilder.Nodes.GroupNode, "logic" | "conj">>,
+    ) {
         emit("updateGroup", nodeId, patch);
     }
 

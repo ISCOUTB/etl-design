@@ -1,281 +1,17 @@
-import type { JsonSchema, MongoRaw } from "#shared/utils/schemas/types";
+import type { MongoRaw } from "#shared/utils/schemas/types";
+import type { Knex } from "knex";
 import { knex } from "knex";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface JsonSchemaProperty {
-    type: Dtype;
-    [key: string]: unknown;
-}
-
-interface KnexColumnInfo {
-    name: string;
-    pgType: string;
-    nullable: boolean;
-    required: boolean;
-    dtype: Dtype;
-}
-
-export interface ConditionNode {
-    id: string;
-    type: "condition";
-    col: string;
-    op: ConditionOperator;
-    val: string;
-    conj: LogicOperator;
-}
-
-export interface GroupNode {
-    id: string;
-    type: "group";
-    logic: LogicOperator;
-    children: QueryNode[];
-    conj: LogicOperator;
-}
-
-export type QueryNode = ConditionNode | GroupNode;
-
-export interface ColumnSelection {
-    id: string;
-    col: string;
-}
-
-export interface OrderByState {
-    col: string;
-    dir: "ASC" | "DESC";
-}
-
-export interface KnexQueryOutput {
-    sql: string;
-    bindings: readonly unknown[];
-}
-
-export type ConditionOperator =
-    | "="
-    | "!="
-    | ">"
-    | "<"
-    | ">="
-    | "<="
-    | "LIKE"
-    | "ILIKE"
-    | "IN"
-    | "NOT IN"
-    | "IS NULL"
-    | "IS NOT NULL";
-
-export type LogicOperator = "AND" | "OR";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const DTYPE_TO_PG: Record<Dtype, string> = {
-    string: "text",
-    integer: "integer",
-    boolean: "boolean",
-    double: "numeric",
-    float: "numeric",
-};
-
-export const OPS_NO_VALUE: ConditionOperator[] = ["IS NULL", "IS NOT NULL"];
-export const OPS_MULTI_VALUE: ConditionOperator[] = ["IN", "NOT IN"];
-const ORDER_NONE = "__none__";
-
-const OPS_BY_PG: Record<string, ConditionOperator[]> = {
-    text: ["=", "!=", "LIKE", "ILIKE", "IN", "NOT IN", "IS NULL", "IS NOT NULL"],
-    numeric: ["=", "!=", ">", "<", ">=", "<=", "IS NULL", "IS NOT NULL"],
-    integer: ["=", "!=", ">", "<", ">=", "<=", "IN", "NOT IN", "IS NULL", "IS NOT NULL"],
-    boolean: ["=", "!=", "IS NULL", "IS NOT NULL"],
-    jsonb: ["IS NULL", "IS NOT NULL"],
-};
-
-// ─── Knex ─────────────────────────────────────────────────────────────────────
-
-const qb = knex({ client: "pg" });
-type QB = ReturnType<typeof qb.queryBuilder>;
-
-// ─── Schema helpers ───────────────────────────────────────────────────────────
-
-function mongoSchemaToColumns(schema: JsonSchema) {
-    const required = schema.required ?? [];
-
-    return Object.entries(schema.properties).map<KnexColumnInfo>(([name, def]) => ({
-        name,
-        pgType: DTYPE_TO_PG[def.type],
-        nullable: !required.includes(name),
-        required: required.includes(name),
-        dtype: def.type,
-    }));
-}
-
-function opsForColumn(col: KnexColumnInfo): ConditionOperator[] {
-    return OPS_BY_PG[col.pgType] ?? ["=", "!=", "IS NULL", "IS NOT NULL"];
-}
-
-// ─── Tree helpers ─────────────────────────────────────────────────────────────
-
-let _id = 0;
-function uid(): string {
-    return `n${++_id}`;
-}
-
-function makeCondition(col: string, conj: LogicOperator = "AND"): ConditionNode {
-    return { id: uid(), type: "condition", col, op: "=", val: "", conj };
-}
-
-function makeGroup(logic: LogicOperator = "AND", conj: LogicOperator = "AND"): GroupNode {
-    return { id: uid(), type: "group", logic, children: [], conj };
-}
-
-function findNode(group: GroupNode, targetId: string): QueryNode | null {
-    for (const child of group.children) {
-        if (child.id === targetId) {
-            return child;
-        }
-
-        if (child.type === "group") {
-            const r = findNode(child, targetId);
-            if (r) {
-                return r;
-            }
-        }
-    }
-    return null;
-}
-
-function findAndRemove(group: GroupNode, targetId: string): boolean {
-    const idx = group.children.findIndex((n) => n.id === targetId);
-    if (idx !== -1) {
-        group.children.splice(idx, 1);
-        return true;
-    }
-    for (const child of group.children) {
-        if (child.type === "group" && findAndRemove(child, targetId)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// ─── Knex where builder ───────────────────────────────────────────────────────
-
-function applyGroup(builder: QB, group: GroupNode): void {
-    group.children.forEach((node, i) => {
-        const isFirst = i === 0;
-        const useOr = !isFirst && node.conj === "OR";
-
-        if (node.type === "condition") {
-            applyCondition(builder, node, useOr);
-            return;
-        }
-
-        if (isFirst) {
-            builder.where((sub) => applyGroup(sub, node));
-            return;
-        }
-        if (useOr) {
-            builder.orWhere((sub) => applyGroup(sub, node));
-            return;
-        }
-        builder.andWhere((sub) => applyGroup(sub, node));
-    });
-}
-
-function applyNullCondition(
-    builder: QB,
-    col: string,
-    op: ConditionOperator,
-    useOr: boolean,
-): boolean {
-    if (op === "IS NULL") {
-        useOr ? builder.orWhereNull(col) : builder.whereNull(col);
-        return true;
-    }
-
-    if (op === "IS NOT NULL") {
-        useOr ? builder.orWhereNotNull(col) : builder.whereNotNull(col);
-        return true;
-    }
-
-    return false;
-}
-
-function applySetCondition(
-    builder: QB,
-    col: string,
-    op: ConditionOperator,
-    val: string,
-    useOr: boolean,
-): boolean {
-    if (op !== "IN" && op !== "NOT IN") {
-        return false;
-    }
-
-    const values = val
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean);
-
-    if (op === "IN") {
-        useOr ? builder.orWhereIn(col, values) : builder.whereIn(col, values);
-        return true;
-    }
-
-    useOr ? builder.orWhereNotIn(col, values) : builder.whereNotIn(col, values);
-    return true;
-}
-
-function applyLikeCondition(
-    builder: QB,
-    col: string,
-    op: ConditionOperator,
-    val: string,
-    useOr: boolean,
-): boolean {
-    if (op !== "LIKE" && op !== "ILIKE") {
-        return false;
-    }
-
-    if (useOr) {
-        builder.orWhereRaw(`?? ${op} ?`, [col, val]);
-        return true;
-    }
-
-    builder.whereRaw(`?? ${op} ?`, [col, val]);
-    return true;
-}
-
-function applyCondition(builder: QB, node: ConditionNode, useOr: boolean): void {
-    const { col, op, val } = node;
-
-    if (applyNullCondition(builder, col, op, useOr)) {
-        return;
-    }
-
-    if (applySetCondition(builder, col, op, val, useOr)) {
-        return;
-    }
-
-    if (applyLikeCondition(builder, col, op, val, useOr)) {
-        return;
-    }
-
-    if (useOr) {
-        builder.orWhere(col, op, val);
-        return;
-    }
-
-    builder.andWhere(col, op, val);
-}
+import { v7 } from "uuid";
 
 export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionState(
     (schema: MaybeRefOrGetter<MongoRaw | undefined>) => {
+        const qb = shallowRef(knex({ client: "pg" }));
         const activeSchema = computed(() => toValue(schema));
-
         const importName = computed(() => activeSchema.value?.import_name ?? "");
 
-        const columns = computed<KnexColumnInfo[]>(() => {
+        const columns = computed<Components.QueryBuilder.KnexColumn[]>(() => {
             if (activeSchema.value) {
-                return mongoSchemaToColumns(activeSchema.value.active_schema);
+                return QueryBuilderUtils.mongoSchemaToColumns(activeSchema.value.active_schema);
             }
 
             return [];
@@ -283,28 +19,32 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
 
         const columnNames = computed(() => columns.value.map((c) => c.name));
 
-        function getColumn(name: string): KnexColumnInfo | undefined {
+        function getColumn(name: string): Components.QueryBuilder.KnexColumn | undefined {
             return columns.value.find((c) => c.name === name);
         }
 
-        function opsForCol(colName: string): ConditionOperator[] {
+        function opsForCol(colName: string): Components.QueryBuilder.Operators.ConditionOperator[] {
             const col = getColumn(colName);
             if (col) {
-                return opsForColumn(col);
+                return QueryBuilderUtils.options.forColumn(col);
             }
 
             return ["=", "!=", "IS NULL", "IS NOT NULL"];
         }
 
-        const selectedCols = useState<ColumnSelection[]>(
+        const selectedCols = useState<Components.QueryBuilder.ColumnSelection[]>(
             NuxtKeys.Components.QueryBuilder.SelectedColumns(activeSchema.value),
-            () => columnNames.value.map<ColumnSelection>((col) => ({ id: uid(), col })),
+            () =>
+                columnNames.value.map<Components.QueryBuilder.ColumnSelection>((col) => ({
+                    id: v7(),
+                    col,
+                })),
         );
-        const whereTree = useState<GroupNode>(
+        const whereTree = useState<Components.QueryBuilder.Nodes.GroupNode>(
             NuxtKeys.Components.QueryBuilder.WhereTree(activeSchema.value),
-            () => makeGroup("AND"),
+            () => QueryBuilderUtils.tree.makeGroup("AND"),
         );
-        const orderBy = useState<OrderByState>(
+        const orderBy = useState<Components.QueryBuilder.OrderByState>(
             NuxtKeys.Components.QueryBuilder.OrderBy(activeSchema.value),
             () => ({
                 col: "",
@@ -319,7 +59,7 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
         // ── Column actions ───────────────────────────────────────────────────────
 
         function addColumn() {
-            selectedCols.value.push({ id: uid(), col: columnNames.value[0] ?? "" });
+            selectedCols.value.push({ id: v7(), col: columnNames.value[0] ?? "" });
         }
 
         function removeColumn(id: string) {
@@ -327,10 +67,12 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
         }
 
         function selectAllColumns() {
-            selectedCols.value = columnNames.value.map<ColumnSelection>((col) => ({
-                id: uid(),
-                col,
-            }));
+            selectedCols.value = columnNames.value.map<Components.QueryBuilder.ColumnSelection>(
+                (col) => ({
+                    id: v7(),
+                    col,
+                }),
+            );
         }
 
         function updateColumn(id: string, col: string | undefined) {
@@ -344,11 +86,13 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
 
         // ── Where actions ────────────────────────────────────────────────────────
 
-        function resolveGroup(groupId: string | "root"): GroupNode | null {
+        function resolveGroup(
+            groupId: string | "root",
+        ): Components.QueryBuilder.Nodes.GroupNode | null {
             if (groupId === "root") {
                 return whereTree.value;
             }
-            const node = findNode(whereTree.value, groupId);
+            const node = QueryBuilderUtils.tree.findNode(whereTree.value, groupId);
 
             if (node?.type === "group") {
                 return node;
@@ -362,7 +106,9 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
             if (!group) {
                 return;
             }
-            group.children.push(makeCondition(columnNames.value[0] ?? "", "AND"));
+            group.children.push(
+                QueryBuilderUtils.tree.makeCondition(columnNames.value[0] ?? "", "AND"),
+            );
         }
 
         function addGroupTo(groupId: string | "root") {
@@ -370,11 +116,11 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
             if (!group) {
                 return;
             }
-            group.children.push(makeGroup("AND", "AND"));
+            group.children.push(QueryBuilderUtils.tree.makeGroup("AND", "AND"));
         }
 
         function removeNode(nodeId: string) {
-            findAndRemove(whereTree.value, nodeId);
+            QueryBuilderUtils.tree.findAndRemove(whereTree.value, nodeId);
         }
 
         function removeAllNodes() {
@@ -383,23 +129,28 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
 
         function updateCondition(
             nodeId: string,
-            patch: Partial<Pick<ConditionNode, "col" | "op" | "val" | "conj">>,
+            patch: Partial<
+                Pick<Components.QueryBuilder.Nodes.ConditionNode, "col" | "op" | "val" | "conj">
+            >,
         ) {
-            const node = findNode(whereTree.value, nodeId);
+            const node = QueryBuilderUtils.tree.findNode(whereTree.value, nodeId);
             if (node?.type === "condition") {
                 Object.assign(node, patch);
             }
         }
 
-        function updateGroup(nodeId: string, patch: Partial<Pick<GroupNode, "logic" | "conj">>) {
-            const node = findNode(whereTree.value, nodeId);
+        function updateGroup(
+            nodeId: string,
+            patch: Partial<Pick<Components.QueryBuilder.Nodes.GroupNode, "logic" | "conj">>,
+        ) {
+            const node = QueryBuilderUtils.tree.findNode(whereTree.value, nodeId);
             if (node?.type === "group") {
                 Object.assign(node, patch);
             }
         }
 
         function toggleConj(nodeId: string) {
-            const node = findNode(whereTree.value, nodeId);
+            const node = QueryBuilderUtils.tree.findNode(whereTree.value, nodeId);
             if (node) {
                 if (node.conj === "AND") {
                     node.conj = "OR";
@@ -412,24 +163,30 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
 
         function reset() {
             selectedCols.value = [];
-            whereTree.value = makeGroup("AND");
+            whereTree.value = QueryBuilderUtils.tree.makeGroup("AND");
             orderBy.value = { col: "", dir: "ASC" };
             limit.value = 0;
         }
 
         // ── Outputs ──────────────────────────────────────────────────────────────
 
-        const queryOutput = computed<KnexQueryOutput | null>(() => {
+        const queryOutput = computed<Components.QueryBuilder.KnexOutput | null>(() => {
             if (!activeSchema.value || !importName.value) {
                 return null;
             }
 
             const cols = selectedCols.value.length ? selectedCols.value.map((c) => c.col) : ["*"];
 
-            const builder = qb(TableUtils.getTableName(importName.value)).select(cols);
+            const builder = qb.value(TableUtils.getTableName(importName.value)).select(cols);
 
-            if (whereTree.value.children.length)
-                builder.where((sub) => applyGroup(sub as unknown as QB, whereTree.value));
+            if (whereTree.value.children.length) {
+                builder.where((sub) =>
+                    QueryBuilderUtils.knex.applyGroup(
+                        sub as unknown as Knex.QueryBuilder,
+                        whereTree.value,
+                    ),
+                );
+            }
 
             if (orderBy.value.col) {
                 builder.orderBy(orderBy.value.col, orderBy.value.dir);
@@ -477,8 +234,8 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
                     return;
                 }
 
-                selectedCols.value = names.map<ColumnSelection>((col) => ({
-                    id: uid(),
+                selectedCols.value = names.map<Components.QueryBuilder.ColumnSelection>((col) => ({
+                    id: v7(),
                     col,
                 }));
             },
@@ -531,12 +288,11 @@ export const [useProvideQueryBuilderView, _useQueryBuilderView] = createInjectio
         }));
 
         function onOrderByColChange(payload?: string) {
-            const value = payload?.toString() ?? ORDER_NONE;
-            qb.state.orderBy.value.col = value === ORDER_NONE ? "" : value;
+            const value = payload?.toString() ?? QB_ORDER_NONE;
+            qb.state.orderBy.value.col = value === QB_ORDER_NONE ? "" : value;
         }
 
         return {
-            ORDER_NONE,
             state: {
                 clipboard,
             },
