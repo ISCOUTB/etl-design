@@ -1,0 +1,51 @@
+flowchart LR
+    classDef iac fill:#1a1a2e,stroke:#7c4dff,stroke-width:2px,color:#fff
+    classDef network fill:#0f3460,stroke:#4fc3f7,stroke-width:2px,color:#fff
+    classDef compute fill:#1b4332,stroke:#52b788,stroke-width:2px,color:#fff
+    classDef storage fill:#3d2000,stroke:#f39c12,stroke-width:2px,color:#fff
+    classDef security fill:#3b1f2b,stroke:#e74c3c,stroke-width:2px,color:#fff
+
+    Internet(["Internet Traffic"])
+
+    subgraph IAC["IaC Tooling"]
+        direction TB
+        Terraform["Terraform (Provision AWS resources)"]:::iac
+        Ansible["Ansible (Configure nodes + Swarm init)"]:::iac
+    end
+
+    subgraph AWS["AWS Cloud Environment"]
+        subgraph VPC["VPC Networking"]
+            direction TB
+            IGW["Internet Gateway"]:::network
+            RT["Route Table + Public Subnet"]:::network
+            SG["Swarm Security Group (ports: 22, 80, 443, 2377, 7946, 4789)"]:::network
+        end
+
+        subgraph Compute["EC2 Swarm Nodes"]
+            direction LR
+            Manager["Manager Nodes"]:::compute
+            Worker["Worker Nodes"]:::compute
+        end
+
+        subgraph StorageGroup["EFS Shared Storage"]
+            EFS["Elastic File System (NFS mount on all nodes)"]:::storage
+        end
+
+        subgraph SecurityGroup["Security and IAM"]
+            direction TB
+            IAM["IAM Instance Profile"]:::security
+            SSM["AWS Systems Manager (AmazonSSMManagedInstanceCore)"]:::security
+        end
+    end
+
+    Internet --> IGW --> RT --> SG
+    SG --> Manager
+    SG --> Worker
+    Manager <-->|Swarm gossip| Worker
+    Manager & Worker --> EFS
+    Manager --> IAM --> SSM
+
+    Terraform -->|Provision| Manager
+    Terraform -->|Provision| Worker
+    Ansible -->|Configure| Manager
+    Ansible -->|Configure| Worker

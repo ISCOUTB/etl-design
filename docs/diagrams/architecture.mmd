@@ -1,0 +1,90 @@
+flowchart TB
+    classDef client fill:#1a1a2e,stroke:#4fc3f7,stroke-width:2px,color:#fff
+    classDef proxy fill:#16213e,stroke:#7c4dff,stroke-width:2px,color:#fff
+    classDef frontend fill:#0f3460,stroke:#1abc9c,stroke-width:2px,color:#fff
+    classDef core fill:#1b4332,stroke:#52b788,stroke-width:2px,color:#fff
+    classDef workers fill:#3b1f2b,stroke:#e74c3c,stroke-width:2px,color:#fff
+    classDef broker fill:#3d2000,stroke:#f39c12,stroke-width:2px,color:#fff
+    classDef parser fill:#1a237e,stroke:#5c6bc0,stroke-width:2px,color:#fff
+    classDef dataproxy fill:#004d61,stroke:#00bcd4,stroke-width:2px,color:#fff
+    classDef database fill:#1a3a1a,stroke:#66bb6a,stroke-width:2px,color:#fff
+    classDef monitoring fill:#2d1b69,stroke:#ab47bc,stroke-width:2px,color:#fff
+
+    Client(["Web Client"]):::client
+
+    subgraph AWS["AWS Cloud"]
+        subgraph Swarm["Docker Swarm Cluster"]
+            direction TB
+
+            Traefik["Traefik</br>Reverse Proxy"]:::proxy
+
+            subgraph AppRow["Application Services"]
+                direction LR
+                Web["NuxtJS</br>Web App"]:::frontend
+                API["Core API</br>Service"]:::core
+                MQ["RabbitMQ</br>Broker"]:::broker
+            end
+
+            subgraph WorkerRow["Async Processing"]
+                direction LR
+                VWorker["ValidationWorker"]:::workers
+                IWorker["InsertionWorker"]:::workers
+                RWorker["ResultWorker"]:::workers
+            end
+
+            Parsers["Parsing Service</br>(Excel Reader + gRPC processors)"]:::parser
+
+            subgraph DataRow["Data Layer"]
+                direction LR
+                PG[("PostgreSQL")]:::database
+                DBProxy["DB Proxy</br>gRPC Gateway"]:::dataproxy
+            end
+
+            subgraph DBBackends["DB Backends"]
+                direction LR
+                Mongo[("MongoDB</br>JSON Schemas")]:::database
+                Redis[("Redis</br>Cache")]:::database
+            end
+
+            subgraph Monitoring["Observability Stack"]
+                direction LR
+                Alloy["Grafana Alloy</br>Collector"]:::monitoring
+                Prometheus["Prometheus</br>Metrics"]:::monitoring
+                Grafana["Grafana</br>Dashboards"]:::monitoring
+                Scaler["Autoscaler</br>Swarm Scaling"]:::monitoring
+            end
+        end
+    end
+
+    %% External
+    Client -->|HTTPS| Traefik
+
+    %% Ingress routing
+    Traefik -->|Route /| Web
+    Traefik -->|Route /api/v1| API
+
+    %% API integrations
+    API -->|Publish task AMQP| MQ
+    API -->|Relational data SQL| PG
+    API -->|Fetch/store gRPC| DBProxy
+    API -->|Generate SQL REST| Parsers
+
+    %% Async pipeline
+    MQ -->|Consume| VWorker
+    MQ -->|Consume| IWorker
+    MQ -->|Consume| RWorker
+
+    VWorker -->|Update task state gRPC| DBProxy
+    IWorker -->|Update task state gRPC| DBProxy
+    IWorker -->|Generate SQL REST| Parsers
+    RWorker -->|Update task state gRPC| DBProxy
+    RWorker -->|Notify completion HTTP| API
+
+    %% Data proxy backends
+    DBProxy -->|Persist schemas| Mongo
+    DBProxy -->|Cache task state| Redis
+
+    %% Observability
+    Alloy -.->|Scrape| Prometheus
+    Prometheus -.->|Data source| Grafana
+    Scaler -.->|Query metrics| Prometheus

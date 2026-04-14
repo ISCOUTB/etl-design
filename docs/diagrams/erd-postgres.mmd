@@ -1,0 +1,58 @@
+%%{init: {'er': {'layoutDirection': 'LR'}}}%%
+erDiagram
+    user ||--o{ upload_tasks : "creates"
+    project ||--o{ upload_tasks : "contains"
+    user ||--o{ user_project : "has_role_in"
+    project ||--o{ user_project : "includes"
+
+    user {
+        uuid id PK
+        varchar name
+        varchar email UK "Unique + CHECK email format"
+        user_role_enum role
+        status_enum status
+        varchar password
+        timestampz created_at
+        timestampz updated_at
+    }
+
+    project {
+        uuid id PK
+        varchar name
+        varchar description
+        varchar provider
+        varchar db_host
+        varchar db_port
+        varchar db_user
+        varchar db_password
+        varchar db_name
+        varchar db_params
+        timestampz created_at
+        timestampz updated_at
+    }
+
+    upload_tasks {
+        uuid task_id PK
+        varchar idempotency_key "EXCLUDE active window overlap"
+        task_status_enum status
+        uuid user_id FK
+        uuid project_id FK
+        varchar file_hash
+        jsonb task_metadata
+        timestampz locked_until
+        timestampz created_at
+        timestampz updated_at
+    }
+
+    user_project {
+        uuid user_id PK,FK
+        uuid project_id PK,FK
+        user_project_type_enum role
+        status_enum status
+        timestampz created_at
+        timestampz updated_at
+    }
+
+    alembic_version {
+        varchar32 version_num PK
+    }
