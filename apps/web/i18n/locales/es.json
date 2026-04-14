@@ -206,6 +206,12 @@
             },
             "file_not_provided": {
                 "title": "Por favor proporciona un archivo antes de enviar"
+            },
+            "query_builder": {
+                "generate_error": {
+                    "title": "No se pudo generar una consulta valida",
+                    "description": "Por favor, se mas especifico, o intenta mas tarde."
+                }
             }
         }
     },
@@ -555,6 +561,94 @@
                 },
                 "file": {
                     "tab": "Archivo"
+                },
+                "query_builder": {
+                    "tab": "Constructor SQL",
+                    "title": "Constructor SQL",
+                    "description": "Construye consultas SQL por bloques y revisa la salida generada.",
+                    "schema": {
+                        "placeholder": "Selecciona un esquema",
+                        "empty": "Aún no hay esquemas disponibles. Sube o crea uno primero."
+                    },
+                    "cards": {
+                        "columns": {
+                            "title": "Columnas",
+                            "description": "Elige columnas especificas para el SELECT. Si no seleccionas ninugna, se usara por defecto todas."
+                        },
+                        "where": {
+                            "title": "Condiciones",
+                            "description": "Construye grupos anidados para WHERE usando operadores AND/OR."
+                        },
+                        "options": {
+                            "title": "Opciones",
+                            "description": "Configura ORDER BY y LIMIT para esta consulta."
+                        },
+                        "output": {
+                            "title": "Salida",
+                            "description": "Inspecciona SQL, salida nativa de knex y arbol de consulta."
+                        }
+                    },
+                    "actions": {
+                        "add_column": "Agregar columna",
+                        "select_all": "Seleccionar todas",
+                        "add_condition": "Agregar condicion",
+                        "add_group": "Agregar grupo",
+                        "toggle_conjunction": "Alternar conjuncion"
+                    },
+                    "generate": {
+                        "button": "Generar",
+                        "events": {
+                            "request_sent": {
+                                "title": "Solicitud de generacion enviada",
+                                "description": "Estamos generando el estado del constructor de consultas. Esto puede tardar unos segundos."
+                            },
+                            "query_created": {
+                                "title": "Consulta lista",
+                                "description": "La consulta generada esta lista. Puedes importarla ahora o esperar a que se importe automaticamente.",
+                                "action": "Importar ahora"
+                            }
+                        },
+                        "modal": {
+                            "title": "Generar estado del Constructor SQL",
+                            "description": "Describe con precision la consulta que quieres construir. Incluye filtros, condiciones y las columnas que deseas devolver. Si no se pueden inferir columnas especificas, se seleccionaran todas las del esquema.",
+                            "form": {
+                                "message": {
+                                    "label": "Que deseas generar?",
+                                    "placeholder": "Ejemplo: Muestrame usuarios adultos activos cuyo nombre contenga 'acme', e incluye name, age e is_adult."
+                                }
+                            },
+                            "actions": {
+                                "generate": "Generar",
+                                "cancel": "Cancelar"
+                            }
+                        }
+                    },
+                    "labels": {
+                        "read_only": "SELECT - SOLO LECTURA",
+                        "dtype": "tipo",
+                        "order_by": "Ordenar por",
+                        "limit": "Limite",
+                        "group": "Grupo"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "Usando todas las columnas (*)",
+                            "description": "No hay columnas especificas seleccionadas. Esta consulta usara todas por defecto"
+                        },
+                        "no_selection": "Todas las columnas (*)",
+                        "no_conditions": "Sin condiciones"
+                    },
+                    "placeholders": {
+                        "select_column": "Selecciona una columna",
+                        "value": "Valor",
+                        "multi_values": "val1, val2, ...",
+                        "order_none": "Sin orden"
+                    },
+                    "output": {
+                        "sql": "SQL",
+                        "native": "Nativo",
+                        "tree": "Arbol"
+                    }
                 }
             },
             "tables": {

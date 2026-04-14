@@ -74,13 +74,17 @@ export default defineNuxtConfig({
     ignore: ["**/*.test.ts", "**/*.spec.ts"],
     runtimeConfig: {
         auth: {
-            secret: process.env.AUTH_SECRET,
-            sign: process.env.AUTH_SIGN,
-            maxAge: 30 * 24 * 60 * 60,
+            SECRET: process.env.AUTH_SECRET,
+            SIGN: process.env.AUTH_SIGN,
+            MAX_AGE: 30 * 24 * 60 * 60,
         },
         public: {
-            apiBase: process.env.API_BASE_URL,
-            homePageURL: process.env.HOMEPAGE_URL,
+            API_BASE: process.env.API_BASE_URL,
+            HOMEPAGE_URL: process.env.HOMEPAGE_URL,
+        },
+        keys: {
+            MODEL_API_KEY: process.env.MODEL_API_KEY,
+            MODEL_ENDPOINT: process.env.MODEL_ENDPOINT,
         },
     },
 

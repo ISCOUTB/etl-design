@@ -1,0 +1,34 @@
+flowchart TD
+    classDef orchestrator fill:#E8F8F5,stroke:#1ABC9C,stroke-width:2px,color:#000,rx:5,ry:5
+    classDef processor fill:#FDEDEC,stroke:#E74C3C,stroke-width:2px,color:#000,rx:5,ry:5
+    classDef external fill:#EBF5FB,stroke:#3498DB,stroke-width:2px,color:#000,rx:5,ry:5
+
+    API(["Core API Service"]):::external
+
+    subgraph ParsingSystem["Parsing Service Components (Zoom-In)"]
+        direction TB
+
+        Reader["Excel Reader (REST Orchestrator)"]:::orchestrator
+
+        Formula["Formula Parser (gRPC)"]:::processor
+        DDL["DDL Generator (gRPC)"]:::processor
+        SQL["SQL Builder (gRPC)"]:::processor
+
+        Reader ==>|1. Extract & Request AST| Formula
+        Formula -.->|Parsed AST| Reader
+
+        Reader ==>|2. Request Schema| DDL
+        DDL -.->|Table Definitions| Reader
+
+        Reader ==>|3. Request SQL| SQL
+        SQL -.->|Final SQL Statements| Reader
+    end
+
+    %% Path A: Excel with formulas — full parsing pipeline
+    API ==>|"Path A: POST /parser/excel (Spreadsheet + dtypes)"| Reader
+    Reader -.->|"SQL per sheet + JSON Schema"| API
+
+    %% Path B: Static JSON Schema — skips formula parsing, generates DDL+SQL only
+    API ==>|"Path B: POST /parser/json (JSON Schema + table name)"| Reader
+    note_b["Path B skips FormulaParser. DDL and SQL are generated directly from the static schema."]
+    note_b -.->|note| DDL

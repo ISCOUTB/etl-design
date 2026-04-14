@@ -1,5 +1,6 @@
 /* eslint-disable style/indent */
 import type { UseWebSocketReturn } from "@vueuse/core";
+import type { ConsolaInstance } from "consola";
 import type { gsap } from "gsap";
 import type { $Fetch, NitroFetchRequest } from "nitropack";
 import "vue-router";
@@ -33,6 +34,7 @@ declare module "#app" {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
         $api: $Fetch<unknown, NitroFetchRequest>;
+        $logger: ConsolaInstance;
     }
 
     interface PageMeta {
@@ -47,6 +49,7 @@ declare module "vue" {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
         $api: $Fetch<unknown, NitroFetchRequest>;
+        $logger: ConsolaInstance;
     }
 }
 

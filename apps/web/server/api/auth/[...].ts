@@ -9,7 +9,7 @@ import { FetchError } from "ofetch";
 const runtimeConfig = useRuntimeConfig();
 
 export default NuxtAuthHandler({
-    secret: runtimeConfig.auth.secret,
+    secret: runtimeConfig.auth.SECRET,
     pages: {
         newUser: "/auth/sign-up",
         signIn: "/auth/sign-in",
@@ -40,7 +40,7 @@ export default NuxtAuthHandler({
 
                 try {
                     const response = await $fetch("/auth/sign-in", {
-                        baseURL: runtimeConfig.public.apiBase,
+                        baseURL: runtimeConfig.public.API_BASE,
                         method: "POST",
                         body: formData,
                     });
@@ -77,13 +77,13 @@ export default NuxtAuthHandler({
             return JWTUtils.encode(
                 token,
                 secret,
-                runtimeConfig.auth.sign,
-                maxAge || runtimeConfig.auth.maxAge,
+                runtimeConfig.auth.SIGN,
+                maxAge || runtimeConfig.auth.MAX_AGE,
             );
         },
 
         async decode({ secret, token }) {
-            return JWTUtils.decode(secret, token, runtimeConfig.auth.sign);
+            return JWTUtils.decode(secret, token, runtimeConfig.auth.SIGN);
         },
     },
     callbacks: {
@@ -119,9 +119,9 @@ export default NuxtAuthHandler({
 
             session.accessToken = await JWTUtils.encode(
                 token,
-                runtimeConfig.auth.secret,
-                runtimeConfig.auth.sign,
-                runtimeConfig.auth.maxAge,
+                runtimeConfig.auth.SECRET,
+                runtimeConfig.auth.SIGN,
+                runtimeConfig.auth.MAX_AGE,
             );
 
             return session;

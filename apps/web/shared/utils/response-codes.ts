@@ -29,6 +29,9 @@ export const ResponseCodesRecord = {
             Schema: {
                 NoFileProvided: "error:project:schema:no-file-provided",
             },
+            QueryBuilder: {
+                GenerateError: "error:project:query-builder:generate-error",
+            },
         },
     },
 } as const;

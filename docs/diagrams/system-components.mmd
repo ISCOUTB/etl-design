@@ -1,0 +1,126 @@
+flowchart LR
+    classDef external  fill:#1a1a2e,stroke:#4fc3f7,stroke-width:2px,color:#fff
+    classDef frontend  fill:#0f3460,stroke:#1abc9c,stroke-width:2px,color:#fff
+    classDef gateway   fill:#16213e,stroke:#7c4dff,stroke-width:2px,color:#fff
+    classDef api       fill:#1b4332,stroke:#52b788,stroke-width:2px,color:#fff
+    classDef async     fill:#2d2d0f,stroke:#f39c12,stroke-width:2px,color:#fff
+    classDef worker    fill:#3b1f2b,stroke:#e74c3c,stroke-width:2px,color:#fff
+    classDef parser    fill:#1a237e,stroke:#7986cb,stroke-width:2px,color:#fff
+    classDef dataproxy fill:#004d61,stroke:#00bcd4,stroke-width:2px,color:#fff
+    classDef db        fill:#1a3a1a,stroke:#66bb6a,stroke-width:2px,color:#fff
+    classDef obs       fill:#2d1b69,stroke:#ab47bc,stroke-width:2px,color:#fff
+
+    %% ── External ──────────────────────────────────────────────────────────────
+    Browser(["End User</br>(Web Browser)"]):::external
+
+    %% ── Presentation ──────────────────────────────────────────────────────────
+    subgraph PRES["Presentation"]
+        direction TB
+        Web["NuxtJS Web App</br>─────────────────</br>▸ SSR + CSR rendering</br>▸ JWE Bearer Token auth</br>▸ Refresh Tokens (stateless)</br>▸ REST calls to API"]:::frontend
+    end
+
+    %% ── Ingress ───────────────────────────────────────────────────────────────
+    subgraph INGRESS["Ingress"]
+        Traefik["Traefik Reverse Proxy</br>─────────────────</br>▸ TLS termination</br>▸ Route /* → Web</br>▸ Route /api/v1/* → API</br>▸ Exposes RabbitMQ UI, Grafana"]:::gateway
+    end
+
+    %% ── Core API ──────────────────────────────────────────────────────────────
+    subgraph CORE["Core API Service  (FastAPI)"]
+        direction TB
+        API["API Orchestrator</br>─────────────────</br>▸ /auth — JWT login & refresh</br>▸ /users — ABAC user mgmt</br>▸ /projects — project & credentials</br>▸ /schemas — JSON Schema CRUD</br>▸ /uploads — validate / insert / process</br>▸ /events — task-completed callback</br>▸ /tasks — status polling</br>▸ /metrics — Prometheus scrape"]:::api
+    end
+
+    %% ── Async Message Bus ─────────────────────────────────────────────────────
+    subgraph BUS["Async Message Bus"]
+        MQ["RabbitMQ</br>─────────────────</br>▸ Exchange: typechecking.exchange</br>▸ Queue: typechecking.validation.queue</br>▸ Queue: typechecking.insertion.queue</br>▸ Queue: typechecking.results.queue</br>▸ x-delivery-limit=3  x-message-ttl=1h"]:::async
+    end
+
+    %% ── Typechecking Service ──────────────────────────────────────────────────
+    subgraph TC["Typechecking Service  (3 AMQP workers)"]
+        direction TB
+        VW["ValidationWorker</br>─────────────────</br>▸ Consumes: validation.queue</br>▸ Polars in-memory validation</br>▸ Validates against JSON Schema</br>▸ Updates task state via DB Proxy</br>▸ Publishes: results.queue</br>▸ Publishes: insertion.queue (if insert=True)"]:::worker
+        IW["InsertionWorker</br>─────────────────</br>▸ Consumes: insertion.queue</br>▸ Calls Parsing Service → SQL</br>▸ Executes SQL on target DB</br>▸ Updates task state via DB Proxy</br>▸ Publishes: results.queue"]:::worker
+        RW["ResultWorker</br>─────────────────</br>▸ Consumes: results.queue</br>▸ HTTP POST → /events/task-completed</br>▸ Updates task state via DB Proxy"]:::worker
+    end
+
+    %% ── Parsing Subsystem ─────────────────────────────────────────────────────
+    subgraph PARSE["Parsing Service  (REST + gRPC internal)"]
+        direction TB
+        ER["Excel Reader</br>─────────────────</br>▸ REST: POST /parser/excel</br>▸ REST: POST /parser/json</br>▸ Orchestrates gRPC processors</br>▸ Returns SQL per sheet"]:::parser
+        FP["Formula Parser</br>────────────</br>▸ gRPC</br>▸ Parses formula AST"]:::parser
+        DG["DDL Generator</br>────────────</br>▸ gRPC</br>▸ Generates CREATE TABLE SQL"]:::parser
+        SB["SQL Builder</br>────────────</br>▸ gRPC</br>▸ Generates INSERT SQL"]:::parser
+
+        ER -->|"gRPC: parse formula"| FP
+        ER -->|"gRPC: generate DDL"| DG
+        ER -->|"gRPC: build INSERT"| SB
+    end
+
+    %% ── DB Proxy ──────────────────────────────────────────────────────────────
+    subgraph PROXY["Database gRPC Proxy"]
+        DBP["DB Proxy</br>─────────────────</br>▸ gRPC server (unified gateway)</br>▸ Redis handler — task state cache</br>▸ MongoDB handler — schema & state persistence</br>▸ Task handler — set/get/update task status"]:::dataproxy
+    end
+
+    %% ── Storage ───────────────────────────────────────────────────────────────
+    subgraph STORE["Storage"]
+        direction TB
+        PG[("PostgreSQL</br>────────────</br>▸ user, project</br>▸ user_project</br>▸ upload_tasks</br>  (idempotency)")]:::db
+        Mongo[("MongoDB</br>────────────</br>▸ JSON Schemas</br>▸ Task state</br>  (persistent)")]:::db
+        Redis[("Redis</br>────────────</br>▸ Task state cache</br>▸ TTL-based eviction</br>▸ Best-effort (no AOF)")]:::db
+    end
+
+    %% ── Observability ─────────────────────────────────────────────────────────
+    subgraph OBS["Observability Stack"]
+        direction LR
+        Alloy["Grafana Alloy</br>(Collector)"]:::obs
+        Prom["Prometheus</br>(Metrics  :9090)"]:::obs
+        Loki["Loki</br>(Logs  :3100)"]:::obs
+        Tempo["Tempo</br>(Traces  :3200)"]:::obs
+        Graf["Grafana</br>(Dashboards  :3000)"]:::obs
+        CAdv["cAdvisor</br>────────────</br>▸ mode: global (all nodes)</br>▸ Container resource metrics</br>▸ --docker_only=true"]:::obs
+        NodeExp["Node Exporter</br>────────────</br>▸ mode: global (all nodes)</br>▸ Host CPU, memory, disk, net</br>▸ /proc and /sys mounts"]:::obs
+        Scaler["Autoscaler</br>────────────</br>▸ PromQL → prometheus:9090</br>▸ docker.sock → scale replicas</br>▸ Configurable cooldown period"]:::obs
+    end
+
+    %% ── External → Ingress ────────────────────────────────────────────────────
+    Browser -->|"HTTPS"| Traefik
+
+    %% ── Ingress → Services ────────────────────────────────────────────────────
+    Traefik -->|"HTTP  Route /"| Web
+    Traefik -->|"HTTP  Route /api/v1"| API
+
+    %% ── Web ↔ API ─────────────────────────────────────────────────────────────
+    Web -->|"REST  /api/v1/**"| API
+
+    %% ── API → downstream ──────────────────────────────────────────────────────
+    API -->|"SQL  psycopg2"| PG
+    API -->|"gRPC  set/get task"| DBP
+    API -->|"AMQP  publish ValidationMessage"| MQ
+    API -->|"REST  POST /parser/excel or /parser/json"| ER
+
+    %% ── MQ → Workers ──────────────────────────────────────────────────────────
+    MQ -->|"AMQP  validation.queue"| VW
+    MQ -->|"AMQP  insertion.queue"| IW
+    MQ -->|"AMQP  results.queue"| RW
+
+    %% ── Workers → DB Proxy ────────────────────────────────────────────────────
+    VW -->|"gRPC  update task state"| DBP
+    IW -->|"gRPC  update task state"| DBP
+    RW -->|"gRPC  update task state"| DBP
+
+    %% ── Workers → other ───────────────────────────────────────────────────────
+    IW -->|"REST  generate SQL"| ER
+    RW -->|"HTTP  POST /events/task-completed"| API
+
+    %% ── DB Proxy ↔ Storage ────────────────────────────────────────────────────
+    DBP -->|"TCP  cache r/w"| Redis
+    DBP -->|"TCP  persist schemas + state"| Mongo
+
+    %% ── Observability ─────────────────────────────────────────────────────────
+    Alloy -.->|"scrape /metrics (Docker labels)"| Prom
+    Alloy -.->|"forward logs"| Loki
+    Alloy -.->|"forward traces OTLP"| Tempo
+    Prom -.->|"data source"| Graf
+    Loki -.->|"data source"| Graf
+    Tempo -.->|"data source"| Graf
+    Scaler -.->|"PromQL queries"| Prom

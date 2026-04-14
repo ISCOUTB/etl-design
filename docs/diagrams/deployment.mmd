@@ -1,0 +1,46 @@
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant CI as CI Workflow (Moon)
+    participant CD as CD Workflow
+    participant DH as Docker Hub
+    participant YQ as yq Tool
+    participant Cluster as Docker Swarm Cluster
+
+    Dev->>GH: Create Pull Request (to development/staging/main)
+    activate CI
+    GH->>CI: Trigger ci-service-tests.yml
+    CI->>CI: moon run service:test
+    CI->>CI: moon run service:docker-build
+
+    alt Tests Pass
+        CI->>GH: Tests Passed
+        deactivate CI
+        Dev->>GH: Merge Pull Request
+
+        alt Merged to staging or main
+            GH->>GH: Create Tag (X.XX-rc for staging / X.XX for main)
+            GH->>CD: Trigger cd-env-master.yml
+            activate CD
+            CD->>CD: Build Docker Images
+            CD->>DH: Push images with new tags
+            DH-->>CD: Images uploaded
+            CD->>YQ: Update docker-stack.yml
+            YQ->>YQ: Modify image tags
+            CD->>GH: Commit updated docker-stack.yml
+            GH->>CD: Detect docker-stack.yml changes
+            CD->>CD: Trigger cd-env.yml
+            CD->>Cluster: SSH Connection
+            CD->>Cluster: docker stack deploy
+            Cluster->>Cluster: Compare with current state
+            Cluster->>Cluster: Update only changed services
+            Cluster-->>CD: Deployment complete
+            CD->>GH: Deployment successful
+            deactivate CD
+        else Merged to development
+            note over GH: No tag created, no CD triggered.
+        end
+    else Tests Fail
+        CI->>GH: Tests Failed
+        GH->>Dev: Review required
+    end
