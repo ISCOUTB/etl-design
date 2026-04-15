@@ -1,6 +1,6 @@
 import type { MongoRaw } from "#shared/utils/schemas/types";
 import type { Knex } from "knex";
-import { knex } from "knex";
+import knex from "knex";
 import { v7 } from "uuid";
 
 export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionState(

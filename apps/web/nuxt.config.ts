@@ -1,6 +1,7 @@
 import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
 import Sonda from "sonda/nuxt";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineNuxtConfig({
     compatibilityDate: "2025-07-15",
@@ -16,7 +17,21 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     css: ["~/assets/css/tailwind.css"],
     vite: {
-        plugins: [tailwindcss()],
+        plugins: [
+            tailwindcss(),
+            {
+                ...nodePolyfills({
+                    globals: {
+                        process: true,
+                        Buffer: true,
+                        global: true,
+                    },
+                }),
+                apply(_, { isSsrBuild }) {
+                    return !isSsrBuild;
+                },
+            },
+        ],
         optimizeDeps: {
             include: [
                 "zod",
