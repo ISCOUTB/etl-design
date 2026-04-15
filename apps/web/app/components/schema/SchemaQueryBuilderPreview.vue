@@ -15,7 +15,7 @@
         [
             {
                 meta: {
-                    label: "projects.id.sections.query_builder.output.sql",
+                    label: "projects.id.sections.query_builder.preview.sql",
                     value: "sql",
                 },
                 component: () => import("@/components/common/code-block/CodeBlock.vue"),
@@ -25,7 +25,7 @@
             },
             {
                 meta: {
-                    label: "projects.id.sections.query_builder.output.native",
+                    label: "projects.id.sections.query_builder.preview.native",
                     value: "native",
                 },
                 component: () => import("@/components/common/code-block/CodeBlock.vue"),
@@ -36,7 +36,7 @@
             },
             {
                 meta: {
-                    label: "projects.id.sections.query_builder.output.tree",
+                    label: "projects.id.sections.query_builder.preview.tree",
                     value: "tree",
                 },
                 component: () => import("@/components/common/code-block/CodeBlock.vue"),
@@ -58,9 +58,9 @@
 <template>
     <Card>
         <CardHeader>
-            <CardTitle>{{ $t("projects.id.sections.query_builder.cards.output.title") }}</CardTitle>
+            <CardTitle>{{ $t("projects.id.sections.query_builder.cards.preview.title") }}</CardTitle>
             <CardDescription>
-                {{ $t("projects.id.sections.query_builder.cards.output.description") }}
+                {{ $t("projects.id.sections.query_builder.cards.preview.description") }}
             </CardDescription>
         </CardHeader>
         <CardContent>

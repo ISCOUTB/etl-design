@@ -1,6 +1,7 @@
 import type { LucideIcon, LucideProps } from "lucide-vue-next";
 import { RouteLocationRaw } from "vue-router";
 import { FunctionalComponent, AllowedComponentProps, VNodeProps } from "vue";
+import type { DialogRootProps } from "reka-ui";
 
 declare global {
     namespace Components {
@@ -41,12 +42,14 @@ declare global {
                 currentKind: Components.Modal.Kind;
                 open: boolean;
                 componentProps: object;
+                containerProps: object;
             }
 
             interface Args<C extends Component> {
                 loader: Components.ComponentLoader<C>;
                 kind?: Components.Modal.Kind;
                 props?: Components.ComponentProps<C>;
+                containerProps?: DialogRootProps;
                 key: string;
             }
         }

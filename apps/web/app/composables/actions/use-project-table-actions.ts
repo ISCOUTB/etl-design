@@ -3,6 +3,7 @@ import type { JsonSchema, MongoRaw, ResponseProject } from "~~/shared/utils/sche
 export default function () {
     const { $api } = useNuxtApp();
     const [loading] = useToggle(false);
+    const { $logger } = useNuxtApp();
 
     async function handleSchemaTransition(
         projectId: ResponseProject["id"],
@@ -32,6 +33,9 @@ export default function () {
     ) {
         loading.value = true;
 
+        const executeSQL = Boolean(project.db_host && project.db_port);
+        $logger.info(`execute_sql ${executeSQL}`);
+
         try {
             const response = await $api("/uploads/table-excel", {
                 method: "POST",
@@ -42,7 +46,7 @@ export default function () {
                     .append("dtypes_str", JSON.stringify(dtypes))
                     .build(),
                 query: {
-                    execute_sql: Boolean(project.db_host && project.db_port),
+                    execute_sql: executeSQL,
                 },
             });
 
@@ -55,12 +59,15 @@ export default function () {
     async function uploadSchema(project: ResponseProject, tableName: string, schema: JsonSchema) {
         loading.value = true;
 
+        const executeSQL = Boolean(project.db_host && project.db_port);
+        $logger.info(`execute_sql ${executeSQL}`);
+
         try {
             const response = await $api("/uploads/table-json", {
                 method: "POST",
                 body: SchemaUtils.Builder.buildJsonSchema(tableName, project.id, schema, []),
                 query: {
-                    execute_sql: Boolean(project.db_host && project.db_port),
+                    execute_sql: executeSQL,
                 },
             });
 

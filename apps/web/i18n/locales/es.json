@@ -587,8 +587,8 @@
                             "title": "Opciones",
                             "description": "Configura ORDER BY y LIMIT para esta consulta."
                         },
-                        "output": {
-                            "title": "Salida",
+                        "preview": {
+                            "title": "Previsualizacion",
                             "description": "Inspecciona SQL, salida nativa de knex y arbol de consulta."
                         }
                     },
@@ -648,7 +648,7 @@
                         "multi_values": "val1, val2, ...",
                         "order_none": "Sin orden"
                     },
-                    "output": {
+                    "preview": {
                         "sql": "SQL",
                         "native": "Nativo",
                         "tree": "Arbol"

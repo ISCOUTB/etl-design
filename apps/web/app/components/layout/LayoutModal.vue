@@ -8,6 +8,7 @@
         <Sheet
             v-if="modal.state.value.currentKind === 'sheet' && canRender"
             v-model:open="modal.state.value.open"
+            v-bind="modal.state.value.containerProps"
         >
             <component
                 :is="modal.currentComponent.value"
@@ -19,6 +20,7 @@
         <Dialog
             v-if="modal.state.value.currentKind === 'dialog' && canRender"
             v-model:open="modal.state.value.open"
+            v-bind="modal.state.value.containerProps"
         >
             <component
                 :is="modal.currentComponent.value"
@@ -30,6 +32,7 @@
         <AlertDialog
             v-if="modal.state.value.currentKind === 'alert-dialog' && canRender"
             v-model:open="modal.state.value.open"
+            v-bind="modal.state.value.containerProps"
         >
             <component
                 :is="modal.currentComponent.value"
@@ -41,6 +44,7 @@
         <Drawer
             v-if="modal.state.value.currentKind === 'drawer' && canRender"
             v-model:open="modal.state.value.open"
+            v-bind="modal.state.value.containerProps"
         >
             <component
                 :is="modal.currentComponent.value"

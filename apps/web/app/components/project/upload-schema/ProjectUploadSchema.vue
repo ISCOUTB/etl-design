@@ -177,7 +177,7 @@
 
                 toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
                     description: $t(
-                        "projects.id.sections.schema.events.table_created.description",
+                        "projects.id.sections.upload_schema.events.table_created.description",
                         {
                             tab: $t("projects.id.sections.tables.tab"),
                         },

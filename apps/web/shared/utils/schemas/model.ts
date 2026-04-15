@@ -1,4 +1,3 @@
-import type { GroupNode as _GNode } from "@/composables/components/use-query-builder";
 import { z } from "zod";
 
 export const ModelResponse = z.object({
@@ -39,7 +38,7 @@ export const ColumnSelection = z.object({
     col: z.coerce.string(),
 });
 
-export const GroupNode: z.ZodType<_GNode> = z.lazy(() =>
+export const GroupNode: z.ZodType<Components.QueryBuilder.Nodes.GroupNode> = z.lazy(() =>
     z.object({
         id: z.coerce.string(),
         type: z.literal("group"),

@@ -80,26 +80,35 @@
                 </Item>
             </CardHeader>
             <CardContent class="h-9">
-                <Select
-                    :model-value="selectedSchemaName"
-                    :disabled="!tables.state.value.tableSchemas.length"
-                    @update:model-value="onSchemaChange($event?.toString())"
-                >
-                    <SelectTrigger class="w-64">
-                        <SelectValue
-                            :placeholder="
-                                $t('projects.id.sections.query_builder.schema.placeholder')
-                            "
-                        />
-                    </SelectTrigger>
-                    <SelectContent :body-lock="false">
-                        <template v-for="table in tables.state.value.tableSchemas" :key="table.id">
-                            <SelectItem :value="table.import_name">
-                                {{ TableUtils.getTableName(table.import_name) }}
-                            </SelectItem>
-                        </template>
-                    </SelectContent>
-                </Select>
+                <ClientOnly>
+                    <Select
+                        :model-value="selectedSchemaName"
+                        :disabled="!tables.state.value.tableSchemas.length"
+                        @update:model-value="onSchemaChange($event?.toString())"
+                    >
+                        <SelectTrigger class="w-64">
+                            <SelectValue
+                                :placeholder="
+                                    $t('projects.id.sections.query_builder.schema.placeholder')
+                                "
+                            />
+                        </SelectTrigger>
+                        <SelectContent :body-lock="false">
+                            <template
+                                v-for="table in tables.state.value.tableSchemas"
+                                :key="table.id"
+                            >
+                                <SelectItem :value="table.import_name">
+                                    {{ TableUtils.getTableName(table.import_name) }}
+                                </SelectItem>
+                            </template>
+                        </SelectContent>
+                    </Select>
+
+                    <template #fallback>
+                        <Skeleton class="h-9 w-64" />
+                    </template>
+                </ClientOnly>
             </CardContent>
         </Card>
 

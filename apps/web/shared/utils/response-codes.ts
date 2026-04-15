@@ -29,8 +29,13 @@ export const ResponseCodesRecord = {
             Schema: {
                 NoFileProvided: "error:project:schema:no-file-provided",
             },
+            MissingConnectionParams: "error:project:connection-invalid",
+            InvalidParams: "error:projectr:invalid-params",
+            CouldNotConnect: "error:project:",
             QueryBuilder: {
                 GenerateError: "error:project:query-builder:generate-error",
+                InvalidColumns: "error:project:query-builder:invalid-columns",
+                InvalidOrderBY: "error:project:query-builder:invalid-order-by",
             },
         },
     },

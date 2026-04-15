@@ -1,4 +1,4 @@
-import type { JsonSchema } from "#shared/utils/schemas/types";
+import type { Dtype, JsonSchema } from "#shared/utils/schemas/types";
 import type { Knex } from "knex";
 import { v7 } from "uuid";
 
@@ -27,6 +27,49 @@ export const QB_OPS_BY_PG: Record<string, Components.QueryBuilder.Operators.Cond
     boolean: ["=", "!=", "IS NULL", "IS NOT NULL"],
     jsonb: ["IS NULL", "IS NOT NULL"],
 };
+
+export const QB_NO_VALUE_OPS = new Set<Components.QueryBuilder.Operators.ConditionOperator>([
+    "IS NULL",
+    "IS NOT NULL",
+]);
+
+export const QB_MULTI_VALUE_OPS = new Set<Components.QueryBuilder.Operators.ConditionOperator>([
+    "IN",
+    "NOT IN",
+]);
+
+function standardizeWhereNode(
+    node: Components.QueryBuilder.Nodes.GroupNode,
+    standardize: (string: string) => string,
+): Components.QueryBuilder.Nodes.GroupNode;
+function standardizeWhereNode(
+    node: Components.QueryBuilder.Nodes.ConditionNode,
+    standardize: (string: string) => string,
+): Components.QueryBuilder.Nodes.ConditionNode;
+function standardizeWhereNode(
+    node: Components.QueryBuilder.Nodes.QueryNode,
+    standardize: (string: string) => string,
+): Components.QueryBuilder.Nodes.QueryNode;
+function standardizeWhereNode(
+    node: Components.QueryBuilder.Nodes.QueryNode,
+    standardize: (string: string) => string,
+): Components.QueryBuilder.Nodes.QueryNode {
+    if (node.type === "group" && Array.isArray(node.children)) {
+        return {
+            ...node,
+            children: node.children.map((child) => standardizeWhereNode(child, standardize)),
+        };
+    }
+
+    if (node.type === "condition") {
+        return {
+            ...node,
+            col: standardize(node.col),
+        };
+    }
+
+    return node;
+}
 
 export const QueryBuilderUtils = {
     options: {
@@ -107,10 +150,12 @@ export const QueryBuilderUtils = {
                     builder.where((sub) => QueryBuilderUtils.knex.applyGroup(sub, node));
                     return;
                 }
+
                 if (useOr) {
                     builder.orWhere((sub) => QueryBuilderUtils.knex.applyGroup(sub, node));
                     return;
                 }
+
                 builder.andWhere((sub) => QueryBuilderUtils.knex.applyGroup(sub, node));
             });
         },
@@ -229,5 +274,113 @@ export const QueryBuilderUtils = {
                 dtype: def.type,
             }),
         );
+    },
+
+    validate: {
+        scalarByType(dtype: Dtype, value: string, onError: () => void) {
+            if (dtype === "integer") {
+                if (!/^-?\d+$/.test(value)) {
+                    onError();
+                }
+                return;
+            }
+
+            if (dtype === "float" || dtype === "double") {
+                if (!Number.isFinite(Number(value))) {
+                    onError();
+                }
+                return;
+            }
+
+            if (dtype === "boolean") {
+                if (!["true", "false", "1", "0"].includes(value.toLowerCase())) {
+                    onError();
+                }
+            }
+        },
+
+        node(
+            node: Components.QueryBuilder.Nodes.QueryNode,
+            columnsByName: Map<string, Components.QueryBuilder.KnexColumn>,
+            onError: () => void,
+        ) {
+            if (node.type === "group") {
+                for (const child of node.children) {
+                    QueryBuilderUtils.validate.node(child, columnsByName, onError);
+                }
+
+                return;
+            }
+
+            const column = columnsByName.get(node.col);
+            if (!column) {
+                throw createError({
+                    status: 400,
+                    statusText: ResponseCodesRecord.Server.Project.QueryBuilder.InvalidColumns,
+                });
+            }
+
+            const allowedOps = QueryBuilderUtils.options.forColumn(column);
+            if (!allowedOps.includes(node.op)) {
+                onError();
+            }
+
+            if (QB_NO_VALUE_OPS.has(node.op)) {
+                return;
+            }
+
+            const raw = node.val.trim() ?? "";
+            if (!raw.length) {
+                onError();
+            }
+
+            if (QB_MULTI_VALUE_OPS.has(node.op)) {
+                const values = raw
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean);
+
+                if (!values.length) {
+                    onError();
+                }
+
+                for (const value of values) {
+                    QueryBuilderUtils.validate.scalarByType(column.dtype, value, onError);
+                }
+
+                return;
+            }
+
+            QueryBuilderUtils.validate.scalarByType(column.dtype, raw, onError);
+        },
+
+        groupNode(
+            columns: Components.QueryBuilder.KnexColumn[],
+            tree: Components.QueryBuilder.Nodes.GroupNode,
+        ) {
+            const columnsByName = new Map(columns.map((column) => [column.name, column]));
+
+            function panic() {
+                throw createError({
+                    status: 400,
+                    statusText: ResponseCodesRecord.Server.BadPayload,
+                });
+            }
+
+            QueryBuilderUtils.validate.node(tree, columnsByName, panic);
+        },
+    },
+
+    standardize: {
+        normalize(string: string): string {
+            return string
+                .toLowerCase()
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036F]/g, "")
+                .replace(/\s+/g, "_");
+        },
+
+        where: standardizeWhereNode,
     },
 };

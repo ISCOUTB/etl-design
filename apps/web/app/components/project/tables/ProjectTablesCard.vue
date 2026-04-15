@@ -99,7 +99,7 @@
                         props: {
                             table: table.value,
                             projectId: state.project.value.id,
-                            kind: "revert",
+                            kind: "delete",
                         },
                     });
                 },
@@ -170,7 +170,11 @@
                             <Tooltip :delay-duration="800">
                                 <TooltipProvider>
                                     <TooltipTrigger as-child>
-                                        <Button variant="ghost" size="icon" @click="action.action">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            @click.stop="action.action"
+                                        >
                                             <component :is="action.icon" />
                                         </Button>
                                     </TooltipTrigger>

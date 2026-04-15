@@ -217,7 +217,7 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
                 return null;
             }
             return {
-                table: TableUtils.getTableName(importName.value),
+                table: importName.value,
                 select: selectedCols.value.length ? selectedCols.value.map((c) => c.col) : ["*"],
                 where: whereTree.value,
                 orderBy: orderBy.value.col ? orderBy.value : null,

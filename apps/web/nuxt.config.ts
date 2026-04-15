@@ -244,6 +244,9 @@ export default defineNuxtConfig({
         experimental: {
             websocket: true,
         },
+        imports: {
+            dirs: ["./shared/utils/**/!(*test|*.spec).{ts,js,mjs,mts}"],
+        },
         devProxy: {
             "/sw.js": { target: "/sw.js" },
         },

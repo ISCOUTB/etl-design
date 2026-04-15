@@ -587,8 +587,8 @@
                             "title": "Options",
                             "description": "Configure ORDER BY and LIMIT for this query."
                         },
-                        "output": {
-                            "title": "Output",
+                        "preview": {
+                            "title": "Preview",
                             "description": "Inspect SQL, native output, and query tree."
                         }
                     },
@@ -648,7 +648,7 @@
                         "multi_values": "val1, val2, ...",
                         "order_none": "No order"
                     },
-                    "output": {
+                    "preview": {
                         "sql": "SQL",
                         "native": "Native",
                         "tree": "Tree"
