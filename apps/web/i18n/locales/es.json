@@ -570,6 +570,10 @@
                         "placeholder": "Selecciona un esquema",
                         "empty": "Aún no hay esquemas disponibles. Sube o crea uno primero."
                     },
+                    "schema_empty": {
+                        "title": "Aún no hay esquemas configurados",
+                        "description": "Sube o crea un esquema antes de usar el constructor SQL."
+                    },
                     "cards": {
                         "columns": {
                             "title": "Columnas",

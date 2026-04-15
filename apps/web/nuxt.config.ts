@@ -32,6 +32,7 @@ export default defineNuxtConfig({
                 "ajv", // CJS
                 "class-variance-authority",
                 "vaul-vue",
+                "knex", // CJS
             ],
         },
         server: {

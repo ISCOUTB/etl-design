@@ -1,7 +1,11 @@
 <script setup lang="ts">
-    import { RotateCcw } from "lucide-vue-next";
+    import { RotateCcw, Table2, Upload } from "lucide-vue-next";
 
-    const { tables, queryBuilder } = useProject();
+    const {
+        state: { VIEWS },
+        tables,
+        queryBuilder,
+    } = useProject();
 
     const qb = useProvideQueryBuilder(queryBuilder.state.schema);
     const selectedSchemaName = computed(() => queryBuilder.state.schema.value?.import_name ?? "");
@@ -78,6 +82,7 @@
             <CardContent class="space-y-4">
                 <Select
                     :model-value="selectedSchemaName"
+                    :disabled="!tables.state.value.tableSchemas.length"
                     @update:model-value="onSchemaChange($event?.toString())"
                 >
                     <SelectTrigger class="w-64">
@@ -97,13 +102,50 @@
                 </Select>
             </CardContent>
         </Card>
+
         <template v-if="queryBuilder.state.schema.value">
             <SchemaQueryBuilder />
         </template>
         <template v-else>
-            <p class="text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.query_builder.schema.empty") }}
-            </p>
+            <Card>
+                <CardHeader>
+                    <CardTitle />
+                    <CardDescription />
+                </CardHeader>
+                <CardContent>
+                    <Empty>
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <Table2 />
+                            </EmptyMedia>
+                            <EmptyTitle>
+                                {{ $t("projects.id.sections.query_builder.schema_empty.title") }}
+                            </EmptyTitle>
+                            <EmptyDescription>
+                                {{
+                                    $t(
+                                        "projects.id.sections.query_builder.schema_empty.description",
+                                    )
+                                }}
+                            </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent>
+                            <Button
+                                variant="outline"
+                                class="cursor-pointer"
+                                @click="
+                                    events.emit('event:projects:change-tab', {
+                                        value: VIEWS.UploadFile,
+                                    })
+                                "
+                            >
+                                <Upload />
+                                {{ $t("projects.id.sections.upload_schema.tab") }}
+                            </Button>
+                        </EmptyContent>
+                    </Empty>
+                </CardContent>
+            </Card>
         </template>
     </div>
 </template>

@@ -570,6 +570,10 @@
                         "placeholder": "Select a schema",
                         "empty": "No schema available yet. Upload or create one first."
                     },
+                    "schema_empty": {
+                        "title": "No schemas configured yet",
+                        "description": "Upload or create a schema before using the query builder."
+                    },
                     "cards": {
                         "columns": {
                             "title": "Columns",
