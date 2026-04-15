@@ -162,7 +162,7 @@ export const [useProvideQueryBuilderApi, _useQueryBuilderApi] = createInjectionS
         }
 
         function reset() {
-            selectedCols.value = [];
+            selectAllColumns();
             whereTree.value = QueryBuilderUtils.tree.makeGroup("AND");
             orderBy.value = { col: "", dir: "ASC" };
             limit.value = 0;

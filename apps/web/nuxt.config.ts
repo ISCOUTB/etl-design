@@ -33,6 +33,7 @@ export default defineNuxtConfig({
                 "class-variance-authority",
                 "vaul-vue",
                 "knex", // CJS
+                "filesize",
             ],
         },
         server: {

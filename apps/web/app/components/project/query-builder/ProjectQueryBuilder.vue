@@ -79,7 +79,7 @@
                     </ItemActions>
                 </Item>
             </CardHeader>
-            <CardContent class="space-y-4">
+            <CardContent class="h-9">
                 <Select
                     :model-value="selectedSchemaName"
                     :disabled="!tables.state.value.tableSchemas.length"
@@ -103,49 +103,61 @@
             </CardContent>
         </Card>
 
-        <template v-if="queryBuilder.state.schema.value">
-            <SchemaQueryBuilder />
-        </template>
-        <template v-else>
-            <Card>
-                <CardHeader>
-                    <CardTitle />
-                    <CardDescription />
-                </CardHeader>
-                <CardContent>
-                    <Empty>
-                        <EmptyHeader>
-                            <EmptyMedia variant="icon">
-                                <Table2 />
-                            </EmptyMedia>
-                            <EmptyTitle>
-                                {{ $t("projects.id.sections.query_builder.schema_empty.title") }}
-                            </EmptyTitle>
-                            <EmptyDescription>
-                                {{
-                                    $t(
-                                        "projects.id.sections.query_builder.schema_empty.description",
-                                    )
-                                }}
-                            </EmptyDescription>
-                        </EmptyHeader>
-                        <EmptyContent>
-                            <Button
-                                variant="outline"
-                                class="cursor-pointer"
-                                @click="
-                                    events.emit('event:projects:change-tab', {
-                                        value: VIEWS.UploadFile,
-                                    })
-                                "
-                            >
-                                <Upload />
-                                {{ $t("projects.id.sections.upload_schema.tab") }}
-                            </Button>
-                        </EmptyContent>
-                    </Empty>
-                </CardContent>
-            </Card>
-        </template>
+        <ClientOnly>
+            <template v-if="queryBuilder.state.schema.value">
+                <SchemaQueryBuilder />
+            </template>
+            <template v-else>
+                <Card>
+                    <CardContent>
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Table2 />
+                                </EmptyMedia>
+                                <EmptyTitle>
+                                    {{
+                                        $t("projects.id.sections.query_builder.schema_empty.title")
+                                    }}
+                                </EmptyTitle>
+                                <EmptyDescription>
+                                    {{
+                                        $t(
+                                            "projects.id.sections.query_builder.schema_empty.description",
+                                        )
+                                    }}
+                                </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                                <Button
+                                    variant="outline"
+                                    class="cursor-pointer"
+                                    @click="
+                                        events.emit('event:projects:change-tab', {
+                                            value: VIEWS.UploadFile,
+                                        })
+                                    "
+                                >
+                                    <Upload />
+                                    {{ $t("projects.id.sections.upload_schema.tab") }}
+                                </Button>
+                            </EmptyContent>
+                        </Empty>
+                    </CardContent>
+                </Card>
+            </template>
+
+            <template #fallback>
+                <Card v-for="index in 4" :key="index">
+                    <CardHeader class="space-y-1.5">
+                        <Skeleton class="h-4" />
+                        <Skeleton class="h-5" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton class="h-64" />
+                    </CardContent>
+                </Card>
+            </template>
+        </ClientOnly>
     </div>
 </template>
