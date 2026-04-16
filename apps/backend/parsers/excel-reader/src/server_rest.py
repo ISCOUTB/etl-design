@@ -274,6 +274,11 @@ async def insert_sql(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     logger.info(f"Processing SQL insertion for file: {filename}")
+    
+    # FIXME: When overwrite is True, the sql created tries to delete somethings,
+    # but because of the table's indexes and some constraints, it fails. For that reason,
+    # for now the overwrite will be ignored and set to False
+    overwrite = False
     sql_statements = create_sql_for_insertion(
         table_name, file_content, filename, truncate=overwrite
     )
