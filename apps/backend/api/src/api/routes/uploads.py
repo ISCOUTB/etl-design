@@ -26,6 +26,7 @@ from src.exceptions import (
     DtypesInvalidJsonObjectException,
     DtypesInvalidJsonStringException,
     ExcelReaderErrorException,
+    FileContentEmptyException,
     ForbiddenException,
     InvalidDBCredentialsException,
     Psycopg2ErrorException,
@@ -42,7 +43,12 @@ from src.utils import logger
 
 router = APIRouter()
 
-HTTPX_CLIENT = httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS)
+HTTPX_CLIENT = httpx.AsyncClient(
+    timeout=settings.EXCEL_READER_TIMEOUT_SECONDS,
+    verify=False,
+    http2=True,
+    base_url=settings.EXCEL_READER_URL,
+)
 
 
 def _execute_sql_per_sheet(
@@ -215,6 +221,7 @@ async def create_table(
     table_name: Annotated[str, Form()],
     dtypes_str: Annotated[str, Form()],
     execute_sql: bool = True,
+    insert_data: bool = False,
 ) -> CreateTableResponse:
     has_permission = PermissionService.has_permission(
         user=current_user,
@@ -248,6 +255,9 @@ async def create_table(
         raise DtypesInvalidContentException()
 
     fill_spaces = "_"
+    spreadsheet_content = await spreadsheet.read()
+    if not spreadsheet_content:
+        raise FileContentEmptyException()
 
     # Extract trace headers from request state (set by LogsMiddleware)
     headers = {}
@@ -261,12 +271,13 @@ async def create_table(
         if trace_headers.get("baggage"):
             headers["baggage"] = trace_headers["baggage"]
 
+    # Get sql statements to create the table
     response = await HTTPX_CLIENT.post(
-        f"{settings.EXCEL_READER_URL}/parser/excel",
+        "/parser/excel",
         files={
             "spreadsheet": (
                 spreadsheet.filename,
-                await spreadsheet.read(),
+                spreadsheet_content,
                 spreadsheet.content_type,
             )
         },
@@ -291,6 +302,49 @@ async def create_table(
 
     sql_per_sheet = response.json()
 
+    # If the user desired to insert data inmediatly, then do a new request
+    # to excel reader to get the insert statements
+    if insert_data:
+        try:
+            response = await HTTPX_CLIENT.post(
+                "/insert-sql",
+                files={
+                    "spreadsheet": (
+                        spreadsheet.filename,
+                        spreadsheet_content,
+                        spreadsheet.content_type,
+                    )
+                },
+                data={
+                    "table_name": table_name,
+                },
+                params={"overwrite": False},
+                headers=headers,
+            )
+
+            if response.is_error:
+                try:
+                    detail = response.json().get("detail", response.text)
+                except Exception:
+                    detail = response.text
+
+                raise ExcelReaderErrorException(
+                    status_code=response.status_code,
+                    message=f"Excel Reader error: {detail}",
+                )
+
+            insert_sql_per_sheet = response.json()
+            # Merge the create table SQL statements with the insert SQL statements
+            for sheet, insert_sql in insert_sql_per_sheet.items():
+                if sheet in sql_per_sheet:
+                    sql_per_sheet[sheet] += f"\n{insert_sql}"
+                else:
+                    sql_per_sheet[sheet] = insert_sql
+        except Exception as e:
+            raise ExcelReaderErrorException(
+                message=f"Failed to get insert SQL from Excel Reader: {str(e)}"
+            )
+
     # Once the file is parsed and the SQL statements are generated, we can execute them if requested.
     # But, first, is neccesary create the jsonschema instance and save it in the db, because the worker
     # will need it to validate the data before insert it.
@@ -305,9 +359,12 @@ async def create_table(
         sheet_table_names_mapping = {}
         for sheet in sql_per_sheet.keys():
             try:
-                sheet_table_names_mapping[sheet] = table_name_from_create_sql_response(sql_per_sheet[sheet])
+                sheet_table_names_mapping[sheet] = table_name_from_create_sql_response(
+                    sql_per_sheet[sheet]
+                )
             except ValueError:
-                sheet_table_names_mapping[sheet] = sheet  # Fallback to sheet name if parsing fails
+                # Fallback to sheet name if parsing fails
+                sheet_table_names_mapping[sheet] = sheet
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_responses = {}
@@ -331,7 +388,9 @@ async def create_table(
         }
 
         save_schema_response = await SchemaService.save_schema(
-            import_name=get_import_name(project_id=project_id, table_name=table_sheet_name),
+            import_name=get_import_name(
+                project_id=project_id, table_name=table_sheet_name
+            ),
             orig_schema=jsonschema,
             database_client=db_client,
         )
@@ -409,7 +468,7 @@ async def create_table_from_json_schema(
 
     try:
         response = await HTTPX_CLIENT.post(
-            f"{settings.EXCEL_READER_URL}/parser/json",
+            "/parser/json",
             json={
                 "table_name": payload.table_name,
                 "jsonschema": payload.jsonschema,
@@ -438,14 +497,20 @@ async def create_table_from_json_schema(
     sql_per_sheet = response.json()
     if len(sql_per_sheet) == 1:
         table_name_in_sql = list(sql_per_sheet.keys())[0]
-        logger.info(f"Using table name '{table_name_in_sql}' from generated SQL for schema saving and execution.")
+        logger.info(
+            f"Using table name '{table_name_in_sql}' from generated SQL for schema saving and execution."
+        )
     else:
         table_name_in_sql = table_name
-        logger.warning(f"Multiple sheets detected. Using requested table name '{table_name}' for schema saving and execution.")
+        logger.warning(
+            f"Multiple sheets detected. Using requested table name '{table_name}' for schema saving and execution."
+        )
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_response = await SchemaService.save_schema(
-        import_name=get_import_name(project_id=project_id, table_name=table_name_in_sql),
+        import_name=get_import_name(
+            project_id=project_id, table_name=table_name_in_sql
+        ),
         orig_schema=payload.jsonschema,
         database_client=db_client,
     )
