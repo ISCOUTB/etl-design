@@ -344,10 +344,9 @@
                                     {{ $t("projects.create.fields.db_password.label") }}
                                 </FieldLabel>
                                 <InputGroup>
-                                    <InputGroupInput
+                                    <InputPassword
                                         id="dbPassword"
                                         v-bind="field"
-                                        type="password"
                                         placeholder="******"
                                         autocomplete="off"
                                         :default-value="project?.db_password?.toString()"
@@ -450,7 +449,7 @@
         <div class="space-y-4">
             <div class="flex justify-end space-x-4">
                 <Button type="submit" :disabled="loading">
-                    <Spinner v-if="loading" />
+                    <UtilsLoading :loading="loading" />
                     <span>
                         {{ $t("common.actions.save_changes") }}
                     </span>

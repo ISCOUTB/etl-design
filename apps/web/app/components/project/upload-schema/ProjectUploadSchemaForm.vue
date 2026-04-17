@@ -3,6 +3,7 @@
 
     interface Props {
         canSubmit: MaybeRefOrGetter<boolean>;
+        loading: MaybeRefOrGetter<boolean>;
     }
 
     interface Emits {
@@ -10,10 +11,10 @@
     }
 
     const props = defineProps<Props>();
-
     const emit = defineEmits<Emits>();
 
     const canSubmit = computed(() => toValue(props.canSubmit));
+    const loading = computed(() => toValue(props.loading));
 
     const { uploadSchema } = useProject();
 
@@ -66,10 +67,12 @@
                 type="button"
                 variant="ghost"
                 class="cursor-pointer"
-                :disabled="!canSubmit"
+                :disabled="!canSubmit || loading"
                 @click="handleSubmit"
             >
-                <Check />
+                <UtilsLoading :loading="loading">
+                    <Check />
+                </UtilsLoading>
                 <span>
                     {{ $t("projects.id.sections.upload_schema.events.upload_file.confirmation") }}
                 </span>

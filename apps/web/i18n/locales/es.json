@@ -551,9 +551,13 @@
                             "updated": "Actualizado: {when}",
                             "status": {
                                 "failed": "Fallido",
+                                "published": "Publicado",
                                 "completed": "Completado"
                             },
-                            "errors": "Errores",
+                            "fields": {
+                                "errors": "Errores",
+                                "logs": "Registro"
+                            },
                             "events": {
                                 "bad_payload": "Respuesta inválida al cargar las tareas"
                             }

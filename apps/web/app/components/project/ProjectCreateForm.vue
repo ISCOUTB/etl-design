@@ -262,10 +262,9 @@
                                     {{ $t("projects.create.fields.db_password.label") }}
                                 </FieldLabel>
                                 <InputGroup>
-                                    <InputGroupInput
+                                    <InputPassword
                                         id="dbPassword"
                                         v-bind="field"
-                                        type="password"
                                         placeholder="******"
                                         autocomplete="off"
                                         :aria-invalid="!!errors.length"
@@ -337,7 +336,7 @@
 
             <div class="flex justify-end space-x-4">
                 <Button type="submit" :disabled="loading">
-                    <Spinner v-if="loading" />
+                    <UtilsLoading :loading="loading" />
                     <span>
                         {{ $t("projects.create.header.title") }}
                     </span>

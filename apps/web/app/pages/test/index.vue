@@ -1,40 +1,7 @@
-<!-- eslint-disable antfu/consistent-list-newline -->
-<script setup lang="ts">
-    import type { z } from "zod";
-    import type { Column } from "~/components/common/data-table/utils";
-
-    definePageMeta({
-        title: "Test Page",
-        layout: "default",
-        middleware: ["development-only"],
-    });
-
-    const { locale } = useI18n();
-
-    useSeoMeta({
-        robots: "noindex, nofollow",
-        ogTitle: "Test Page",
-        ogLocale: () => locale.value.replace("-", "_"),
-    });
-
-    const columns: Column<z.infer<typeof ResponseProjectSchema>>[] = [
-        { key: "id", label: "ID" },
-        { key: "name", label: "Name" },
-        { key: "provider", label: "Provider" },
-    ];
-    const data = useState("mock-data", () =>
-        Array.from({ length: 10000 }).map((_, index) => mockResponseProjectSchema(index)),
-    );
-</script>
-
 <template>
-    <DataTable :data="data" index="id" :columns="columns" :page-size="10" class="h-screen">
-        <TableCaption>Mock Data</TableCaption>
-        <DataTableHeader />
-        <TableBody>
-            <DataTableVirtualList :row-height="37">
-                <DataTableContent />
-            </DataTableVirtualList>
-        </TableBody>
-    </DataTable>
+    <div>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Adipisci alias modi repellendus
+        cupiditate corrupti deleniti dolorem saepe dolor inventore. Natus optio ratione nam
+        voluptatem dicta eum soluta vero, omnis at?
+    </div>
 </template>

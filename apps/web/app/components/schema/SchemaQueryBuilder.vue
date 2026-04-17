@@ -46,12 +46,9 @@
                         class="cursor-pointer"
                         @click="handleExecute"
                     >
-                        <template v-if="loading">
-                            <Spinner />
-                        </template>
-                        <template v-else>
+                        <UtilsLoading :loading="loading">
                             <Rocket />
-                        </template>
+                        </UtilsLoading>
                         Execute
                     </Button>
                 </div>

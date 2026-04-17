@@ -551,9 +551,13 @@
                             "updated": "Updated: {when}",
                             "status": {
                                 "failed": "Failed",
+                                "published": "Published",
                                 "completed": "Completed"
                             },
-                            "errors": "Errors",
+                            "fields": {
+                                "errors": "Errors",
+                                "logs": "Logs"
+                            },
                             "events": {
                                 "bad_payload": "Invalid response while loading tasks"
                             }

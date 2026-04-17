@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    import { RotateCcw, Trash2 } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
     interface Props {
@@ -44,7 +45,6 @@
             .handleSchemaTransition(props.projectId, table.value?.import_name)
             .then(async () => {
                 await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(props.projectId));
-                handleCloseModal();
 
                 if (props.kind === "delete") {
                     toast.success($t("projects.id.sections.tables.events.table_deleted.title"), {
@@ -62,6 +62,8 @@
                     });
                 }
 
+                handleCloseModal();
+
                 if (props.onSuccess) {
                     await props.onSuccess();
                 }
@@ -78,6 +80,9 @@
 
     const { define: DefineDescription, reuse: ReuseDescription } = createReusableTemplate();
     const { define: DefineInput, reuse: ReuseInput } = createReusableTemplate();
+    const { define: DefineLoader, reuse: ReuseLoader } = createReusableTemplate<{
+        icon: Component;
+    }>();
 </script>
 
 <template>
@@ -117,6 +122,14 @@
         />
     </DefineInput>
 
+    <DefineLoader v-slot="{ icon }">
+        <UtilsLoading :loading="actions.state.loading">
+            <template #default>
+                <component :is="icon" />
+            </template>
+        </UtilsLoading>
+    </DefineLoader>
+
     <ResponsiveModal desktop="alert-dialog" mobile="drawer">
         <template #alert-dialog>
             <AlertDialogContent>
@@ -137,6 +150,7 @@
                             :disabled="!isValid || actions.state.loading.value"
                             @click="handleDelete"
                         >
+                            <ReuseLoader :icon="Trash2" />
                             {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
                         </AlertDialogAction>
                     </template>
@@ -145,6 +159,7 @@
                             :disabled="!isValid || actions.state.loading.value"
                             @click="handleDelete"
                         >
+                            <ReuseLoader :icon="RotateCcw" />
                             {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
                         </AlertDialogAction>
                     </template>
@@ -176,6 +191,7 @@
                                 class="bg-destructive text-white hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
                                 @click="handleDelete"
                             >
+                                <ReuseLoader :icon="Trash2" />
                                 {{ $t("projects.id.sections.tables.card.dropdown.delete") }}
                             </Button>
                         </template>
@@ -185,6 +201,7 @@
                                 :disabled="!isValid || actions.state.loading.value"
                                 @click="handleDelete"
                             >
+                                <ReuseLoader :icon="RotateCcw" />
                                 {{ $t("projects.id.sections.tables.card.dropdown.revert") }}
                             </Button>
                         </template>

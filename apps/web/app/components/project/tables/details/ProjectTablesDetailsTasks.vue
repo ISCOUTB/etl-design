@@ -9,6 +9,7 @@
         tables,
     } = useProject();
     const { t } = useI18n();
+    const { $logger } = useNuxtApp();
 
     const { data: tasks, refresh } = useApiFetch<ProjectTask[]>(
         `/tasks/project/${project.value.id}`,
@@ -21,6 +22,7 @@
                 const _parseResult = ProjectTaskResponse.safeParse(payload);
                 if (!_parseResult.success) {
                     toast.error(t("projects.id.sections.tables.details.tasks.events.bad_payload"));
+                    $logger.info(_parseResult.error);
                     return [];
                 }
 

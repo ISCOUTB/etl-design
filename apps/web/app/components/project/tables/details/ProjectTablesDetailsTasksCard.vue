@@ -2,7 +2,7 @@
     import type { ProjectTask } from "#shared/utils/schemas/types";
     import type { HTMLAttributes, HtmlHTMLAttributes } from "vue";
     import type { BadgeVariants } from "~/components/ui/badge";
-    import { AlertCircle, CheckCircle2 } from "lucide-vue-next";
+    import { AlertCircle, CheckCircle2, Send } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     interface Props {
@@ -33,13 +33,12 @@
     const properties = computed<Properties>(() => {
         if (hasError(props.task)) {
             return {
-                error: true,
                 icon: {
                     component: AlertCircle,
                     class: "text-destructive",
                 },
                 header: {
-                    class: "border-destructive/10",
+                    class: "bg-destructive/5 border-destructive/50",
                 },
                 badge: {
                     variant: "destructive",
@@ -49,8 +48,24 @@
             };
         }
 
+        if (props.task.status === "published") {
+            return {
+                icon: {
+                    component: Send,
+                    class: "text-amber-600",
+                },
+                header: {
+                    class: "bg-amber-500/5 border-amber-500/50",
+                },
+                badge: {
+                    variant: "secondary",
+                    class: "border-amber-500/30 bg-amber-500 text-slate-50",
+                    label: "projects.id.sections.tables.details.tasks.status.published",
+                },
+            };
+        }
+
         return {
-            error: true,
             icon: {
                 component: CheckCircle2,
                 class: "text-emerald-600",
@@ -112,19 +127,27 @@
                     {{ $t(properties.badge.label) }}
                 </Badge>
             </ItemActions>
-            <pre>
-                {{ task }}
-            </pre>
         </Item>
         <Accordion type="multiple" class="px-4">
             <AccordionItem v-if="task.data.error?.length" value="errors">
                 <AccordionTrigger
                     class="hover:no-underline focus-visible:ring-0 px-4 bg-destructive/5 cursor-pointer"
                 >
-                    {{ $t("projects.id.sections.tables.details.tasks.errors") }}
+                    {{ $t("projects.id.sections.tables.details.tasks.fields.errors") }}
                 </AccordionTrigger>
-                <AccordionContent class="mt-2">
+                <AccordionContent class="mt-4">
                     {{ task.data.error }}
+                </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem v-if="task.status === 'published'" value="logs">
+                <AccordionTrigger
+                    class="hover:no-underline focus-visible:ring-0 px-4 bg-amber-500/10 cursor-pointer"
+                >
+                    {{ $t("projects.id.sections.tables.details.tasks.fields.logs") }}
+                </AccordionTrigger>
+                <AccordionContent class="mt-4">
+                    <CodeBlock class="border-amber-500/50" :content="task.data.results" />
                 </AccordionContent>
             </AccordionItem>
         </Accordion>

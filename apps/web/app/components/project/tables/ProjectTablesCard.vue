@@ -57,8 +57,8 @@
             {
                 label: "projects.id.sections.tables.card.dropdown.edit",
                 icon: Edit,
-                action() {
-                    navigateTo(
+                async action() {
+                    await navigateTo(
                         $localeRoute({
                             name: "projects-id-tables-tableName-edit",
                             params: {

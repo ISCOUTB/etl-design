@@ -101,6 +101,8 @@
         }
     }
 
+    const [loading] = useToggle(false);
+
     function _uploadSchema() {
         if (!uploadSchema.state.value.tableName) {
             toast.error($t("projects.id.sections.upload_schema.validation.table_name_not_empty"));
@@ -137,7 +139,8 @@
             .catch((error) => {
                 handleCloseModal();
                 errorToast.handleServer(error);
-            });
+            })
+            .finally(() => (loading.value = false));
     }
 
     function _uploadFile() {
@@ -190,7 +193,8 @@
             .catch((error) => {
                 handleCloseModal();
                 errorToast.handleServer(error);
-            });
+            })
+            .finally(() => (loading.value = false));
     }
 
     function handleUpload(_event: Event) {
@@ -205,6 +209,8 @@
                         errorToast.handle(ResponseCodesRecord.Server.Project.Schema.NoFileProvided);
                         return;
                     }
+
+                    loading.value = true;
 
                     if (uploadSchema.state.value.uploadedFile.type === "json") {
                         _uploadSchema();
@@ -340,6 +346,7 @@
                 <ProjectUploadSchemaForm
                     v-if="selectedFile"
                     :can-submit="canSubmit"
+                    :loading="loading"
                     class="space-y-6"
                     @submit="handleUpload"
                 />
@@ -490,6 +497,7 @@
 
                 <ProjectUploadSchemaForm
                     :can-submit="canSubmit"
+                    :loading="loading"
                     class="space-y-6 disabled:cursor-not-allowed"
                     @submit="handleUpload"
                 />

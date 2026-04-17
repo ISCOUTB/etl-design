@@ -222,6 +222,29 @@ export const ProjectTask = ApiResponse(
             error: z.string().optional(),
             upload_date: z.string(),
             update_date: z.string(),
+            results: z
+                .unknown()
+                .transform<Record<string, unknown> | undefined>((data, ctx) => {
+                    if (data === null || data === undefined) {
+                        return undefined;
+                    }
+
+                    if (typeof data === "string") {
+                        try {
+                            return JSON.parse(data);
+                        } catch {
+                            ctx.addIssue({ code: "custom", message: "Invalid JSON" });
+                            return z.NEVER;
+                        }
+                    }
+
+                    if (typeof data === "object") {
+                        return data as Record<string, unknown>;
+                    }
+
+                    return data;
+                })
+                .optional(),
         })
         .catchall(z.unknown()),
 );

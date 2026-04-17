@@ -172,7 +172,7 @@
     const onSubmit = handleSubmit((values) => {
         loading.value = true;
 
-        $logger.info({
+        const payload = {
             $schema: table.value.active_schema.$schema,
             type: table.value.active_schema.type,
             required: values.columns
@@ -181,23 +181,16 @@
             properties: Object.fromEntries(
                 values.columns.map(({ name, ...options }) => [name, options]),
             ),
-        });
+        };
+
+        $logger.info(`Using payload to update schema: ${payload}`);
 
         $api(`/schemas/${projectId.value}`, {
             method: "POST",
             query: {
                 table_name: values.tableName,
             },
-            body: {
-                $schema: table.value.active_schema.$schema,
-                type: table.value.active_schema.type,
-                required: values.columns
-                    .filter((column) => !column.optional)
-                    .map((column) => column.name),
-                properties: Object.fromEntries(
-                    values.columns.map(({ name, ...options }) => [name, options]),
-                ),
-            },
+            body: payload,
         })
             .then(async () => {
                 await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(projectId.value));
@@ -241,8 +234,10 @@
                         >
                             {{ $t("common.actions.reset") }}
                         </Button>
-                        <Button type="submit" :disabled="!hasColumnChanges || hasErrors">
-                            <Save class="size-4" />
+                        <Button type="submit" :disabled="!hasColumnChanges || hasErrors || loading">
+                            <UtilsLoading :loading="loading">
+                                <Save class="size-4" />
+                            </UtilsLoading>
                             {{ $t("common.actions.save_changes") }}
                         </Button>
                     </div>
