@@ -112,6 +112,9 @@
                     {{ $t(properties.badge.label) }}
                 </Badge>
             </ItemActions>
+            <pre>
+                {{ task }}
+            </pre>
         </Item>
         <Accordion type="multiple" class="px-4">
             <AccordionItem v-if="task.data.error?.length" value="errors">

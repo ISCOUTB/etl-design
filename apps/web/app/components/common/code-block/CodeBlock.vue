@@ -78,7 +78,10 @@
         </template>
 
         <div class="p-4">
-            <pre class="overflow text-xs text-muted-foreground" v-text="parsedContent" />
+            <pre
+                class="overflow-hidden whitespace-pre-wrap break-normal text-xs text-muted-foreground"
+                v-text="parsedContent"
+            />
         </div>
     </div>
 </template>

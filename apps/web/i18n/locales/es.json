@@ -472,7 +472,8 @@
                             "delete": "Eliminar"
                         }
                     },
-                    "default_table_name": "nombre_columna",
+                    "default_table_name": "nombre_columna-{index}",
+                    "default_table_name_base": "nombre_columna",
                     "delete": {
                         "validation": {
                             "delete": "eliminar {value}",
@@ -680,7 +681,8 @@
                         "table_name_format": "El formato no es válido",
                         "column_name_format": "Nombre de columna inválido",
                         "invalid_type": "Tipo no compatible",
-                        "min_columns": "Se requiere al menos {min} columna(s)"
+                        "min_columns": "Se requiere al menos {min} columna(s)",
+                        "duplicated_column": "La columna ya existe"
                     }
                 }
             }

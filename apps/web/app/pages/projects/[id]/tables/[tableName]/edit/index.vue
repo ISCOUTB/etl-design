@@ -84,7 +84,7 @@
         NuxtKeys.Projects.Tables.SharedState(projectId.value, tableName.value),
     );
 
-    const { $api, $localePath } = useNuxtApp();
+    const { $api, $logger, $localePath } = useNuxtApp();
     const { callbackUrl, navigate } = useCallbackUrl(
         $localePath({ name: "projects-id", params: { id: projectId.value } }),
     );
@@ -107,23 +107,81 @@
             }),
         ),
     };
+    const columnsLookup = shallowRef(
+        new Map<string, ColumnDefinition>(
+            initialValues.columns.map((column) => [column.name, column]),
+        ),
+    );
 
     const { EditTableSchema } = useEditTableSchema();
-    const { meta, handleSubmit, resetField, setFieldValue, resetForm } = useForm({
+    const {
+        meta,
+        errors: formErrors,
+        handleSubmit,
+        resetField,
+        setFieldValue,
+        resetForm,
+    } = useForm({
         validationSchema: toTypedSchema(EditTableSchema.value),
         initialValues,
+        validateOnMount: true,
     });
     const { fields, push, remove } = useFieldArray<ColumnDefinition>("columns");
-    const columnsDirty = computed(
+
+    const hasColumnChanges = computed(
         () =>
-            JSON.stringify(fields.value.map((field) => field.value)) ===
+            JSON.stringify(fields.value.map((field) => field.value)) !==
             JSON.stringify(initialValues.columns),
     );
+    const hasErrors = computed(() => {
+        return Object.keys(formErrors.value).some((message) => Boolean(message));
+    });
+
+    function createColumn(): ColumnDefinition {
+        const baseName = $t("projects.id.sections.tables.default_table_name_base");
+
+        const existingNumbers = fields.value
+            .map((f) => {
+                const match = f.value.name.match(new RegExp(`${baseName}-(\\d+)`, "i"));
+                if (match && match[1]) {
+                    return Number.parseInt(match[1], 10);
+                }
+
+                return null;
+            })
+            .filter((n): n is number => n !== null);
+
+        let nextNumber = 1;
+        while (existingNumbers.includes(nextNumber)) {
+            nextNumber++;
+        }
+
+        return {
+            name: $t("projects.id.sections.tables.default_table_name", {
+                index: nextNumber,
+            }),
+            type: "string",
+            optional: false,
+            primary_key: false,
+            unique: false,
+        };
+    }
 
     const errorToast = useErrorToast();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
         loading.value = true;
+
+        $logger.info({
+            $schema: table.value.active_schema.$schema,
+            type: table.value.active_schema.type,
+            required: values.columns
+                .filter((column) => !column.optional)
+                .map((column) => column.name),
+            properties: Object.fromEntries(
+                values.columns.map(({ name, ...options }) => [name, options]),
+            ),
+        });
 
         $api(`/schemas/${projectId.value}`, {
             method: "POST",
@@ -183,7 +241,7 @@
                         >
                             {{ $t("common.actions.reset") }}
                         </Button>
-                        <Button type="submit" :disabled="!meta.dirty || !meta.valid">
+                        <Button type="submit" :disabled="!hasColumnChanges || hasErrors">
                             <Save class="size-4" />
                             {{ $t("common.actions.save_changes") }}
                         </Button>
@@ -252,7 +310,7 @@
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        :disabled="columnsDirty"
+                                        :disabled="!hasColumnChanges"
                                         @click="setFieldValue('columns', initialValues.columns)"
                                     >
                                         <RotateCcw class="size-4" />
@@ -262,18 +320,7 @@
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        @click="
-                                            () =>
-                                                push({
-                                                    name: $t(
-                                                        'projects.id.sections.tables.default_table_name',
-                                                    ),
-                                                    type: 'string',
-                                                    optional: false,
-                                                    primary_key: false,
-                                                    unique: false,
-                                                })
-                                        "
+                                        @click="() => push(createColumn())"
                                     >
                                         <Plus class="size-4" />
                                         {{ $t("projects.id.tables.edit.columns.add") }}
@@ -321,6 +368,7 @@
                                                     class="font-mono text-sm"
                                                     placeholder="column_name"
                                                     :aria-invalid="!!errors.length"
+                                                    :disabled="columnsLookup.has(column.value.name)"
                                                 />
                                                 <FieldError v-if="errors.length" :errors="errors" />
                                             </Field>
@@ -341,7 +389,7 @@
                                         </VeeField>
                                     </div>
                                     <div
-                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                        class="col-span-1 hidden lg:flex items-center justify-center h-full"
                                     >
                                         <VeeField
                                             v-slot="{ handleChange, value }"
@@ -363,7 +411,7 @@
                                         </VeeField>
                                     </div>
                                     <div
-                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                        class="col-span-1 hidden lg:flex items-center justify-center h-full"
                                     >
                                         <VeeField
                                             v-slot="{ handleChange, value }"
@@ -379,7 +427,7 @@
                                         </VeeField>
                                     </div>
                                     <div
-                                        class="col-span-1 hidden lg:flex items-center justify-center pt-2"
+                                        class="col-span-1 hidden lg:flex items-center justify-center h-full"
                                     >
                                         <VeeField
                                             v-slot="{ handleChange, value }"
@@ -394,7 +442,10 @@
                                             />
                                         </VeeField>
                                     </div>
-                                    <div class="col-span-1 flex justify-end pt-2">
+                                    <div
+                                        v-if="!columnsLookup.has(column.value.name)"
+                                        class="col-span-1 flex items-center justify-end pt-2"
+                                    >
                                         <Button
                                             variant="destructive"
                                             size="icon"
