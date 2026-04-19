@@ -206,13 +206,6 @@ export const MongoRawSchema = z.object({
 
 export const MongoGetSchemasResponse = z.object({ schemas: z.array(MongoRawSchema) });
 
-export const API_CONSTANTS = {
-    TASK: {
-        VALIDATION_TASK: "validation",
-        INSERTION_TASK: "insertion",
-    },
-} as const;
-
 export const ProjectTask = ApiResponse(
     z
         .object({

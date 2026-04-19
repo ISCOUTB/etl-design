@@ -18,20 +18,6 @@ const Schema = z.object({
     }),
 });
 
-const ExtraParams = z
-    .string()
-    .nullable()
-    .transform((str) => {
-        try {
-            if (str) {
-                return JSON.parse(str);
-            }
-
-            return {};
-        } catch {}
-    })
-    .pipe(z.record(z.string(), z.unknown()));
-
 export default defineWrappedResponseHandler(async (event) => {
     const logger = Logger.getInstance();
     const session = await getServerSession(event);
@@ -72,7 +58,7 @@ export default defineWrappedResponseHandler(async (event) => {
 
     QueryBuilderUtils.validate.groupNode(columns, tree.where);
 
-    const extraParams = ExtraParams.safeParse(project.db_params);
+    const extraParams = DatabaseExtraParams.safeParse(project.db_params);
     if (!extraParams.success) {
         logger.warn(`could not parse params for project ${projectId}`);
         throw createError({

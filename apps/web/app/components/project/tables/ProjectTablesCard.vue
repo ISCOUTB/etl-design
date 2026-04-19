@@ -43,7 +43,7 @@
     const route = useRoute();
     const config = useAppConfig();
     const events = useAppEvents();
-    const { state, tables } = useProject();
+    const { project, tables } = useProject();
     const actions = computed<Action[]>(() =>
         [
             {
@@ -62,7 +62,7 @@
                         $localeRoute({
                             name: "projects-id-tables-tableName-edit",
                             params: {
-                                id: state.project.value.id,
+                                id: project.value.id,
                                 tableName: TableUtils.getTableName(table.value.import_name),
                             },
                             query: { [config.constants.CALLBACK_KEY]: route.fullPath },
@@ -81,7 +81,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: table.value,
-                            projectId: state.project.value.id,
+                            projectId: project.value.id,
                             kind: "revert",
                         },
                     });
@@ -98,7 +98,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: table.value,
-                            projectId: state.project.value.id,
+                            projectId: project.value.id,
                             kind: "delete",
                         },
                     });

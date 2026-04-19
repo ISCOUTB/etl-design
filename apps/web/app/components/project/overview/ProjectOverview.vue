@@ -13,9 +13,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
 
     const validConnectionString = computed(
         () => project && project.value.db_host && project.value.db_port,

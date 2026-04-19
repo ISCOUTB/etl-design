@@ -1,11 +1,7 @@
 <script setup lang="ts">
     import { RotateCcw, Table2, Upload } from "lucide-vue-next";
 
-    const {
-        state: { VIEWS },
-        tables,
-        queryBuilder,
-    } = useProject();
+    const { VIEWS, tables, queryBuilder } = useProject();
 
     const qb = useProvideQueryBuilder(queryBuilder.state.schema);
     const selectedSchemaName = computed(() => queryBuilder.state.schema.value?.import_name ?? "");

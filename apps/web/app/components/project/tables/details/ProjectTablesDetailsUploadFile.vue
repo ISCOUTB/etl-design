@@ -11,10 +11,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-        tables,
-    } = useProject();
+    const { project, tables } = useProject();
     const selectedFile = computed({
         get() {
             if (tables.state.value.selectedSchema) {

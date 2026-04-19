@@ -4,10 +4,7 @@
     import { ListMinus } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-        tables,
-    } = useProject();
+    const { project, tables } = useProject();
     const { t } = useI18n();
     const { $logger } = useNuxtApp();
 

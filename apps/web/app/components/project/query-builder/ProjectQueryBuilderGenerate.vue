@@ -6,7 +6,7 @@
 
     const { $logger } = useNuxtApp();
     const {
-        state: { project },
+        project,
         tables,
         queryBuilder,
     } = useProject();

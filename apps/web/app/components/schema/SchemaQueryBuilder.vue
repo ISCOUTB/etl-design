@@ -3,9 +3,7 @@
 
     const { $logger } = useNuxtApp();
 
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
     const qb = useQueryBuilder();
     const [loading] = useToggle(false);
     function handleExecute() {

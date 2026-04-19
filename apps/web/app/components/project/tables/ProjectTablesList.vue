@@ -1,10 +1,7 @@
 <script setup lang="ts">
     import { Table2 } from "lucide-vue-next";
 
-    const {
-        state: { VIEWS },
-        tables,
-    } = useProject();
+    const { VIEWS, tables } = useProject();
 
     const events = useAppEvents();
 </script>

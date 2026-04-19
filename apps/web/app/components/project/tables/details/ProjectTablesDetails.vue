@@ -1,10 +1,7 @@
 <script setup lang="ts">
     import { ArrowLeft, Pencil, Table2, Trash2 } from "lucide-vue-next";
 
-    const {
-        state: { project },
-        tables,
-    } = useProject();
+    const { project, tables } = useProject();
 
     const tableName = computed(() => {
         if (!tables.state.value.selectedSchema) {

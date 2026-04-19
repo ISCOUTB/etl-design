@@ -1,9 +1,7 @@
 <script setup lang="ts">
     import { ExternalLink, Pencil, Trash2, TriangleAlert } from "lucide-vue-next";
 
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
 
     const modal = useModal();
     const config = useAppConfig();

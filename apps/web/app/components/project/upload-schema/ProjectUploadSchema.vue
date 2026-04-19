@@ -10,10 +10,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-        uploadSchema,
-    } = useProject();
+    const { project, uploadSchema } = useProject();
 
     const events = useAppEvents();
 

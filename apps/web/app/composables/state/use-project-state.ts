@@ -31,11 +31,9 @@ export const [useProvideProjectState, _useProjectState] = createInjectionState(
         const queryBuilder = useProvideProjectQueryBuilder(project.value, undefined);
 
         return {
-            state: {
-                project,
-                view,
-                VIEWS,
-            },
+            project,
+            view,
+            VIEWS,
             tables,
             uploadSchema,
             queryBuilder,
