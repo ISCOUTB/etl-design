@@ -37,7 +37,7 @@
                 import("@/components/project/query-builder/ProjectQueryBuilderGenerateModal.vue"),
             key: ModalKeys.Projects.QueryBuilder.Generate,
             props: {
-                onSubmit(message) {
+                onSubmit(message: string) {
                     $fetch("/api/schemas/query-builder/generate", {
                         method: "POST",
                         body: {

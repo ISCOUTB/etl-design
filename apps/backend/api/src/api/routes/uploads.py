@@ -404,6 +404,7 @@ async def create_table(
         except InvalidDBCredentialsException:
             raise
         except psycopg2.Error as e:
+            logger.error(e)
             raise Psycopg2ErrorException(
                 message="An error occurred while processing the database operation.\n"
                 f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"

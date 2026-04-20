@@ -1,7 +1,5 @@
 <script setup lang="ts">
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
     const qb = useQueryBuilder();
 
     const view = useState(
@@ -58,7 +56,9 @@
 <template>
     <Card>
         <CardHeader>
-            <CardTitle>{{ $t("projects.id.sections.query_builder.cards.preview.title") }}</CardTitle>
+            <CardTitle>
+                {{ $t("projects.id.sections.query_builder.cards.preview.title") }}
+            </CardTitle>
             <CardDescription>
                 {{ $t("projects.id.sections.query_builder.cards.preview.description") }}
             </CardDescription>

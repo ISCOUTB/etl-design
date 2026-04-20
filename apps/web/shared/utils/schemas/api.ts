@@ -213,8 +213,8 @@ export const ProjectTask = ApiResponse(
             project_id: z.string(),
             import_name: z.string(),
             error: z.string().optional(),
-            upload_date: z.string(),
-            update_date: z.string(),
+            upload_date: z.string().optional(),
+            update_date: z.string().optional(),
             results: z
                 .unknown()
                 .transform<Record<string, unknown> | undefined>((data, ctx) => {

@@ -11,6 +11,7 @@
     import { toast } from "vue-sonner";
 
     const { project, uploadSchema } = useProject();
+    const { $logger } = useNuxtApp();
 
     const events = useAppEvents();
 
@@ -169,11 +170,10 @@
                 project.value,
                 uploadSchema.state.value.tableName,
                 dtypes,
+                uploadSchema.state.value.insertData,
             )
             .then(async () => {
-                if (project.value) {
-                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
-                }
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
 
                 toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
                     description: $t(
@@ -187,9 +187,13 @@
                 handleCloseModal();
                 events.emit("event:schema:table-created", undefined);
             })
-            .catch((error) => {
+            .catch(async (error) => {
                 handleCloseModal();
                 errorToast.handleServer(error);
+
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+
+                $logger.error(error);
             })
             .finally(() => (loading.value = false));
     }

@@ -178,6 +178,12 @@
             "title": "Respuesta de servidor inválida",
             "description": "Los datos recibidos del servidor están mal formados y no pudieron ser procesados. Por favor, inténtalo de nuevo más tarde."
         },
+        "database": {
+            "psycop_exception": {
+                "title": "Error al ejecutar SQL",
+                "description": "Aun puedes visualizar la tabla generada"
+            }
+        },
         "auth": {
             "invalid_credentials": {
                 "title": "Credenciales inválidas"
@@ -433,6 +439,13 @@
                         "title": "Nombre de la tabla",
                         "description": "Configura el nombre de la tabla generada",
                         "placeholder": "usuarios"
+                    },
+                    "form": {
+                        "additional_configurations": "Configuraciones adicionales",
+                        "insert_data": {
+                            "label": "Insertar datos",
+                            "description": "Activa esta opcion para importar las filas del archivo en la tabla justo despues de crear el esquema."
+                        }
                     },
                     "upload": {
                         "title": "¿Estás seguro?",

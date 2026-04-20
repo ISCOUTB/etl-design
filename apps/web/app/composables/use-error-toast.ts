@@ -102,6 +102,13 @@ export default function () {
                 };
             }
 
+            case ResponseCodesRecord.Server.Database.PsycopException: {
+                return {
+                    title: "errors.database.psycop_exception.title",
+                    description: "errors.database.psycop_exception.description",
+                };
+            }
+
             default: {
                 return {
                     title: "errors.unknown.title",

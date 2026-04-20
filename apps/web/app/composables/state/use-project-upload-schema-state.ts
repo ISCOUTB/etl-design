@@ -3,6 +3,7 @@ import type { Column } from "@/components/common/data-table/utils";
 
 interface State {
     tableName: string | undefined;
+    insertData: boolean;
     uploadedFile: Schemas.Schema.UploadedFile | undefined;
     sheetNames: string[];
     columnsConfig: Record<string, ColumnConfig>;
@@ -22,6 +23,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
 
         const state = useState<State>(NuxtKeys.Projects.Schemas.SchemaState(initialId), () => ({
             tableName: undefined,
+            insertData: true,
             uploadedFile: undefined,
             sheetNames: [],
             columnsConfig: {},
@@ -153,6 +155,10 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             state.value.tableName = tableName;
         }
 
+        function setInsertData(value: boolean) {
+            state.value.insertData = value;
+        }
+
         function addSchemaError(error: SchemaError) {
             if (!errors.value.some((e) => e.key === error.key)) {
                 errors.value.push(error);
@@ -222,6 +228,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 setUploadedFile,
                 setColumnDataType,
                 setTableName,
+                setInsertData,
                 setColumnConfig,
                 setColumnUnique,
                 setColumnOptional,

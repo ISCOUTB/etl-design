@@ -38,5 +38,8 @@ export const ResponseCodesRecord = {
                 InvalidOrderBY: "error:project:query-builder:invalid-order-by",
             },
         },
+        Database: {
+            PsycopException: "error:psycopg2-error",
+        },
     },
 } as const;

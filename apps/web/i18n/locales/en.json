@@ -178,6 +178,12 @@
             "title": "Invalid Server Response",
             "description": "The data received from the server was malformed and could not be processed. Please try again later."
         },
+        "database": {
+            "psycop_exception": {
+                "title": "Error while executing SQL",
+                "description": "You can still view the generated table"
+            }
+        },
         "auth": {
             "invalid_credentials": {
                 "title": "Invalid credentials"
@@ -433,6 +439,13 @@
                         "title": "Table Name",
                         "description": "Configure the name of the generated table",
                         "placeholder": "users"
+                    },
+                    "form": {
+                        "additional_configurations": "Additional Configurations",
+                        "insert_data": {
+                            "label": "Insert Data",
+                            "description": "Enable this option to import file rows into the table right after creating the schema."
+                        }
                     },
                     "upload": {
                         "title": "Are you sure?",

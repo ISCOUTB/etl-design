@@ -33,11 +33,13 @@
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
-    const { state, uploadSchema } = useProvideProjectState(projectId.value?.toString());
+    const { VIEWS, project, view, uploadSchema } = useProvideProjectState(
+        projectId.value?.toString(),
+    );
     useSeoMeta({
         title: () =>
             $t("projects.id.title", {
-                projectName: state.project.value?.name,
+                projectName: project.value?.name,
             }),
         description: () => $t("projects.id.description"),
 
@@ -57,7 +59,7 @@
         robots: "noindex, nofollow",
     });
     watchEffect(() => {
-        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = state.project.value.name;
+        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = project.value.name;
     });
 
     const animations = useViewManagerAnimations();
@@ -66,7 +68,7 @@
             {
                 meta: {
                     label: "projects.id.sections.overview.tab",
-                    value: state.VIEWS.value.Overview,
+                    value: VIEWS.value.Overview,
                     icon: Info,
                 },
                 component: () => import("~/components/project/overview/ProjectOverview.vue"),
@@ -75,7 +77,7 @@
             {
                 meta: {
                     label: "projects.id.sections.upload_schema.tab",
-                    value: state.VIEWS.value.UploadFile,
+                    value: VIEWS.value.UploadFile,
                     icon: Upload,
                 },
                 component: () =>
@@ -85,7 +87,7 @@
             {
                 meta: {
                     label: "projects.id.sections.tables.tab",
-                    value: state.VIEWS.value.Tables,
+                    value: VIEWS.value.Tables,
                     icon: Table,
                 },
                 component: () => import("~/components/project/tables/ProjectTables.vue"),
@@ -94,7 +96,7 @@
             {
                 meta: {
                     label: "projects.id.sections.query_builder.tab",
-                    value: state.VIEWS.value.QueryBuilder,
+                    value: VIEWS.value.QueryBuilder,
                     icon: Pickaxe,
                 },
                 component: () =>
@@ -104,28 +106,28 @@
             {
                 meta: {
                     label: "projects.id.sections.settings.tab",
-                    value: state.VIEWS.value.Settings,
+                    value: VIEWS.value.Settings,
                     icon: Settings,
                 },
                 component: () => import("@/components/project/ProjectSettings.vue"),
                 props: {},
             },
         ],
-        { key: "project-views", model: state.view },
+        { key: "project-views", model: view },
     );
 
     watch(
         () => uploadSchema.state.value.uploadedFile,
         (file) => {
             const hasTab = views.computed.filteredViews.value.some(
-                (entry) => entry.meta.value === state.VIEWS.value.File,
+                (entry) => entry.meta.value === VIEWS.value.File,
             );
 
             if (file && !hasTab) {
                 views.dispatch.addView({
                     meta: {
                         label: "projects.id.sections.file.tab",
-                        value: state.VIEWS.value.File,
+                        value: VIEWS.value.File,
                         icon: FileIcon,
                         class: cn(
                             "relative transition-colors",
@@ -149,7 +151,7 @@
             }
 
             if (!file && hasTab) {
-                views.dispatch.removeView(state.VIEWS.value.File);
+                views.dispatch.removeView(VIEWS.value.File);
             }
         },
         { immediate: true },
@@ -158,9 +160,9 @@
     const events = useAppEvents();
     onMounted(() => {
         views.dispatch.preload([
-            state.VIEWS.value.UploadFile,
-            state.VIEWS.value.Tables,
-            state.VIEWS.value.QueryBuilder,
+            VIEWS.value.UploadFile,
+            VIEWS.value.Tables,
+            VIEWS.value.QueryBuilder,
         ]);
         events.on("event:projects:change-tab", ({ value }) => views.dispatch.setActive(value));
     });
@@ -170,14 +172,14 @@
     <div class="mx-auto w-full max-w-5xl">
         <div class="mb-8">
             <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                {{ state.project.value.name }}
+                {{ project.name }}
             </h1>
             <p class="mt-1.5 text-sm text-muted-foreground">
-                {{ state.project.value.description }}
+                {{ project.description }}
             </p>
         </div>
 
-        <Tabs v-model="state.view.value" :default-value="state.VIEWS.value.Overview">
+        <Tabs v-model="view" :default-value="VIEWS.Overview">
             <TabsList>
                 <TabsTrigger
                     v-for="entry in views.computed.filteredViews.value"
