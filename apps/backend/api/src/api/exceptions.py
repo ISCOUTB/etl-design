@@ -107,7 +107,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             "path": str(request.url.path),
             "exception_type": type(exc).__name__,
             "http_status": exc.status_code,
-            "message": exc.message,
+            "error_message": exc.message,
         },
     )
 
