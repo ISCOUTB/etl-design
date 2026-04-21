@@ -51,7 +51,7 @@ tasks:
             - source:deploy-redis
             - source:deploy-rabbit
             - database:run
-            - typechecking:run
+            # - typechecking:run
             - api:run
         preset: server
         options:

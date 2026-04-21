@@ -132,7 +132,7 @@ async def read_excel(
     dtypes_str: str = Form(...),
     table_name: str = Form(...),
     limit: int = 50,
-    fill_spaces: str = " ",
+    fill_spaces: str = "-",
 ) -> Dict[str, str]:
     if settings.EXCEL_READER_DEBUG:
         logger.debug(f"Received file: {spreadsheet.filename}")
@@ -261,6 +261,7 @@ async def insert_sql(
     spreadsheet: UploadFile,
     table_name: str = Form(...),
     overwrite: bool = False,
+    fill_spaces: str = "_",
 ) -> Dict[str, str]:
     if settings.EXCEL_READER_DEBUG:
         logger.debug(f"Received file for SQL insertion: {spreadsheet.filename}")
@@ -274,11 +275,12 @@ async def insert_sql(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     logger.info(f"Processing SQL insertion for file: {filename}")
-    
+
     # FIXME: When overwrite is True, the sql created tries to delete somethings,
     # but because of the table's indexes and some constraints, it fails. For that reason,
     # for now the overwrite will be ignored and set to False
     overwrite = False
+    table_name = standardize_string(table_name, fill_spaces=fill_spaces)
     sql_statements = create_sql_for_insertion(
         table_name, file_content, filename, truncate=overwrite
     )

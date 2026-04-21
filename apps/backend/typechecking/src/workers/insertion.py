@@ -528,7 +528,7 @@ class InsertionWorker:
             response = post_multipart_http(
                 url=settings.EXCEL_READER_INSERT_URL,
                 files=files,
-                data={"table_name": table_name},
+                data={"table_name": table_name, "fill_spaces": "_"},
                 params={"overwrite": overwrite},
                 timeout_seconds=settings.EXCEL_READER_TIMEOUT_SECONDS,
                 logger=logger,

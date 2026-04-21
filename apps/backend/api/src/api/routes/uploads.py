@@ -336,7 +336,7 @@ async def create_table(
                 data={
                     "table_name": table_name,
                 },
-                params={"overwrite": False},
+                params={"overwrite": False, "fill_spaces": fill_spaces},
                 headers=headers,
             )
 
