@@ -106,7 +106,10 @@ def build_sql(
             f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
             f"{col} {dtypes[col]['type']} {extra_statements} ".strip()
         )
-        sql_expression += f" GENERATED ALWAYS AS ({cols[col]['sql']}) STORED"
+        sql_expression += (
+            f" GENERATED ALWAYS AS (({cols[col]['sql']})::{dtypes[col]['type']}) "
+            "STORED"
+        )
         sql_expressions[level].append(
             SQLResponseSQLContent(
                 sql=f"{sql_expression.strip()};", columns=[col]
