@@ -292,9 +292,10 @@ def logical_maps(ast: AST, _) -> CellAST:
     if ast["type"] != "logical":
         raise ValueError("AST must be of type 'logical'")
 
-    value = (
-        str(ast["value"]).lower() == "true"
-    )  # Adjust depending on its received value
+    value = False
+    if str(ast["value"]).lower() in {"true", "1", "yes"}:
+        value = True
+
     return {
         "type": "logical",
         "value": value,
