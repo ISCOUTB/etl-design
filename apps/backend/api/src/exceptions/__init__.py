@@ -34,6 +34,7 @@ from src.exceptions.uploads import (
     DtypesInvalidJsonObjectException,
     DtypesInvalidJsonStringException,
     ExcelReaderErrorException,
+    Psycopg2CouldNotConnectToDatabaseException,
     Psycopg2ErrorException,
     UploadTaskNotFoundException,
 )
@@ -91,6 +92,7 @@ __all__ = [
     "DtypesInvalidJsonObjectException",
     "DtypesInvalidContentException",
     "ExcelReaderErrorException",
+    "Psycopg2CouldNotConnectToDatabaseException",
     "Psycopg2ErrorException",
     "UploadTaskNotFoundException",
 ]

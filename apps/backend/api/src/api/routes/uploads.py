@@ -29,6 +29,7 @@ from src.exceptions import (
     FileContentEmptyException,
     ForbiddenException,
     InvalidDBCredentialsException,
+    Psycopg2CouldNotConnectToDatabaseException,
     Psycopg2ErrorException,
 )
 from src.models import Project
@@ -56,11 +57,27 @@ def _execute_sql_per_sheet(
     uri: str,
     sql_per_sheet: Dict[str, str],
 ) -> None:
-    with psycopg2.connect(uri) as conn:
-        cur = conn.cursor()
-        for _, sql in sql_per_sheet.items():
-            cur.execute(sql)
-        conn.commit()
+    if not uri:
+        raise InvalidDBCredentialsException()
+
+    try:
+        with psycopg2.connect(uri) as conn:
+            cur = conn.cursor()
+            for _, sql in sql_per_sheet.items():
+                cur.execute(sql)
+            conn.commit()
+    # In case of connection issues, we want to raise a specific exception
+    # to return a 503 status code
+    except psycopg2.OperationalError:
+        raise Psycopg2CouldNotConnectToDatabaseException()
+    # For any other psycopg2 error, we raise a generic database operation
+    # error with details for debugging
+    except psycopg2.Error as e:
+        logger.error(f"Database operation failed: {str(e)}")
+        raise Psycopg2ErrorException(
+            message=f"An error occurred while processing the database operation.\n"
+            f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
+        )
 
 
 @router.post("/validate")
@@ -399,17 +416,7 @@ async def create_table(
 
     # Execute the generated SQL statements to create the table in the database if requested
     if execute_sql:
-        try:
-            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
-        except InvalidDBCredentialsException:
-            raise
-        except psycopg2.Error as e:
-            logger.error(e)
-            raise Psycopg2ErrorException(
-                message="An error occurred while processing the database operation.\n"
-                f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
-            )
-
+        _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
@@ -517,16 +524,7 @@ async def create_table_from_json_schema(
     )
 
     if execute_sql:
-        try:
-            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
-        except InvalidDBCredentialsException:
-            raise
-        except psycopg2.Error as e:
-            raise Psycopg2ErrorException(
-                message="An error occurred while processing the database operation.\n"
-                f"Error details: {str(e)}\nSQL attempted: {sql_per_sheet}"
-            )
-
+        _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
