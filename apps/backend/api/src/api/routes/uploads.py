@@ -289,6 +289,7 @@ async def create_table(
             headers["baggage"] = trace_headers["baggage"]
 
     # Get sql statements to create the table
+    logger.info(f"Calling excel-reader with table_name: {table_name}")
     response = await HTTPX_CLIENT.post(
         "/parser/excel",
         files={
@@ -380,8 +381,11 @@ async def create_table(
                     sql_per_sheet[sheet]
                 )
             except ValueError:
-                # Fallback to sheet name if parsing fails
-                sheet_table_names_mapping[sheet] = sheet
+                # Fallback to requested table name if only one sheet is defined in dtypes
+                if len(dtypes) == 1:
+                    sheet_table_names_mapping[sheet] = table_name
+                else:
+                    sheet_table_names_mapping[sheet] = sheet
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_responses = {}

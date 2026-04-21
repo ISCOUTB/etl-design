@@ -83,12 +83,24 @@ def binary_maps(ast: AST, columns: Dict[str, str]) -> BinaryExpressionAST:
         case _:
             operator_sql = ast["operator"]
 
+    left_sql = left["sql"]
+    right_sql = right["sql"]
+
+    # Add numeric casts if the operator is numeric and the operands are not text literals
+    # to avoid "operator does not exist: text >= numeric" errors in PostgreSQL
+    numeric_operators = {"+", "-", "*", "/", ">", "<", ">=", "<=", "=", "<>"}
+    if ast["operator"] in numeric_operators:
+        if left["type"] != "text":
+            left_sql = f"({left_sql})::numeric"
+        if right["type"] != "text":
+            right_sql = f"({right_sql})::numeric"
+
     return {
         "type": "binary-expression",
         "operator": ast["operator"],
         "left": left,
         "right": right,
-        "sql": f"({left['sql']}) {operator_sql} ({right['sql']})",
+        "sql": f"({left_sql}) {operator_sql} ({right_sql})",
     }
 
 
