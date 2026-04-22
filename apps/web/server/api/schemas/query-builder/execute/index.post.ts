@@ -1,3 +1,4 @@
+import type { ResponseProject } from "#shared/utils/schemas/types";
 import { getServerSession } from "#auth";
 import knex from "knex";
 import { z } from "zod";
@@ -18,6 +19,46 @@ const Schema = z.object({
     }),
 });
 
+function resolveClient(project: ResponseProject): knex.Knex {
+    const logger = Logger.getInstance();
+
+    if (project.db_host && project.db_port) {
+        const extraParams = DatabaseExtraParams.safeParse(project.db_params);
+        if (!extraParams.success) {
+            logger.warn(`could not parse params for project ${project.id}`);
+            throw createError({
+                status: 400,
+                statusText: ResponseCodesRecord.Server.Project.InvalidParams,
+            });
+        }
+
+        return knex({
+            client: "pg",
+            connection: {
+                host: project.db_host,
+                port: project.db_port,
+                user: project.db_user ?? undefined,
+                password: project.db_password ?? undefined,
+                database: project.db_name ?? undefined,
+                ...extraParams.data,
+            },
+        });
+    }
+
+    const { database } = useRuntimeConfig();
+
+    return knex({
+        client: "pg",
+        connection: {
+            host: database.default.HOST,
+            port: Number(database.default.PORT),
+            user: database.default.USER,
+            password: database.default.PASSWORD,
+            database: database.default.DB,
+        },
+    });
+}
+
 export default defineWrappedResponseHandler(async (event) => {
     const logger = Logger.getInstance();
     const session = await getServerSession(event);
@@ -30,12 +71,6 @@ export default defineWrappedResponseHandler(async (event) => {
     logger.info(tree);
 
     const project = await ProjectRepository.get(session, projectId);
-    if (!project.db_host || !project.db_port) {
-        throw createError({
-            status: 400,
-            statusMessage: ResponseCodesRecord.Server.Project.MissingConnectionParams,
-        });
-    }
 
     const table = await ProjectRepository.getTable(session, projectId, tree.table);
     const columns = QueryBuilderUtils.mongoSchemaToColumns(table.active_schema);
@@ -58,26 +93,7 @@ export default defineWrappedResponseHandler(async (event) => {
 
     QueryBuilderUtils.validate.groupNode(columns, tree.where);
 
-    const extraParams = DatabaseExtraParams.safeParse(project.db_params);
-    if (!extraParams.success) {
-        logger.warn(`could not parse params for project ${projectId}`);
-        throw createError({
-            status: 400,
-            statusText: ResponseCodesRecord.Server.Project.InvalidParams,
-        });
-    }
-
-    const client = knex({
-        client: "pg",
-        connection: {
-            host: project.db_host,
-            port: project.db_port,
-            user: project.db_user ?? undefined,
-            password: project.db_password ?? undefined,
-            database: project.db_name ?? undefined,
-            ...extraParams.data,
-        },
-    });
+    const client = resolveClient(project);
 
     try {
         client.raw("SELECT 1");

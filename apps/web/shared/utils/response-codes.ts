@@ -31,7 +31,7 @@ export const ResponseCodesRecord = {
             },
             MissingConnectionParams: "error:project:connection-invalid",
             InvalidParams: "error:projectr:invalid-params",
-            CouldNotConnect: "error:project:",
+            CouldNotConnect: "error:project:could-not-connect",
             QueryBuilder: {
                 GenerateError: "error:project:query-builder:generate-error",
                 InvalidColumns: "error:project:query-builder:invalid-columns",

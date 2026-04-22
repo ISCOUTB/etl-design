@@ -103,6 +103,15 @@ export default defineNuxtConfig({
             MODEL_API_KEY: process.env.MODEL_API_KEY,
             MODEL_ENDPOINT: process.env.MODEL_ENDPOINT,
         },
+        database: {
+            default: {
+                HOST: process.env.DEFAULT_PROJECT_POSTGRES_HOST,
+                PORT: process.env.DEFAULT_PROJECT_POSTGRES_PORT,
+                USER: process.env.DEFAULT_PROJECT_POSTGRES_USER,
+                PASSWORD: process.env.DEFAULT_PROJECT_POSTGRES_PASSWORD,
+                DB: process.env.DEFAULT_PROJECT_POSTGRES_DB,
+            },
+        },
     },
 
     ///////////////////////////////////////////////////////
@@ -247,7 +256,7 @@ export default defineNuxtConfig({
     },
 
     ///////////////////////////////////////////////////////
-    // FLAGS
+    // NITRO & FLAGS
     ///////////////////////////////////////////////////////
     experimental: {
         payloadExtraction: false,

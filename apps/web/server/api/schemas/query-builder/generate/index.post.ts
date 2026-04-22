@@ -25,7 +25,7 @@ export default defineWrappedResponseHandler(async (event) => {
     const completion = await $fetch(runtimeConfig.keys.MODEL_ENDPOINT, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ollama`,
+            Authorization: `Bearer ${runtimeConfig.keys.MODEL_API_KEY}`,
             "Content-Type": "application/json",
         },
         body: {
