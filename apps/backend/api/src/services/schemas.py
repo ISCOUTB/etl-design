@@ -68,10 +68,20 @@ class SchemaService:
             extra = {}
             for k, v in prop_info.get("extra", {}).items():
                 try:
+                    # Try loading as JSON (handles "true", "false", numbers, etc.)
                     extra[k] = json.loads(v)
                 except (json.JSONDecodeError, TypeError):
-                    # Fallback for old schemas stored as plain strings
-                    extra[k] = v
+                    # Fallback for old schemas or non-JSON strings
+                    # Special case: handle capitalized booleans from previous bad serialization
+                    if isinstance(v, str):
+                        if v.lower() == "true":
+                            extra[k] = True
+                        elif v.lower() == "false":
+                            extra[k] = False
+                        else:
+                            extra[k] = v
+                    else:
+                        extra[k] = v
 
             api_schema["properties"][prop_name] = {
                 "type": prop_info.get(

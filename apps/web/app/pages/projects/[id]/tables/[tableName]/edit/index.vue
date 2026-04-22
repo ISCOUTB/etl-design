@@ -183,7 +183,7 @@
             ),
         };
 
-        $logger.info(`Using payload to update schema: ${payload}`);
+        $logger.info("Using payload to update schema:", payload);
 
         $api(`/schemas/${projectId.value}`, {
             method: "POST",

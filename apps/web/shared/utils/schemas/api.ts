@@ -148,10 +148,24 @@ export const SpreadsheetDtypesSchema = z.discriminatedUnion("dtype", [
 
 export const ColumnDtypesSchema = z.record(z.string(), SpreadsheetDtypesSchema);
 
+const BooleanSchema = z.preprocess((value) => {
+    if (typeof value === "string") {
+        if (value.toLowerCase() === "true") {
+            return true;
+        }
+
+        if (value.toLowerCase() === "false") {
+            return false;
+        }
+    }
+
+    return value;
+}, z.boolean());
+
 export const JsonSchemaPropertyConstraints = z.object({
-    unique: z.coerce.boolean().optional(),
-    optional: z.coerce.boolean().optional(),
-    primary_key: z.coerce.boolean().optional(),
+    unique: BooleanSchema.optional(),
+    optional: BooleanSchema.optional(),
+    primary_key: BooleanSchema.optional(),
 });
 
 export const JsonSchema = z.preprocess(
