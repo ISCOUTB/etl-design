@@ -367,21 +367,32 @@ async def create_table(
     # But, first, is neccesary create the jsonschema instance and save it in the db, because the worker
     # will need it to validate the data before insert it.
 
-    if len(sql_per_sheet) == 1:
-        sheet_table_names_mapping = {}
+    # Match table name for each sheet to ensure correct import_name and schema saving.
+    # The mapping logic handles both single-sheet and multi-sheet scenarios.
+    sheet_table_names_mapping = {}
+
+    if len(dtypes) == 1:
+        # Case 1: Single sheet upload.
+        # We explicitly map the only sheet in dtypes to the requested table_name.
+        # This is the most common case and prevents "Sheet1" defaulting issues.
         sheet_name = list(dtypes.keys())[0]
-        if sheet_name != table_name:
-            sheet_table_names_mapping[sheet_name] = table_name
+        sheet_table_names_mapping[sheet_name] = table_name
+    elif len(sql_per_sheet) == 1:
+        # Case 2: Only one SQL statement generated (fallback).
+        # Map the first sheet in dtypes to the table_name requested.
+        sheet_name = list(dtypes.keys())[0]
+        sheet_table_names_mapping[sheet_name] = table_name
     else:
-        # Match table name for each sheet
-        sheet_table_names_mapping = {}
+        # Case 3: Multi-sheet upload.
+        # We try to extract table names from the CREATE TABLE statements in each sheet's SQL.
         for sheet in sql_per_sheet.keys():
             try:
-                sheet_table_names_mapping[sheet] = table_name_from_create_sql_response(
-                    sql_per_sheet[sheet]
-                )
+                # Attempt to extract table name from SQL (e.g., "CREATE TABLE foobar")
+                extracted_name = table_name_from_create_sql_response(sql_per_sheet[sheet])
+                sheet_table_names_mapping[sheet] = extracted_name
             except ValueError:
-                # Fallback to requested table name if only one sheet is defined in dtypes
+                # Fallback: if we can't extract, use the sheet name or global table_name
+                # if there is a clear 1-to-1 relationship.
                 if len(dtypes) == 1:
                     sheet_table_names_mapping[sheet] = table_name
                 else:
