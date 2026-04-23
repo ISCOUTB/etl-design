@@ -1,7 +1,7 @@
 <script setup lang="ts">
-    import { RotateCcw, Table2, Upload } from "lucide-vue-next";
+    import { Grid2x2X, RotateCcw, Table2, Upload } from "lucide-vue-next";
 
-    const { VIEWS, tables, queryBuilder } = useProject();
+    const { VIEWS, tables, queryBuilder, uploadSchema } = useProject();
 
     const qb = useProvideQueryBuilder(queryBuilder.state.schema);
 
@@ -9,6 +9,17 @@
         "table",
         queryBuilder.state.schema.value?.import_name ?? "",
     );
+
+    const columns = computed(() => {
+        if (!queryBuilder.state.rows.value.length) {
+            return [];
+        }
+
+        return uploadSchema.dispatch.toColumns(
+            queryBuilder.state.rows.value,
+            NuxtKeys.Projects.Schemas.RowId,
+        );
+    });
 
     watchEffect(() => {
         const list = tables.state.value.tableSchemas;
@@ -123,7 +134,66 @@
 
         <ClientOnly>
             <template v-if="queryBuilder.state.schema.value">
-                <SchemaQueryBuilder />
+                <SchemaQueryBuilder :rows="queryBuilder.state.rows">
+                    <template #output="{ rows, loading }">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>
+                                    {{ $t("projects.id.sections.query_builder.output.title") }}
+                                </CardTitle>
+                                <CardDescription>
+                                    {{
+                                        $t("projects.id.sections.query_builder.output.description")
+                                    }}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <template v-if="loading">
+                                    <div class="flex justify-center items-center h-32">
+                                        <Spinner />
+                                    </div>
+                                </template>
+
+                                <template v-else>
+                                    <DataTable
+                                        v-if="rows.length > 0"
+                                        :index="NuxtKeys.Projects.Schemas.RowId"
+                                        :data="rows"
+                                        :columns="columns"
+                                    >
+                                        <DataTableHeader />
+                                        <TableBody>
+                                            <DataTableVirtualList :row-height="37">
+                                                <DataTableContent />
+                                            </DataTableVirtualList>
+                                        </TableBody>
+                                    </DataTable>
+                                    <Empty v-else>
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <Grid2x2X />
+                                            </EmptyMedia>
+                                            <EmptyTitle>
+                                                {{
+                                                    $t(
+                                                        "projects.id.sections.query_builder.output.empty.title",
+                                                    )
+                                                }}
+                                            </EmptyTitle>
+                                            <EmptyDescription>
+                                                {{
+                                                    $t(
+                                                        "projects.id.sections.query_builder.output.empty.description",
+                                                    )
+                                                }}
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                    </Empty>
+                                </template>
+                            </CardContent>
+                        </Card>
+                    </template>
+                </SchemaQueryBuilder>
             </template>
             <template v-else>
                 <Card>
@@ -166,7 +236,7 @@
             </template>
 
             <template #fallback>
-                <Card v-for="index in 4" :key="index">
+                <Card v-for="index in 5" :key="index">
                     <CardHeader class="space-y-1.5">
                         <Skeleton class="h-4" />
                         <Skeleton class="h-5" />

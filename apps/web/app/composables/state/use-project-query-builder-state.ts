@@ -5,6 +5,11 @@ export const [useProvideProjectQueryBuilder, useProjectQueryBuilderState] = crea
             () => _schema,
         );
 
-        return { state: { schema } };
+        const rows = useState<Record<string, unknown>[]>(
+            NuxtKeys.Projects.QueryBuilder.Rows(project.id),
+            () => [],
+        );
+
+        return { state: { schema, rows } };
     },
 );

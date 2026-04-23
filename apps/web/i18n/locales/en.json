@@ -663,6 +663,19 @@
                             }
                         }
                     },
+                    "execute": {
+                        "title": "Execute Query",
+                        "description": "Run the current query and load the resulting rows.",
+                        "button": "Execute"
+                    },
+                    "output": {
+                        "title": "Rows",
+                        "description": "Inspect the rows returned by the last execution.",
+                        "empty": {
+                            "title": "No rows to display",
+                            "description": "Either the request returned 0 rows or no request has been performed."
+                        }
+                    },
                     "labels": {
                         "read_only": "SELECT - READ ONLY",
                         "dtype": "dtype",

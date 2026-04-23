@@ -2,11 +2,24 @@
     import { Rocket } from "lucide-vue-next";
     import { FetchError } from "ofetch";
 
-    const { $logger } = useNuxtApp();
+    interface Props {
+        rows?: Ref<Record<string, unknown>[]>;
+    }
 
-    const errorToast = useErrorToast();
+    const props = defineProps<Props>();
+
+    const route = useRoute();
+    const rows = useState<Record<string, unknown>[]>(
+        NuxtKeys.Components.QueryBuilder.Rows(route.path),
+        () => [],
+    );
+
+    if (props.rows) {
+        syncRef(rows, props.rows, { direction: "both" });
+    }
 
     const qb = useQueryBuilder();
+    const errorToast = useErrorToast();
     const { project } = useProject();
     const [loading] = useToggle(false);
     function handleExecute() {
@@ -18,7 +31,7 @@
                 tree: qb.computed.queryTree.value,
             },
         })
-            .then((response) => $logger.log(response))
+            .then((response) => (rows.value = response.rows))
             .catch((error) => {
                 if (error instanceof FetchError) {
                     errorToast.handle(error.statusText);
@@ -36,11 +49,11 @@
         <SchemaQueryBuilderPreview />
         <Card>
             <CardHeader>
-                <CardTitle> Execute Query </CardTitle>
+                <CardTitle>
+                    {{ $t("projects.id.sections.query_builder.execute.title") }}
+                </CardTitle>
                 <CardDescription>
-                    Lorem ipsum dolor sit amet consectetur, adipisicing elit. Necessitatibus, veniam
-                    molestiae nam dolorum labore eum facere itaque nihil incidunt at autem illo
-                    accusantium aperiam sit assumenda ipsa, perspiciatis maiores. Illo.
+                    {{ $t("projects.id.sections.query_builder.execute.description") }}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -54,10 +67,11 @@
                         <UtilsLoading :loading="loading">
                             <Rocket />
                         </UtilsLoading>
-                        Execute
+                        {{ $t("projects.id.sections.query_builder.execute.button") }}
                     </Button>
                 </div>
             </CardContent>
         </Card>
+        <slot name="output" v-bind="{ rows, loading }" />
     </div>
 </template>

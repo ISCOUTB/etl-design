@@ -663,6 +663,19 @@
                             }
                         }
                     },
+                    "execute": {
+                        "title": "Ejecutar consulta",
+                        "description": "Ejecuta la consulta actual y carga las filas resultantes.",
+                        "button": "Ejecutar"
+                    },
+                    "output": {
+                        "title": "Filas",
+                        "description": "Inspecciona las filas devueltas por la última ejecución.",
+                        "empty": {
+                            "title": "No hay filas para mostrar",
+                            "description": "La consulta no devolvió filas o todavía no se ha ejecutado ninguna."
+                        }
+                    },
                     "labels": {
                         "read_only": "SELECT - SOLO LECTURA",
                         "dtype": "tipo",

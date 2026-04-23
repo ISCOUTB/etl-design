@@ -86,13 +86,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 return [];
             }
 
-            const firstRow = parsedFileContent.value?.[0];
-            if (!firstRow) {
-                return [];
-            }
-            return Object.keys(firstRow)
-                .filter((key) => key !== ROW_ID)
-                .map((key) => ({ key, label: key }));
+            return toColumns(parsedFileContent.value, ROW_ID);
         });
 
         const sampleValueByColumn = computed<Record<string, unknown>>(() => {
@@ -213,6 +207,20 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             });
         }
 
+        function toColumns(
+            data: Record<string, unknown>[] | undefined,
+            rowId: string,
+        ): Column<Record<string, unknown>>[] {
+            const row = data?.[0];
+            if (!row) {
+                return [];
+            }
+
+            return Object.keys(row)
+                .filter((key) => key !== rowId)
+                .map((key) => ({ key, label: key }));
+        }
+
         return {
             state,
             errors,
@@ -239,6 +247,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 addSchemaError,
                 removeSchemaError,
                 clearSchemaErrors,
+                toColumns,
             },
         };
     });

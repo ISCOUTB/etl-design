@@ -35,7 +35,7 @@
                                     qb.dispatch.updateColumn(sc.id, $event?.toString())
                                 "
                             >
-                                <SelectTrigger class="h-8 w-44 font-mono text-xs">
+                                <SelectTrigger class="h-8 w-64 font-mono text-xs">
                                     <SelectValue
                                         :placeholder="
                                             $t(

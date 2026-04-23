@@ -110,6 +110,12 @@ export const NuxtKeys = {
                     onlyA: (id) => `project:${id}:query-builder:selected-output`,
                     both: (id, name) => `project:${id}:query-builder:${name}:selected-output`,
                 }),
+            Rows: (projectId: ResponseProject["id"] | undefined) =>
+                $(
+                    projectId,
+                    "project:query-builder:rows",
+                    (id) => `project:${id}:query-builder:rows`,
+                ),
         },
     },
     Components: {
@@ -137,6 +143,7 @@ export const NuxtKeys = {
                 ),
             Limit: (schema: MongoRaw | undefined) =>
                 $(schema, "query-builder:limit", (value) => `query-builder:${value.id}:limit`),
+            Rows: (route: string) => `query-builder:${route}:rows`,
         },
     },
     Composables: {
