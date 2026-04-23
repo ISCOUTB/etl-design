@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import type { Dtype, JsonSchema } from "#shared/utils/schemas/types";
 import type { Knex } from "knex";
 import { v7 } from "uuid";
@@ -372,13 +373,41 @@ export const QueryBuilderUtils = {
     },
 
     standardize: {
-        normalize(string: string): string {
-            return string
-                .toLowerCase()
-                .trim()
-                .normalize("NFD")
+        fillSpaces(raw: string): string {
+            if (raw === "") {
+                return raw;
+            }
+            const normalized = raw
+                .normalize("NFKD")
                 .replace(/[\u0300-\u036F]/g, "")
-                .replace(/\s+/g, "_");
+                .replace(/[^\u0000-\u007F]/g, "") // \x00 → \u0000, \x7F → \u007F
+                .replace(/\W/g, "")
+                .toLowerCase();
+            return normalized || "_";
+        },
+        normalize(value: string, fillSpaces: string = "_"): string {
+            const spacesReplacement = QueryBuilderUtils.standardize.fillSpaces(fillSpaces);
+
+            const text = value
+                .normalize("NFKD")
+                .replace(/[\u0300-\u036F]/g, "")
+                .replace(/[^\u0000-\u007F]/g, "")
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, spacesReplacement)
+                .replace(/\W/g, "")
+                .replace(/_+/g, "_")
+                .replace(/^_|_$/g, "");
+
+            if (!text) {
+                return "unnamed";
+            }
+
+            if (/^\d/.test(text)) {
+                return `_${text}`;
+            }
+
+            return text;
         },
 
         where: standardizeWhereNode,

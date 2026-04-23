@@ -4,7 +4,11 @@
     const { VIEWS, tables, queryBuilder } = useProject();
 
     const qb = useProvideQueryBuilder(queryBuilder.state.schema);
-    const selectedSchemaName = computed(() => queryBuilder.state.schema.value?.import_name ?? "");
+
+    const selectedSchemaName = useRouteQuery(
+        "table",
+        queryBuilder.state.schema.value?.import_name ?? "",
+    );
 
     watchEffect(() => {
         const list = tables.state.value.tableSchemas;
@@ -36,6 +40,15 @@
             queryBuilder.state.schema.value = found;
         }
     }
+
+    syncRef(queryBuilder.state.schema, selectedSchemaName, {
+        direction: "ltr",
+        transform: {
+            ltr(left) {
+                return left?.import_name;
+            },
+        },
+    });
 
     const events = useAppEvents();
     onMounted(() => {
