@@ -49,28 +49,31 @@
         <SchemaQueryBuilderPreview />
         <Card>
             <CardHeader>
-                <CardTitle>
-                    {{ $t("projects.id.sections.query_builder.execute.title") }}
-                </CardTitle>
-                <CardDescription>
-                    {{ $t("projects.id.sections.query_builder.execute.description") }}
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div class="flex justify-end">
-                    <Button
-                        variant="outline"
-                        :disabled="loading"
-                        class="cursor-pointer"
-                        @click="handleExecute"
-                    >
-                        <UtilsLoading :loading="loading">
-                            <Rocket />
-                        </UtilsLoading>
-                        {{ $t("projects.id.sections.query_builder.execute.button") }}
-                    </Button>
+                <div class="flex items-center justify-between">
+                    <div class="space-y-1.5">
+                        <CardTitle>
+                            {{ $t("projects.id.sections.query_builder.execute.title") }}
+                        </CardTitle>
+                        <CardDescription>
+                            {{ $t("projects.id.sections.query_builder.execute.description") }}
+                        </CardDescription>
+                    </div>
+
+                    <div>
+                        <Button
+                            variant="outline"
+                            :disabled="loading"
+                            class="cursor-pointer"
+                            @click="handleExecute"
+                        >
+                            <UtilsLoading :loading="loading">
+                                <Rocket />
+                            </UtilsLoading>
+                            {{ $t("projects.id.sections.query_builder.execute.button") }}
+                        </Button>
+                    </div>
                 </div>
-            </CardContent>
+            </CardHeader>
         </Card>
         <slot name="output" v-bind="{ rows, loading }" />
     </div>

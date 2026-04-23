@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { Grid2x2X, RotateCcw, Table2, Upload } from "lucide-vue-next";
+    import { BrushCleaning, Grid2x2X, RotateCcw, Table2, Upload } from "lucide-vue-next";
 
     const { VIEWS, tables, queryBuilder, uploadSchema } = useProject();
 
@@ -71,33 +71,28 @@
     <div class="space-y-4">
         <Card>
             <CardHeader>
-                <Item class="p-0">
-                    <ItemContent>
-                        <ItemTitle as-child>
-                            <CardTitle>
-                                {{ $t("projects.id.sections.query_builder.title") }}
-                            </CardTitle>
-                        </ItemTitle>
-                        <ItemDescription as-child>
+                <div class="flex items-center justify-between">
+                    <div class="space-y-1.5">
+                        <CardTitle>
+                            {{ $t("projects.id.sections.query_builder.title") }}
+                        </CardTitle>
+                        <CardDescription>
                             {{ $t("projects.id.sections.query_builder.description") }}
-                        </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                        <div class="space-x-2">
-                            <Button
-                                variant="outline"
-                                class="cursor-pointer"
-                                @click="
-                                    events.emit('event:projects:query-builder:reset', undefined)
-                                "
-                            >
-                                <RotateCcw />
-                                {{ $t("common.actions.reset") }}
-                            </Button>
-                            <ProjectQueryBuilderGenerate />
-                        </div>
-                    </ItemActions>
-                </Item>
+                        </CardDescription>
+                    </div>
+
+                    <div class="space-x-2">
+                        <Button
+                            variant="outline"
+                            class="cursor-pointer"
+                            @click="events.emit('event:projects:query-builder:reset', undefined)"
+                        >
+                            <RotateCcw />
+                            {{ $t("common.actions.reset") }}
+                        </Button>
+                        <ProjectQueryBuilderGenerate />
+                    </div>
+                </div>
             </CardHeader>
             <CardContent class="h-9">
                 <ClientOnly>
@@ -138,14 +133,35 @@
                     <template #output="{ rows, loading }">
                         <Card>
                             <CardHeader>
-                                <CardTitle>
-                                    {{ $t("projects.id.sections.query_builder.output.title") }}
-                                </CardTitle>
-                                <CardDescription>
-                                    {{
-                                        $t("projects.id.sections.query_builder.output.description")
-                                    }}
-                                </CardDescription>
+                                <div class="flex items-center justify-between">
+                                    <div class="space-y-1.5">
+                                        <CardTitle>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.query_builder.output.title",
+                                                )
+                                            }}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.query_builder.output.description",
+                                                )
+                                            }}
+                                        </CardDescription>
+                                    </div>
+
+                                    <div>
+                                        <Button
+                                            v-if="rows.length > 0"
+                                            variant="outline"
+                                            @click="rows.length = 0"
+                                        >
+                                            <BrushCleaning />
+                                            Clear
+                                        </Button>
+                                    </div>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <template v-if="loading">
