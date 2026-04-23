@@ -496,6 +496,7 @@
                         },
                         "dropdown": {
                             "view_schema": "View",
+                            "query": "Query",
                             "edit": "Edit",
                             "revert": "Revert",
                             "delete": "Delete"

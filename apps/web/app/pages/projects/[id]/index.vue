@@ -170,48 +170,50 @@
 
 <template>
     <div class="mx-auto w-full max-w-5xl">
-        <div class="mb-8">
-            <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                {{ project.name }}
-            </h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">
-                {{ project.description }}
-            </p>
-        </div>
+        <div class="space-y-4">
+            <div class="space-y-1.5">
+                <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
+                    {{ project.name }}
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ project.description }}
+                </p>
+            </div>
 
-        <Tabs v-model="view" :default-value="VIEWS.Overview">
-            <TabsList>
-                <TabsTrigger
-                    v-for="entry in views.computed.filteredViews.value"
-                    :key="entry.meta.value"
-                    :value="entry.meta.value"
-                    :class="entry.meta.class"
+            <Tabs v-model="view" :default-value="VIEWS.Overview">
+                <TabsList class="w-full">
+                    <TabsTrigger
+                        v-for="entry in views.computed.filteredViews.value"
+                        :key="entry.meta.value"
+                        :value="entry.meta.value"
+                        :class="cn('cursor-pointer', entry.meta.class)"
+                    >
+                        <component :is="entry.meta.icon" v-if="entry.meta.icon" />
+                        <span>
+                            {{ $t(entry.meta.label) }}
+                        </span>
+                    </TabsTrigger>
+                </TabsList>
+                <Transition
+                    mode="out-in"
+                    :css="false"
+                    @enter="animations.onPanelEnter"
+                    @leave="animations.onPanelLeave"
                 >
-                    <component :is="entry.meta.icon" v-if="entry.meta.icon" />
-                    <span>
-                        {{ $t(entry.meta.label) }}
-                    </span>
-                </TabsTrigger>
-            </TabsList>
-            <Transition
-                mode="out-in"
-                :css="false"
-                @enter="animations.onPanelEnter"
-                @leave="animations.onPanelLeave"
-            >
-                <TabsContent
-                    v-if="views.state.activeView.value && views.computed.component.value"
-                    :key="views.state.activeView.value"
-                    :value="views.state.activeView.value"
-                    class="mt-6"
-                >
-                    <component
-                        :is="views.computed.component.value"
-                        v-bind="{ ...views.computed.props.value }"
-                    />
-                </TabsContent>
-            </Transition>
-        </Tabs>
+                    <TabsContent
+                        v-if="views.state.activeView.value && views.computed.component.value"
+                        :key="views.state.activeView.value"
+                        :value="views.state.activeView.value"
+                        class="mt-6"
+                    >
+                        <component
+                            :is="views.computed.component.value"
+                            v-bind="{ ...views.computed.props.value }"
+                        />
+                    </TabsContent>
+                </Transition>
+            </Tabs>
+        </div>
 
         <div class="my-24" />
     </div>

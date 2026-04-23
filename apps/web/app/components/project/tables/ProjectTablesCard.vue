@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { ChevronRight, Edit, Eye, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
+    import { ChevronRight, Edit, Eye, Pickaxe, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
@@ -37,6 +37,7 @@
         })),
     );
 
+    const { VIEWS, queryBuilder } = useProject();
     const modal = useModal();
 
     const { $localeRoute } = useNuxtApp();
@@ -52,6 +53,14 @@
                 action() {
                     tables.dispatch.setSelectedSchema(table.value);
                     events.emit("event:projects:table:change-view", { value: "details" });
+                },
+            },
+            {
+                label: "projects.id.sections.tables.card.dropdown.query",
+                icon: Pickaxe,
+                action() {
+                    queryBuilder.state.schema.value = table.value;
+                    events.emit("event:projects:change-tab", { value: VIEWS.value.QueryBuilder });
                 },
             },
             {

@@ -496,6 +496,7 @@
                         },
                         "dropdown": {
                             "view_schema": "Ver",
+                            "query": "Seleccionar",
                             "edit": "Editar",
                             "revert": "Revertir",
                             "delete": "Eliminar"
