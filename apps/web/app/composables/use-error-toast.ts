@@ -46,78 +46,6 @@ export default function () {
         return value;
     }
 
-    function getDefaults(errorCode: ResponseCodes.Code | string | undefined): ErrorCodeDefaults {
-        switch (errorCode) {
-            case ResponseCodesRecord.Server.Auth.SignIn.InvalidCredentials: {
-                return {
-                    title: "errors.auth.invalid_credentials.title",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Auth.SignIn.UserNotFound: {
-                return {
-                    title: "errors.auth.user_not_found.title",
-                    description: "errors.auth.user_not_found.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.BadPayload: {
-                return {
-                    title: "errors.bad_payload.title",
-                    description: "errors.bad_payload.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.UnAuthorized: {
-                return {
-                    title: "errors.auth.unauthorized.title",
-                    description: "errors.auth.unauthorized.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.UnAutenticated: {
-                return {
-                    title: "errors.auth.unauthenticated.title",
-                    description: "errors.auth.unauthenticated.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Project.NotFound: {
-                return {
-                    title: "errors.project.not_found.title",
-                    description: "errors.project.not_found.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Project.Schema.NoFileProvided: {
-                return {
-                    title: "errors.project.file_not_provided.title",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Project.QueryBuilder.GenerateError: {
-                return {
-                    title: "errors.project.query_builder.generate_error.title",
-                    description: "errors.project.query_builder.generate_error.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Database.PsycopException: {
-                return {
-                    title: "errors.database.psycop_exception.title",
-                    description: "errors.database.psycop_exception.description",
-                };
-            }
-
-            default: {
-                return {
-                    title: "errors.unknown.title",
-                    description: "errors.unknown.description",
-                };
-            }
-        }
-    }
-
     function show(notification: ToastNotification) {
         const title = resolveI18nText(notification.title) || t("errors.unknown.title");
         const description = resolveI18nText(notification.description);
@@ -143,7 +71,7 @@ export default function () {
                 ? ApiErrorSchema.safeParse(payload).data?.error
                 : String(payload);
 
-        const defaults = getDefaults(errorCode);
+        const defaults = getDefaultErrorMessage(errorCode);
         const merged: ToastNotification = {
             ...defaults,
             ...(errorCode ? handler?.[errorCode as ResponseCodes.Code] : {}),

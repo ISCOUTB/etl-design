@@ -36,6 +36,7 @@ export const ResponseCodesRecord = {
                 GenerateError: "error:project:query-builder:generate-error",
                 InvalidColumns: "error:project:query-builder:invalid-columns",
                 InvalidOrderBY: "error:project:query-builder:invalid-order-by",
+                ParseRowsError: "error:project:query-builder:parse-rows-error",
             },
         },
         Database: {

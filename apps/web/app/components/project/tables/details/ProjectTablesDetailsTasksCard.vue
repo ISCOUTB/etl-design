@@ -2,7 +2,7 @@
     import type { ProjectTask } from "#shared/utils/schemas/types";
     import type { HTMLAttributes, HtmlHTMLAttributes } from "vue";
     import type { BadgeVariants } from "~/components/ui/badge";
-    import { AlertCircle, CheckCircle2, Send } from "lucide-vue-next";
+    import { AlertCircle, CheckCircle2, Clock3, Send } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     interface Props {
@@ -25,6 +25,25 @@
     }
 
     const props = defineProps<Props>();
+    const { locale } = useI18n();
+
+    const updateDate = computed(() => {
+        if (
+            !props.task.data.update_date ||
+            props.task.data.update_date === props.task.data.upload_date
+        ) {
+            return;
+        }
+
+        return new Date(props.task.data.update_date).toLocaleDateString(locale.value, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "UTC",
+        });
+    });
 
     function hasError(task: ProjectTask) {
         return !!task.data.error;
@@ -65,18 +84,35 @@
             };
         }
 
+        if (props.task.status === "completed") {
+            return {
+                icon: {
+                    component: CheckCircle2,
+                    class: "text-emerald-600",
+                },
+                header: {
+                    class: "bg-emerald-500/5 border-emerald-500/50",
+                },
+                badge: {
+                    variant: "secondary",
+                    class: "border-emerald-500/30 bg-emerald-500 text-slate-50",
+                    label: "projects.id.sections.tables.details.tasks.status.completed",
+                },
+            };
+        }
+
         return {
             icon: {
-                component: CheckCircle2,
-                class: "text-emerald-600",
+                component: Clock3,
+                class: "text-sky-600",
             },
             header: {
-                class: "bg-emerald-500/5 border-emerald-500/50",
+                class: "bg-sky-500/5 border-sky-500/50",
             },
             badge: {
                 variant: "secondary",
-                class: "border-emerald-500/30 bg-emerald-500 text-slate-50",
-                label: "projects.id.sections.tables.details.tasks.status.completed",
+                class: "border-sky-500/30 bg-sky-500 text-slate-50",
+                label: "projects.id.sections.tables.details.tasks.status.created",
             },
         };
     });
@@ -92,34 +128,46 @@
                 <ItemTitle>
                     {{ $t("projects.id.sections.tables.details.tasks.item") }}
                 </ItemTitle>
-                <ItemDescription class="text-xs">
-                    {{
-                        new Date(task.data.upload_date).toLocaleDateString($i18n.locale, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            timeZone: "UTC",
-                        })
-                    }}
-                    <template v-if="task.data.upload_date !== task.data.update_date">
-                        {{
-                            $t("projects.id.sections.tables.details.tasks.updated", {
-                                when: new Date(task.data.update_date).toLocaleDateString(
-                                    $i18n.locale,
+                <ItemDescription class="space-y-0.5">
+                    <div class="flex h-5 space-x-2 items-center">
+                        <span v-if="task.data.upload_date">
+                            {{
+                                new Date(task.data.upload_date).toLocaleDateString($i18n.locale, {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    timeZone: "UTC",
+                                })
+                            }}
+                        </span>
+                        <template v-if="updateDate">
+                            <Separator
+                                orientation="vertical"
+                                class="data-[orientation=vertical]:h-2"
+                            />
+                            <span>
+                                {{
+                                    $t("projects.id.sections.tables.details.tasks.updated", {
+                                        when: updateDate,
+                                    })
+                                }}
+                            </span>
+                        </template>
+                    </div>
+                    <DevOnly>
+                        <div class="text-muted-foreground">
+                            {{
+                                $t(
+                                    "projects.id.sections.tables.details.tasks.fields.status_debug",
                                     {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        timeZone: "UTC",
+                                        status: task.status,
                                     },
-                                ),
-                            })
-                        }}
-                    </template>
+                                )
+                            }}
+                        </div>
+                    </DevOnly>
                 </ItemDescription>
             </ItemContent>
             <ItemActions>

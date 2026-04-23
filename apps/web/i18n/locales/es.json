@@ -217,6 +217,22 @@
                 "generate_error": {
                     "title": "No se pudo generar una consulta valida",
                     "description": "Por favor, se mas especifico, o intenta mas tarde."
+                },
+                "invalid_columns": {
+                    "title": "Columnas inválidas",
+                    "description": "Una o más columnas seleccionadas no existen en el esquema actual."
+                },
+                "invalid_order_by": {
+                    "title": "Columna de orden inválida",
+                    "description": "La columna seleccionada para ORDER BY no existe en el esquema actual."
+                },
+                "parse_rows_error": {
+                    "title": "No se pudieron interpretar los resultados",
+                    "description": "La base de datos devolvió filas en un formato inesperado."
+                },
+                "could_not_connect": {
+                    "title": "No se pudo conectar a la base de datos",
+                    "description": "Revisa la configuración de conexión del proyecto e inténtalo de nuevo."
                 }
             }
         }
@@ -564,12 +580,14 @@
                             "updated": "Actualizado: {when}",
                             "status": {
                                 "failed": "Fallido",
+                                "created": "Creado",
                                 "published": "Publicado",
                                 "completed": "Completado"
                             },
                             "fields": {
                                 "errors": "Errores",
-                                "logs": "Registro"
+                                "logs": "Registro",
+                                "status_debug": "Estado: {status}"
                             },
                             "events": {
                                 "bad_payload": "Respuesta inválida al cargar las tareas"

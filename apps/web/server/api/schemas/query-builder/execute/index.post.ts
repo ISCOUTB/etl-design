@@ -139,12 +139,18 @@ export default defineWrappedResponseHandler(async (event) => {
         builder.limit(tree.limit);
     }
 
-    const rows = await builder;
+    const parsedRows = z.array(z.record(z.string(), z.unknown())).safeParse(await builder);
+    if (!parsedRows.success) {
+        throw createError({
+            status: 500,
+            statusText: ResponseCodesRecord.Server.Project.QueryBuilder.ParseRowsError,
+        });
+    }
 
     return {
-        rows,
+        rows: parsedRows.data,
         meta: {
-            count: rows.length,
+            count: parsedRows.data.length,
             table: tree.table,
         },
     };

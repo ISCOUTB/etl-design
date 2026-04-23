@@ -1,10 +1,13 @@
 <script setup lang="ts">
     import { Rocket } from "lucide-vue-next";
+    import { FetchError } from "ofetch";
 
     const { $logger } = useNuxtApp();
 
-    const { project } = useProject();
+    const errorToast = useErrorToast();
+
     const qb = useQueryBuilder();
+    const { project } = useProject();
     const [loading] = useToggle(false);
     function handleExecute() {
         loading.value = true;
@@ -16,7 +19,11 @@
             },
         })
             .then((response) => $logger.log(response))
-            .catch((error) => $logger.error(error))
+            .catch((error) => {
+                if (error instanceof FetchError) {
+                    errorToast.handle(error.statusText);
+                }
+            })
             .finally(() => (loading.value = false));
     }
 </script>

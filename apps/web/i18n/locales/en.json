@@ -217,6 +217,22 @@
                 "generate_error": {
                     "title": "Could not generate a valid query",
                     "description": "Please be more specific or try again later."
+                },
+                "invalid_columns": {
+                    "title": "Invalid columns",
+                    "description": "One or more selected columns do not exist in the current schema."
+                },
+                "invalid_order_by": {
+                    "title": "Invalid order by column",
+                    "description": "The selected ORDER BY column does not exist in the current schema."
+                },
+                "parse_rows_error": {
+                    "title": "Could not parse query results",
+                    "description": "The database returned rows in an unexpected format."
+                },
+                "could_not_connect": {
+                    "title": "Could not connect to the database",
+                    "description": "Check the project connection settings and try again."
                 }
             }
         }
@@ -564,12 +580,14 @@
                             "updated": "Updated: {when}",
                             "status": {
                                 "failed": "Failed",
+                                "created": "Created",
                                 "published": "Published",
                                 "completed": "Completed"
                             },
                             "fields": {
                                 "errors": "Errors",
-                                "logs": "Logs"
+                                "logs": "Logs",
+                                "status_debug": "Status: {status}"
                             },
                             "events": {
                                 "bad_payload": "Invalid response while loading tasks"
