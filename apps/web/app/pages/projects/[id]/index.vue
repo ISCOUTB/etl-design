@@ -64,7 +64,7 @@
 
     const animations = useViewManagerAnimations();
     const views = useViewManager(
-        () => [
+        [
             {
                 meta: {
                     label: "projects.id.sections.overview.tab",

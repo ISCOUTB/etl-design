@@ -4,9 +4,10 @@
     const qb = useQueryBuilder();
 
     const { $gsap } = useNuxtApp();
+    const utils = useAnimationsUtils();
 
     function onRowEnter(element: Element, done: () => void) {
-        if (!(element instanceof HTMLElement)) {
+        if (utils.noAnimations.value || !(element instanceof HTMLElement)) {
             return;
         }
 
@@ -26,7 +27,7 @@
     }
 
     function onRowLeave(element: Element, done: () => void) {
-        if (!(element instanceof HTMLElement)) {
+        if (utils.noAnimations.value || !(element instanceof HTMLElement)) {
             return;
         }
 

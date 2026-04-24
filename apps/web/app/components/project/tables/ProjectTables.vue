@@ -8,7 +8,7 @@
 
     const animations = useViewManagerAnimations();
     const views = useViewManager(
-        () => [
+        [
             {
                 meta: {
                     label: "",

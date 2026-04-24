@@ -22,18 +22,13 @@ export interface UseTabsManagerOptions {
     model?: Ref<string>;
 }
 
-export default function (
-    initialViews: MaybeRefOrGetter<[Entry, ...Entry[]]>,
-    options?: UseTabsManagerOptions,
-) {
+export default function (initialViews: [Entry, ...Entry[]], options?: UseTabsManagerOptions) {
     const route = useRoute();
     const stateKey = NuxtKeys.Composables.ViewManager.StateKey(options?.key ?? route.path);
     const componentCache = shallowRef(new Map<Meta["value"], Raw<Component>>());
 
-    const initial = computed(() => toValue(initialViews));
-
     const views = shallowRef(
-        new Map<Meta["value"], Entry>(initial.value.map((entry) => [entry.meta.value, entry])),
+        new Map<Meta["value"], Entry>(initialViews.map((entry) => [entry.meta.value, entry])),
     );
     const filteredViews = computed(() =>
         Array.from(views.value.values()).filter((entry) => !toValue(entry.meta.hidden)),
@@ -139,22 +134,6 @@ export default function (
             }),
         );
     }
-
-    watch(
-        initial,
-        (nextInitial) => {
-            const dynamicTabs = Array.from(views.value.values()).filter(
-                (entry) =>
-                    !nextInitial.some((baseEntry) => baseEntry.meta.value === entry.meta.value),
-            );
-
-            views.value = new Map([
-                ...nextInitial.map((entry) => [entry.meta.value, entry] as [string, Entry]),
-                ...dynamicTabs.map((entry) => [entry.meta.value, entry] as [string, Entry]),
-            ]);
-        },
-        { immediate: true },
-    );
 
     watch(
         filteredViews,

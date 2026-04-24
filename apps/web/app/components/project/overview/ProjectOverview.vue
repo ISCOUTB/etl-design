@@ -127,7 +127,7 @@
                 </div>
 
                 <div v-if="!project.db_host || !project.db_port">
-                    <HoverCard>
+                    <HoverCard :open-delay="50">
                         <HoverCardTrigger as-child>
                             <div class="border border-border rounded-lg p-2">
                                 <Info class="size-4.5 text-amber-500 dark:text-orange-400" />
