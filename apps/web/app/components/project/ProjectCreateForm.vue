@@ -4,6 +4,8 @@
         CirclePlus,
         Cloud,
         Database,
+        Eye,
+        EyeOff,
         Info,
         Lock,
         Plug,
@@ -12,6 +14,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
+    const dbPassword = useInputPassword("password", { id: "dbPassword" });
     const { CreateProjectSchema } = useCreateProjectSchema();
     const { handleSubmit } = useForm({
         validationSchema: toTypedSchema(CreateProjectSchema.value),
@@ -262,15 +265,30 @@
                                     {{ $t("projects.create.fields.db_password.label") }}
                                 </FieldLabel>
                                 <InputGroup>
-                                    <InputPassword
+                                    <InputGroupInput
                                         id="dbPassword"
                                         v-bind="field"
+                                        :type="dbPassword.type.value"
                                         placeholder="******"
                                         autocomplete="off"
                                         :aria-invalid="!!errors.length"
                                     />
                                     <InputGroupAddon align="inline-start">
                                         <Lock class="size-4" stroke-width="2" />
+                                    </InputGroupAddon>
+
+                                    <InputGroupAddon align="inline-end">
+                                        <InputGroupButton
+                                            type="button"
+                                            @click="dbPassword.dispatch.onToggle"
+                                        >
+                                            <template v-if="dbPassword.type.value === 'password'">
+                                                <Eye />
+                                            </template>
+                                            <template v-if="dbPassword.type.value === 'text'">
+                                                <EyeOff />
+                                            </template>
+                                        </InputGroupButton>
                                     </InputGroupAddon>
                                 </InputGroup>
                                 <FieldError v-if="errors.length" :errors="errors" />

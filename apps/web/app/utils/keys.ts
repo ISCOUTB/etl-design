@@ -1,4 +1,5 @@
 import type { MongoRaw, ResponseProject } from "#shared/utils/schemas/types";
+import { v7 } from "uuid";
 
 function $<T>(context: T | undefined, defaultValue: string, value: (value: T) => string) {
     if (!context) {
@@ -145,6 +146,7 @@ export const NuxtKeys = {
                 $(schema, "query-builder:limit", (value) => `query-builder:${value.id}:limit`),
             Rows: (route: string) => `query-builder:${route}:rows`,
         },
+        InputPassword: () => `input:${v7()}`,
     },
     Composables: {
         ViewManager: {

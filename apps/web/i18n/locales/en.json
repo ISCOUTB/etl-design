@@ -356,7 +356,12 @@
                     },
                     "connection_details": {
                         "title": "Connection Details",
-                        "description": "Database connection parameters for this project."
+                        "description": "Database connection parameters for this project.",
+                        "warning": {
+                            "title": "Using the default database connection",
+                            "description": "No database has been configured for this project yet. A default connection will be resolved when needed",
+                            "action": "Configure"
+                        }
                     },
                     "connection_string": {
                         "title": "Connection String",

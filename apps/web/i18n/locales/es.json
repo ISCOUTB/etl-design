@@ -356,7 +356,12 @@
                     },
                     "connection_details": {
                         "title": "Detalles de conexión",
-                        "description": "Parámetros de conexión a la base de datos para este proyecto."
+                        "description": "Parámetros de conexión a la base de datos para este proyecto.",
+                        "warning": {
+                            "title": "Usando la conexión por defecto",
+                            "description": "Este proyecto todavía no tiene una base de datos configurada. Una conexion por defecto sera determinada cuando sea requerido",
+                            "action": "Configurar"
+                        }
                     },
                     "connection_string": {
                         "title": "Cadena de conexión",

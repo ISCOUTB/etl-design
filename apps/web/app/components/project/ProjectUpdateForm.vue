@@ -5,6 +5,8 @@
         CirclePlus,
         Cloud,
         Database,
+        Eye,
+        EyeOff,
         Info,
         Lock,
         Plug,
@@ -30,6 +32,7 @@
 
     const project = computed(() => toValue(props.project));
 
+    const dbPassword = useInputPassword("password", { id: "dbPassword" });
     const { CreateProjectSchema } = useCreateProjectSchema();
     const { handleSubmit, resetField } = useForm({
         validationSchema: toTypedSchema(CreateProjectSchema.value),
@@ -344,9 +347,10 @@
                                     {{ $t("projects.create.fields.db_password.label") }}
                                 </FieldLabel>
                                 <InputGroup>
-                                    <InputPassword
+                                    <InputGroupInput
                                         id="dbPassword"
                                         v-bind="field"
+                                        :type="dbPassword.type.value"
                                         placeholder="******"
                                         autocomplete="off"
                                         :default-value="project?.db_password?.toString()"
@@ -357,14 +361,29 @@
                                         <Lock class="size-4" stroke-width="2" />
                                     </InputGroupAddon>
 
-                                    <InputGroupAddon v-if="meta.dirty" align="inline-end">
+                                    <InputGroupAddon align="inline-end">
                                         <InputGroupButton
+                                            v-if="meta.dirty"
                                             variant="ghost"
                                             size="icon-xs"
                                             type="button"
                                             @click="resetField('dbPassword')"
                                         >
                                             <RotateCcw class="size-4" />
+                                        </InputGroupButton>
+
+                                        <InputGroupButton
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-xs"
+                                            @click="dbPassword.dispatch.onToggle"
+                                        >
+                                            <template v-if="dbPassword.type.value === 'password'">
+                                                <Eye class="size-4" />
+                                            </template>
+                                            <template v-if="dbPassword.type.value === 'text'">
+                                                <EyeOff class="size-4" />
+                                            </template>
                                         </InputGroupButton>
                                     </InputGroupAddon>
                                 </InputGroup>

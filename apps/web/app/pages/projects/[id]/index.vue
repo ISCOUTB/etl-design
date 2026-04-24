@@ -181,7 +181,7 @@
             </div>
 
             <Tabs v-model="view" :default-value="VIEWS.Overview">
-                <TabsList class="w-full">
+                <TabsList class="w-full flex-wrap h-full">
                     <TabsTrigger
                         v-for="entry in views.computed.filteredViews.value"
                         :key="entry.meta.value"
