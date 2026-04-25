@@ -145,13 +145,18 @@ class ProjectService:
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[schemas.ResponseProjectSchema]:
+        def _process_project_row(project_row: schemas.ProjectSearchRow) -> schemas.ResponseProjectSchema:
+            project, owner_id, owner_user = project_row
+            decrypted_project = self.__decrypt_db_credentials(project)
+            self.repository.db.expunge(decrypted_project)
+            return ParserService.parse_project(
+                decrypted_project, owner_id=owner_id, owner_user=owner_user
+            )
+
         encrypted_projects = self.repository.search_projects(
             name=name, user_id=user_id, skip=skip, limit=limit
         )
-        projects = list(map(self.__decrypt_db_credentials, encrypted_projects))
-        for project in projects:
-            self.repository.db.expunge(project)
-        return ParserService.parse_projects(projects)
+        return list(map(_process_project_row, encrypted_projects))
 
     def count_projects(self, name: Optional[str] = None) -> int:
         return self.repository.count_projects(name=name)

@@ -14,6 +14,7 @@ from src.api.deps import (
     ProjectServiceDep,
     UserProjectServiceDep,
 )
+from src.core.domain import is_user_sudo
 from src.exceptions import ForbiddenException, ProjectNotFoundException
 from src.services.permissions import Action, PermissionService
 
@@ -40,9 +41,13 @@ async def search_projects(
     if not has_permission:
         raise ForbiddenException()
 
+    user_id = current_user.id
+    if is_user_sudo(current_user.role.value):
+        user_id = None
+
     page = (skip // limit) + 1
     projects = project_service.search_projects(
-        name=name, user_id=current_user.id, skip=skip, limit=limit
+        name=name, user_id=user_id, skip=skip, limit=limit
     )
     total = project_service.count_projects(name=name)
     response = schemas.PaginatedResponse(

@@ -10,6 +10,7 @@ from src.schemas.generic import DeleteResult, T
 from src.schemas.projects import (
     BaseProjectSchema,
     CreateProjectSchema,
+    ProjectSearchRow,
     ResponseProjectSchema,
     UpdateProjectSchema,
 )
@@ -71,6 +72,7 @@ __all__ = [
     # Project Schemas
     "BaseProjectSchema",
     "CreateProjectSchema",
+    "ProjectSearchRow",
     "ResponseProjectSchema",
     "UpdateProjectSchema",
     # User-Project Association Schemas

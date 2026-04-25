@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Optional, TypeAlias
 
 from pydantic import BaseModel, field_validator
 
+from src import models
 from src.exceptions import InvalidUserDataException
 
 
@@ -49,9 +51,23 @@ class UpdateProjectSchema(BaseModel):
         return value
 
 
+ProjectSearchRow: TypeAlias = tuple[
+    models.Project,
+    Optional[str],  # owner_id
+    Optional[str],  # owner_user
+]
+
+
 class ResponseProjectSchema(BaseProjectSchema):
     """Schema for project data in API responses."""
 
     id: str
+
+    # Just for API response, not stored in DB.
+    # in order to avoid do multiples api queries to get the owner information
+    owner_id: str
+    owner_user: str
+
+    # Timestamps
     created_at: datetime
     updated_at: datetime
