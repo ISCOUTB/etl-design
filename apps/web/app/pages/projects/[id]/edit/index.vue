@@ -8,6 +8,7 @@
         i18n: {
             paths: {
                 en: "/projects/[id]/edit",
+                es: "/proyectos/[id]/editar",
             },
         },
         breadcrumb: {

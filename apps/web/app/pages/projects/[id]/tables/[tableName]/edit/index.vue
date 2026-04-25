@@ -21,6 +21,7 @@
         i18n: {
             paths: {
                 en: "/projects/[id]/tables/[tableName]",
+                es: "/proyectos/[id]/tablas/[tableName]",
             },
         },
         breadcrumb: {

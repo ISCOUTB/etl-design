@@ -17,6 +17,7 @@
         i18n: {
             paths: {
                 en: "/projects",
+                es: "/proyectos",
             },
         },
         breadcrumb: {
@@ -123,10 +124,6 @@
             },
         ];
     }
-
-    function handlePageChange(page: number) {
-        currentPage.value = page;
-    }
 </script>
 
 <template>
@@ -169,7 +166,7 @@
                 :page-size="data?.limit ?? config.pagination.defaultPageSize"
                 :total-pages="data?.total_pages ?? 1"
                 class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-                @change-page="handlePageChange"
+                @change-page="(page) => (currentPage = page)"
             >
                 <template #controls-previous>
                     <ChevronsLeft />

@@ -753,5 +753,19 @@
                 }
             }
         }
+    },
+    "admin": {
+        "users": {
+            "title": "Usuarios",
+            "header": {
+                "description": "Administra usuarios"
+            },
+            "search_input": {
+                "placeholder": "Buscar usuarios..."
+            },
+            "badges": {
+                "you": "Tú"
+            }
+        }
     }
 }

@@ -32,7 +32,7 @@
             :type="manager.type.value"
         />
         <InputGroupAddon align="inline-end">
-            <InputGroupButton @click="manager.dispatch.onToggle">
+            <InputGroupButton type="button" @click="manager.dispatch.onToggle">
                 <template v-if="manager.type.value === 'password'">
                     <Eye />
                 </template>

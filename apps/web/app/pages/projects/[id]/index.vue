@@ -9,6 +9,7 @@
         i18n: {
             paths: {
                 en: "/projects/[id]",
+                es: "/proyectos/[id]",
             },
         },
         breadcrumb: {

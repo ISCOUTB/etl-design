@@ -9,6 +9,7 @@
         i18n: {
             paths: {
                 en: "/auth/sign-in",
+                es: "/authenticacion/iniciar-sesion",
             },
         },
     });
