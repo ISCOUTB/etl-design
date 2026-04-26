@@ -175,6 +175,10 @@
             "title": "Ocurrió un error desconocido",
             "description": "Por favor, inténtalo de nuevo más tarde"
         },
+        "offline": {
+            "title": "Sin conexión a internet",
+            "description": "Parece que no tienes conexión. Revisa tu red e inténtalo de nuevo."
+        },
         "bad_payload": {
             "title": "Respuesta de servidor inválida",
             "description": "Los datos recibidos del servidor están mal formados y no pudieron ser procesados. Por favor, inténtalo de nuevo más tarde."

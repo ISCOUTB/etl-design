@@ -175,6 +175,10 @@
             "title": "An unknown error ocurred",
             "description": "Please try again later"
         },
+        "offline": {
+            "title": "No internet connection",
+            "description": "You appear to be offline. Check your network connection and try again."
+        },
         "bad_payload": {
             "title": "Invalid Server Response",
             "description": "The data received from the server was malformed and could not be processed. Please try again later."

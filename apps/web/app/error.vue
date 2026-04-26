@@ -14,9 +14,19 @@
     }
 
     const props = defineProps<Props>();
+    const online = useOnline();
+
     const parsedError = computed(() => mapError(props.error.status));
 
     function mapError(statusCode: number | undefined): Error {
+        if (!online.value) {
+            return {
+                title: "errors.offline.title",
+                description: "errors.offline.description",
+                icon: ServerCrash,
+            };
+        }
+
         switch (statusCode) {
             case 404: {
                 return {

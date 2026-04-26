@@ -166,7 +166,7 @@ export default defineNuxtConfig({
             background_color: "#000",
             display: "standalone",
             display_override: ["window-controls-overlay"],
-            start_url: "/",
+            start_url: "/?standalone=true",
             scope: "/",
             icons: [
                 {
@@ -186,12 +186,11 @@ export default defineNuxtConfig({
             cleanupOutdatedCaches: true,
             clientsClaim: true,
             maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-            globPatterns: [],
+            globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
             globIgnores: ["**/_payload.json", "_nuxt/builds/**/*.json", "sw.js", "workbox-*.js"],
             runtimeCaching: [
                 {
-                    urlPattern: ({ sameOrigin, request }) =>
-                        sameOrigin && request.mode === "navigate",
+                    urlPattern: ({ request }) => request.mode === "navigate",
                     handler: "NetworkFirst",
                     options: {
                         cacheName: "pages-cache",
@@ -200,13 +199,10 @@ export default defineNuxtConfig({
                     },
                 },
                 {
-                    urlPattern:
-                        /\.(?:js|mjs|cjs|mp4|png|webp|svg|ico|css|glb|ttf|webmanifest|txt)$/,
-                    handler: "CacheFirst",
+                    urlPattern: /\.(?:js|css|webmanifest|json)$/,
+                    handler: "StaleWhileRevalidate",
                     options: {
-                        cacheName: "js-cache",
-                        expiration: { maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 },
-                        cacheableResponse: { statuses: [0, 200] },
+                        cacheName: "static-resources",
                     },
                 },
             ],
