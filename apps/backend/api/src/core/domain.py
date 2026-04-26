@@ -18,10 +18,11 @@ def table_name_from_create_sql_response(sql_response: str) -> str:
         start_pattern = r"CREATE TABLE IF NOT EXISTS\s+(\w+)"
 
     match = re.search(start_pattern, sql_response, re.IGNORECASE)
-    if match:
-        return match.group(1)
-    else:
+    if not match:
         raise ValueError("Could not extract table name from SQL response")
+
+    result = match.group(1)
+    return result.split(".")[-1]  # In case the table name is qualified with a schema
 
 
 def is_user_sudo(user_role: str) -> bool:
