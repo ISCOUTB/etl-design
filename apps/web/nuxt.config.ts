@@ -170,14 +170,14 @@ export default defineNuxtConfig({
             scope: "/",
             icons: [
                 {
-                    src: "/icon-512x512.jpeg",
+                    src: "/icon-512x512.png",
                     sizes: "512x512",
-                    type: "image/jpeg",
+                    type: "image/png",
                 },
                 {
-                    src: "/icon-192x192.jpeg",
+                    src: "/icon-192x192.png",
                     sizes: "192x192",
-                    type: "image/jpeg",
+                    type: "image/png",
                 },
             ],
             screenshots: [],
