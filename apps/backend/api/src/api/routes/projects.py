@@ -31,6 +31,7 @@ router = APIRouter()
 async def search_projects(
     current_user: CurrentUser,
     project_service: ProjectServiceDep,
+    owner_id: Optional[str] = None,
     name: Optional[str] = None,
     skip: int = 0,
     limit: int = 10,
@@ -44,6 +45,9 @@ async def search_projects(
     user_id = current_user.id
     if is_user_sudo(current_user.role.value):
         user_id = None
+
+    if owner_id:
+        user_id = owner_id
 
     page = (skip // limit) + 1
     projects = project_service.search_projects(

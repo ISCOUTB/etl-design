@@ -1,7 +1,6 @@
 <script setup lang="ts" generic="TContent">
     import type { HTMLAttributes } from "vue";
     import { Check, Copy } from "lucide-vue-next";
-    import { toast } from "vue-sonner";
     import { cn } from "~/lib/utils";
 
     interface Props<T> {
@@ -21,18 +20,6 @@
     const parsedContent = computed(() => JSON.stringify(content.value ?? {}, null, 4));
 
     const clipboard = useClipboard();
-    const animations = useClipboardAnimations();
-
-    function handleCopy(event: MouseEvent) {
-        clipboard.copy(parsedContent.value);
-        animations.animateButtonClick(event);
-    }
-
-    onMounted(() => {
-        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
-            immediate: true,
-        });
-    });
 </script>
 
 <template>
@@ -61,13 +48,13 @@
                         variant="outline"
                         size="icon-sm"
                         class="opacity-0 group-hover:opacity-100 transition-opacity"
-                        @click="handleCopy"
+                        @click="clipboard.handleCopy(parsedContent, $event)"
                     >
                         <Transition
                             :css="false"
                             mode="out-in"
-                            @enter="animations.onIconEnter"
-                            @leave="animations.onIconLeave"
+                            @enter="clipboard.animations.onIconEnter"
+                            @leave="clipboard.animations.onIconLeave"
                         >
                             <Check v-if="clipboard.copied.value" />
                             <Copy v-else />

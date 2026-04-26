@@ -88,7 +88,8 @@
         },
         "clipboard": {
             "copy": "Copy",
-            "copied": "Copied to clipboard"
+            "copied": "Copied to clipboard",
+            "copy_id": "Copy ID"
         }
     },
     "settings": {
@@ -327,6 +328,9 @@
             },
             "search_input": {
                 "placeholder": "Search projects..."
+            },
+            "actions": {
+                "clear_owner_filter": "Clear owner filter"
             },
             "content": {
                 "no_description": "This Project has no description",
@@ -759,6 +763,10 @@
             "title": "Users",
             "header": {
                 "description": "Manage users"
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive"
             },
             "search_input": {
                 "placeholder": "Search users..."

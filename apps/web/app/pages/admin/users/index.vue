@@ -34,6 +34,30 @@
         },
     });
 
+    const { locale } = useI18n();
+    const {
+        public: { homePageURL },
+    } = useRuntimeConfig();
+
+    useSeoMeta({
+        description: () => $t("admin.users.header.description"),
+
+        ogImage: () => `${homePageURL}/icon.jpeg`,
+        twitterImage: () => `${homePageURL}/icon.jpeg`,
+
+        ogType: "website",
+        ogTitle: () => $t("admin.users.title"),
+        ogDescription: () => $t("admin.users.header.description"),
+        ogLocale: () => locale.value.replace("-", "_"),
+        ogSiteName: () => $t("layouts.title"),
+
+        twitterCard: "summary_large_image",
+        twitterTitle: () => $t("admin.users.title"),
+        twitterDescription: () => $t("admin.users.header.description"),
+
+        robots: "noindex, nofollow",
+    });
+
     const auth = useAuth();
 
     const config = useAppConfig();
@@ -155,6 +179,31 @@
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger as-child>
+                                            <div
+                                                class="size-2 rounded-full shrink-0"
+                                                :class="
+                                                    cn(
+                                                        $item.status === 'active'
+                                                            ? 'bg-emerald-500'
+                                                            : 'bg-muted-foreground/40',
+                                                    )
+                                                "
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p class="text-xs capitalize">
+                                                {{
+                                                    $te(`admin.users.status.${$item.status}`)
+                                                        ? $t(`admin.users.status.${$item.status}`)
+                                                        : $item.status
+                                                }}
+                                            </p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger as-child>
                                             <div class="shrink-0 text-muted-foreground">
                                                 <component
                                                     :is="resolveRoleIcon($item.role)"
@@ -174,29 +223,20 @@
                                     </Tooltip>
                                 </TooltipProvider>
 
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger as-child>
-                                            <div
-                                                class="size-2 rounded-full shrink-0"
-                                                :class="
-                                                    cn(
-                                                        $item.status === 'active'
-                                                            ? 'bg-emerald-500'
-                                                            : 'bg-muted-foreground/40',
-                                                    )
-                                                "
-                                            />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p class="text-xs capitalize">{{ $item.status }}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-
-                                <Button variant="outline" size="sm">
-                                    <Boxes />
-                                    {{ $t("projects.title") }}
+                                <Button variant="outline" as-child>
+                                    <NuxtLink
+                                        :to="
+                                            $localeRoute({
+                                                name: 'projects',
+                                                query: {
+                                                    [config.constants.OWNER_ID_KEY]: $item.id,
+                                                },
+                                            })
+                                        "
+                                    >
+                                        <Boxes />
+                                        {{ $t("projects.title") }}
+                                    </NuxtLink>
                                 </Button>
                             </div>
                         </ItemActions>

@@ -8,6 +8,7 @@
         Plus,
         Search,
         Server,
+        UserSearch,
     } from "lucide-vue-next";
 
     definePageMeta({
@@ -68,9 +69,12 @@
         () => (currentPage.value - 1) * config.pagination.defaultPageSize,
     );
 
+    const ownerId = useRouteQuery<string | null>(config.constants.OWNER_ID_KEY, null);
+
     const { data: _data, status } = useApiFetch("/projects/search", {
         query: {
             name: debouncedSearchContent,
+            owner_id: ownerId,
             skip: calculatedSkip,
             limit: config.pagination.defaultPageSize,
         },
@@ -129,68 +133,82 @@
 <template>
     <div class="mx-auto w-full max-w-5xl flex flex-col grow">
         <TooltipProvider>
-            <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                        {{ $t("projects.view.header.title") }}
-                    </h1>
-                    <p class="mt-1.5 text-sm text-muted-foreground">
-                        {{ $t("projects.view.header.description") }}
-                    </p>
-                </div>
-                <NuxtLink as-child :to="$localeRoute({ name: 'projects-create' })">
-                    <Button>
-                        <Plus class="size-4" />
-                        <span>{{ $t("projects.create.header.title") }}</span>
-                    </Button>
-                </NuxtLink>
-            </div>
+            <div class="space-y-6">
+                <div class="space-y-8">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div class="space-y-1.5">
+                            <h1
+                                class="text-2xl font-semibold tracking-tight text-foreground text-balance"
+                            >
+                                {{ $t("projects.view.header.title") }}
+                            </h1>
+                            <p class="text-sm text-muted-foreground">
+                                {{ $t("projects.view.header.description") }}
+                            </p>
+                        </div>
 
-            <div class="mb-6">
-                <InputGroup class="max-w-sm">
-                    <InputGroupInput
-                        v-model="searchContent"
-                        :placeholder="$t('projects.view.search_input.placeholder')"
-                    />
-                    <InputGroupAddon align="inline-start">
-                        <Search />
-                    </InputGroupAddon>
-                </InputGroup>
-            </div>
-
-            <PaginationRoot
-                :items="data?.items"
-                index="id"
-                :page="currentPage"
-                :loading="status === 'pending'"
-                :page-size="data?.limit ?? config.pagination.defaultPageSize"
-                :total-pages="data?.total_pages ?? 1"
-                class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-                @change-page="(page) => (currentPage = page)"
-            >
-                <template #controls-previous>
-                    <ChevronsLeft />
-                </template>
-                <template #controls-next>
-                    <ChevronsRight />
-                </template>
-
-                <template #empty>
-                    <LazyProjectEmpty />
-                </template>
-
-                <template #loading>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <template v-for="i in config.pagination.defaultPageSize" :key="i">
-                            <Skeleton class="w-full h-82.5" />
-                        </template>
+                        <div class="space-x-2 flex items-center flex-wrap">
+                            <NuxtLink as-child :to="$localeRoute({ name: 'projects-create' })">
+                                <Button>
+                                    <Plus class="size-4" />
+                                    <span>{{ $t("projects.create.header.title") }}</span>
+                                </Button>
+                            </NuxtLink>
+                            <AuthRole v-if="ownerId">
+                                <Button variant="outline" @click="ownerId = null">
+                                    <UserSearch />
+                                    {{ $t("projects.view.actions.clear_owner_filter") }}
+                                </Button>
+                            </AuthRole>
+                        </div>
                     </div>
-                </template>
 
-                <template #item="{ $item }">
-                    <ProjectCard :project="$item" :make-info="makeInfo" />
-                </template>
-            </PaginationRoot>
+                    <div>
+                        <InputGroup class="max-w-sm">
+                            <InputGroupInput
+                                v-model="searchContent"
+                                :placeholder="$t('projects.view.search_input.placeholder')"
+                            />
+                            <InputGroupAddon align="inline-start">
+                                <Search />
+                            </InputGroupAddon>
+                        </InputGroup>
+                    </div>
+                </div>
+                <PaginationRoot
+                    :items="data?.items"
+                    index="id"
+                    :page="currentPage"
+                    :loading="status === 'pending'"
+                    :page-size="data?.limit ?? config.pagination.defaultPageSize"
+                    :total-pages="data?.total_pages ?? 1"
+                    class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+                    @change-page="(page) => (currentPage = page)"
+                >
+                    <template #controls-previous>
+                        <ChevronsLeft />
+                    </template>
+                    <template #controls-next>
+                        <ChevronsRight />
+                    </template>
+
+                    <template #empty>
+                        <LazyProjectEmpty />
+                    </template>
+
+                    <template #loading>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <template v-for="i in config.pagination.defaultPageSize" :key="i">
+                                <Skeleton class="w-full h-82.5" />
+                            </template>
+                        </div>
+                    </template>
+
+                    <template #item="{ $item }">
+                        <ProjectCard :project="$item" :make-info="makeInfo" />
+                    </template>
+                </PaginationRoot>
+            </div>
         </TooltipProvider>
     </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { FileIcon, Info, Pickaxe, Settings, Table, Upload } from "lucide-vue-next";
+    import { FileIcon, Info, Pickaxe, Settings, Table, Upload, User } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     definePageMeta({
@@ -172,13 +172,22 @@
 <template>
     <div class="mx-auto w-full max-w-5xl">
         <div class="space-y-4">
-            <div class="space-y-1.5">
-                <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                    {{ project.name }}
-                </h1>
-                <p class="text-sm text-muted-foreground">
-                    {{ project.description }}
-                </p>
+            <div class="flex items-center justify-between">
+                <div class="space-y-1.5">
+                    <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
+                        {{ project.name }}
+                    </h1>
+                    <p class="text-sm text-muted-foreground">
+                        {{ project.description }}
+                    </p>
+                </div>
+
+                <AuthRole>
+                    <Badge variant="outline">
+                        <span>{{ project.owner_user }}</span>
+                        <User />
+                    </Badge>
+                </AuthRole>
             </div>
 
             <Tabs v-model="view" :default-value="VIEWS.Overview">

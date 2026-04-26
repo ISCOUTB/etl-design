@@ -50,6 +50,8 @@ export const BaseProjectSchema = z.object({
 export const ResponseProjectSchema = z
     .object({
         id: z.string(),
+        owner_id: z.string(),
+        owner_user: z.string(),
         created_at: z.iso.datetime({ offset: true }),
         updated_at: z.iso.datetime({ offset: true }),
     })

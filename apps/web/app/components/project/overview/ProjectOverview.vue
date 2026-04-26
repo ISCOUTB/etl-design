@@ -2,6 +2,7 @@
     import { buildPgConnectionString } from "#shared/utils/pg-connection-string";
     import {
         Calendar,
+        Check,
         Cloud,
         Copy,
         Database,
@@ -13,7 +14,6 @@
         Server,
         User,
     } from "lucide-vue-next";
-    import { toast } from "vue-sonner";
 
     const { project } = useProject();
 
@@ -37,12 +37,6 @@
 
     const clipboard = useClipboard();
     const config = useAppConfig();
-
-    onMounted(() => {
-        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
-            immediate: true,
-        });
-    });
 </script>
 
 <template>
@@ -74,10 +68,18 @@
                                 variant="ghost"
                                 size="icon"
                                 class="size-8"
-                                @click="clipboard.copy(project.id)"
+                                @click="clipboard.handleCopy(project.id, $event)"
                             >
-                                <Copy />
-                                <span class="sr-only">Copy ID</span>
+                                <Transition
+                                    :css="false"
+                                    mode="out-in"
+                                    @enter="clipboard.animations.onIconEnter"
+                                    @leave="clipboard.animations.onIconLeave"
+                                >
+                                    <Check v-if="clipboard.copied.value" />
+                                    <Copy v-else />
+                                </Transition>
+                                <span class="sr-only">{{ $t("common.clipboard.copy_id") }}</span>
                             </Button>
                         </div>
                     </div>

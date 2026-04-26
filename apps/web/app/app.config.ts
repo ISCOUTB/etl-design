@@ -45,5 +45,6 @@ export default defineAppConfig({
     },
     constants: {
         CALLBACK_KEY: "callbackUrl",
+        OWNER_ID_KEY: "ownerId",
     },
 });

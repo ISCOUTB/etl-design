@@ -88,7 +88,8 @@
         },
         "clipboard": {
             "copy": "Copiar",
-            "copied": "Copiado al portapapeles"
+            "copied": "Copiado al portapapeles",
+            "copy_id": "Copiar ID"
         }
     },
     "settings": {
@@ -327,6 +328,9 @@
             },
             "search_input": {
                 "placeholder": "Buscar proyectos..."
+            },
+            "actions": {
+                "clear_owner_filter": "Limpiar filtro de propietario"
             },
             "content": {
                 "no_description": "Este proyecto no tiene descripción",
@@ -759,6 +763,10 @@
             "title": "Usuarios",
             "header": {
                 "description": "Administra usuarios"
+            },
+            "status": {
+                "active": "Activo",
+                "inactive": "Inactivo"
             },
             "search_input": {
                 "placeholder": "Buscar usuarios..."
