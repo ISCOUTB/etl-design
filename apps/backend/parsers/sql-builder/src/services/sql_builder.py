@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from proto_utils.parsers.dtypes import (
     AllASTs,
@@ -15,6 +15,7 @@ def sql_builder(
     cols: Dict[str, AllASTs],
     dtypes: Dict[str, Dict[str, str]],
     table_name: str,
+    scheme: Optional[str] = None,
 ) -> BuildSQLResponse:
     """
     Main function to build SQL expressions from column definitions and their dependencies.
@@ -34,7 +35,7 @@ def sql_builder(
             error="The AST contains cyclic dependencies.",
         )
 
-    sql_expressions = build_sql(cols, graph, dtypes, table_name)
+    sql_expressions = build_sql(cols, graph, dtypes, table_name, scheme)
     sql_expressions = dict(
         map(
             lambda item: (

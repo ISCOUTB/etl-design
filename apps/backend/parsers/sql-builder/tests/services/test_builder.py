@@ -421,3 +421,50 @@ class TestBuildSql:
         create_sql = result[0][0]["sql"]
         assert "id BIGINT" in create_sql
         assert "name VARCHAR(255)" in create_sql
+
+    def test_create_schema_and_table_with_scheme(self):
+        # Excel input: Single column, no dependencies, with scheme
+        cols = {
+            "col1": {"type": "number", "value": 10, "sql": "10"},
+        }
+        dtypes = {
+            "col1": {"type": "INTEGER", "extra": "NOT NULL"},
+        }
+        graph = create_dependency_graph(cols)
+
+        result = build_sql(cols, graph, dtypes, "test_table", scheme="myschema")
+
+        assert 0 in result
+        assert len(result[0]) == 1
+        sql = result[0][0]["sql"]
+        # Schema creation should appear before table creation
+        assert "CREATE SCHEMA IF NOT EXISTS myschema;" in sql
+        # Table should be namespaced with the scheme
+        assert "CREATE TABLE IF NOT EXISTS myschema.test_table" in sql
+        assert "col1 INTEGER NOT NULL" in sql
+
+    def test_alter_and_constraint_with_scheme(self):
+        # Verify ALTER TABLE and primary key constraint respect scheme usage
+        cols = {
+            "col1": {"type": "number", "value": 10, "sql": "10"},
+            "col2": {"type": "cell", "column": "col1", "sql": "col1"},
+        }
+        dtypes = {
+            "col1": {"type": "INTEGER", "extra": "PRIMARY KEY"},
+            "col2": {"type": "INTEGER", "extra": ""},
+        }
+        graph = create_dependency_graph(cols)
+
+        result = build_sql(cols, graph, dtypes, "users", scheme="auth")
+
+        # Level 0 create statement should include schema creation and schematized table
+        create_sql = result[0][0]["sql"]
+        assert "CREATE SCHEMA IF NOT EXISTS auth;" in create_sql
+        assert "CREATE TABLE IF NOT EXISTS auth.users" in create_sql
+        # Constraint name uses the original table name (builder constructs constraint before applying scheme)
+        assert "CONSTRAINT users_pk PRIMARY KEY (col1)" in create_sql
+
+        # Alter statement for generated column should reference the schematized table
+        assert 1 in result
+        alter_sql = result[1][0]["sql"]
+        assert "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS col2" in alter_sql
