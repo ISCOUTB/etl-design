@@ -117,7 +117,8 @@ def test_json_schema_to_sql_builder_payload_validates_request_primary_keys():
 
 
 def test_read_json_returns_excel_like_response(monkeypatch):
-    def _fake_generate_sql(_stub, _cols, _dtypes, table_name):
+    def _fake_generate_sql(*args, **kwargs):
+        table_name = args[3] if len(args) > 3 else kwargs.get("table_name")
         return f"CREATE TABLE IF NOT EXISTS {table_name} (...);"
 
     app.dependency_overrides[get_sql_builder_stub] = lambda: (

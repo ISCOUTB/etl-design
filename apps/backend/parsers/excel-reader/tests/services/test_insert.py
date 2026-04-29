@@ -130,3 +130,30 @@ def test_create_sql_for_insertion_with_truncate_wraps_atomic_swap(monkeypatch):
     assert "ALTER TABLE users_temp RENAME TO users;" in sql
     assert "DROP TABLE users_backup;" in sql
     assert sql.strip().endswith("COMMIT;")
+
+
+def test_create_sql_for_insertion_prefixes_scheme(monkeypatch):
+    # Excel input: one sheet, scheme should prefix the target table name
+    monkeypatch.setattr(
+        "src.services.insert.get_data_from_spreadsheet",
+        lambda **_kwargs: {
+            "columns": {
+                "Sheet1": {
+                    "A": {"name": "id", "is_formula": False},
+                }
+            },
+            "data": {
+                "Sheet1": {"A": [{"value": 1}]},
+            },
+        },
+    )
+
+    result = create_sql_for_insertion(
+        table_name="users",
+        file_bytes=b"bytes",
+        filename="users.xlsx",
+        scheme="auth",
+    )
+
+    sql = result["Sheet1"]
+    assert sql.startswith("INSERT INTO auth.users (id) VALUES")

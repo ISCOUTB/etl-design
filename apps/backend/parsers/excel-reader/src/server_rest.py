@@ -1,6 +1,6 @@
 # TODO: Migrate this REST server to gRPC
 import json
-from typing import Annotated, Dict
+from typing import Annotated, Dict, Optional
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +17,7 @@ from proto_utils.telemetry import configure_otel_tracing
 from pydantic import ValidationError
 
 from src.core.config import settings
+from src.core.constants import DEFAULT_FILL_SPACES
 from src.schemas import (
     ColumnDtypesSchema,
     JSONSchemaRequest,
@@ -96,13 +97,15 @@ app.add_middleware(
 async def read_json(
     sql_builder_stub: SQLBuilderDep,
     payload: JSONSchemaRequest,
-    fill_spaces: str = " ",
+    fill_spaces: str = DEFAULT_FILL_SPACES,
 ) -> Dict[str, str]:
-    if settings.EXCEL_READER_DEBUG:
-        logger.debug(f"Received JSON schema for table: {payload.table_name}")
+    logger.debug(f"Received JSON schema for table: {payload.table_name}")
 
     table_name = payload.table_name.strip()
     table_name = standardize_string(table_name, fill_spaces=fill_spaces)
+    scheme = payload.scheme.strip() if payload.scheme else None
+    if scheme:
+        scheme = standardize_string(scheme, fill_spaces=fill_spaces)
 
     try:
         cols, dtypes = json_schema_to_sql_builder_payload(
@@ -114,10 +117,7 @@ async def read_json(
         raise HTTPException(status_code=400, detail=str(exc))
 
     sql_statement = generate_sql(
-        sql_builder_stub,
-        cols,
-        dtypes,
-        table_name,
+        sql_builder_stub, cols, dtypes, table_name, scheme
     )
     return {table_name: sql_statement}
 
@@ -131,11 +131,11 @@ async def read_excel(
     sql_builder_stub: SQLBuilderDep,
     dtypes_str: str = Form(...),
     table_name: str = Form(...),
+    scheme: Optional[str] = Form(None),
     limit: int = 50,
-    fill_spaces: str = "-",
+    fill_spaces: str = DEFAULT_FILL_SPACES,
 ) -> Dict[str, str]:
-    if settings.EXCEL_READER_DEBUG:
-        logger.debug(f"Received file: {spreadsheet.filename}")
+    logger.debug(f"Received file: {spreadsheet.filename}")
 
     file_content = await spreadsheet.read()
     if not file_content:
@@ -179,8 +179,10 @@ async def read_excel(
             detail="Dtypes JSON does not match the expected schema",
         )
 
-    # Standardize table name format to avoid issues in SQL generation
+    # Standardize table name & scheme format to avoid issues in SQL generation
     table_name = standardize_string(table_name, fill_spaces=fill_spaces)
+    if scheme is not None:
+        scheme = standardize_string(scheme, fill_spaces=fill_spaces)
 
     # Parse dtypes to use OPTIONAL, PRIMARY KEY, etc. in SQL generation
     dtypes = {
@@ -237,13 +239,14 @@ async def read_excel(
     sql_statements = {
         sheet: generate_sql(
             sql_builder_stub,
-            ddls[sheet],  # type: ignore
-            dtypes[sheet],
-            (
+            cols=ddls[sheet],  # type: ignore
+            dtypes=dtypes[sheet],
+            table_name=(
                 f"{table_name}_{standardize_string(sheet)}"
                 if len(ddls) > 1
                 else table_name
             ),
+            scheme=scheme,
         )
         for sheet in ddls.keys()
     }
@@ -260,8 +263,9 @@ async def read_excel(
 async def insert_sql(
     spreadsheet: UploadFile,
     table_name: str = Form(...),
+    scheme: Optional[str] = Form(None),
     overwrite: bool = False,
-    fill_spaces: str = "_",
+    fill_spaces: str = DEFAULT_FILL_SPACES,
 ) -> Dict[str, str]:
     if settings.EXCEL_READER_DEBUG:
         logger.debug(f"Received file for SQL insertion: {spreadsheet.filename}")
@@ -276,13 +280,16 @@ async def insert_sql(
 
     logger.info(f"Processing SQL insertion for file: {filename}")
 
-    # FIXME: When overwrite is True, the sql created tries to delete somethings,
+    # FIXME: When overwrite is True, the sql created tries to delete some things,
     # but because of the table's indexes and some constraints, it fails. For that reason,
-    # for now the overwrite will be ignored and set to False
+    # for now the overwrite will be ignored and set to `False`
     overwrite = False
     table_name = standardize_string(table_name, fill_spaces=fill_spaces)
+    if scheme is not None:
+        scheme = standardize_string(scheme, fill_spaces=fill_spaces)
+
     sql_statements = create_sql_for_insertion(
-        table_name, file_content, filename, truncate=overwrite
+        table_name, file_content, filename, scheme=scheme, truncate=overwrite
     )
 
     keys = list(sql_statements.keys())

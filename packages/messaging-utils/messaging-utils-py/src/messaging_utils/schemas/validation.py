@@ -16,6 +16,7 @@ class ValidationMessage(TypedDict):
     extra: Dict[str, str]
     insert: bool
     insert_table_name: Optional[str]
+    insert_scheme: Optional[str]
     insert_overwrite: Optional[bool]
     insert_db_uri: Optional[str]
     idempotency_key: Optional[str]

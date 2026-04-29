@@ -1,15 +1,18 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from src.services.get_data import get_data_from_spreadsheet
 
 
 def create_sql_for_insertion(
-    table_name: str, file_bytes: bytes, filename: str, truncate: bool = False
+    table_name: str, file_bytes: bytes, filename: str, scheme: Optional[str] = None, truncate: bool = False
 ) -> Dict[str, str]:
     # The truncate parameter is dangerous and should be used with caution.
     # In this case, we will use another way instead of using TRUNCATE TABLE directly,
     # we will create a new table with the same structure and then rename it to the original table name,
     # this way we can avoid the risk of truncating the original table by mistake.
+
+    if scheme is not None:
+        table_name = f"{scheme}.{table_name}"
 
     content = get_data_from_spreadsheet(
         file_bytes=file_bytes, filename=filename, limit=None

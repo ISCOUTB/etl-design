@@ -1,4 +1,4 @@
-from typing import Dict, Generator
+from typing import Dict, Generator, Optional
 
 from proto_utils.generated.parsers import (
     ddl_generator_pb2,
@@ -46,6 +46,7 @@ def generate_sql(
     cols: Dict[str, ddl_generator_pb2.DDLResponse],
     dtypes: Dict[str, Dict[str, str]],
     table_name: str,
+    scheme: Optional[str] = None,
 ) -> str:
     request = sql_builder_pb2.BuildSQLRequest(
         cols=cols,
@@ -56,6 +57,7 @@ def generate_sql(
             for dtype in dtypes
         },
         table_name=table_name,
+        scheme=scheme,
     )
     response: sql_builder_pb2.BuildSQLResponse = stub.BuildSQL(request)
     sql_expressions = SQLBuilderSerde.deserialize_build_sql_response(response)[

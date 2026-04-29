@@ -216,7 +216,7 @@ async def process(
             table_name=table_name,
             db_uri=db_uri,
             overwrite=overwrite,
-            trace_headers=trace_headers,
+            trace_headers=trace_headers,  # type: ignore
         )
         return response
     except Exception:
@@ -271,7 +271,6 @@ async def create_table(
     except ValidationError:
         raise DtypesInvalidContentException()
 
-    fill_spaces = "_"
     spreadsheet_content = await spreadsheet.read()
     if not spreadsheet_content:
         raise FileContentEmptyException()
@@ -302,8 +301,9 @@ async def create_table(
         data={
             "table_name": table_name,
             "dtypes_str": dtypes_str,
+            "scheme": str(project_id),
         },
-        params={"fill_spaces": fill_spaces, "limit": 5},
+        params={"limit": 5},
         headers=headers,
     )
 
@@ -335,8 +335,9 @@ async def create_table(
                 },
                 data={
                     "table_name": table_name,
+                    "scheme": str(project_id),
                 },
-                params={"overwrite": False, "fill_spaces": fill_spaces},
+                params={"overwrite": False},
                 headers=headers,
             )
 
