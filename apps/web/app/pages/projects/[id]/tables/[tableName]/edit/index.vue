@@ -168,6 +168,20 @@
         };
     }
 
+    function setAllColumnsOptional(value: boolean) {
+        setFieldValue(
+            "columns",
+            fields.value.map((field) => ({ ...field.value, optional: value })),
+        );
+    }
+
+    function setAllColumnsUnique(value: boolean) {
+        setFieldValue(
+            "columns",
+            fields.value.map((field) => ({ ...field.value, unique: value })),
+        );
+    }
+
     const errorToast = useErrorToast();
     const [loading] = useToggle(false);
     const onSubmit = handleSubmit((values) => {
@@ -337,12 +351,41 @@
                                     <div class="col-span-2 lg:col-span-4">
                                         {{ $t("projects.id.tables.edit.columns.type") }}
                                     </div>
-                                    <div class="hidden lg:block col-span-1 text-center">
-                                        Primary
+                                    <div class="col-span-1 text-center">
+                                        {{
+                                            $t(
+                                                "projects.id.sections.tables.details.properties_table.primary",
+                                            )
+                                        }}
                                     </div>
-                                    <div class="hidden lg:block col-span-1 text-center">Unique</div>
-                                    <div class="hidden lg:block col-span-1 text-center">
-                                        Optional
+                                    <div class="col-span-1 text-center flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.unique",
+                                                )
+                                            }}
+                                        </span>
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) => setAllColumnsUnique(!!value)
+                                            "
+                                        />
+                                    </div>
+                                    <div class="col-span-1 text-center flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.optional",
+                                                )
+                                            }}
+                                        </span>
+
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) => setAllColumnsOptional(!!value)
+                                            "
+                                        />
                                     </div>
                                     <div class="col-span-1" />
                                 </div>

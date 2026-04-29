@@ -185,8 +185,16 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             patchColumnConfig(columnKey, { optional });
         }
 
+        function setAllColumnsOptional(optional: boolean) {
+            columns.value.forEach((column) => patchColumnConfig(column.key, { optional }));
+        }
+
         function setColumnUnique(columnKey: string, unique: boolean) {
             patchColumnConfig(columnKey, { unique });
+        }
+
+        function setAllColumnsUnique(unique: boolean) {
+            columns.value.forEach((column) => patchColumnConfig(column.key, { unique }));
         }
 
         function setColumnPrimaryKey(columnKey: string, primary_key: boolean) {
@@ -239,7 +247,9 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 setInsertData,
                 setColumnConfig,
                 setColumnUnique,
+                setAllColumnsUnique,
                 setColumnOptional,
+                setAllColumnsOptional,
                 setColumnPrimaryKey,
                 patchColumnConfig,
                 getColumnDataTypeModel,

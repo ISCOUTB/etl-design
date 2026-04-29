@@ -415,9 +415,53 @@
                                         )
                                     }}
                                 </TableHead>
-                                <TableHead> Primary </TableHead>
-                                <TableHead> Unique </TableHead>
-                                <TableHead> Optional </TableHead>
+                                <TableHead>
+                                    {{
+                                        $t(
+                                            "projects.id.sections.tables.details.properties_table.primary",
+                                        )
+                                    }}
+                                </TableHead>
+                                <TableHead>
+                                    <div class="flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.unique",
+                                                )
+                                            }}
+                                        </span>
+
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) =>
+                                                    uploadSchema.dispatch.setAllColumnsUnique(
+                                                        !!value,
+                                                    )
+                                            "
+                                        />
+                                    </div>
+                                </TableHead>
+                                <TableHead>
+                                    <div class="flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.optional",
+                                                )
+                                            }}
+                                        </span>
+
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) =>
+                                                    uploadSchema.dispatch.setAllColumnsOptional(
+                                                        !!value,
+                                                    )
+                                            "
+                                        />
+                                    </div>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
