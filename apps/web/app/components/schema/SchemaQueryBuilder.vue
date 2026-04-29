@@ -61,9 +61,8 @@
 
                     <div>
                         <Button
-                            variant="outline"
+                            class="border border-green-300 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 disabled:bg-green-50 disabled:text-green-300 disabled:border-green-200 disabled:cursor-not-allowed transition-colors duration-200"
                             :disabled="loading"
-                            class="cursor-pointer"
                             @click="handleExecute"
                         >
                             <UtilsLoading :loading="loading">

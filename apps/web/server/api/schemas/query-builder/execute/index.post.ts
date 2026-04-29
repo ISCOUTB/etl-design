@@ -96,7 +96,7 @@ export default defineWrappedResponseHandler(async (event) => {
     const client = resolveClient(project);
 
     try {
-        client.raw("SELECT 1");
+        await client.raw("SELECT 1");
     } catch {
         throw createError({
             status: 400,
@@ -104,9 +104,9 @@ export default defineWrappedResponseHandler(async (event) => {
         });
     }
 
-    const builder = client(
-        QueryBuilderUtils.standardize.normalize(TableUtils.getTableName(tree.table)),
-    ).select(
+    const tableName = QueryBuilderUtils.standardize.normalize(TableUtils.getTableName(tree.table));
+
+    const builder = client(tableName).select(
         tree.select.map((column) => {
             if (column === "*") {
                 return column;
@@ -139,7 +139,11 @@ export default defineWrappedResponseHandler(async (event) => {
         builder.limit(tree.limit);
     }
 
-    const parsedRows = z.array(z.record(z.string(), z.unknown())).safeParse(await builder);
+    const parsedRows = z
+        .array(z.record(z.string(), z.unknown()))
+        .safeParse(
+            await builder.withSchema(`${QueryBuilderUtils.standardize.normalize(project.id)}`),
+        );
     if (!parsedRows.success) {
         throw createError({
             status: 500,
