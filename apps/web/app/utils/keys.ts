@@ -118,6 +118,8 @@ export const NuxtKeys = {
                     (id) => `project:${id}:query-builder:rows`,
                 ),
         },
+        CookieTab: (projectId: ResponseProject["id"] | undefined) =>
+            $(projectId, "sloth:project:tab", (id) => `sloth:project:${id}:tab`),
     },
     Components: {
         DataTable: {

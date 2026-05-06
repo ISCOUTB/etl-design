@@ -36,7 +36,9 @@
                     <Button
                         class="cursor-pointer"
                         @click="
-                            events.emit('event:projects:change-tab', { value: VIEWS.UploadFile })
+                            events.emit('event:projects:change-tab', {
+                                value: VIEWS.UploadFile.value,
+                            })
                         "
                     >
                         {{ $t("projects.id.sections.tables.empty.events.create_new") }}

@@ -1,26 +1,65 @@
-const VIEWS = {
-    Overview: "overview",
-    UploadFile: "upload-file",
-    Tables: "tables",
-    Settings: "settings",
-    File: "file",
-    QueryBuilder: "query-builder",
-} as const;
-
 export const [useProvideProjectState, _useProjectState] = createInjectionState(
     (initialId: string | undefined) => {
+        const { t } = useI18n();
+
         const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(initialId));
 
-        const view = useRouteQuery<string>("tab", VIEWS.Overview, {
-            mode: "replace",
-            transform: (value) => {
-                const sections = Object.values(VIEWS);
-                const found = sections.find((section) => section === value);
-                if (found) {
-                    return found;
-                }
+        const VIEWS = computed(() => ({
+            Overview: {
+                key: "Overview",
+                value: t("projects.id.sections.overview.tab"),
+            },
+            UploadFile: {
+                key: "UploadFile",
+                value: t("projects.id.sections.upload_schema.tab"),
+            },
+            Tables: {
+                key: "Tables",
+                value: t("projects.id.sections.tables.tab"),
+            },
+            Settings: {
+                key: "Settings",
+                value: t("projects.id.sections.settings.tab"),
+            },
+            File: {
+                key: "File",
+                value: t("projects.id.sections.file.tab"),
+            },
+            QueryBuilder: {
+                key: "QueryBuilder",
+                value: t("projects.id.sections.query_builder.tab"),
+            },
+        }));
 
-                return VIEWS.Overview;
+        const cookie = useCookie(NuxtKeys.Projects.CookieTab(initialId), {
+            default: () => VIEWS.value.Overview.key,
+        });
+
+        const view = useRouteQuery<string>("tab", VIEWS.value.Overview.value, {
+            mode: "replace",
+        });
+
+        syncRef(cookie, view, {
+            direction: "both",
+            transform: {
+                ltr(left) {
+                    const sections = Object.values(VIEWS.value);
+                    const found = sections.find((section) => section.key === left);
+                    if (found) {
+                        return found.value;
+                    }
+
+                    return VIEWS.value.Overview.value;
+                },
+                rtl(right) {
+                    const sections = Object.values(VIEWS.value);
+                    const found = sections.find((section) => section.value === right);
+                    if (found) {
+                        return found.key;
+                    }
+
+                    return VIEWS.value.Overview.key;
+                },
             },
         });
 
