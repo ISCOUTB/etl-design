@@ -59,7 +59,7 @@
                     </CardDescription>
                 </div>
 
-                <div v-if="qb.state.selectedCols.value.length" class="space-x-2">
+                <div v-if="qb.state.selectedCols.value.length" class="flex gap-2 flex-wrap">
                     <Button
                         variant="outline"
                         size="sm"
