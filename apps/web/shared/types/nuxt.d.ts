@@ -29,6 +29,8 @@ type AuthMiddlewareMeta =
           navigateUnauthenticatedTo?: string;
       };
 
+interface PageMetaEvents {}
+
 declare module "#app" {
     interface NuxtApp {
         $socket: UseWebSocketReturn<WebSocket.Message>;
@@ -41,6 +43,7 @@ declare module "#app" {
         title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
+        events?: Partial<PageMetaEvents>;
     }
 }
 
@@ -58,5 +61,6 @@ declare module "vue-router" {
         title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
+        events?: Partial<PageMetaEvents>;
     }
 }

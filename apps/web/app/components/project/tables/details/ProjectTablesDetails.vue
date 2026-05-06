@@ -39,7 +39,7 @@
 
     function handleQuery(_event: Event) {
         queryBuilder.state.schema.value = tables.state.value.selectedSchema;
-        events.emit("event:projects:change-tab", { value: VIEWS.value.QueryBuilder });
+        events.emit("event:projects:change-tab", { value: VIEWS.QueryBuilder });
     }
 </script>
 

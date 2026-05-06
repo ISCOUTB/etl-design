@@ -60,7 +60,7 @@
                 icon: Pickaxe,
                 action() {
                     queryBuilder.state.schema.value = table.value;
-                    events.emit("event:projects:change-tab", { value: VIEWS.value.QueryBuilder });
+                    events.emit("event:projects:change-tab", { value: VIEWS.QueryBuilder });
                 },
             },
             {

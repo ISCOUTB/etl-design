@@ -499,8 +499,8 @@ dependencies = [
 requires-dist = [
     { name = "grpcio", specifier = ">=1.80.0" },
     { name = "grpcio-tools", specifier = ">=1.80.0" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.40.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.40.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.41.1" },
+    { name = "opentelemetry-sdk", specifier = ">=1.41.1" },
 ]
 
 [[package]]

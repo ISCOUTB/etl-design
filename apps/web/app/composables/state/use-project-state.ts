@@ -1,28 +1,26 @@
+const VIEWS = {
+    Overview: "overview",
+    UploadFile: "upload-file",
+    Tables: "tables",
+    Settings: "settings",
+    File: "file",
+    QueryBuilder: "query-builder",
+} as const;
+
 export const [useProvideProjectState, _useProjectState] = createInjectionState(
     (initialId: string | undefined) => {
-        const { t } = useI18n();
-
         const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(initialId));
 
-        const VIEWS = computed(() => ({
-            Overview: t("projects.id.sections.overview.tab"),
-            UploadFile: t("projects.id.sections.upload_schema.tab"),
-            Tables: t("projects.id.sections.tables.tab"),
-            Settings: t("projects.id.sections.settings.tab"),
-            File: t("projects.id.sections.file.tab"),
-            QueryBuilder: t("projects.id.sections.query_builder.tab"),
-        }));
-
-        const view = useRouteQuery<string>("tab", VIEWS.value.Overview, {
+        const view = useRouteQuery<string>("tab", VIEWS.Overview, {
             mode: "replace",
             transform: (value) => {
-                const sections = Object.values(VIEWS.value);
+                const sections = Object.values(VIEWS);
                 const found = sections.find((section) => section === value);
                 if (found) {
                     return found;
                 }
 
-                return VIEWS.value.Overview;
+                return VIEWS.Overview;
             },
         });
 
