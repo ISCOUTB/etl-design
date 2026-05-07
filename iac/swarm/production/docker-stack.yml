@@ -42,12 +42,8 @@ services:
 
             # Internal metrics entrypoint (private, only inside the cluster)
             - "--entrypoints.metrics.address=:8082"
-            - "--entrypoints.websecure.http.tls=true"
-            - "--entrypoints.websecure.http.tls.certresolver=le"
-            - "--certificatesresolvers.le.acme.tlschallenge=true"
-            - "--certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL?Variable not set}"
-            - "--certificatesresolvers.le.acme.storage=/certificates/acme.json"
-            - "--certificatesresolvers.le.acme.caserver=${LETSENCRYPT_CA_SERVER-https://acme-v02.api.letsencrypt.org/directory}"
+            - "--providers.file.directory=/certs"
+            - "--providers.file.watch=true"
 
             # Providers
 
@@ -106,25 +102,29 @@ services:
                 - "traefik.metrics.prometheus=true"
 
                 # Dashboard router
-                - "traefik.http.routers.dashboard.rule=Host(`dashboard.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.dashboard.rule=Host(`dashboard.${DOMAIN}`)"
                 - "traefik.http.routers.dashboard.entrypoints=websecure"
                 - "traefik.http.routers.dashboard.service=api@internal"
                 - "traefik.http.routers.dashboard.tls=true"
-                - "traefik.http.routers.dashboard.tls.certresolver=le"
 
                 # Basic‑auth middleware
                 - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USERNAME?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
                 - "traefik.http.middlewares.internal-allowlist.ipallowlist.sourcerange=${TRAEFIK_ALLOWED_CIDRS?Variable not set}"
-                - "traefik.http.middlewares.secure-headers.headers.stsseconds=31536000"
-                - "traefik.http.middlewares.secure-headers.headers.stsincludesubdomains=true"
-                - "traefik.http.middlewares.secure-headers.headers.stspreload=true"
-                - "traefik.http.middlewares.secure-headers.headers.contenttypenosniff=true"
-                - "traefik.http.middlewares.secure-headers.headers.framedeny=true"
-                - "traefik.http.middlewares.internal-maintenance.chain.middlewares=internal-allowlist@swarm,secure-headers@swarm"
+                - "traefik.http.middlewares.internal-maintenance.chain.middlewares=internal-allowlist@swarm,secure-headers@file"
                 - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-maintenance@swarm"
 
                 # Service hint
                 - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+        configs:
+          - source: traefik_tls
+            target: /certs/tls.yml
+          - source: traefik_middlewares
+            target: /certs/middlewares.yml
+          - source: traefik_fullchain
+            target: /certs/fullchain.crt
+          - source: traefik_privkey
+            target: /certs/server.key
 
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -159,10 +159,9 @@ services:
                     memory: 512M
             labels:
                 - "traefik.enable=${TRAEFIK_EXPOSE_PROMETHEUS-false}"
-                - "traefik.http.routers.prometheus.rule=Host(`prometheus.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
                 - "traefik.http.routers.prometheus.entrypoints=websecure"
                 - "traefik.http.routers.prometheus.tls=true"
-                - "traefik.http.routers.prometheus.tls.certresolver=le"
                 - "traefik.http.routers.prometheus.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
@@ -173,8 +172,8 @@ services:
             - traefik_proxy
         environment:
             GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD?Variable not set}
-            GF_SERVER_DOMAIN: grafana.swarm.${DOMAIN}
-            GF_SERVER_ROOT_URL: https://grafana.swarm.${DOMAIN}
+            GF_SERVER_DOMAIN: grafana.${DOMAIN}
+            GF_SERVER_ROOT_URL: https://grafana.${DOMAIN}
         volumes:
             - grafana-data:/var/lib/grafana
         configs:
@@ -200,10 +199,9 @@ services:
                     - spread: node.id
             labels:
                 - "traefik.enable=${TRAEFIK_EXPOSE_GRAFANA-false}"
-                - "traefik.http.routers.grafana.rule=Host(`grafana.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
                 - "traefik.http.routers.grafana.entrypoints=websecure"
                 - "traefik.http.routers.grafana.tls=true"
-                - "traefik.http.routers.grafana.tls.certresolver=le"
                 - "traefik.http.routers.grafana.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
@@ -560,10 +558,9 @@ services:
                     cpus: "1.0"
             labels:
                 - "traefik.enable=${TRAEFIK_EXPOSE_RABBITMQ-false}"
-                - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.${DOMAIN}`)"
                 - "traefik.http.routers.rabbitmq.entrypoints=websecure"
                 - "traefik.http.routers.rabbitmq.tls=true"
-                - "traefik.http.routers.rabbitmq.tls.certresolver=le"
                 - "traefik.http.routers.rabbitmq.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
 
@@ -731,10 +728,9 @@ services:
                     memory: "512m"
             labels:
                 - "traefik.enable=${TRAEFIK_EXPOSE_PGADMIN-false}"
-                - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMAIN}`)"
                 - "traefik.http.routers.pgadmin.entrypoints=websecure"
                 - "traefik.http.routers.pgadmin.tls=true"
-                - "traefik.http.routers.pgadmin.tls.certresolver=le"
                 - "traefik.http.routers.pgadmin.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
@@ -991,7 +987,7 @@ services:
         image: vulcan99/etl-api:latest
         environment:
             API_V1_STR: ${API_V1_STR-/api/v1}
-            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web,https://web.swarm.${DOMAIN}
+            CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web,https://${DOMAIN}
             SERVER_HOST: "0.0.0.0"
             SERVER_PORT: ${SERVER_PORT?Variable not set}
             SERVER_DEBUG: "false"
@@ -1088,18 +1084,16 @@ services:
             labels:
                 - scaler.enabled=true
                 - "traefik.enable=${TRAEFIK_EXPOSE_API-false}"
-                - "traefik.http.routers.api.rule=Host(`api.swarm.${DOMAIN}`)"
+                - "traefik.http.routers.api.rule=Host(`api.${DOMAIN}`)"
                 - "traefik.http.routers.api.entrypoints=websecure"
                 - "traefik.http.routers.api.tls=true"
-                - "traefik.http.routers.api.tls.certresolver=le"
-                - "traefik.http.routers.api-web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`${API_V1_STR-/api/v1}`)"
+                - "traefik.http.routers.api-web.rule=Host(`${DOMAIN}`) && PathPrefix(`${API_V1_STR-/api/v1}`)"
                 - "traefik.http.routers.api-web.entrypoints=websecure"
                 - "traefik.http.routers.api-web.tls=true"
-                - "traefik.http.routers.api-web.tls.certresolver=le"
                 - "traefik.http.routers.api-web.priority=100"
                 - "traefik.http.routers.api-web.service=api@swarm"
-                - "traefik.http.routers.api.middlewares=secure-headers@swarm"
-                - "traefik.http.routers.api-web.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.api.middlewares=secure-headers@file"
+                - "traefik.http.routers.api-web.middlewares=secure-headers@file"
                 - "traefik.http.services.api.loadbalancer.server.port=${SERVER_PORT?Variable not set}"
                 - prometheus-job=api
                 - prometheus-port=${SERVER_PORT?Variable not set}
@@ -1110,9 +1104,9 @@ services:
         environment:
             NUXT_SITE_ENV: production
             API_BASE_URL: ${API_V1_STR-/api/v1}
-            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
-            NUXT_SITE_URL: https://web.swarm.${DOMAIN}
-            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            HOMEPAGE_URL: https://${DOMAIN}
+            NUXT_SITE_URL: https://${DOMAIN}
+            AUTH_ORIGIN: https://${DOMAIN}/api/auth
             AUTH_SECRET: ${AUTH_SECRET?Variable not set}
             AUTH_SIGN: ${AUTH_SIGN?Variable not set}
             NUXT_SITE_NAME: ${NUXT_SITE_NAME-"S.L.O.T.H"}
@@ -1151,12 +1145,11 @@ services:
                 - scaler.enabled=true
                 - "traefik.enable=true"
                 - "traefik.docker.network=${GLOBAL_STACK_NAME}_traefik_proxy"
-                - "traefik.http.routers.web.rule=Host(`web.swarm.${DOMAIN}`) && PathPrefix(`/`)"
+                - "traefik.http.routers.web.rule=Host(`${DOMAIN}`) && PathPrefix(`/`)"
                 - "traefik.http.routers.web.entrypoints=websecure"
                 - "traefik.http.routers.web.priority=1"
                 - "traefik.http.routers.web.tls=true"
-                - "traefik.http.routers.web.tls.certresolver=le"
-                - "traefik.http.routers.web.middlewares=secure-headers@swarm"
+                - "traefik.http.routers.web.middlewares=secure-headers@file"
                 - "traefik.http.routers.web.service=web"
                 - "traefik.http.services.web.loadbalancer.server.port=3000"
 
@@ -1229,6 +1222,14 @@ networks:
                 - subnet: 10.210.17.0/24
 
 configs:
+    traefik_tls:
+        file: ./traefik/tls.yml
+    traefik_middlewares:
+        file: ./traefik/middlewares.yml
+    traefik_fullchain:
+        file: ./certs/fullchain.crt
+    traefik_privkey:
+        file: ./certs/domain.key
     prometheus_config:
         file: ./prometheus.yml
     grafana_datasources:
