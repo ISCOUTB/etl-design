@@ -982,7 +982,7 @@ services:
                 - prometheus-port=${SERVER_PORT?Variable not set}
                 - prometheus-path=/api/v1/metrics
     web:
-        image: vulcan99/web:1.02
+        image: vulcan99/web:1.03
         environment:
             NUXT_SITE_ENV: production
             API_BASE_URL: ${API_V1_STR-/api/v1}
