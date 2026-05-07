@@ -271,7 +271,7 @@ This project is developed as part of an academic degree project at Universidad T
 
 ## 👥 Authors
 
-**Engineering Degree Project**
+**Engineering Degree Project**  
 Diederik Montaño  
 Mauro Gonzalez  
 Juan Perez  
