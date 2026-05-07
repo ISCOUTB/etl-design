@@ -204,22 +204,22 @@ Currently, the system has significant limitations with range operations:
 
 1. Install dependencies:
 
-  ```bash
-  uv sync
-  ```
+    ```bash
+    uv sync
+    ```
 
 2. Configure environment:
 
-  ```bash
-  cp .env.example .env
-  # Edit .env with your configuration
-  ```
+    ```bash
+    cp .env.example .env
+    # Edit .env with your configuration
+    ```
 
 3. Start the service:
 
-  ```bash
-  uv run -m src.server
-  ```
+    ```bash
+    uv run python -m src.server
+    ```
 
 ## Running Tests
 
@@ -238,6 +238,12 @@ Environment variables (see `.env.example`):
 DDL_GENERATOR_HOST="localhost"
 DDL_GENERATOR_PORT="50053"
 DDL_GENERATOR_DEBUG=True
+ENABLE_PROMETHEUS_METRICS=False
+PROMETHEUS_METRICS_PORT="9090"
+DDL_TRACE_CONTEXT_ENABLED=True
+DDL_TRACE_CONTEXT_LOG_HEADERS=False
+OTEL_SERVICE_NAME="ddl-generator"
+OTEL_SERVICE_VERSION="1.0.0"
 ```
 
 ## Development

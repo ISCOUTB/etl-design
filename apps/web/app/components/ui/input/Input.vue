@@ -3,12 +3,13 @@
     import { useVModel } from "@vueuse/core";
     import { cn } from "@/lib/utils";
 
-    const props = defineProps<{
+    interface Props {
         defaultValue?: string | number;
         modelValue?: string | number;
         class?: HTMLAttributes["class"];
-    }>();
+    }
 
+    const props = defineProps<Props>();
     const emits = defineEmits<{
         (e: "update:modelValue", payload: string | number): void;
     }>();

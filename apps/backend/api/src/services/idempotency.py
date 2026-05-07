@@ -17,13 +17,15 @@ from uuidv7 import uuid7
 from src import models, schemas
 from src.core.config import settings
 from src.core.constants import INSERTION_TASK, VALIDATION_TASK
+from src.core.domain import get_import_name
 from src.exceptions import (
     AppException,
     ContentTypeEmptyException,
     FileContentEmptyException,
     FilenameEmptyException,
+    ProjectNotFoundException,
 )
-from src.repositories import UploadRepository
+from src.repositories import ProjectRepository, UploadRepository
 from src.utils import logger, utc_now
 
 
@@ -83,6 +85,11 @@ class IdempotencyService:
         table_name: str,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -113,7 +120,6 @@ class IdempotencyService:
 
         # First, create the task in database with status "pending"
         try:
-            # Save the task in the database with status "pending"
             db_task = self.upload_repository.create_upload_task(
                 upload_task_create=schemas.UploadTaskCreateSchema(
                     task_id=task_id,
@@ -157,6 +163,9 @@ class IdempotencyService:
                             "idempotency_key": idempotency_key,
                         },
                     )
+            else:
+                logger.error("Database integrity error during task creation", e)
+            raise AppException() from e
         except OperationalError as e:
             # If the problem is the postgres database, roll back the transaction and raise an AppException.
             logger.error("Database operation failed, rolling back task creation", e)
@@ -232,7 +241,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=VALIDATION_TASK,
@@ -263,6 +274,11 @@ class IdempotencyService:
         overwrite: bool = False,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -364,6 +380,7 @@ class IdempotencyService:
                 file_data=file_content,
                 project_id=project_id,
                 table_name=table_name,
+                scheme=str(project_id),
                 metadata=metadata,
                 task="sample_insertion",
                 overwrite=overwrite,
@@ -411,7 +428,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=INSERTION_TASK,
@@ -442,6 +461,11 @@ class IdempotencyService:
         overwrite: bool = False,
         trace_headers: Optional[schemas.OpenTelemetryTraceHeaders] = None,
     ) -> dtypes.ApiResponse:
+        if not ProjectRepository(db=self.upload_repository.db).get_project_by_id(
+            project_id=project_id
+        ):
+            raise ProjectNotFoundException()
+
         file_content = await spreadsheet_file.read()
         if not file_content:
             raise FileContentEmptyException()
@@ -458,7 +482,7 @@ class IdempotencyService:
             project_id=project_id,
             table_name=table_name,
             file_hash=file_hash,
-            metadata=VALIDATION_TASK,
+            metadata=f"{VALIDATION_TASK}&{INSERTION_TASK}",
         )
 
         task_id = str(uuid7())
@@ -546,6 +570,7 @@ class IdempotencyService:
                 task="sample_validation",
                 insert=True,
                 insert_overwrite=overwrite,
+                insert_scheme=str(project_id),
                 insert_db_uri=db_uri,
                 task_id=task_id,
                 idempotency_key=idempotency_key,
@@ -592,7 +617,9 @@ class IdempotencyService:
                         data={
                             "task_id": task_id,
                             "project_id": project_id,
-                            "import_name": f"{project_id}__{table_name}",
+                            "import_name": get_import_name(
+                                project_id=project_id, table_name=table_name
+                            ),
                         },
                     ),
                     task=VALIDATION_TASK,

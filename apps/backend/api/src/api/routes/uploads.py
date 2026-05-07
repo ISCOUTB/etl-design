@@ -20,13 +20,16 @@ from src.api.deps import (
     PublisherDep,
 )
 from src.core.config import settings
+from src.core.domain import get_import_name, table_name_from_create_sql_response
 from src.exceptions import (
     DtypesInvalidContentException,
     DtypesInvalidJsonObjectException,
     DtypesInvalidJsonStringException,
     ExcelReaderErrorException,
+    FileContentEmptyException,
     ForbiddenException,
     InvalidDBCredentialsException,
+    Psycopg2CouldNotConnectToDatabaseException,
     Psycopg2ErrorException,
 )
 from src.models import Project
@@ -37,10 +40,16 @@ from src.schemas import (
 )
 from src.services import SchemaService
 from src.services.permissions import Action, ModelKeys, PermissionService
+from src.utils import logger
 
 router = APIRouter()
 
-HTTPX_CLIENT = httpx.AsyncClient(timeout=settings.EXCEL_READER_TIMEOUT_SECONDS)
+HTTPX_CLIENT = httpx.AsyncClient(
+    timeout=settings.EXCEL_READER_TIMEOUT_SECONDS,
+    verify=False,
+    http2=True,
+    base_url=settings.EXCEL_READER_URL,
+)
 
 
 def _execute_sql_per_sheet(
@@ -48,11 +57,27 @@ def _execute_sql_per_sheet(
     uri: str,
     sql_per_sheet: Dict[str, str],
 ) -> None:
-    with psycopg2.connect(uri) as conn:
-        cur = conn.cursor()
-        for _, sql in sql_per_sheet.items():
-            cur.execute(sql)
-        conn.commit()
+    if not uri:
+        raise InvalidDBCredentialsException()
+
+    try:
+        with psycopg2.connect(uri) as conn:
+            cur = conn.cursor()
+            for _, sql in sql_per_sheet.items():
+                cur.execute(sql)
+            conn.commit()
+    # In case of connection issues, we want to raise a specific exception
+    # to return a 503 status code
+    except psycopg2.OperationalError:
+        raise Psycopg2CouldNotConnectToDatabaseException()
+    # For any other psycopg2 error, we raise a generic database operation
+    # error with details for debugging
+    except psycopg2.Error as e:
+        logger.error(f"Database operation failed: {str(e)}")
+        raise Psycopg2ErrorException(
+            message=f"An error occurred while processing the database operation.\n"
+            f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
+        )
 
 
 @router.post("/validate")
@@ -191,7 +216,7 @@ async def process(
             table_name=table_name,
             db_uri=db_uri,
             overwrite=overwrite,
-            trace_headers=trace_headers,
+            trace_headers=trace_headers,  # type: ignore
         )
         return response
     except Exception:
@@ -213,6 +238,7 @@ async def create_table(
     table_name: Annotated[str, Form()],
     dtypes_str: Annotated[str, Form()],
     execute_sql: bool = True,
+    insert_data: bool = False,
 ) -> CreateTableResponse:
     has_permission = PermissionService.has_permission(
         user=current_user,
@@ -240,12 +266,14 @@ async def create_table(
             )
             for sheet_name, sheet_json in dtypes_json.items()
         }
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError):
         raise DtypesInvalidJsonStringException()
     except ValidationError:
         raise DtypesInvalidContentException()
 
-    fill_spaces = "_"
+    spreadsheet_content = await spreadsheet.read()
+    if not spreadsheet_content:
+        raise FileContentEmptyException()
 
     # Extract trace headers from request state (set by LogsMiddleware)
     headers = {}
@@ -259,20 +287,23 @@ async def create_table(
         if trace_headers.get("baggage"):
             headers["baggage"] = trace_headers["baggage"]
 
+    # Get sql statements to create the table
+    logger.info(f"Calling excel-reader with table_name: {table_name}")
     response = await HTTPX_CLIENT.post(
-        f"{settings.EXCEL_READER_URL}/parser/excel",
+        "/parser/excel",
         files={
             "spreadsheet": (
                 spreadsheet.filename,
-                await spreadsheet.read(),
+                spreadsheet_content,
                 spreadsheet.content_type,
             )
         },
         data={
             "table_name": table_name,
             "dtypes_str": dtypes_str,
+            "scheme": str(project_id),
         },
-        params={"fill_spaces": fill_spaces, "limit": 5},
+        params={"limit": 5},
         headers=headers,
     )
 
@@ -289,13 +320,91 @@ async def create_table(
 
     sql_per_sheet = response.json()
 
+    # If the user desired to insert data inmediatly, then do a new request
+    # to excel reader to get the insert statements
+    if insert_data:
+        try:
+            response = await HTTPX_CLIENT.post(
+                "/insert-sql",
+                files={
+                    "spreadsheet": (
+                        spreadsheet.filename,
+                        spreadsheet_content,
+                        spreadsheet.content_type,
+                    )
+                },
+                data={
+                    "table_name": table_name,
+                    "scheme": str(project_id),
+                },
+                params={"overwrite": False},
+                headers=headers,
+            )
+
+            if response.is_error:
+                try:
+                    detail = response.json().get("detail", response.text)
+                except Exception:
+                    detail = response.text
+
+                raise ExcelReaderErrorException(
+                    status_code=response.status_code,
+                    message=f"Excel Reader error: {detail}",
+                )
+
+            insert_sql_per_sheet = response.json()
+            # Merge the create table SQL statements with the insert SQL statements
+            for sheet, insert_sql in insert_sql_per_sheet.items():
+                if sheet in sql_per_sheet:
+                    sql_per_sheet[sheet] += f"\n{insert_sql}"
+                else:
+                    sql_per_sheet[sheet] = insert_sql
+        except Exception as e:
+            raise ExcelReaderErrorException(
+                message=f"Failed to get insert SQL from Excel Reader: {str(e)}"
+            )
+
     # Once the file is parsed and the SQL statements are generated, we can execute them if requested.
     # But, first, is neccesary create the jsonschema instance and save it in the db, because the worker
     # will need it to validate the data before insert it.
 
+    # Match table name for each sheet to ensure correct import_name and schema saving.
+    # The mapping logic handles both single-sheet and multi-sheet scenarios.
+    sheet_table_names_mapping = {}
+
+    if len(dtypes) == 1:
+        # Case 1: Single sheet upload.
+        # We explicitly map the only sheet in dtypes to the requested table_name.
+        # This is the most common case and prevents "Sheet1" defaulting issues.
+        sheet_name = list(dtypes.keys())[0]
+        sheet_table_names_mapping[sheet_name] = table_name
+    elif len(sql_per_sheet) == 1:
+        # Case 2: Only one SQL statement generated (fallback).
+        # Map the first sheet in dtypes to the table_name requested.
+        sheet_name = list(dtypes.keys())[0]
+        sheet_table_names_mapping[sheet_name] = table_name
+    else:
+        # Case 3: Multi-sheet upload.
+        # We try to extract table names from the CREATE TABLE statements in each sheet's SQL.
+        for sheet in sql_per_sheet.keys():
+            try:
+                # Attempt to extract table name from SQL (e.g., "CREATE TABLE foobar")
+                extracted_name = table_name_from_create_sql_response(
+                    sql_per_sheet[sheet]
+                )
+                sheet_table_names_mapping[sheet] = extracted_name
+            except ValueError:
+                # Fallback: if we can't extract, use the sheet name or global table_name
+                # if there is a clear 1-to-1 relationship.
+                if len(dtypes) == 1:
+                    sheet_table_names_mapping[sheet] = table_name
+                else:
+                    sheet_table_names_mapping[sheet] = sheet
+
     # Create the JSON Schema for the table and save it in the database
     save_schema_responses = {}
     for sheet_name, sheet_data in dtypes.items():
+        table_sheet_name = sheet_table_names_mapping.get(sheet_name, sheet_name)
         required_fields = [
             field_name for field_name, dtype in sheet_data.items() if not dtype.optional
         ]
@@ -314,25 +423,18 @@ async def create_table(
         }
 
         save_schema_response = await SchemaService.save_schema(
-            import_name=f"{project_id}__{sheet_name}",
+            import_name=get_import_name(
+                project_id=project_id, table_name=table_sheet_name
+            ),
             orig_schema=jsonschema,
             database_client=db_client,
         )
 
-        save_schema_responses[sheet_name] = save_schema_response
+        save_schema_responses[table_sheet_name] = save_schema_response
 
     # Execute the generated SQL statements to create the table in the database if requested
     if execute_sql:
-        try:
-            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
-        except InvalidDBCredentialsException:
-            raise
-        except psycopg2.OperationalError as e:
-            raise Psycopg2ErrorException(
-                message="An error occurred while processing the database operation.\n"
-                f"Error details: {str(e)}\nSQL attempted: {json.dumps(sql_per_sheet)}"
-            )
-
+        _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
@@ -392,7 +494,7 @@ async def create_table_from_json_schema(
 
     try:
         response = await HTTPX_CLIENT.post(
-            f"{settings.EXCEL_READER_URL}/parser/json",
+            "/parser/json",
             json={
                 "table_name": payload.table_name,
                 "jsonschema": payload.jsonschema,
@@ -419,33 +521,36 @@ async def create_table_from_json_schema(
         )
 
     sql_per_sheet = response.json()
+    if len(sql_per_sheet) == 1:
+        table_name_in_sql = list(sql_per_sheet.keys())[0]
+        logger.info(
+            f"Using table name '{table_name_in_sql}' from generated SQL for schema saving and execution."
+        )
+    else:
+        table_name_in_sql = table_name
+        logger.warning(
+            f"Multiple sheets detected. Using requested table name '{table_name}' for schema saving and execution."
+        )
 
     # Create the JSON Schema for the table and save it in the database
     save_schema_response = await SchemaService.save_schema(
-        import_name=f"{project_id}__{table_name}",
+        import_name=get_import_name(
+            project_id=project_id, table_name=table_name_in_sql
+        ),
         orig_schema=payload.jsonschema,
         database_client=db_client,
     )
 
     if execute_sql:
-        try:
-            _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
-        except InvalidDBCredentialsException:
-            raise
-        except Exception as e:
-            raise Psycopg2ErrorException(
-                message="An error occurred while processing the database operation.\n"
-                f"Error details: {str(e)}\nSQL attempted: {sql_per_sheet}"
-            )
-
+        _execute_sql_per_sheet(uri=db_uri, sql_per_sheet=sql_per_sheet)
         return CreateTableResponse(
             message="Table created successfully",
             sql_per_sheet=sql_per_sheet,
-            schema_saved={"Sheet1": save_schema_response},
+            schema_saved={table_name_in_sql: save_schema_response},
         )
 
     return CreateTableResponse(
         message="SQL generated successfully (execution skipped)",
         sql_per_sheet=sql_per_sheet,
-        schema_saved={"Sheet1": save_schema_response},
+        schema_saved={table_name_in_sql: save_schema_response},
     )

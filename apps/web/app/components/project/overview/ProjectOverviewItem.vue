@@ -1,7 +1,6 @@
 <script setup lang="ts">
     import type { HTMLAttributes } from "vue";
-    import { Copy, TriangleAlert } from "lucide-vue-next";
-    import { toast } from "vue-sonner";
+    import { Check, Copy, TriangleAlert } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     interface Props {
@@ -20,12 +19,6 @@
 
     const value = computed(() => toValue(props.value));
     const clipboard = useClipboard();
-
-    onMounted(() => {
-        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
-            immediate: true,
-        });
-    });
 </script>
 
 <template>
@@ -52,15 +45,23 @@
                     size="icon"
                     class="size-8"
                     @click="
-                        () => {
+                        (event: MouseEvent) => {
                             if (value) {
-                                clipboard.copy(value);
+                                clipboard.handleCopy(value, event);
                             }
                         }
                     "
                 >
-                    <Copy />
-                    <span class="sr-only">Copy ID</span>
+                    <Transition
+                        :css="false"
+                        mode="out-in"
+                        @enter="clipboard.animations.onIconEnter"
+                        @leave="clipboard.animations.onIconLeave"
+                    >
+                        <Check v-if="clipboard.copied.value" />
+                        <Copy v-else />
+                    </Transition>
+                    <span class="sr-only">{{ $t("common.clipboard.copy") }}</span>
                 </Button>
             </template>
 

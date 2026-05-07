@@ -10,6 +10,7 @@ fi
 
 docker run -d --name $CONTAINER_NAME \
   -p "${POSTGRES_PORT}:5432" \
+  --restart on-failure \
   -e POSTGRES_USER=${POSTGRES_USER} \
   -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
   -e PGDATA=/var/lib/postgresql/data/pgdata \

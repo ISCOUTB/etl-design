@@ -2,20 +2,20 @@
     import { buildPgConnectionString } from "#shared/utils/pg-connection-string";
     import {
         Calendar,
+        Check,
         Cloud,
         Copy,
         Database,
+        ExternalLink,
         Globe,
         Hash,
+        Info,
         Plug,
         Server,
         User,
     } from "lucide-vue-next";
-    import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
 
     const validConnectionString = computed(
         () => project && project.value.db_host && project.value.db_port,
@@ -36,23 +36,20 @@
     });
 
     const clipboard = useClipboard();
-
-    onMounted(() => {
-        whenever(clipboard.copied, () => toast.success($t("common.clipboard.copied")), {
-            immediate: true,
-        });
-    });
+    const config = useAppConfig();
 </script>
 
 <template>
     <div class="flex flex-col gap-8">
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.overview.header.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.overview.header.description") }}
-            </p>
+        <section class="space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.overview.header.title") }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.overview.header.description") }}
+                </p>
+            </div>
 
             <div class="rounded-lg border">
                 <div class="divide-y px-5">
@@ -71,10 +68,18 @@
                                 variant="ghost"
                                 size="icon"
                                 class="size-8"
-                                @click="clipboard.copy(project.id)"
+                                @click="clipboard.handleCopy(project.id, $event)"
                             >
-                                <Copy />
-                                <span class="sr-only">Copy ID</span>
+                                <Transition
+                                    :css="false"
+                                    mode="out-in"
+                                    @enter="clipboard.animations.onIconEnter"
+                                    @leave="clipboard.animations.onIconLeave"
+                                >
+                                    <Check v-if="clipboard.copied.value" />
+                                    <Copy v-else />
+                                </Transition>
+                                <span class="sr-only">{{ $t("common.clipboard.copy_id") }}</span>
                             </Button>
                         </div>
                     </div>
@@ -112,13 +117,70 @@
             </div>
         </section>
 
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.overview.connection_details.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.overview.connection_details.description") }}
-            </p>
+        <section class="space-y-5">
+            <div class="flex items-center justify-between">
+                <div class="space-y-1">
+                    <h3 class="text-sm font-medium text-foreground">
+                        {{ $t("projects.id.sections.overview.connection_details.title") }}
+                    </h3>
+                    <p class="text-sm text-muted-foreground">
+                        {{ $t("projects.id.sections.overview.connection_details.description") }}
+                    </p>
+                </div>
+
+                <div v-if="!project.db_host || !project.db_port">
+                    <HoverCard :open-delay="50">
+                        <HoverCardTrigger as-child>
+                            <div class="border border-border rounded-lg p-2">
+                                <Info class="size-4.5 text-amber-500 dark:text-orange-400" />
+                            </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent align="end" class="w-96">
+                            <Item class="p-0">
+                                <ItemContent>
+                                    <ItemTitle>
+                                        {{
+                                            $t(
+                                                "projects.id.sections.overview.connection_details.warning.title",
+                                            )
+                                        }}
+                                    </ItemTitle>
+                                    <ItemDescription class="line-clamp-none">
+                                        {{
+                                            $t(
+                                                "projects.id.sections.overview.connection_details.warning.description",
+                                            )
+                                        }}
+                                    </ItemDescription>
+                                </ItemContent>
+                                <ItemActions>
+                                    <Button variant="outline" as-child class="break-all">
+                                        <NuxtLink
+                                            :to="
+                                                $localeRoute({
+                                                    name: 'projects-id-edit',
+                                                    params: { id: project.id },
+                                                    query: {
+                                                        [config.constants.CALLBACK_KEY]:
+                                                            $route.fullPath,
+                                                    },
+                                                })
+                                            "
+                                        >
+                                            <ExternalLink />
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.overview.connection_details.warning.action",
+                                                )
+                                            }}
+                                        </NuxtLink>
+                                    </Button>
+                                </ItemActions>
+                            </Item>
+                        </HoverCardContent>
+                    </HoverCard>
+                </div>
+            </div>
 
             <div class="rounded-lg border">
                 <div class="divide-y px-5">
@@ -164,13 +226,15 @@
             </div>
         </section>
 
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.overview.connection_string.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.overview.connection_string.description") }}
-            </p>
+        <section class="space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.overview.connection_string.title") }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.overview.connection_string.description") }}
+                </p>
+            </div>
 
             <div
                 class="flex items-center justify-between gap-3 rounded-lg border bg-muted/50 px-4 py-3"

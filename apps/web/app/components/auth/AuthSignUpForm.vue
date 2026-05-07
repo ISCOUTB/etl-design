@@ -88,10 +88,9 @@
                     <FieldLabel for="password">
                         {{ $t("auth.fields.password.label") }}
                     </FieldLabel>
-                    <Input
+                    <InputPassword
                         id="password"
                         v-bind="field"
-                        type="password"
                         :placeholder="$t('auth.fields.password.placeholder')"
                         autocomplete="current-password"
                         :aria-invalid="!!errors.length"
@@ -105,10 +104,9 @@
                     <FieldLabel for="confirm">
                         {{ $t("auth.fields.confirm_password.label") }}
                     </FieldLabel>
-                    <Input
+                    <InputPassword
                         id="confirm"
                         v-bind="field"
-                        type="password"
                         :placeholder="$t('auth.fields.confirm_password.placeholder')"
                         autocomplete="current-password"
                         :aria-invalid="!!errors.length"
@@ -119,7 +117,7 @@
 
             <Field>
                 <Button :disabled="loading" type="submit">
-                    <Spinner v-if="loading" />
+                    <UtilsLoading :loading="loading" />
                     {{ $t("auth.sign_up.submit") }}
                 </Button>
             </Field>

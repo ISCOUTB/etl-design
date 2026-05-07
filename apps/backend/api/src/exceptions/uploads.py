@@ -31,6 +31,12 @@ class Psycopg2ErrorException(AppException):
     message = "An error occurred while processing the database operation."
 
 
+class Psycopg2CouldNotConnectToDatabaseException(AppException):
+    status_code = 503
+    error_code = "error:psycopg2-could-not-connect-to-database"
+    message = "Could not connect to the database with the provided credentials."
+
+
 class ExcelReaderErrorException(AppException):
     status_code = 500  # Depending on the context, this could also be a 400 if it's due to client input
     error_code = "error:excel-reader-error"

@@ -27,6 +27,7 @@ type Props = Partial<ToastNotification> & {
 };
 
 export default function () {
+    const { $logger } = useNuxtApp();
     const { t, te } = useI18n();
 
     function resolveI18nText<T>(value?: T) {
@@ -45,64 +46,6 @@ export default function () {
         return value;
     }
 
-    function getDefaults(errorCode: ResponseCodes.Code | string | undefined): ErrorCodeDefaults {
-        switch (errorCode) {
-            case ResponseCodesRecord.Server.Auth.SignIn.InvalidCredentials: {
-                return {
-                    title: "errors.auth.invalid_credentials.title",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Auth.SignIn.UserNotFound: {
-                return {
-                    title: "errors.auth.user_not_found.title",
-                    description: "errors.auth.user_not_found.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.BadPayload: {
-                return {
-                    title: "errors.bad_payload.title",
-                    description: "errors.bad_payload.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.UnAuthorized: {
-                return {
-                    title: "errors.auth.unauthorized.title",
-                    description: "errors.auth.unauthorized.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.UnAutenticated: {
-                return {
-                    title: "errors.auth.unauthenticated.title",
-                    description: "errors.auth.unauthenticated.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Project.NotFound: {
-                return {
-                    title: "errors.project.not_found.title",
-                    description: "errors.project.not_found.description",
-                };
-            }
-
-            case ResponseCodesRecord.Server.Project.Schema.NoFileProvided: {
-                return {
-                    title: "errors.project.file_not_provided.title",
-                };
-            }
-
-            default: {
-                return {
-                    title: "errors.unknown.title",
-                    description: "errors.unknown.description",
-                };
-            }
-        }
-    }
-
     function show(notification: ToastNotification) {
         const title = resolveI18nText(notification.title) || t("errors.unknown.title");
         const description = resolveI18nText(notification.description);
@@ -116,7 +59,7 @@ export default function () {
         });
     }
 
-    function handle(payload: unknown, props?: Props) {
+    function handle(payload: unknown, props?: Props): ToastNotification {
         const { handler, ...rest } = props ?? {};
 
         const options = Object.fromEntries(
@@ -128,7 +71,7 @@ export default function () {
                 ? ApiErrorSchema.safeParse(payload).data?.error
                 : String(payload);
 
-        const defaults = getDefaults(errorCode);
+        const defaults = getDefaultErrorMessage(errorCode);
         const merged: ToastNotification = {
             ...defaults,
             ...(errorCode ? handler?.[errorCode as ResponseCodes.Code] : {}),
@@ -136,6 +79,8 @@ export default function () {
         };
 
         show(merged);
+
+        return merged;
     }
 
     function handleServer(error: unknown) {
@@ -143,10 +88,9 @@ export default function () {
             return;
         }
 
-        console.warn(error);
+        $logger.warn(error);
         if (error instanceof FetchError && error.data) {
             const parsedError = ApiErrorSchema.safeParse(error.data);
-            console.warn(parsedError);
             if (!parsedError.success) {
                 handle(ResponseCodesRecord.Server.UnknownError);
 

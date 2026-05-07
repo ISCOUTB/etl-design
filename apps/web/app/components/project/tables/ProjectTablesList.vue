@@ -1,10 +1,7 @@
 <script setup lang="ts">
     import { Table2 } from "lucide-vue-next";
 
-    const {
-        state: { VIEWS },
-        tables,
-    } = useProject();
+    const { VIEWS, tables } = useProject();
 
     const events = useAppEvents();
 </script>
@@ -39,7 +36,9 @@
                     <Button
                         class="cursor-pointer"
                         @click="
-                            events.emit('event:projects:change-tab', { value: VIEWS.UploadFile })
+                            events.emit('event:projects:change-tab', {
+                                value: VIEWS.UploadFile.value,
+                            })
                         "
                     >
                         {{ $t("projects.id.sections.tables.empty.events.create_new") }}

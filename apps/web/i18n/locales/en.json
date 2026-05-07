@@ -88,7 +88,8 @@
         },
         "clipboard": {
             "copy": "Copy",
-            "copied": "Copied to clipboard"
+            "copied": "Copied to clipboard",
+            "copy_id": "Copy ID"
         }
     },
     "settings": {
@@ -174,9 +175,19 @@
             "title": "An unknown error ocurred",
             "description": "Please try again later"
         },
+        "offline": {
+            "title": "No internet connection",
+            "description": "You appear to be offline. Check your network connection and try again."
+        },
         "bad_payload": {
             "title": "Invalid Server Response",
             "description": "The data received from the server was malformed and could not be processed. Please try again later."
+        },
+        "database": {
+            "psycop_exception": {
+                "title": "Error while executing SQL",
+                "description": "You can still view the generated table"
+            }
         },
         "auth": {
             "invalid_credentials": {
@@ -206,6 +217,28 @@
             },
             "file_not_provided": {
                 "title": "Please provide a file before submiting"
+            },
+            "query_builder": {
+                "generate_error": {
+                    "title": "Could not generate a valid query",
+                    "description": "Please be more specific or try again later."
+                },
+                "invalid_columns": {
+                    "title": "Invalid columns",
+                    "description": "One or more selected columns do not exist in the current schema."
+                },
+                "invalid_order_by": {
+                    "title": "Invalid order by column",
+                    "description": "The selected ORDER BY column does not exist in the current schema."
+                },
+                "parse_rows_error": {
+                    "title": "Could not parse query results",
+                    "description": "The database returned rows in an unexpected format."
+                },
+                "could_not_connect": {
+                    "title": "Could not connect to the database",
+                    "description": "Check the project connection settings and try again."
+                }
             }
         }
     },
@@ -300,6 +333,9 @@
             "search_input": {
                 "placeholder": "Search projects..."
             },
+            "actions": {
+                "clear_owner_filter": "Clear owner filter"
+            },
             "content": {
                 "no_description": "This Project has no description",
                 "no_db_host": "No Host",
@@ -328,7 +364,12 @@
                     },
                     "connection_details": {
                         "title": "Connection Details",
-                        "description": "Database connection parameters for this project."
+                        "description": "Database connection parameters for this project.",
+                        "warning": {
+                            "title": "Using the default database connection",
+                            "description": "No database has been configured for this project yet. A default connection will be resolved when needed",
+                            "action": "Configure"
+                        }
                     },
                     "connection_string": {
                         "title": "Connection String",
@@ -428,6 +469,13 @@
                         "description": "Configure the name of the generated table",
                         "placeholder": "users"
                     },
+                    "form": {
+                        "additional_configurations": "Additional Configurations",
+                        "insert_data": {
+                            "label": "Insert Data",
+                            "description": "Enable this option to import file rows into the table right after creating the schema."
+                        }
+                    },
                     "upload": {
                         "title": "Are you sure?",
                         "description": "Make sure you have reviewed all the settings before uploading the file."
@@ -461,12 +509,14 @@
                         },
                         "dropdown": {
                             "view_schema": "View",
+                            "query": "Query",
                             "edit": "Edit",
                             "revert": "Revert",
                             "delete": "Delete"
                         }
                     },
-                    "default_table_name": "column_name",
+                    "default_table_name": "column_name-{index}",
+                    "default_table_name_base": "column_name",
                     "delete": {
                         "validation": {
                             "delete": "delete {value}",
@@ -541,7 +591,18 @@
                                 "description": "Tasks will appear here once a file processing job is created for this table."
                             },
                             "item": "Task",
-                            "errors": "Errors",
+                            "updated": "Updated: {when}",
+                            "status": {
+                                "failed": "Failed",
+                                "created": "Created",
+                                "published": "Published",
+                                "completed": "Completed"
+                            },
+                            "fields": {
+                                "errors": "Errors",
+                                "logs": "Logs",
+                                "status_debug": "Status: {status}"
+                            },
                             "events": {
                                 "bad_payload": "Invalid response while loading tasks"
                             }
@@ -550,6 +611,111 @@
                 },
                 "file": {
                     "tab": "File"
+                },
+                "query_builder": {
+                    "tab": "Query Builder",
+                    "title": "Query Builder",
+                    "description": "Build SQL queries block by block and inspect the generated output.",
+                    "schema": {
+                        "placeholder": "Select a schema",
+                        "empty": "No schema available yet. Upload or create one first."
+                    },
+                    "schema_empty": {
+                        "title": "No schemas configured yet",
+                        "description": "Upload or create a schema before using the query builder."
+                    },
+                    "cards": {
+                        "columns": {
+                            "title": "Columns",
+                            "description": "Choose specific columns for SELECT. If none are selected, all of them will be selected"
+                        },
+                        "where": {
+                            "title": "Conditions",
+                            "description": "Build nested WHERE groups with AND/OR operators."
+                        },
+                        "options": {
+                            "title": "Options",
+                            "description": "Configure ORDER BY and LIMIT for this query."
+                        },
+                        "preview": {
+                            "title": "Preview",
+                            "description": "Inspect SQL, native output, and query tree."
+                        }
+                    },
+                    "actions": {
+                        "add_column": "Add Column",
+                        "select_all": "Select All",
+                        "add_condition": "Add Condition",
+                        "add_group": "Add Group",
+                        "toggle_conjunction": "Toggle conjunction"
+                    },
+                    "generate": {
+                        "button": "Generate",
+                        "events": {
+                            "request_sent": {
+                                "title": "Generation request sent",
+                                "description": "We are generating your query builder state. This may take a few seconds."
+                            },
+                            "query_created": {
+                                "title": "Query ready",
+                                "description": "Your generated query is ready. Import it now or wait and it will be imported automatically.",
+                                "action": "Import now"
+                            }
+                        },
+                        "modal": {
+                            "title": "Generate Query Builder State",
+                            "description": "Describe exactly the query you want to build. Include filters, conditions, and the columns you want to return. If columns are unclear, all schema columns will be selected.",
+                            "form": {
+                                "message": {
+                                    "label": "What should be generated?",
+                                    "placeholder": "Example: Show active adult users with name containing 'acme', and include name, age, and is_adult."
+                                }
+                            },
+                            "actions": {
+                                "generate": "Generate",
+                                "cancel": "Cancel"
+                            }
+                        }
+                    },
+                    "execute": {
+                        "title": "Execute Query",
+                        "description": "Run the current query and load the resulting rows.",
+                        "button": "Execute"
+                    },
+                    "output": {
+                        "title": "Rows",
+                        "description": "Inspect the rows returned by the last execution.",
+                        "empty": {
+                            "title": "No rows to display",
+                            "description": "Either the request returned 0 rows or no request has been performed."
+                        }
+                    },
+                    "labels": {
+                        "read_only": "SELECT - READ ONLY",
+                        "dtype": "dtype",
+                        "order_by": "Order By",
+                        "limit": "Limit",
+                        "group": "Group"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "Using all columns (*)",
+                            "description": "No specific columns are selected. This query will use SELECT * by default."
+                        },
+                        "no_selection": "All columns (*)",
+                        "no_conditions": "No conditions"
+                    },
+                    "placeholders": {
+                        "select_column": "Select a column",
+                        "value": "Value",
+                        "multi_values": "val1, val2, ...",
+                        "order_none": "No order"
+                    },
+                    "preview": {
+                        "sql": "SQL",
+                        "native": "Native",
+                        "tree": "Tree"
+                    }
                 }
             },
             "tables": {
@@ -577,7 +743,8 @@
                         "table_name_format": "Format is not valid",
                         "column_name_format": "Invalid Column Name",
                         "invalid_type": "Unsopported Type",
-                        "min_columns": "At least {min} columns is required"
+                        "min_columns": "At least {min} columns is required",
+                        "duplicated_column": "Column already exists"
                     }
                 }
             }
@@ -592,6 +759,24 @@
                 "project_updated": {
                     "title": "Project Updated!"
                 }
+            }
+        }
+    },
+    "admin": {
+        "users": {
+            "title": "Users",
+            "header": {
+                "description": "Manage users"
+            },
+            "status": {
+                "active": "Active",
+                "inactive": "Inactive"
+            },
+            "search_input": {
+                "placeholder": "Search users..."
+            },
+            "badges": {
+                "you": "You"
             }
         }
     }

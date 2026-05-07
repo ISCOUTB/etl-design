@@ -78,6 +78,7 @@ class ParseFormulasResult(TypedDict):
 class JSONSchemaRequest(BaseModel):
     jsonschema: Dict[str, Any]
     table_name: str
+    scheme: Optional[str] = None
     primary_keys: list[str] = Field(default_factory=list)
 
 

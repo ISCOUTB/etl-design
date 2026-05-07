@@ -18,6 +18,7 @@ This service is responsible for:
 - Calling DDL Generator to transform ASTs into SQL expressions
 - Calling SQL Builder to build final table-level SQL
 - Generating insertion SQL for non-formula columns
+- Running as the current REST implementation while the gRPC migration remains pending
 
 ## Current Architecture
 
@@ -40,15 +41,18 @@ Orchestrates Formula Parser + DDL Generator + SQL Builder from an uploaded sprea
 Request:
 
 - `spreadsheet` (file, required)
-- `dtypes_str` (form stringified JSON, required)
+- `dtypes_str` (form stringified JSON, required; must match `SpreadsheetDtypesSchema`)
 - `table_name` (form string, required)
 - `limit` (query int, optional, default `50`)
 - `fill_spaces` (query string, optional, default `" "`)
+- Each sheet in `dtypes_str` maps column letters to objects with `dtype` plus optional `unique`, `optional`, `primary_key`, and `constraints` fields.
+- `constraints` can use numeric fields such as `minimum`, `maximum`, `exclusive_minimum`, `exclusive_maximum`, and `multiple_of`, or string fields such as `min_length`, `max_length`, and `pattern`.
 
 Response:
 
 - `Dict[str, str]` where each key is a table/sheet name and each value is generated SQL.
 - If one sheet is returned, key is normalized to the provided `table_name`.
+- The exact SQL string depends on the workbook contents, column metadata, and constraint flags such as `primary_key`, `unique`, `optional`, and `constraints`.
 
 Example:
 
@@ -57,7 +61,15 @@ curl -X POST "http://localhost:8001/parser/excel" \
   -H "Content-Type: multipart/form-data" \
   -F "spreadsheet=@sample.xlsx" \
   -F "table_name=users" \
-  -F 'dtypes_str={"Sheet1": {"A": {"dtype": "integer"}, "B": {"dtype": "string"}}}'
+   -F 'dtypes_str={"Sheet1": {"A": {"dtype": "integer", "optional": false, "primary_key": true}, "B": {"dtype": "string", "optional": true, "unique": true, "constraints": {"max_length": 120}}}}'
+```
+
+Example response:
+
+```json
+{
+   "users": "CREATE TABLE IF NOT EXISTS users (... PRIMARY KEY ..., UNIQUE ..., CHECK (...));"
+}
 ```
 
 ### `POST /parser/json`
@@ -66,13 +78,40 @@ Builds SQL directly from a JSON Schema payload and primary keys.
 
 Request body:
 
-- `jsonschema` (object)
+- `jsonschema` (object with root type `object` and a non-empty `properties` map)
 - `table_name` (string)
 - `primary_keys` (list of strings, optional)
 
 Response:
 
 - `Dict[str, str]` with one key (`table_name`) and generated SQL as value.
+- The exact SQL string depends on schema properties, required fields, primary keys, and constraints.
+
+Example request:
+
+```json
+{
+  "table_name": "users",
+  "jsonschema": {
+    "type": "object",
+    "required": ["id", "email"],
+    "properties": {
+      "id": {"type": "integer"},
+      "email": {"type": "string", "maxLength": 255, "unique": true},
+      "age": {"type": "integer", "minimum": 0}
+    }
+  },
+  "primary_keys": ["id"]
+}
+```
+
+Example response:
+
+```json
+{
+  "users": "CREATE TABLE IF NOT EXISTS users (... PRIMARY KEY ..., UNIQUE ..., CHECK (...));"
+}
+```
 
 ### `POST /insert-sql`
 
@@ -87,7 +126,15 @@ Request:
 Behavior:
 
 - Uses only non-formula columns for inserts.
-- If `overwrite=true`, emits a temp-table swap sequence (`CREATE ... LIKE`, rename, drop backup, `COMMIT`) around the insertion SQL.
+- If `overwrite=true`, the output string also includes a temp-table block, a `BEGIN`/`COMMIT` section, and table rename/drop statements.
+
+Example response:
+
+```json
+{
+   "users": "INSERT INTO users (id, name) VALUES (1, 'Alice'), (2, NULL);"
+}
+```
 
 ### `GET /metrics`
 

@@ -41,6 +41,8 @@ def extract_cell_data(
     sheets: Dict[str, Dict[str, List[schemas.CellData]]] = {}
 
     for sheet in workbook.worksheets:
+        if sheet.sheet_state != "visible":
+            continue
         sheets[sheet.title] = {}
         if limit is None or limit <= 0:
             limit = sheet.max_row

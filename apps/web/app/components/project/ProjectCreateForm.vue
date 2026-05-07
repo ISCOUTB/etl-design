@@ -4,6 +4,8 @@
         CirclePlus,
         Cloud,
         Database,
+        Eye,
+        EyeOff,
         Info,
         Lock,
         Plug,
@@ -12,6 +14,7 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
+    const dbPassword = useInputPassword("password", { id: "dbPassword" });
     const { CreateProjectSchema } = useCreateProjectSchema();
     const { handleSubmit } = useForm({
         validationSchema: toTypedSchema(CreateProjectSchema.value),
@@ -265,13 +268,27 @@
                                     <InputGroupInput
                                         id="dbPassword"
                                         v-bind="field"
-                                        type="password"
+                                        :type="dbPassword.type.value"
                                         placeholder="******"
                                         autocomplete="off"
                                         :aria-invalid="!!errors.length"
                                     />
                                     <InputGroupAddon align="inline-start">
                                         <Lock class="size-4" stroke-width="2" />
+                                    </InputGroupAddon>
+
+                                    <InputGroupAddon align="inline-end">
+                                        <InputGroupButton
+                                            type="button"
+                                            @click="dbPassword.dispatch.onToggle"
+                                        >
+                                            <template v-if="dbPassword.type.value === 'password'">
+                                                <Eye />
+                                            </template>
+                                            <template v-if="dbPassword.type.value === 'text'">
+                                                <EyeOff />
+                                            </template>
+                                        </InputGroupButton>
                                     </InputGroupAddon>
                                 </InputGroup>
                                 <FieldError v-if="errors.length" :errors="errors" />
@@ -337,7 +354,7 @@
 
             <div class="flex justify-end space-x-4">
                 <Button type="submit" :disabled="loading">
-                    <Spinner v-if="loading" />
+                    <UtilsLoading :loading="loading" />
                     <span>
                         {{ $t("projects.create.header.title") }}
                     </span>

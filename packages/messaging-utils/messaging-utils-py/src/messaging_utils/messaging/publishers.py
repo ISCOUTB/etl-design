@@ -216,6 +216,7 @@ class Publisher:
         task: ValidationTasks,
         insert: bool = False,
         insert_table_name: Optional[str] = None,
+        insert_scheme: Optional[str] = None,
         insert_overwrite: Optional[bool] = None,
         insert_db_uri: Optional[str] = None,
         task_id: Optional[str] = None,
@@ -288,32 +289,25 @@ class Publisher:
                 # actually, it is already str, but for type clarity
                 task_id = str(uuid7())
 
-            # Build base message
-            message_data: dict = {
-                "id": task_id,
-                "task": task,
-                "file_data": file_data.hex(),
-                "project_id": project_id,
-                "table_name": table_name,
-                "metadata": metadata,
-                "date": datetime.now().isoformat(),
-                "extra": kwargs,
-                "insert": insert,
-                "insert_table_name": insert_table_name,
-                "insert_overwrite": insert_overwrite,
-                "insert_db_uri": insert_db_uri,
-                "idempotency_key": idempotency_key,
-            }
-            
-            # Add trace context headers only if provided
-            if traceparent:
-                message_data["traceparent"] = traceparent
-            if tracestate:
-                message_data["tracestate"] = tracestate
-            if baggage:
-                message_data["baggage"] = baggage
-            
-            message = ValidationMessage(**message_data)  # type: ignore
+            message = ValidationMessage(
+                id=task_id,
+                task=task,
+                file_data=file_data.hex(),
+                project_id=project_id,
+                table_name=table_name,
+                metadata=metadata,
+                date=datetime.now().isoformat(),
+                extra=kwargs,
+                insert=insert,
+                insert_table_name=insert_table_name,
+                insert_scheme=insert_scheme,
+                insert_overwrite=insert_overwrite,
+                insert_db_uri=insert_db_uri,
+                idempotency_key=idempotency_key,
+                traceparent=traceparent,
+                tracestate=tracestate,
+                baggage=baggage,
+            )
 
             self._channel.basic_publish(
                 exchange=self.exchange_info["exchange"],
@@ -342,6 +336,7 @@ class Publisher:
         task: InsertionTasks,
         db_uri: str,
         table_name: str,
+        scheme: Optional[str] = None,
         overwrite: bool = False,
         task_id: Optional[str] = None,
         idempotency_key: Optional[str] = None,
@@ -366,6 +361,7 @@ class Publisher:
             task (InsertionTasks): Task type for the insertion request (e.g.,
                 "sample_insertion").
             table_name (Optional[str]): Optional name of the target table for the insertion.
+            scheme (Optional[str]): Optional name of the target schema for the insertion.
             overwrite (bool): Whether the insertion should overwrite to existing data (True) or overwrite it (False).
             db_uri (str): The URI for connecting to the database where the data should be inserted.
             task_id (Optional[str]): Optional unique task ID (UUID) for tracking the insertion request. If not provided, a new UUID will be generated.
@@ -388,6 +384,7 @@ class Publisher:
                 file_data=file_data.hex(),
                 project_id=project_id,
                 table_name=table_name,
+                scheme=scheme,
                 metadata=metadata,
                 date=datetime.now().isoformat(),
                 extra=kwargs,

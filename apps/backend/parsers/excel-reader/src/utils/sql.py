@@ -72,25 +72,3 @@ def get_column_type_sql(col: SpreadsheetDtypesSchema) -> str:
             sql_type = f"VARCHAR({col.constraints.max_length})"
 
     return sql_type
-
-
-if __name__ == "__main__":
-    from src.schemas import (  # noqa: F401
-        DtypesEnum,
-        FloatConstraints,
-        IntegerConstraints,
-    )
-
-    # Example usage
-    col_schema = SpreadsheetDtypesSchema(
-        dtype=DtypesEnum.INTEGER,
-        unique=True,
-        optional=False,
-        primary_key=False,
-        constraints=IntegerConstraints(
-            minimum=0, maximum=100, exclusive_minimum=True
-        ),
-    )
-
-    sql_statements = generate_extra_statements_sql("age", col_schema)
-    print(sql_statements)

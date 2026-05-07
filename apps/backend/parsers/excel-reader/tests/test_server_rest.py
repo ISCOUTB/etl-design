@@ -58,9 +58,12 @@ def test_read_excel_orchestrates_services_single_sheet(monkeypatch):
             },
         }
 
-    def _fake_generate_sql(_stub, cols, _dtypes, table_name):
+    def _fake_generate_sql(*args, **kwargs):
+        # args: stub, cols, dtypes, table_name, [scheme]
+        cols_arg = args[1] if len(args) > 1 else kwargs.get("cols")
+        table_name = args[3] if len(args) > 3 else kwargs.get("table_name")
         called_tables.append(table_name)
-        assert cols == {"id": "ddl_id", "name": "ddl_name"}
+        assert cols_arg == {"id": "ddl_id", "name": "ddl_name"}
         return f"CREATE TABLE IF NOT EXISTS {table_name} (...);"
 
     _override_dependencies()
@@ -102,6 +105,69 @@ def test_read_excel_orchestrates_services_single_sheet(monkeypatch):
     _clear_overrides()
 
 
+def test_read_excel_forwards_scheme_to_sql_builder(monkeypatch):
+    # Excel input: single sheet, schema should be forwarded to SQL builder
+    called_kwargs = {}
+
+    def _fake_parse_formulas_with_ddl(**_kwargs):
+        return {
+            "result": {
+                "Sheet1": {"A": [{"sql": "ddl_id"}]},
+            },
+            "columns": {
+                "Sheet1": {"A": {"name": "id", "is_formula": False}},
+            },
+        }
+
+    def _fake_generate_sql(*args, **kwargs):
+        # capture positional table_name and scheme as SQLBuilder is called with positional args
+        if len(args) > 3:
+            called_kwargs["table_name"] = args[3]
+        if len(args) > 4:
+            called_kwargs["scheme"] = args[4]
+        called_kwargs.update(kwargs)
+        return "CREATE SCHEMA IF NOT EXISTS auth;\nCREATE TABLE IF NOT EXISTS auth.users (id INTEGER);"
+
+    _override_dependencies()
+    monkeypatch.setattr(
+        "src.server_rest.parse_formulas_with_ddl",
+        _fake_parse_formulas_with_ddl,
+    )
+    monkeypatch.setattr("src.server_rest.generate_sql", _fake_generate_sql)
+
+    client = TestClient(app)
+    response = client.post(
+        "/parser/excel",
+        files={
+            "spreadsheet": (
+                "sample.xlsx",
+                b"fake excel bytes",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        data={
+            "table_name": "users",
+            "scheme": "auth",
+            "dtypes_str": json.dumps(
+                {
+                    "Sheet1": {
+                        "A": {"dtype": "integer", "optional": False},
+                    }
+                }
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "users": "CREATE SCHEMA IF NOT EXISTS auth;\nCREATE TABLE IF NOT EXISTS auth.users (id INTEGER);"
+    }
+    assert called_kwargs["table_name"] == "users"
+    assert called_kwargs["scheme"] == "auth"
+
+    _clear_overrides()
+
+
 def test_read_excel_orchestrates_services_multiple_sheets(monkeypatch):
     # Excel input: two sheets (Sheet1, Sheet2)
     called_tables = []
@@ -118,7 +184,8 @@ def test_read_excel_orchestrates_services_multiple_sheets(monkeypatch):
             },
         }
 
-    def _fake_generate_sql(_stub, _cols, _dtypes, table_name):
+    def _fake_generate_sql(*args, **kwargs):
+        table_name = args[3] if len(args) > 3 else kwargs.get("table_name")
         called_tables.append(table_name)
         return f"SQL::{table_name}"
 
@@ -152,10 +219,10 @@ def test_read_excel_orchestrates_services_multiple_sheets(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {
-        "Sheet1": "SQL::users_Sheet1",
-        "Sheet2": "SQL::users_Sheet2",
+        "Sheet1": "SQL::users_sheet1",
+        "Sheet2": "SQL::users_sheet2",
     }
-    assert called_tables == ["users_Sheet1", "users_Sheet2"]
+    assert called_tables == ["users_sheet1", "users_sheet2"]
 
     _clear_overrides()
 
@@ -270,11 +337,18 @@ def test_read_excel_returns_400_on_sheet_mismatch(monkeypatch):
     _clear_overrides()
 
 
-def test_read_json_returns_400_when_table_name_is_blank(monkeypatch):
+def test_read_json_normalizes_blank_table_name(monkeypatch):
+    called_tables = []
+
+    def _fake_generate_sql(*args, **kwargs):
+        table_name = args[3] if len(args) > 3 else kwargs.get("table_name")
+        called_tables.append(table_name)
+        return f"CREATE TABLE IF NOT EXISTS {table_name} (...);"
+
     _override_dependencies()
     monkeypatch.setattr(
         "src.server_rest.generate_sql",
-        lambda *_args, **_kwargs: "SHOULD_NOT_RUN",
+        _fake_generate_sql,
     )
 
     client = TestClient(app)
@@ -291,8 +365,11 @@ def test_read_json_returns_400_when_table_name_is_blank(monkeypatch):
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "'table_name' is required"
+    assert response.status_code == 200
+    assert response.json() == {
+        "unnamed": "CREATE TABLE IF NOT EXISTS unnamed (...);"
+    }
+    assert called_tables == ["unnamed"]
 
     _clear_overrides()
 
@@ -319,3 +396,26 @@ def test_insert_sql_single_sheet_uses_table_name_key(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {"users": "INSERT INTO users ...;"}
+
+
+def test_insert_sql_with_scheme_uses_table_name_key(monkeypatch):
+    monkeypatch.setattr(
+        "src.server_rest.create_sql_for_insertion",
+        lambda *_args, **_kwargs: {"Sheet1": "INSERT INTO auth.users ...;"},
+    )
+
+    client = TestClient(app)
+    response = client.post(
+        "/insert-sql",
+        files={
+            "spreadsheet": (
+                "sample.xlsx",
+                b"fake excel bytes",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        data={"table_name": "users", "scheme": "auth", "overwrite": "false"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"users": "INSERT INTO auth.users ...;"}

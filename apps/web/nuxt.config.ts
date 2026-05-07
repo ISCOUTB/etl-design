@@ -1,6 +1,7 @@
 import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
 import Sonda from "sonda/nuxt";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineNuxtConfig({
     compatibilityDate: "2025-07-15",
@@ -16,7 +17,21 @@ export default defineNuxtConfig({
     ///////////////////////////////////////////////////////
     css: ["~/assets/css/tailwind.css"],
     vite: {
-        plugins: [tailwindcss()],
+        plugins: [
+            tailwindcss(),
+            {
+                ...nodePolyfills({
+                    globals: {
+                        process: true,
+                        Buffer: true,
+                        global: true,
+                    },
+                }),
+                apply(_, { isSsrBuild }) {
+                    return !isSsrBuild;
+                },
+            },
+        ],
         optimizeDeps: {
             include: [
                 "zod",
@@ -32,6 +47,8 @@ export default defineNuxtConfig({
                 "ajv", // CJS
                 "class-variance-authority",
                 "vaul-vue",
+                "knex", // CJS
+                "filesize",
             ],
         },
         server: {
@@ -74,13 +91,26 @@ export default defineNuxtConfig({
     ignore: ["**/*.test.ts", "**/*.spec.ts"],
     runtimeConfig: {
         auth: {
-            secret: process.env.AUTH_SECRET,
-            sign: process.env.AUTH_SIGN,
-            maxAge: 30 * 24 * 60 * 60,
+            SECRET: process.env.AUTH_SECRET,
+            SIGN: process.env.AUTH_SIGN,
+            MAX_AGE: 30 * 24 * 60 * 60,
         },
         public: {
-            apiBase: process.env.API_BASE_URL,
-            homePageURL: process.env.HOMEPAGE_URL,
+            API_BASE: process.env.API_BASE_URL,
+            HOMEPAGE_URL: process.env.HOMEPAGE_URL,
+        },
+        keys: {
+            MODEL_API_KEY: process.env.MODEL_API_KEY,
+            MODEL_ENDPOINT: process.env.MODEL_ENDPOINT,
+        },
+        database: {
+            default: {
+                HOST: process.env.DEFAULT_PROJECT_POSTGRES_HOST,
+                PORT: process.env.DEFAULT_PROJECT_POSTGRES_PORT,
+                USER: process.env.DEFAULT_PROJECT_POSTGRES_USER,
+                PASSWORD: process.env.DEFAULT_PROJECT_POSTGRES_PASSWORD,
+                DB: process.env.DEFAULT_PROJECT_POSTGRES_DB,
+            },
         },
     },
 
@@ -136,18 +166,18 @@ export default defineNuxtConfig({
             background_color: "#000",
             display: "standalone",
             display_override: ["window-controls-overlay"],
-            start_url: "/",
+            start_url: "/?standalone=true",
             scope: "/",
             icons: [
                 {
-                    src: "/icon-512x512.jpeg",
+                    src: "/icon-512x512.png",
                     sizes: "512x512",
-                    type: "image/jpeg",
+                    type: "image/png",
                 },
                 {
-                    src: "/icon-192x192.jpeg",
+                    src: "/icon-192x192.png",
                     sizes: "192x192",
-                    type: "image/jpeg",
+                    type: "image/png",
                 },
             ],
             screenshots: [],
@@ -156,12 +186,11 @@ export default defineNuxtConfig({
             cleanupOutdatedCaches: true,
             clientsClaim: true,
             maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-            globPatterns: [],
+            globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
             globIgnores: ["**/_payload.json", "_nuxt/builds/**/*.json", "sw.js", "workbox-*.js"],
             runtimeCaching: [
                 {
-                    urlPattern: ({ sameOrigin, request }) =>
-                        sameOrigin && request.mode === "navigate",
+                    urlPattern: ({ request }) => request.mode === "navigate",
                     handler: "NetworkFirst",
                     options: {
                         cacheName: "pages-cache",
@@ -170,13 +199,10 @@ export default defineNuxtConfig({
                     },
                 },
                 {
-                    urlPattern:
-                        /\.(?:js|mjs|cjs|mp4|png|webp|svg|ico|css|glb|ttf|webmanifest|txt)$/,
-                    handler: "CacheFirst",
+                    urlPattern: /\.(?:js|css|webmanifest|json)$/,
+                    handler: "StaleWhileRevalidate",
                     options: {
-                        cacheName: "js-cache",
-                        expiration: { maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 },
-                        cacheableResponse: { statuses: [0, 200] },
+                        cacheName: "static-resources",
                     },
                 },
             ],
@@ -226,16 +252,20 @@ export default defineNuxtConfig({
     },
 
     ///////////////////////////////////////////////////////
-    // FLAGS
+    // NITRO & FLAGS
     ///////////////////////////////////////////////////////
     experimental: {
         payloadExtraction: false,
         appManifest: false,
         scanPageMeta: true,
+        buildCache: true,
     },
     nitro: {
         experimental: {
             websocket: true,
+        },
+        imports: {
+            dirs: ["./shared/utils/**/!(*test|*.spec).{ts,js,mjs,mts}"],
         },
         devProxy: {
             "/sw.js": { target: "/sw.js" },

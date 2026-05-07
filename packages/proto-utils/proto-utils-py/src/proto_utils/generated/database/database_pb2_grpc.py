@@ -10,7 +10,7 @@ from . import database_pb2 as database_dot_database__pb2
 from . import mongo_pb2 as database_dot_mongo__pb2
 from . import redis_pb2 as database_dot_redis__pb2
 
-GRPC_GENERATED_VERSION = '1.78.0'
+GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

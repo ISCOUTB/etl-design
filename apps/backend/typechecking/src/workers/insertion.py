@@ -512,6 +512,7 @@ class InsertionWorker:
         file_bytes = bytes.fromhex(message["file_data"])
         filename = message["metadata"]["filename"]
         table_name = message["table_name"]
+        scheme = message.get("scheme")
         overwrite = message["overwrite"]
 
         update_task_status(
@@ -528,7 +529,7 @@ class InsertionWorker:
             response = post_multipart_http(
                 url=settings.EXCEL_READER_INSERT_URL,
                 files=files,
-                data={"table_name": table_name},
+                data={"table_name": table_name, "scheme": scheme},
                 params={"overwrite": overwrite},
                 timeout_seconds=settings.EXCEL_READER_TIMEOUT_SECONDS,
                 logger=logger,

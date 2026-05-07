@@ -1,0 +1,124 @@
+sequenceDiagram
+    autonumber
+
+    actor Client as Web Client
+    participant API as API Service
+    participant PG as PostgreSQL
+    participant MQ as RabbitMQ
+    participant DB as DB Proxy gRPC
+    participant VWorker as ValidationWorker
+    participant IWorker as InsertionWorker
+    participant RWorker as ResultWorker
+    participant Parser as Parsing Service
+
+    note over Client, Parser: Phase 1: Idempotency Check and Task Registration
+
+    Client->>API: POST /api/v1/uploads/process (Spreadsheet + project_id + table_name + overwrite)
+    activate API
+
+    note over API: SHA-256 idempotency_key from<br/>user_id:project_id:table_name:file_hash:VALIDATION&INSERTION
+
+    API->>PG: INSERT upload_tasks (status: PENDING, locked_until: now + 600s)
+
+    alt EXCLUDE constraint violated — active task already exists in [PENDING, PUBLISHED] window
+        PG-->>API: IntegrityError (uq_idempotency_key_active_window)
+        API->>PG: SELECT existing task WHERE idempotency_key matches
+        PG-->>API: Existing task (task_id + status)
+        API-->>Client: HTTP 202 Already in progress (task_id + current status)
+    else New task created successfully
+        PG-->>API: task_id
+
+        API->>MQ: Publish single ValidationMessage (insert=True, insert_db_uri, overwrite)
+
+        alt Publish OK
+            API->>PG: UPDATE status = PUBLISHED, locked_until = now + 1800s
+            API->>DB: set_task_id (best-effort cache, Redis + MongoDB)
+            note over API, DB: Cache failure is non-critical — DB is source of truth
+        else RabbitMQ unavailable
+            API->>PG: UPDATE status = PENDING, locked_until = now + 60s
+            API-->>Client: HTTP 503 (AMQP error — retry later)
+        end
+
+        API-->>Client: HTTP 202 Accepted (task_id)
+    end
+    deactivate API
+
+    note over MQ, VWorker: Phase 2: Async Validation (x-delivery-limit=3, x-message-ttl=1h)
+
+    MQ-->>VWorker: Consume from typechecking.validation.queue
+    activate VWorker
+
+    VWorker->>DB: get_task_status (idempotency check)
+    alt status in [success, error, completed]
+        VWorker-->>MQ: ACK (skip — already completed)
+    else status in [processing, validating-file, received]
+        VWorker-->>MQ: ACK (skip — another worker has it)
+    else status is null (first time)
+        VWorker->>DB: set_task_id (status: received)
+    end
+
+    VWorker->>DB: update status → received-sample-validation
+    VWorker->>DB: update status → processing-file
+    VWorker->>DB: update status → validating-file
+
+    note over VWorker: Polars in-memory validation<br/>against JSON Schema stored in MongoDB (via DB Proxy)
+
+    alt Validation successful
+        VWorker->>DB: update status → success
+        VWorker->>MQ: Publish ResultsMessage → typechecking.results.queue
+        note over VWorker: insert=True AND db_uri valid AND overwrite flag checked
+        VWorker->>MQ: Publish InsertionMessage → typechecking.insertion.queue
+    else Validation failed
+        VWorker->>DB: update status → error
+        VWorker->>MQ: Publish ResultsMessage (error) → typechecking.results.queue
+    end
+
+    VWorker-->>MQ: ACK
+    deactivate VWorker
+
+    note over MQ, IWorker: Phase 3a: Async Insertion (triggered only if validation succeeded)
+
+    MQ-->>IWorker: Consume from typechecking.insertion.queue
+    activate IWorker
+
+    IWorker->>DB: get_task_status (idempotency check)
+    IWorker->>DB: set_task_id (status: received — insertion task)
+    IWorker->>Parser: REST — generate SQL statements from spreadsheet
+    Parser-->>IWorker: SQL statements per sheet
+    IWorker->>DB: update status → inserting
+    note over IWorker: Execute SQL against target DB using project credentials
+    IWorker->>DB: update status → success / error
+    IWorker->>MQ: Publish ResultsMessage → typechecking.results.queue
+    IWorker-->>MQ: ACK
+    deactivate IWorker
+
+    note over MQ, RWorker: Phase 3b: Result Notification (always executed after validation or insertion)
+
+    MQ-->>RWorker: Consume from typechecking.results.queue
+    activate RWorker
+
+    RWorker->>DB: get_task_status (idempotency — skip if already completed)
+    RWorker->>DB: update status → notifying
+    RWorker->>API: POST /api/v1/events/task-completed (task_id, status, results)
+    activate API
+    API->>PG: UPDATE upload_tasks SET status = COMPLETED or FAILED
+    PG-->>API: OK
+    API-->>RWorker: HTTP 200 OK
+    deactivate API
+    RWorker->>DB: update status → completed
+    RWorker-->>MQ: ACK
+    deactivate RWorker
+
+    note over Client, API: Phase 4: Result Retrieval
+
+    Client->>API: GET /api/v1/tasks/{task_id}
+    activate API
+    API->>PG: SELECT status FROM upload_tasks WHERE task_id = ?
+    PG-->>API: Task status and metadata
+
+    alt status PENDING or PUBLISHED
+        API-->>Client: HTTP 200 (Processing...)
+    else status COMPLETED or FAILED
+        API-->>Client: HTTP 200 (Full report + results)
+    end
+    deactivate API

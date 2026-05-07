@@ -1,20 +1,9 @@
 <script setup lang="ts">
     import { filesize } from "filesize";
-    import {
-        AlertCircle,
-        Download,
-        ExternalLink,
-        FileIcon,
-        Rocket,
-        Trash2,
-        X,
-    } from "lucide-vue-next";
+    import { Download, FileIcon, Rocket, Trash2, X } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-        tables,
-    } = useProject();
+    const { project, tables } = useProject();
     const selectedFile = computed({
         get() {
             if (tables.state.value.selectedSchema) {
@@ -123,7 +112,6 @@
                 :supported-formats="
                     config.files.importData.supportedFormats.map((format) => `.${format}`).join(',')
                 "
-                :disabled="() => !project.db_host || !project.db_port"
                 @change="handleInputChange"
                 @dropped="handleDrop"
             >
@@ -181,49 +169,6 @@
                             </Button>
                         </div>
                     </div>
-                </template>
-
-                <template #disabled>
-                    <Item variant="outline">
-                        <ItemMedia>
-                            <AlertCircle class="text-destructive" />
-                        </ItemMedia>
-                        <ItemContent>
-                            <ItemTitle class="text-destructive">
-                                {{
-                                    $t("projects.id.sections.tables.details.upload.disabled.title")
-                                }}
-                            </ItemTitle>
-                            <ItemDescription class="text-destructive">
-                                {{
-                                    $t(
-                                        "projects.id.sections.tables.details.upload.disabled.description",
-                                        {
-                                            fields: `(${$t("projects.create.fields.db_host.label")}, ${$t("projects.create.fields.db_port.label")})`,
-                                        },
-                                    )
-                                }}
-                            </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                            <Button variant="outline" as-child>
-                                <NuxtLink
-                                    :to="
-                                        $localeRoute({
-                                            name: 'projects-id-edit',
-                                            params: { id: project.id },
-                                            query: {
-                                                [config.constants.CALLBACK_KEY]: $route.fullPath,
-                                            },
-                                        })
-                                    "
-                                >
-                                    <ExternalLink />
-                                    {{ $t("projects.edit.header.title") }}
-                                </NuxtLink>
-                            </Button>
-                        </ItemActions>
-                    </Item>
                 </template>
             </DropzoneArea>
         </CardContent>

@@ -1,12 +1,12 @@
 # Database Connections Service
 
-A centralized gRPC microservice for database connection management and operations, providing a unified abstraction layer for MongoDB and Redis. This service was designed to solve architectural problems that arise when multiple microservices need to share the same databases, while maintaining microservices architecture principles.
+This service is the shared gRPC proxy for MongoDB and Redis in the backend. The API and Typechecking services use it to avoid direct coupling to the backing stores while still sharing schema metadata and task state.
 
 ## Purpose and Architecture
 
 ### Problem Solved
 
-In a microservices architecture, traditionally each service should have its own database. However, in this project, the [API](../../backend/api/) and [Typechecking](../../backend/typechecking/) services needed to share:
+In a microservices architecture, each service usually owns its data. In this project, the [API](../../backend/api/) and [Typechecking](../../backend/typechecking/) services need shared access to:
 
 - **Redis**: For fast task state tracking and response caching
 - **MongoDB**: For JSON schema persistence and task history
@@ -20,7 +20,7 @@ The service implements an intelligent dual storage strategy:
 - **Redis**: Fast cache for immediate access and real-time task state management
 - **MongoDB**: Persistent storage for JSON schemas and task backup
 
-With automatic synchronization and fallback mechanisms between both systems.
+With automatic synchronization and fallback behavior between both systems.
 
 ## Main Features
 
@@ -49,8 +49,8 @@ With automatic synchronization and fallback mechanisms between both systems.
 
 - **Python 3.12**: Main service language
 - **gRPC**: High-performance communication protocol
-- **Redis 6.4+**: In-memory database for cache and task state
-- **MongoDB 4.15+**: NoSQL database for persistence
+- **Redis**: In-memory database for cache and task state
+- **MongoDB**: NoSQL database for persistence
 - **Protocol Buffers**: Efficient data serialization
 - **Docker**: Service containerization
 

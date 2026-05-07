@@ -1,3 +1,5 @@
+// import knex from "knex";
+
 interface Params {
     user?: string | null;
     password?: string | null;
@@ -6,6 +8,18 @@ interface Params {
     database?: string | null;
     params?: string | null;
 }
+
+// function foo(config: Params) {
+//     const client = knex({
+//         client: "pg",
+//         connection: {
+//             host: config.host,
+//             port: Number(config.port),
+//             user: config.user ?? undefined,
+//             password: config.password ?? undefined,
+//         },
+//     });
+// }
 
 export function buildPgConnectionString(config: Params) {
     let userInfo = "";

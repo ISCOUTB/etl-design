@@ -105,18 +105,21 @@ def test_binary_maps_builds_nested_sql():
     }
     result = binary_maps(ast, {"A": "amount"})
 
-    assert result["sql"] == "(amount) + (5)"
+    assert result["sql"] == "((amount)::numeric) + ((5)::numeric)"
 
 
 @pytest.mark.parametrize(
     "operator, expected_sql",
     [
-        ("=", "(left_col) IS NOT DISTINCT FROM (right_col)"),
-        ("<>", "(left_col) IS DISTINCT FROM (right_col)"),
-        (">", "(left_col) > (right_col)"),
-        ("<", "(left_col) < (right_col)"),
-        (">=", "(left_col) >= (right_col)"),
-        ("<=", "(left_col) <= (right_col)"),
+        (
+            "=",
+            "((left_col)::numeric) IS NOT DISTINCT FROM ((right_col)::numeric)",
+        ),
+        ("<>", "((left_col)::numeric) IS DISTINCT FROM ((right_col)::numeric)"),
+        (">", "((left_col)::numeric) > ((right_col)::numeric)"),
+        ("<", "((left_col)::numeric) < ((right_col)::numeric)"),
+        (">=", "((left_col)::numeric) >= ((right_col)::numeric)"),
+        ("<=", "((left_col)::numeric) <= ((right_col)::numeric)"),
     ],
 )
 def test_binary_maps_supports_comparison_operators(operator, expected_sql):
@@ -186,7 +189,7 @@ def test_function_maps_if_with_equal_condition_generates_case_when():
 
     assert (
         result["sql"]
-        == "CASE WHEN (left_col) IS NOT DISTINCT FROM (right_col) THEN 1 ELSE 0 END"
+        == "CASE WHEN ((left_col)::numeric) IS NOT DISTINCT FROM ((right_col)::numeric) THEN 1 ELSE 0 END"
     )
 
 
@@ -211,7 +214,7 @@ def test_function_maps_if_with_not_equal_condition_generates_case_when():
 
     assert (
         result["sql"]
-        == "CASE WHEN (left_col) IS DISTINCT FROM (right_col) THEN 'different' ELSE 'equal' END"
+        == "CASE WHEN ((left_col)::numeric) IS DISTINCT FROM ((right_col)::numeric) THEN 'different' ELSE 'equal' END"
     )
 
 
@@ -227,7 +230,10 @@ def test_binary_maps_equal_should_be_null_safe_in_sql():
     result = binary_maps(ast, {"A": "left_col", "B": "right_col"})
 
     # Null-safe equality better matches Excel-like semantics for nullable columns.
-    assert result["sql"] == "(left_col) IS NOT DISTINCT FROM (right_col)"
+    assert (
+        result["sql"]
+        == "((left_col)::numeric) IS NOT DISTINCT FROM ((right_col)::numeric)"
+    )
 
 
 def test_binary_maps_not_equal_should_be_null_safe_in_sql():
@@ -242,7 +248,10 @@ def test_binary_maps_not_equal_should_be_null_safe_in_sql():
     result = binary_maps(ast, {"A": "left_col", "B": "right_col"})
 
     # Null-safe inequality prevents NULL comparisons from becoming UNKNOWN.
-    assert result["sql"] == "(left_col) IS DISTINCT FROM (right_col)"
+    assert (
+        result["sql"]
+        == "((left_col)::numeric) IS DISTINCT FROM ((right_col)::numeric)"
+    )
 
 
 def test_generate_ddl_dispatches_by_ast_type():
@@ -328,8 +337,8 @@ def test_function_maps_if_with_and_condition_and_sum_then_branch():
     result = function_maps(ast, columns)
 
     assert result["sql"] == (
-        "CASE WHEN (left_col) IS DISTINCT FROM (right_col) "
-        "AND (score_col) >= (10) THEN jan + feb + mar ELSE 0 END"
+        "CASE WHEN ((left_col)::numeric) IS DISTINCT FROM ((right_col)::numeric) "
+        "AND ((score_col)::numeric) >= ((10)::numeric) THEN jan + feb + mar ELSE 0 END"
     )
 
 
@@ -377,8 +386,8 @@ def test_function_maps_nested_if_builds_nested_case_when_sql():
     )
 
     assert result["sql"] == (
-        "CASE WHEN (a_col) IS NOT DISTINCT FROM (b_col) THEN "
-        "CASE WHEN (c_col) <= (d_col) THEN 'ok' ELSE 'bad' END "
+        "CASE WHEN ((a_col)::numeric) IS NOT DISTINCT FROM ((b_col)::numeric) THEN "
+        "CASE WHEN ((c_col)::numeric) <= ((d_col)::numeric) THEN 'ok' ELSE 'bad' END "
         "ELSE 'skip' END"
     )
 
@@ -413,7 +422,10 @@ def test_generate_ddl_handles_complex_binary_with_unary_operand():
         }
     )
 
-    assert result["sql"] == "((x) + (y)) * (-((z) - (2)))"
+    assert (
+        result["sql"]
+        == "((((x)::numeric) + ((y)::numeric))::numeric) * ((-(((z)::numeric) - ((2)::numeric)))::numeric)"
+    )
 
 
 def test_maps_contains_expected_handlers():

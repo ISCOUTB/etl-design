@@ -9,6 +9,7 @@ import type {
     ResponseProjectSchema,
     SpreadsheetDtypesSchema,
 } from "#shared/utils/schemas/api";
+import type { UserRole as _UserRole } from "#shared/utils/schemas/auth";
 import type { z } from "zod";
 
 export type ColumnConfig = z.infer<typeof SpreadsheetDtypesSchema>;
@@ -20,3 +21,4 @@ export type MongoRaw = z.infer<typeof MongoRawSchema>;
 export type JsonSchema = z.infer<typeof _JsonSchema>;
 export type JsonSchemaPropertyConstraints = z.infer<typeof _JsonSchemaPropertyConstraints>;
 export type ProjectTask = z.infer<typeof _ProjectTask>;
+export type UserRole = z.infer<typeof _UserRole>;

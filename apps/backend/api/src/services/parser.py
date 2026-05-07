@@ -1,8 +1,9 @@
 # type: ignore
 
-from typing import List
+from typing import List, Optional
 
 from src import models, schemas
+from src.core.constants import DEFAULT_OWNER_ID, DEFAULT_OWNER_USER
 
 
 class ParserService:
@@ -23,7 +24,12 @@ class ParserService:
         return list(map(ParserService.parse_user, users))
 
     @staticmethod
-    def parse_project(project: models.Project) -> schemas.ResponseProjectSchema:
+    def parse_project(
+        project: models.Project,
+        *,
+        owner_id: Optional[str] = None,
+        owner_user: Optional[str] = None,
+    ) -> schemas.ResponseProjectSchema:
         return schemas.ResponseProjectSchema(
             id=str(project.id),
             name=str(project.name),
@@ -35,6 +41,8 @@ class ParserService:
             db_name=project.db_name,
             db_params=project.db_params,
             description=project.description,
+            owner_id=owner_id or DEFAULT_OWNER_ID,
+            owner_user=owner_user or DEFAULT_OWNER_USER,
             created_at=project.created_at,
             updated_at=project.updated_at,
         )

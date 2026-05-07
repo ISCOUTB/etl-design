@@ -6,6 +6,7 @@ from proto_utils.database.mongo_serde import MongoSerde
 from proto_utils.generated.database import mongo_pb2
 
 from src.core.database_mongo import MongoConnection
+from src.core.database_redis import RedisConnection
 from src.handlers.base import BaseHandler, RequestT, ResponseT
 from src.services.mongo import MongoSchemasService
 
@@ -18,6 +19,20 @@ class MongoOperation(Protocol[RequestT, ResponseT]):
         /,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
+    ) -> ResponseT: ...
+
+
+@runtime_checkable
+class MongoOperationWithTasks(Protocol[RequestT, ResponseT]):
+    def __call__(
+        self,
+        request: RequestT,
+        /,
+        *,
+        mongo_schemas_connection: MongoConnection,
+        mongo_task_connection: MongoConnection,
+        redis_task_connection: RedisConnection,
     ) -> ResponseT: ...
 
 
@@ -27,7 +42,8 @@ class MongoHandler(BaseHandler):
 
     def _execute_with_retry(
         self,
-        operation: MongoOperation[RequestT, ResponseT],
+        operation: MongoOperation[RequestT, ResponseT]
+        | MongoOperationWithTasks[RequestT, ResponseT],
         request: RequestT,
         retry_on_failure: bool = False,
     ) -> ResponseT:
@@ -37,8 +53,20 @@ class MongoHandler(BaseHandler):
 
         for attempt in range(1, retries + 1):
             try:
-                mongo_db = self.manager.get_mongo_schemas_connection(attempt > 1)
-                return operation(request, mongo_schemas_connection=mongo_db)
+                mongo_schema_collection = self.manager.get_mongo_schemas_connection(
+                    attempt > 1
+                )
+                mongo_task_collection = self.manager.get_mongo_tasks_connection(
+                    attempt > 1
+                )
+                redis_task_connection = self.manager.get_redis_connection(attempt > 1)
+
+                return operation(
+                    request,
+                    mongo_schemas_connection=mongo_schema_collection,
+                    mongo_task_connection=mongo_task_collection,
+                    redis_task_connection=redis_task_connection,
+                )
             except (
                 pymongo.errors.ConnectionFailure,
                 pymongo.errors.ServerSelectionTimeoutError,

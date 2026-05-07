@@ -1,6 +1,7 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy import String, and_, cast
+from sqlalchemy.orm import Session, aliased
 
 from src import models, schemas
 from src.repositories.base import BaseRepository
@@ -20,23 +21,48 @@ class ProjectRepository(BaseRepository[models.Project]):
         user_id: Optional[str] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
-    ) -> List[models.Project]:
-        base_query = self.db.query(models.Project)
+    ) -> List[schemas.ProjectSearchRow]:
+        owner_assignment = aliased(models.UserProject)
+        owner_user = aliased(models.User)
+
+        base_query = (
+            self.db.query(
+                models.Project,
+                cast(owner_user.id, String).label("owner_id"),
+                owner_user.name.label("owner_user"),
+            )
+            .outerjoin(
+                owner_assignment,
+                and_(
+                    owner_assignment.project_id == models.Project.id,
+                    owner_assignment.role == models.UserProjectType.OWNER,
+                    owner_assignment.status == models.Status.ACTIVE,
+                ),
+            )
+            .outerjoin(
+                owner_user,
+                and_(
+                    owner_user.id == owner_assignment.user_id,
+                    owner_user.status == models.Status.ACTIVE,
+                ),
+            )
+        )
 
         if user_id is not None:
+            assigned_user = aliased(models.UserProject)
             base_query = (
                 base_query.join(
-                    models.UserProject,
-                    models.UserProject.project_id == models.Project.id,
+                    assigned_user,
+                    assigned_user.project_id == models.Project.id,
                 )
-                .filter(models.UserProject.user_id == user_id)
-                .filter(models.UserProject.status == models.Status.ACTIVE)
+                .filter(assigned_user.user_id == user_id)
+                .filter(assigned_user.status == models.Status.ACTIVE)
             )
 
         if name:
             base_query = base_query.filter(models.Project.name.ilike(f"{name}%"))
 
-        base_query = base_query.distinct()
+        base_query = base_query.distinct(models.Project.id)
 
         if skip is not None:
             base_query = base_query.offset(skip)
@@ -44,7 +70,8 @@ class ProjectRepository(BaseRepository[models.Project]):
         if limit is not None:
             base_query = base_query.limit(limit)
 
-        return base_query.all()
+        rows = base_query.all()
+        return list(map(lambda row: (row[0], row[1], row[2]), rows))
 
     def count_projects(self, name: Optional[str] = None) -> int:
         base_query = self.db.query(models.Project)

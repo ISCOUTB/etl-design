@@ -6,6 +6,7 @@
         i18n: {
             paths: {
                 en: "/projects/create",
+                es: "/proyectos/crear",
             },
         },
         breadcrumb: {

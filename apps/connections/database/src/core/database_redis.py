@@ -377,6 +377,60 @@ class RedisConnection:
         finally:
             pipe.reset()
 
+    def remove_tasks_by_import_name(
+        self, import_name: str, tasks: Optional[List[str]] = None
+    ) -> int:
+        """Remove all tasks associated with a specific import name.
+
+        This method deletes all task data and removes the task IDs from the
+        associated import name's task set. Uses pipeline for atomic multi-command
+        execution.
+
+        Args:
+            import_name (str): The import name to filter tasks by.
+            tasks (Optional[List[str]]): The tasks or context under which the tasks are stored.
+
+        Returns:
+            int: The number of tasks that were successfully removed.
+        """
+        task_names: List[str]
+        if tasks is None:
+            keys = self.redis_client.keys(f"*:import:{import_name}:tasks")
+            task_names = list({key.split(":", 1)[0] for key in keys})
+        else:
+            task_names = list(dict.fromkeys(tasks))
+
+        if not task_names:
+            return 0
+
+        deleted_tasks_count = 0
+
+        # Use pipeline for atomic operations
+        pipe = self.redis_client.pipeline(transaction=True)
+        try:
+            for task in task_names:
+                import_key = f"{task}:import:{import_name}:tasks"
+                task_ids = self.redis_client.smembers(import_key)
+                deleted_tasks_count += len(task_ids)
+
+                for task_id in task_ids:
+                    pipe.delete(f"{task}:task:{task_id}")
+                    pipe.srem(import_key, task_id)
+
+                # Ensure the import set key is removed even if there are stale/empty sets
+                pipe.delete(import_key)
+
+            pipe.execute()
+            return deleted_tasks_count
+        except redis.exceptions.WatchError:
+            raise Exception(
+                f"Tasks for import {import_name} were modified by another process"
+            )
+        except Exception:
+            raise
+        finally:
+            pipe.reset()
+
     # =================== Manage all cache ===================
 
     def get_cache(self) -> Dict[str, Any]:

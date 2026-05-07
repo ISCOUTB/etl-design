@@ -1,0 +1,48 @@
+architecture-beta
+    group vpc(logos:aws)[AWS Cloud]
+    group swarm(logos:docker-icon)[Docker Swarm Cluster] in vpc
+    group monitoring(logos:prometheus)[Observability Stack] in swarm
+    group datasvc(server)[Data Services] in swarm
+
+    service client(internet)[Web Client]
+
+    service proxy(server)[Traefik Proxy] in swarm
+    service web(logos:vue)[NuxtJS Web App] in swarm
+    service api(server)[Core API Service] in swarm
+    service mq(logos:rabbitmq-icon)[RabbitMQ] in swarm
+    service typecheck(server)[Typecheck Workers] in swarm
+    service parsers(server)[Parsing Service] in swarm
+
+    service dbproxy(server)[DB Proxy Service] in datasvc
+    service pg(logos:postgresql)[PostgreSQL] in datasvc
+    service mongo(logos:mongodb-icon)[MongoDB] in datasvc
+    service redis(logos:redis)[Redis] in datasvc
+
+    service prometheus(server)[Prometheus] in monitoring
+    service grafana(server)[Grafana] in monitoring
+    service alloy(server)[Grafana Alloy] in monitoring
+    service scaler(server)[Autoscaler] in monitoring
+
+    client: B --> T: proxy
+    proxy: R --> L: web
+    proxy: B --> T: api
+
+    api: R --> L: mq
+    mq: B --> T: typecheck
+
+    api: B --> T: parsers
+    typecheck: T --> B: parsers
+
+    api: R --> L: dbproxy
+    typecheck: B --> T: dbproxy
+
+    typecheck: L --> R: api
+
+    api: B --> T: pg
+
+    dbproxy: L --> R: mongo
+    dbproxy: B --> T: redis
+
+    alloy: L --> R: prometheus
+    scaler: T --> B: prometheus
+    prometheus: R --> L: grafana

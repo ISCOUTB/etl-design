@@ -1,6 +1,6 @@
 # Formula Parser Service
 
-A Node.js gRPC service that parses Excel formulas into Abstract Syntax Trees (AST) and token representations. This service is responsible for analyzing Excel formula syntax and providing structured data that can be consumed by other services in the Excel Parsing system.
+A Node.js gRPC service that parses Excel formulas into token streams and Abstract Syntax Trees (AST). The service is the first computational step in the parsing pipeline and provides structured formula data for the DDL Generator.
 
 ## Overview
 
@@ -94,14 +94,14 @@ message FormulaParserResponse {
 ### Prerequisites
 
 - Node.js 18+
-- npm
+- pnpm
 
 ### Setup
 
-1. Install dependencies:
+1. Install workspace dependencies from the repository root:
 
     ```bash
-    npm install
+    pnpm install
     ```
 
 2. Configure environment:
@@ -111,22 +111,23 @@ message FormulaParserResponse {
     # Edit .env with your configuration
     ```
 
-3. Generate Protocol Buffer files:
+3. Build the service:
 
     ```bash
-    npm run generate-proto
+    moon run formula-parser:build
     ```
 
 4. Start the service:
 
     ```bash
-    npm start
+    moon run formula-parser:run
     ```
 
-For development with auto-reload:
+For iterative development, rebuild after code changes and rerun the service:
 
 ```bash
-npm run dev
+moon run formula-parser:build
+moon run formula-parser:run
 ```
 
 ## Configuration
@@ -147,27 +148,26 @@ DEBUG_FORMULA_PARSER=true
 ```text
 formula-parser/
 ├── src/
-│   ├── server.js                    # gRPC server setup
-│   ├── client.js                    # Test client
-│   ├── clients/                     # Generated Protocol Buffer files
-│   │   ├── formula_parser_grpc_pb.js
-│   │   ├── formula_parser_pb.js
-│   │   └── dtypes_pb.js
+│   ├── cli.ts
 │   ├── core/
-│   │   └── config.js                # Configuration management
 │   ├── handlers/
-│   │   └── formulaParserHandler.js  # Request handling logic
+│   ├── instrumentation.ts
+│   ├── server.ts
 │   ├── services/
-│   │   └── formulaParser.js         # Core parsing logic
-│   └── tests/                       # Test files
+│   └── utils/
 ├── package.json                     # Project configuration
+├── tests/                           # Test files
 ├── Dockerfile                       # Container configuration
+├── moon.yml
+├── tsconfig.json
+├── tsup.config.ts
+├── vitest.config.ts
 └── README.md                        # This file
 ```
 
 ### Key Components
 
-#### Core Parser (`services/formulaParser.js`)
+#### Core Parser
 
 The main parsing engine that:
 
@@ -175,22 +175,7 @@ The main parsing engine that:
 2. **Builds AST** using `excel-formula-ast`
 3. **Handles errors** gracefully with descriptive messages
 
-```javascript
-function parseFormula(formula) {
-    let tokens = null;
-    let ast = null;
-
-    try {
-        tokens = tokenize(formula);
-        ast = buildTree(tokens);
-        return { formula, tokens, ast, error: "" };
-    } catch (error) {
-        return { formula, tokens, ast, error: error.message };
-    }
-}
-```
-
-#### Handler (`handlers/formulaParserHandler.js`)
+#### Handler Layer
 
 Manages gRPC request/response conversion:
 
@@ -225,11 +210,14 @@ The service provides comprehensive error handling:
 - **excel-formula-ast**: AST generation from tokens
 - **google-protobuf**: Protocol Buffer runtime
 - **dotenv**: Environment variable management
+- **@sloth/packages-proto-utils-js**: Workspace gRPC client and shared types
 
 ### Development Dependencies
 
-- **grpc-tools**: Protocol Buffer compilation tools
-- **nodemon**: Development server with auto-reload
+- **tsup**: TypeScript build pipeline
+- **vitest**: Test runner and coverage
+- **typescript**: TypeScript compiler and type checking
+- **eslint**: Linting and formatting checks
 
 ## API Examples
 

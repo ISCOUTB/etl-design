@@ -1,9 +1,7 @@
 <script setup lang="ts">
     import { ExternalLink, Pencil, Trash2, TriangleAlert } from "lucide-vue-next";
 
-    const {
-        state: { project },
-    } = useProject();
+    const { project } = useProject();
 
     const modal = useModal();
     const config = useAppConfig();
@@ -22,13 +20,15 @@
 
 <template>
     <div class="flex flex-col gap-8">
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.settings.overview.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.settings.overview.description") }}
-            </p>
+        <section class="space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.settings.overview.title") }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.settings.overview.description") }}
+                </p>
+            </div>
 
             <Item v-if="project" variant="outline" class="p-5 rounded-lg">
                 <ItemContent>
@@ -60,13 +60,15 @@
             </Item>
         </section>
 
-        <section>
-            <h3 class="mb-1 text-sm font-medium text-foreground">
-                {{ $t("projects.id.sections.settings.ownership.title") }}
-            </h3>
-            <p class="mb-5 text-sm text-muted-foreground">
-                {{ $t("projects.id.sections.settings.ownership.description") }}
-            </p>
+        <section class="space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-sm font-medium text-foreground">
+                    {{ $t("projects.id.sections.settings.ownership.title") }}
+                </h3>
+                <p class="text-sm text-muted-foreground">
+                    {{ $t("projects.id.sections.settings.ownership.description") }}
+                </p>
+            </div>
 
             <Item variant="outline" class="p-5 rounded-lg">
                 <ItemContent>
@@ -92,8 +94,8 @@
 
         <Separator />
 
-        <section>
-            <div class="mb-5 flex items-center gap-2">
+        <section class="space-y-5">
+            <div class="flex items-center space-x-2">
                 <TriangleAlert class="size-4 text-destructive" />
                 <h3 class="text-sm font-medium text-destructive">
                     {{ $t("projects.id.sections.settings.danger_zone.title") }}

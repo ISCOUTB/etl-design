@@ -10,9 +10,9 @@ The packages are organized as independent modules that can be imported and used 
 
 ```text
 packages/
-├── proto/                      # Protocol Buffer definitions
-├── proto-utils/                # Protocol Buffer utilities
-└── messaging-utils/            # RabbitMQ messaging utilities  
+├── proto/             # Protocol Buffer definitions
+├── proto-utils/       # Protocol Buffer utilities
+└── messaging-utils/   # RabbitMQ messaging utilities
 ```
 
 ## 📦 Available Packages
@@ -104,16 +104,15 @@ client = DatabaseClient('localhost:50051')
 ```python
 # Python
 from messaging_utils.messaging.publishers import Publisher
-from messaging_utils.schemas.validation import Metadata, ValidationTasks
+from messaging_utils.schemas.validation import Metadata
 
 publisher = Publisher()
 task_id = publisher.publish_validation_request(
-    routing_key="validation.request",
-    file_data=file_content,
-    import_name="user_schema_v1",
-    metadata=Metadata(filename="data.csv", priority=1),
-    task="sample_validation"
-)
+  routing_key="validation.request",
+  file_data=file_content,
+  import_name="user_schema_v1",
+  metadata=Metadata(filename="data.csv", priority=1),
+  task="sample_validation",
 )
 ```
 
@@ -166,7 +165,7 @@ Each package follows semantic versioning:
 ## 📊 Package Status
 
 | Package | Language | Status | Version | Purpose |
-|---------|----------|--------|---------|---------|
+| ------- | -------- | ------ | ------- | ------- |
 | proto | Proto3 | ✅ Active | - | Service definitions |
 | proto-utils-js | TypeScript | ✅ Active | 1.0.0 | JS/TS gRPC clients |
 | proto-utils-py | Python | ✅ Active | 0.1.0 | Python gRPC clients |
