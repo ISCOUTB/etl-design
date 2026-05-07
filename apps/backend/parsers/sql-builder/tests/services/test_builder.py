@@ -467,4 +467,6 @@ class TestBuildSql:
         # Alter statement for generated column should reference the schematized table
         assert 1 in result
         alter_sql = result[1][0]["sql"]
-        assert "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS col2" in alter_sql
+        assert (
+            "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS col2" in alter_sql
+        )

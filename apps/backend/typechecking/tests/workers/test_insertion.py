@@ -217,7 +217,7 @@ class TestInsertionDataFlow:
 
         mock_post_multipart.assert_called_once()
         post_kwargs = mock_post_multipart.call_args.kwargs
-        assert post_kwargs["data"] == {"table_name": "customers"}
+        assert post_kwargs["data"] == {"table_name": "customers", "scheme": None}
         assert post_kwargs["params"] == {"overwrite": True}
         assert post_kwargs["files"]["spreadsheet"][0] == "to_insert.csv"
 
