@@ -39,7 +39,6 @@ services:
             - "--entrypoints.metrics.address=:8082"
             - "--providers.file.directory=/certs"
             - "--providers.file.watch=true"
-
             # Providers
 
             # Enable the Docker Swarm provider (instead of Docker provider)
@@ -93,7 +92,6 @@ services:
                 - "traefik.http.routers.dashboard.entrypoints=websecure"
                 - "traefik.http.routers.dashboard.service=api@internal"
                 - "traefik.http.routers.dashboard.tls=true"
-
                 # Basic‑auth middleware
                 - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_USERNAME?Variable not set}:${TRAEFIK_HASHED_PASSWORD?Variable not set}"
                 - "traefik.http.middlewares.internal-allowlist.ipallowlist.sourcerange=${TRAEFIK_ALLOWED_CIDRS?Variable not set}"
@@ -101,17 +99,15 @@ services:
                 - "traefik.http.routers.dashboard.middlewares=dashboard-auth@swarm,internal-maintenance@swarm"
                 # Service hint
                 - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
         configs:
-          - source: traefik_tls
-            target: /certs/tls.yml
-          - source: traefik_middlewares
-            target: /certs/middlewares.yml
-          - source: traefik_fullchain
-            target: /certs/fullchain.crt
-          - source: traefik_privkey
-            target: /certs/server.key
-
+            - source: traefik_tls
+              target: /certs/tls.yml
+            - source: traefik_middlewares
+              target: /certs/middlewares.yml
+            - source: traefik_fullchain
+              target: /certs/fullchain.crt
+            - source: traefik_privkey
+              target: /certs/server.key
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - ${TRAEFIK_CERTS_PATH?Variable not set}:/certificates
@@ -322,7 +318,7 @@ services:
     # Parsers: Formula Parser, DDL Generator, SQL Builder, Excel Reader
     # =============================================================================
     formula-parser:
-        image: vulcan99/formula-parser:1.00
+        image: vulcan99/formula-parser:1.02
         environment:
             FORMULA_PARSER_HOST: "0.0.0.0"
             FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
@@ -359,7 +355,7 @@ services:
                 - prometheus-port=9090
                 - prometheus-path=/metrics
     ddl-generator:
-        image: vulcan99/ddl-generator:1.00
+        image: vulcan99/ddl-generator:1.02
         environment:
             DDL_GENERATOR_HOST: "0.0.0.0"
             DDL_GENERATOR_PORT: ${PARSERS_DDL_GENERATOR_PORT?Variable not set}
@@ -399,7 +395,7 @@ services:
                 - prometheus-port=9090
                 - prometheus-path=/metrics
     sql-builder:
-        image: vulcan99/sql-builder:1.00
+        image: vulcan99/sql-builder:1.02
         environment:
             SQL_BUILDER_HOST: "0.0.0.0"
             SQL_BUILDER_PORT: ${PARSERS_SQL_BUILDER_PORT?Variable not set}
@@ -434,7 +430,7 @@ services:
                 - prometheus-port=9090
                 - prometheus-path=/metrics
     excel-reader:
-        image: vulcan99/excel-reader:1.00
+        image: vulcan99/excel-reader:1.02
         environment:
             FORMULA_PARSER_HOST: formula-parser
             FORMULA_PARSER_PORT: ${PARSERS_FORMULA_PARSER_PORT?Variable not set}
@@ -605,15 +601,10 @@ services:
                     memory: "256m"
                 limits:
                     memory: "512m"
-
     default-bi-postgres:
         image: postgres:18
         healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    "pg_isready -U ${DEFAULT_PROJECT_POSTGRES_USER} -d ${DEFAULT_PROJECT_POSTGRES_DB}",
-                ]
+            test: ["CMD-SHELL", "pg_isready -U ${DEFAULT_PROJECT_POSTGRES_USER} -d ${DEFAULT_PROJECT_POSTGRES_DB}"]
             interval: 10s
             retries: 5
             start_period: 30s
@@ -640,7 +631,6 @@ services:
                     memory: "256m"
                 limits:
                     memory: "512m"
-
     pgadmin:
         image: dpage/pgadmin4:latest
         environment:
@@ -669,7 +659,7 @@ services:
                 - "traefik.http.routers.pgadmin.middlewares=internal-maintenance@swarm"
                 - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
     database:
-        image: vulcan99/etl-database:1.00
+        image: vulcan99/etl-database:1.02
         healthcheck:
             test: ["CMD", "python", "-c", "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ['DATABASE_CONNECTION_PORT'])), 3); s.close()"]
             interval: 10s
@@ -756,7 +746,7 @@ services:
     # Application Services: API Server, Web, Type Checking Worker, Pre‑start Initialization
     # =============================================================================
     typechecking:
-        image: vulcan99/typechecking:1.00
+        image: vulcan99/typechecking:1.02
         environment:
             MINIMAL_SERVER_HOST: "0.0.0.0"
             MINIMAL_SERVER_PORT: ${TYPECHECKING_MINIMAL_SERVER_PORT?Variable not set}
@@ -888,7 +878,7 @@ services:
                 delay: 5s
                 max_attempts: 3
     api:
-        image: vulcan99/etl-api:1.00
+        image: vulcan99/etl-api:1.02
         environment:
             API_V1_STR: ${API_V1_STR-/api/v1}
             CORS_ORIGINS: ${CORS_ORIGINS?Variable not set},http://web,https://${DOMAIN}
@@ -927,7 +917,6 @@ services:
             POSTGRES_USER: ${POSTGRES_USER?Variable not set}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD?Variable not set}
             POSTGRES_DB: ${POSTGRES_DB?Variable not set}
-
             DEFAULT_PROJECT_POSTGRES_HOST: default-bi-postgres
             DEFAULT_PROJECT_POSTGRES_PORT: 5432
             DEFAULT_PROJECT_POSTGRES_USER: ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
@@ -993,7 +982,7 @@ services:
                 - prometheus-port=${SERVER_PORT?Variable not set}
                 - prometheus-path=/api/v1/metrics
     web:
-        image: vulcan99/web:1.00
+        image: vulcan99/web:1.02
         environment:
             NUXT_SITE_ENV: production
             API_BASE_URL: ${API_V1_STR-/api/v1}
