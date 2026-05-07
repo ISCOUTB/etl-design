@@ -280,10 +280,6 @@ async def insert_sql(
 
     logger.info(f"Processing SQL insertion for file: {filename}")
 
-    # FIXME: When overwrite is True, the sql created tries to delete some things,
-    # but because of the table's indexes and some constraints, it fails. For that reason,
-    # for now the overwrite will be ignored and set to `False`
-    overwrite = False
     table_name = standardize_string(table_name, fill_spaces=fill_spaces)
     if scheme is not None:
         scheme = standardize_string(scheme, fill_spaces=fill_spaces)

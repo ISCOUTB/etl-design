@@ -4,7 +4,11 @@ from src.services.get_data import get_data_from_spreadsheet
 
 
 def create_sql_for_insertion(
-    table_name: str, file_bytes: bytes, filename: str, scheme: Optional[str] = None, truncate: bool = False
+    table_name: str,
+    file_bytes: bytes,
+    filename: str,
+    scheme: Optional[str] = None,
+    truncate: bool = False,
 ) -> Dict[str, str]:
     # The truncate parameter is dangerous and should be used with caution.
     # In this case, we will use another way instead of using TRUNCATE TABLE directly,
@@ -36,6 +40,8 @@ def create_sql_for_insertion(
             f"{table_name}_{sheet}" if n_sheets > 1 else table_name
         )
         table_name_sheet_tmp = f"{table_name_sheet}_temp"
+        # Remove scheme for temp table
+        table_name_sheet_noscheme = table_name_sheet.split(".")[-1]
 
         prefix_sql = ""
         if truncate:
@@ -78,13 +84,13 @@ def create_sql_for_insertion(
             suffix_sql += "\nBEGIN;\n"
 
             # Rename original table to backup, and the new table to original name
-            suffix_sql += f"ALTER TABLE {table_name_sheet} RENAME TO {table_name_sheet}_backup;\n"
-            suffix_sql += f"ALTER TABLE {table_name_sheet_tmp} RENAME TO {table_name_sheet};\n"
+            suffix_sql += f'ALTER TABLE {table_name_sheet} RENAME TO "{table_name_sheet_noscheme}_backup";\n'
+            suffix_sql += f'ALTER TABLE {table_name_sheet_tmp} RENAME TO "{table_name_sheet_noscheme}";\n'
 
             # I'll drop the backup table here, but maybe we will use something like TTLs
             # (postgres don't support it natively but we can create a background job to drop backup
             # tables older than X days) to keep some backups just in case
-            suffix_sql += f"DROP TABLE {table_name_sheet}_backup;\n"
+            suffix_sql += f"DROP TABLE {table_name_sheet}_backup CASCADE;\n"
 
             # Commit the transaction
             suffix_sql += "COMMIT;"

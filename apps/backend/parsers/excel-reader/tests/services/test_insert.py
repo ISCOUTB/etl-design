@@ -126,9 +126,9 @@ def test_create_sql_for_insertion_with_truncate_wraps_atomic_swap(monkeypatch):
     sql = result["Sheet1"]
     assert "CREATE TABLE users_temp (LIKE users INCLUDING ALL);" in sql
     assert "BEGIN;" in sql
-    assert "ALTER TABLE users RENAME TO users_backup;" in sql
-    assert "ALTER TABLE users_temp RENAME TO users;" in sql
-    assert "DROP TABLE users_backup;" in sql
+    assert 'ALTER TABLE users RENAME TO "users_backup";' in sql
+    assert 'ALTER TABLE users_temp RENAME TO "users";' in sql
+    assert "DROP TABLE users_backup CASCADE;" in sql
     assert sql.strip().endswith("COMMIT;")
 
 
