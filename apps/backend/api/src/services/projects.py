@@ -145,7 +145,9 @@ class ProjectService:
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> List[schemas.ResponseProjectSchema]:
-        def _process_project_row(project_row: schemas.ProjectSearchRow) -> schemas.ResponseProjectSchema:
+        def _process_project_row(
+            project_row: schemas.ProjectSearchRow,
+        ) -> schemas.ResponseProjectSchema:
             project, owner_id, owner_user = project_row
             decrypted_project = self.__decrypt_db_credentials(project)
             self.repository.db.expunge(decrypted_project)

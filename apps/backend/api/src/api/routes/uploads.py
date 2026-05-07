@@ -389,7 +389,9 @@ async def create_table(
         for sheet in sql_per_sheet.keys():
             try:
                 # Attempt to extract table name from SQL (e.g., "CREATE TABLE foobar")
-                extracted_name = table_name_from_create_sql_response(sql_per_sheet[sheet])
+                extracted_name = table_name_from_create_sql_response(
+                    sql_per_sheet[sheet]
+                )
                 sheet_table_names_mapping[sheet] = extracted_name
             except ValueError:
                 # Fallback: if we can't extract, use the sheet name or global table_name
