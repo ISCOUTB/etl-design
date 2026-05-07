@@ -82,19 +82,3 @@ def get_data_from_spreadsheet(
             for sheet, sheet_data in cells.items()
         },
     }
-
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    # Example usage
-    filename = (
-        "/home/juand/Documents/vscode/proyecto-ingenieria/etl-design/"
-        "tools/benchmarks/static/acme__users__sample1.xls"
-    )
-    with open(filename, "rb") as f:
-        file_bytes = f.read()
-
-    cell_data = get_data_from_spreadsheet(filename, file_bytes, limit=10)
-
-    pprint(cell_data)

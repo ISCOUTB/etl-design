@@ -1,2 +1,10 @@
 .moon/cache
 .moon/cache/**
+.git
+.github
+docs
+iac
+.venv
+node_modules
+dist
+

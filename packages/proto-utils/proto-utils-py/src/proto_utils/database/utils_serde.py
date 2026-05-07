@@ -114,10 +114,18 @@ class DatabaseUtilsSerde:
             if k == "extra" and isinstance(v, dict):
                 # Grouped format (from incoming request)
                 for sub_k, sub_v in v.items():
-                    final_extra[sub_k] = str(sub_v)
+                    # Ensure booleans and other types are serialized as JSON-compatible strings
+                    # especially for booleans where str(False) -> "False" but we need "false"
+                    if isinstance(sub_v, bool):
+                        final_extra[sub_k] = "true" if sub_v else "false"
+                    else:
+                        final_extra[sub_k] = str(sub_v)
             else:
                 # Flattened format (retrieved directly from MongoDB)
-                final_extra[k] = str(v)
+                if isinstance(v, bool):
+                    final_extra[k] = "true" if v else "false"
+                else:
+                    final_extra[k] = str(v)
 
         return utils_pb2.Properties(
             type=DatabaseUtilsSerde.serialize_property_type(prop_type),

@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Optional
 
 from dotenv import load_dotenv
 from pydantic import (
@@ -90,10 +90,10 @@ class Settings(BaseSettings):
 
     # PostgreSQL Configuration
     POSTGRES_HOST: str
-    POSTGRES_PORT: int
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_PORT: int = 5432
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
 
     @computed_field
     @property
@@ -105,6 +105,24 @@ class Settings(BaseSettings):
             host=self.POSTGRES_HOST,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
+        )
+
+    DEFAULT_PROJECT_POSTGRES_HOST: Optional[str] = None
+    DEFAULT_PROJECT_POSTGRES_PORT: Optional[int] = None
+    DEFAULT_PROJECT_POSTGRES_USER: Optional[str] = None
+    DEFAULT_PROJECT_POSTGRES_PASSWORD: Optional[str] = None
+    DEFAULT_PROJECT_POSTGRES_DB: Optional[str] = None
+
+    @computed_field
+    @property
+    def DEFAULT_PROJECT_POSTGRES_URI(self) -> PostgresDsn:
+        return MultiHostUrl.build(  # type: ignore
+            scheme="postgresql",
+            username=self.DEFAULT_PROJECT_POSTGRES_USER,
+            password=self.DEFAULT_PROJECT_POSTGRES_PASSWORD,
+            host=self.DEFAULT_PROJECT_POSTGRES_HOST,
+            port=self.DEFAULT_PROJECT_POSTGRES_PORT,
+            path=self.DEFAULT_PROJECT_POSTGRES_DB,
         )
 
     # Database Connection Configuration

@@ -4,6 +4,7 @@ k8s/rendered-charts
 *.pem
 *.key
 *.crt
+*.csr
 *.p12
 *.pfx
 

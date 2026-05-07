@@ -1,6 +1,4 @@
 <script setup lang="ts">
-    import { Search } from "lucide-vue-next";
-
     const { tables } = useProject();
 
     const route = useRoute();
@@ -10,7 +8,7 @@
 
     const animations = useViewManagerAnimations();
     const views = useViewManager(
-        () => [
+        [
             {
                 meta: {
                     label: "",
@@ -54,17 +52,6 @@
                         })
                     }}
                 </p>
-            </div>
-            <div>
-                <InputGroup class="max-w-md">
-                    <InputGroupInput
-                        :disabled="!!tables.state.value.selectedSchema"
-                        placeholder="Search Tables..."
-                    />
-                    <InputGroupAddon align="inline-start">
-                        <Search class="size-4 text-muted-foreground" />
-                    </InputGroupAddon>
-                </InputGroup>
             </div>
         </div>
 

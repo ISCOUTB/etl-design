@@ -28,6 +28,7 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.1.0",
     "opentelemetry-sdk>=1.40.0",
     "opentelemetry-exporter-otlp-proto-http>=1.40.0",
+    "httpx[http2]>=0.28.1",
 ]
 
 [tool.uv.sources]

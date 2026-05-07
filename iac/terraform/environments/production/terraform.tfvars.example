@@ -6,7 +6,7 @@
 environment = "production"
 
 # Project name
-project_name = "etl-design"
+project_name = "sloth"
 
 # ============================================
 # Cluster Configuration

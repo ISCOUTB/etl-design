@@ -4,38 +4,76 @@ export const [useProvideProjectState, _useProjectState] = createInjectionState(
 
         const project = useState<ResponseProject>(NuxtKeys.Projects.SharedState(initialId));
 
-        const VIEWS = computed<Views.Project.ProjectSections>(() => ({
-            Overview: t("projects.id.sections.overview.tab"),
-            UploadFile: t("projects.id.sections.upload_schema.tab"),
-            Tables: t("projects.id.sections.tables.tab"),
-            Settings: t("projects.id.sections.settings.tab"),
-            File: t("projects.id.sections.file.tab"),
+        const VIEWS = computed(() => ({
+            Overview: {
+                key: "Overview",
+                value: t("projects.id.sections.overview.tab"),
+            },
+            UploadFile: {
+                key: "UploadFile",
+                value: t("projects.id.sections.upload_schema.tab"),
+            },
+            Tables: {
+                key: "Tables",
+                value: t("projects.id.sections.tables.tab"),
+            },
+            Settings: {
+                key: "Settings",
+                value: t("projects.id.sections.settings.tab"),
+            },
+            File: {
+                key: "File",
+                value: t("projects.id.sections.file.tab"),
+            },
+            QueryBuilder: {
+                key: "QueryBuilder",
+                value: t("projects.id.sections.query_builder.tab"),
+            },
         }));
 
-        const view = useRouteQuery<string>("tab", VIEWS.value.Overview, {
-            mode: "replace",
-            transform: (value) => {
-                const sections = Object.values(VIEWS.value);
-                const found = sections.find((section) => section === value);
-                if (found) {
-                    return found;
-                }
+        const cookie = useCookie(NuxtKeys.Projects.CookieTab(initialId), {
+            default: () => VIEWS.value.Overview.key,
+        });
 
-                return VIEWS.value.Overview;
+        const view = useRouteQuery<string>("tab", VIEWS.value.Overview.value, {
+            mode: "replace",
+        });
+
+        syncRef(cookie, view, {
+            direction: "both",
+            transform: {
+                ltr(left) {
+                    const sections = Object.values(VIEWS.value);
+                    const found = sections.find((section) => section.key === left);
+                    if (found) {
+                        return found.value;
+                    }
+
+                    return VIEWS.value.Overview.value;
+                },
+                rtl(right) {
+                    const sections = Object.values(VIEWS.value);
+                    const found = sections.find((section) => section.value === right);
+                    if (found) {
+                        return found.key;
+                    }
+
+                    return VIEWS.value.Overview.key;
+                },
             },
         });
 
         const tables = useProvideProjectTablesState(initialId);
         const uploadSchema = useProvideProjectUploadSchemaState(initialId);
+        const queryBuilder = useProvideProjectQueryBuilder(project.value, undefined);
 
         return {
-            state: {
-                project,
-                view,
-                VIEWS,
-            },
+            project,
+            view,
+            VIEWS,
             tables,
             uploadSchema,
+            queryBuilder,
         };
     },
 );
@@ -44,8 +82,8 @@ export function useProject() {
     const state = _useProjectState();
     if (!state) {
         throw createError({
-            statusCode: 500,
-            statusMessage:
+            status: 500,
+            statusText:
                 "Project state not injected. Ensure useProvideProjectState is called in a parent component.",
             fatal: true,
         });

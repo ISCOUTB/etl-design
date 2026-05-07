@@ -26,6 +26,7 @@
             <NuxtLoadingIndicator color="var(--accent)" />
             <NuxtPage :transition="{ css: false, mode: 'out-in', onBeforeEnter, onLeave }" />
             <Sonner rich-colors />
+            <NuxtPwaManifest />
         </NuxtLayout>
     </div>
 </template>

@@ -1,10 +1,7 @@
 <script setup lang="ts">
-    import { ArrowLeft, Pencil, Table2, Trash2 } from "lucide-vue-next";
+    import { ArrowLeft, Pencil, Pickaxe, Table2, Trash2 } from "lucide-vue-next";
 
-    const {
-        state: { project },
-        tables,
-    } = useProject();
+    const { project, tables, queryBuilder, VIEWS } = useProject();
 
     const tableName = computed(() => {
         if (!tables.state.value.selectedSchema) {
@@ -39,6 +36,11 @@
             },
         });
     }
+
+    function handleQuery(_event: Event) {
+        queryBuilder.state.schema.value = tables.state.value.selectedSchema;
+        events.emit("event:projects:change-tab", { value: VIEWS.value.QueryBuilder.value });
+    }
 </script>
 
 <template>
@@ -47,9 +49,9 @@
             <div class="flex items-center gap-4">
                 <Button variant="ghost" size="icon" class="shrink-0" @click="handleBack">
                     <ArrowLeft class="size-4" />
-                    <span class="sr-only">{{
-                        $t("projects.id.sections.tables.details.back")
-                    }}</span>
+                    <span class="sr-only">
+                        {{ $t("projects.id.sections.tables.details.back") }}
+                    </span>
                 </Button>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-3">
@@ -70,6 +72,10 @@
                 </div>
 
                 <div class="space-x-2">
+                    <Button variant="outline" @click="handleQuery">
+                        <Pickaxe />
+                        Query Table
+                    </Button>
                     <Button v-if="project" variant="outline" as-child>
                         <NuxtLink
                             :to="

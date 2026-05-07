@@ -48,14 +48,6 @@ tasks:
         toolchains: node
         preset: server
 
-    client-run:
-        command: node
-        args:
-            - src/client.js
-        toolchains: node
-        options:
-            runFromWorkspaceRoot: false
-
     build:
         command: npx
         args:

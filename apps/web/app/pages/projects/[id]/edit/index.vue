@@ -8,6 +8,7 @@
         i18n: {
             paths: {
                 en: "/projects/[id]/edit",
+                es: "/proyectos/[id]/editar",
             },
         },
         breadcrumb: {
@@ -33,7 +34,7 @@
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
-    const { state } = useProvideProjectState(projectId.value?.toString());
+    const { project } = useProvideProjectState(projectId.value?.toString());
     useSeoMeta({
         description: () => $t("projects.edit.header.description"),
 
@@ -53,7 +54,7 @@
         robots: "noindex, nofollow",
     });
     watchEffect(() => {
-        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = state.project.value.name;
+        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = project.value.name;
     });
 
     const errorToast = useErrorToast();
@@ -73,7 +74,7 @@
 <template>
     <div>
         <ProjectUpdateForm
-            :project="state.project"
+            :project="project"
             class="mx-auto w-full max-w-5xl"
             @sucess="handleSuccess"
             @error="(error) => errorToast.handleServer(error)"

@@ -20,7 +20,8 @@ declare global {
             | {
                   key: "event:projects:table:set-selected-schema";
                   payload: { schema: MongoRaw | undefined };
-              };
+              }
+            | { key: "event:projects:query-builder:reset"; payload: undefined };
 
         type EventKey = Events["key"];
 

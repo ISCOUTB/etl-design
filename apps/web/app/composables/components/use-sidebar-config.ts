@@ -1,7 +1,8 @@
-import { Boxes, FolderOpen, PlusSquare } from "lucide-vue-next";
+import { Boxes, FolderOpen, PlusSquare, User } from "lucide-vue-next";
 
 export default function () {
     const { $localeRoute } = useNuxtApp();
+    const auth = useAuth();
 
     const SIDEBAR_CONFIG: Components.Sidebar.Group[] = [
         {
@@ -26,6 +27,14 @@ export default function () {
                             to: () => $localeRoute({ name: "projects" }),
                         },
                     ],
+                },
+                {
+                    kind: "item",
+                    label: "Users",
+                    icon: User,
+                    actionKind: "navigation",
+                    hidden: () => auth.data.value?.user.role !== "sudo",
+                    to: () => $localeRoute({ name: "admin-users" }),
                 },
             ],
         },

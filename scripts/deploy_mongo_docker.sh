@@ -10,7 +10,7 @@ fi
 
 docker run -d --name $CONTAINER_NAME \
   -p "${MONGO_PORT}:27017" \
-  --restart unless-stopped \
+  --restart on-failure \
   -e MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME} \
   -e MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD} \
   -e MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE} \

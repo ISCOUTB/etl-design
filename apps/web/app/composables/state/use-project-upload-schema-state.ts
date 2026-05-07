@@ -3,6 +3,7 @@ import type { Column } from "@/components/common/data-table/utils";
 
 interface State {
     tableName: string | undefined;
+    insertData: boolean;
     uploadedFile: Schemas.Schema.UploadedFile | undefined;
     sheetNames: string[];
     columnsConfig: Record<string, ColumnConfig>;
@@ -22,6 +23,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
 
         const state = useState<State>(NuxtKeys.Projects.Schemas.SchemaState(initialId), () => ({
             tableName: undefined,
+            insertData: true,
             uploadedFile: undefined,
             sheetNames: [],
             columnsConfig: {},
@@ -84,13 +86,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 return [];
             }
 
-            const firstRow = parsedFileContent.value?.[0];
-            if (!firstRow) {
-                return [];
-            }
-            return Object.keys(firstRow)
-                .filter((key) => key !== ROW_ID)
-                .map((key) => ({ key, label: key }));
+            return toColumns(parsedFileContent.value, ROW_ID);
         });
 
         const sampleValueByColumn = computed<Record<string, unknown>>(() => {
@@ -153,6 +149,10 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             state.value.tableName = tableName;
         }
 
+        function setInsertData(value: boolean) {
+            state.value.insertData = value;
+        }
+
         function addSchemaError(error: SchemaError) {
             if (!errors.value.some((e) => e.key === error.key)) {
                 errors.value.push(error);
@@ -185,8 +185,16 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             patchColumnConfig(columnKey, { optional });
         }
 
+        function setAllColumnsOptional(optional: boolean) {
+            columns.value.forEach((column) => patchColumnConfig(column.key, { optional }));
+        }
+
         function setColumnUnique(columnKey: string, unique: boolean) {
             patchColumnConfig(columnKey, { unique });
+        }
+
+        function setAllColumnsUnique(unique: boolean) {
+            columns.value.forEach((column) => patchColumnConfig(column.key, { unique }));
         }
 
         function setColumnPrimaryKey(columnKey: string, primary_key: boolean) {
@@ -207,6 +215,20 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
             });
         }
 
+        function toColumns(
+            data: Record<string, unknown>[] | undefined,
+            rowId: string,
+        ): Column<Record<string, unknown>>[] {
+            const row = data?.[0];
+            if (!row) {
+                return [];
+            }
+
+            return Object.keys(row)
+                .filter((key) => key !== rowId)
+                .map((key) => ({ key, label: key }));
+        }
+
         return {
             state,
             errors,
@@ -222,9 +244,12 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 setUploadedFile,
                 setColumnDataType,
                 setTableName,
+                setInsertData,
                 setColumnConfig,
                 setColumnUnique,
+                setAllColumnsUnique,
                 setColumnOptional,
+                setAllColumnsOptional,
                 setColumnPrimaryKey,
                 patchColumnConfig,
                 getColumnDataTypeModel,
@@ -232,6 +257,7 @@ export const [useProvideProjectUploadSchemaState, useProjectUploadSchemaState] =
                 addSchemaError,
                 removeSchemaError,
                 clearSchemaErrors,
+                toColumns,
             },
         };
     });

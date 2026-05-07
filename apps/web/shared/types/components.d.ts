@@ -1,6 +1,7 @@
 import type { LucideIcon, LucideProps } from "lucide-vue-next";
 import { RouteLocationRaw } from "vue-router";
 import { FunctionalComponent, AllowedComponentProps, VNodeProps } from "vue";
+import type { DialogRootProps } from "reka-ui";
 
 declare global {
     namespace Components {
@@ -41,12 +42,14 @@ declare global {
                 currentKind: Components.Modal.Kind;
                 open: boolean;
                 componentProps: object;
+                containerProps: object;
             }
 
             interface Args<C extends Component> {
                 loader: Components.ComponentLoader<C>;
                 kind?: Components.Modal.Kind;
                 props?: Components.ComponentProps<C>;
+                containerProps?: DialogRootProps;
                 key: string;
             }
         }
@@ -113,6 +116,77 @@ declare global {
                 kind: "action-button";
                 menuAction?: () => unknown;
                 dropdownItems: Components.GenericDropdown.Item[][];
+            }
+        }
+
+        namespace QueryBuilder {
+            interface JsonSchemaProperty {
+                dtype: Dtype;
+                [key: string]: unknown;
+            }
+
+            interface KnexColumn {
+                name: string;
+                pgType: string;
+                nullable: boolean;
+                required: boolean;
+                dtype: Dtype;
+            }
+
+            interface KnexOutput {
+                sql: string;
+                bindings: readonly unknown[];
+            }
+
+            interface ColumnSelection {
+                id: string;
+                col: string;
+            }
+
+            export interface OrderByState {
+                col: string;
+                dir: "ASC" | "DESC";
+            }
+
+            namespace Operators {
+                export type ConditionOperator =
+                    | "="
+                    | "!="
+                    | ">"
+                    | "<"
+                    | ">="
+                    | "<="
+                    | "LIKE"
+                    | "ILIKE"
+                    | "IN"
+                    | "NOT IN"
+                    | "IS NULL"
+                    | "IS NOT NULL";
+
+                export type LogicOperator = "AND" | "OR";
+            }
+
+            namespace Nodes {
+                interface ConditionNode {
+                    id: string;
+                    type: "condition";
+                    col: string;
+                    op: Components.QueryBuilder.Operators.ConditionOperator;
+                    val: string;
+                    conj: Components.QueryBuilder.Operators.LogicOperator;
+                }
+
+                interface GroupNode {
+                    id: string;
+                    type: "group";
+                    logic: Components.QueryBuilder.Operators.LogicOperator;
+                    children: Components.QueryBuilder.Nodes.QueryNode[];
+                    conj: Components.QueryBuilder.Operators.LogicOperator;
+                }
+
+                type QueryNode =
+                    | Components.QueryBuilder.Nodes.ConditionNode
+                    | Components.QueryBuilder.Nodes.GroupNode;
             }
         }
     }

@@ -19,6 +19,7 @@ import pymongo.results
 from proto_utils.database import dtypes
 
 from src.core.database_mongo import MongoConnection
+from src.core.database_redis import RedisConnection
 
 
 class MongoSchemasService:
@@ -106,6 +107,7 @@ class MongoSchemasService:
         _: Optional[dtypes.MongoPingRequest] = None,
         *,
         mongo_schemas_connection: MongoConnection,
+        **__,
     ) -> dtypes.MongoPingResponse:
         """Ping the MongoDB server to check connectivity.
 
@@ -122,6 +124,7 @@ class MongoSchemasService:
         request: dtypes.MongoGetRawSchemasRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
     ) -> Optional[dtypes.MongoGetRawSchemasResponse]:
         """Get raw schema documents from MongoDB by import name.
 
@@ -162,6 +165,7 @@ class MongoSchemasService:
         request: dtypes.MongoGetSchemasByImportRegexRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
     ) -> dtypes.MongoGetSchemasByImportRegexResponse:
         """Get raw schema documents from MongoDB by import name regex.
 
@@ -207,6 +211,7 @@ class MongoSchemasService:
         request: dtypes.MongoInsertOneSchemaRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
     ) -> dtypes.MongoInsertOneSchemaResponse:
         """Insert or update a JSON schema in the database (ATOMIC).
 
@@ -360,6 +365,7 @@ class MongoSchemasService:
         _: Optional[dtypes.MongoCountAllDocumentsRequest] = None,
         *,
         mongo_schemas_connection: MongoConnection,
+        **__,
     ) -> dtypes.MongoCountAllDocumentsResponse:
         """Count all documents in the schemas collection.
 
@@ -382,6 +388,7 @@ class MongoSchemasService:
         request: dtypes.MongoFindJsonSchemaRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
     ) -> dtypes.MongoFindJsonSchemaResponse:
         """Find a JSON schema by import name.
 
@@ -439,6 +446,7 @@ class MongoSchemasService:
         request: dtypes.MongoUpdateOneJsonSchemaRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        **_,
     ) -> dtypes.MongoUpdateOneJsonSchemaResponse:
         """Update an existing JSON schema (ATOMIC).
 
@@ -567,6 +575,8 @@ class MongoSchemasService:
         request: dtypes.MongoDeleteOneJsonSchemaRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        mongo_task_connection: MongoConnection,
+        redis_task_connection: RedisConnection,
     ) -> dtypes.MongoDeleteOneJsonSchemaResponse:
         """Delete the current active schema or revert to previous version.
 
@@ -597,28 +607,47 @@ class MongoSchemasService:
 
         if not releases:
             # Try to use transaction, fallback to non-transactional if not supported
+            # the schema related to a import_name is being completely deleted,
+            # so we should also delete all associated tasks to avoid orphaned data
             try:
                 with mongo_schemas_connection.transaction() as session:
-                    result: pymongo.results.DeleteResult = (
+                    result: pymongo.results.DeleteResult = (  # type: ignore
                         mongo_schemas_connection.delete_one(
                             {"import_name": request["import_name"]}, session=session
                         )
                     )
+
+                    redis_task_connection.remove_tasks_by_import_name(
+                        request["import_name"], None
+                    )
+                    result_tasks = mongo_task_connection.delete_many(
+                        {"import_name": request["import_name"]}, session=session
+                    )
             except pymongo.errors.OperationFailure as transaction_error:
                 # MongoDB not in replica set mode, do non-transactional operation
                 if "Transaction numbers" in str(transaction_error):
-                    result: pymongo.results.DeleteResult = (
+                    result: pymongo.results.DeleteResult = (  # type: ignore
                         mongo_schemas_connection.delete_one(
                             {"import_name": request["import_name"]}
                         )
                     )
+                    redis_task_connection.remove_tasks_by_import_name(
+                        request["import_name"], None
+                    )
+                    result_tasks = mongo_task_connection.delete_many(
+                        {"import_name": request["import_name"]}
+                    )
                 else:
                     raise
+
             return dtypes.MongoDeleteOneJsonSchemaResponse(
                 success=True,
                 message=f"Schema with import_name '{request['import_name']}' deleted",
                 status="deleted",
-                extra={**result.raw_result},
+                extra={
+                    **result.raw_result,
+                    "tasks_deleted_count": str(result_tasks.deleted_count),
+                },
             )
 
         # Try to use transaction, fallback to non-transactional if not supported
@@ -673,6 +702,8 @@ class MongoSchemasService:
         request: dtypes.MongoDeleteImportNameRequest,
         *,
         mongo_schemas_connection: MongoConnection,
+        mongo_task_connection: MongoConnection,
+        redis_task_connection: RedisConnection,
     ) -> dtypes.MongoDeleteImportNameResponse:
         """Delete all schemas associated with an import name.
 
@@ -687,16 +718,32 @@ class MongoSchemasService:
             dtypes.MongoDeleteImportNameResponse: Response indicating the operation
                 result (deleted or error).
         """
+        # When a schema is completely deleted, we should also delete all associated tasks to avoid orphaned data
         try:
-            result: pymongo.results.DeleteResult = mongo_schemas_connection.delete_one(
-                {"import_name": request["import_name"]}
-            )
-            if result.deleted_count > 0:
+            with mongo_task_connection.transaction() as session:
+                result_schema: pymongo.results.DeleteResult = (
+                    mongo_schemas_connection.delete_one(
+                        {"import_name": request["import_name"]}, session=session
+                    )
+                )
+
+                # Remove tasks from Redis and MongoDB to avoid cache inconsistencies and orphaned data
+                redis_task_connection.remove_tasks_by_import_name(
+                    request["import_name"], None
+                )
+                result_tasks = mongo_task_connection.delete_many(
+                    {"import_name": request["import_name"]}, session=session
+                )
+
+            if result_schema.deleted_count > 0:
                 return dtypes.MongoDeleteImportNameResponse(
                     success=True,
                     message=f"All schemas with import_name '{request['import_name']}' deleted",
                     status="deleted",
-                    extra={**result.raw_result},
+                    extra={
+                        **result_schema.raw_result,
+                        "tasks_deleted_count": str(result_tasks.deleted_count),
+                    },
                 )
             else:
                 return dtypes.MongoDeleteImportNameResponse(

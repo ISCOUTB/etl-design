@@ -88,7 +88,8 @@
         },
         "clipboard": {
             "copy": "Copiar",
-            "copied": "Copiado al portapapeles"
+            "copied": "Copiado al portapapeles",
+            "copy_id": "Copiar ID"
         }
     },
     "settings": {
@@ -174,9 +175,19 @@
             "title": "Ocurrió un error desconocido",
             "description": "Por favor, inténtalo de nuevo más tarde"
         },
+        "offline": {
+            "title": "Sin conexión a internet",
+            "description": "Parece que no tienes conexión. Revisa tu red e inténtalo de nuevo."
+        },
         "bad_payload": {
             "title": "Respuesta de servidor inválida",
             "description": "Los datos recibidos del servidor están mal formados y no pudieron ser procesados. Por favor, inténtalo de nuevo más tarde."
+        },
+        "database": {
+            "psycop_exception": {
+                "title": "Error al ejecutar SQL",
+                "description": "Aun puedes visualizar la tabla generada"
+            }
         },
         "auth": {
             "invalid_credentials": {
@@ -206,6 +217,28 @@
             },
             "file_not_provided": {
                 "title": "Por favor proporciona un archivo antes de enviar"
+            },
+            "query_builder": {
+                "generate_error": {
+                    "title": "No se pudo generar una consulta valida",
+                    "description": "Por favor, se mas especifico, o intenta mas tarde."
+                },
+                "invalid_columns": {
+                    "title": "Columnas inválidas",
+                    "description": "Una o más columnas seleccionadas no existen en el esquema actual."
+                },
+                "invalid_order_by": {
+                    "title": "Columna de orden inválida",
+                    "description": "La columna seleccionada para ORDER BY no existe en el esquema actual."
+                },
+                "parse_rows_error": {
+                    "title": "No se pudieron interpretar los resultados",
+                    "description": "La base de datos devolvió filas en un formato inesperado."
+                },
+                "could_not_connect": {
+                    "title": "No se pudo conectar a la base de datos",
+                    "description": "Revisa la configuración de conexión del proyecto e inténtalo de nuevo."
+                }
             }
         }
     },
@@ -300,6 +333,9 @@
             "search_input": {
                 "placeholder": "Buscar proyectos..."
             },
+            "actions": {
+                "clear_owner_filter": "Limpiar filtro de propietario"
+            },
             "content": {
                 "no_description": "Este proyecto no tiene descripción",
                 "no_db_host": "Sin Host",
@@ -328,7 +364,12 @@
                     },
                     "connection_details": {
                         "title": "Detalles de conexión",
-                        "description": "Parámetros de conexión a la base de datos para este proyecto."
+                        "description": "Parámetros de conexión a la base de datos para este proyecto.",
+                        "warning": {
+                            "title": "Usando la conexión por defecto",
+                            "description": "Este proyecto todavía no tiene una base de datos configurada. Una conexion por defecto sera determinada cuando sea requerido",
+                            "action": "Configurar"
+                        }
                     },
                     "connection_string": {
                         "title": "Cadena de conexión",
@@ -428,6 +469,13 @@
                         "description": "Configura el nombre de la tabla generada",
                         "placeholder": "usuarios"
                     },
+                    "form": {
+                        "additional_configurations": "Configuraciones adicionales",
+                        "insert_data": {
+                            "label": "Insertar datos",
+                            "description": "Activa esta opcion para importar las filas del archivo en la tabla justo despues de crear el esquema."
+                        }
+                    },
                     "upload": {
                         "title": "¿Estás seguro?",
                         "description": "Asegúrate de haber revisado todos los ajustes antes de subir el archivo."
@@ -461,12 +509,14 @@
                         },
                         "dropdown": {
                             "view_schema": "Ver",
+                            "query": "Seleccionar",
                             "edit": "Editar",
                             "revert": "Revertir",
                             "delete": "Eliminar"
                         }
                     },
-                    "default_table_name": "nombre_columna",
+                    "default_table_name": "nombre_columna-{index}",
+                    "default_table_name_base": "nombre_columna",
                     "delete": {
                         "validation": {
                             "delete": "eliminar {value}",
@@ -541,7 +591,18 @@
                                 "description": "Las tareas aparecerán aquí cuando se cree un proceso de carga para esta tabla."
                             },
                             "item": "Tarea",
-                            "errors": "Errores",
+                            "updated": "Actualizado: {when}",
+                            "status": {
+                                "failed": "Fallido",
+                                "created": "Creado",
+                                "published": "Publicado",
+                                "completed": "Completado"
+                            },
+                            "fields": {
+                                "errors": "Errores",
+                                "logs": "Registro",
+                                "status_debug": "Estado: {status}"
+                            },
                             "events": {
                                 "bad_payload": "Respuesta inválida al cargar las tareas"
                             }
@@ -550,6 +611,111 @@
                 },
                 "file": {
                     "tab": "Archivo"
+                },
+                "query_builder": {
+                    "tab": "Constructor SQL",
+                    "title": "Constructor SQL",
+                    "description": "Construye consultas SQL por bloques y revisa la salida generada.",
+                    "schema": {
+                        "placeholder": "Selecciona un esquema",
+                        "empty": "Aún no hay esquemas disponibles. Sube o crea uno primero."
+                    },
+                    "schema_empty": {
+                        "title": "Aún no hay esquemas configurados",
+                        "description": "Sube o crea un esquema antes de usar el constructor SQL."
+                    },
+                    "cards": {
+                        "columns": {
+                            "title": "Columnas",
+                            "description": "Elige columnas especificas para el SELECT. Si no seleccionas ninugna, se usara por defecto todas."
+                        },
+                        "where": {
+                            "title": "Condiciones",
+                            "description": "Construye grupos anidados para WHERE usando operadores AND/OR."
+                        },
+                        "options": {
+                            "title": "Opciones",
+                            "description": "Configura ORDER BY y LIMIT para esta consulta."
+                        },
+                        "preview": {
+                            "title": "Previsualizacion",
+                            "description": "Inspecciona SQL, salida nativa de knex y arbol de consulta."
+                        }
+                    },
+                    "actions": {
+                        "add_column": "Agregar columna",
+                        "select_all": "Seleccionar todas",
+                        "add_condition": "Agregar condicion",
+                        "add_group": "Agregar grupo",
+                        "toggle_conjunction": "Alternar conjuncion"
+                    },
+                    "generate": {
+                        "button": "Generar",
+                        "events": {
+                            "request_sent": {
+                                "title": "Solicitud de generacion enviada",
+                                "description": "Estamos generando el estado del constructor de consultas. Esto puede tardar unos segundos."
+                            },
+                            "query_created": {
+                                "title": "Consulta lista",
+                                "description": "La consulta generada esta lista. Puedes importarla ahora o esperar a que se importe automaticamente.",
+                                "action": "Importar ahora"
+                            }
+                        },
+                        "modal": {
+                            "title": "Generar estado del Constructor SQL",
+                            "description": "Describe con precision la consulta que quieres construir. Incluye filtros, condiciones y las columnas que deseas devolver. Si no se pueden inferir columnas especificas, se seleccionaran todas las del esquema.",
+                            "form": {
+                                "message": {
+                                    "label": "Que deseas generar?",
+                                    "placeholder": "Ejemplo: Muestrame usuarios adultos activos cuyo nombre contenga 'acme', e incluye name, age e is_adult."
+                                }
+                            },
+                            "actions": {
+                                "generate": "Generar",
+                                "cancel": "Cancelar"
+                            }
+                        }
+                    },
+                    "execute": {
+                        "title": "Ejecutar consulta",
+                        "description": "Ejecuta la consulta actual y carga las filas resultantes.",
+                        "button": "Ejecutar"
+                    },
+                    "output": {
+                        "title": "Filas",
+                        "description": "Inspecciona las filas devueltas por la última ejecución.",
+                        "empty": {
+                            "title": "No hay filas para mostrar",
+                            "description": "La consulta no devolvió filas o todavía no se ha ejecutado ninguna."
+                        }
+                    },
+                    "labels": {
+                        "read_only": "SELECT - SOLO LECTURA",
+                        "dtype": "tipo",
+                        "order_by": "Ordenar por",
+                        "limit": "Limite",
+                        "group": "Grupo"
+                    },
+                    "empty": {
+                        "header": {
+                            "title": "Usando todas las columnas (*)",
+                            "description": "No hay columnas especificas seleccionadas. Esta consulta usara todas por defecto"
+                        },
+                        "no_selection": "Todas las columnas (*)",
+                        "no_conditions": "Sin condiciones"
+                    },
+                    "placeholders": {
+                        "select_column": "Selecciona una columna",
+                        "value": "Valor",
+                        "multi_values": "val1, val2, ...",
+                        "order_none": "Sin orden"
+                    },
+                    "preview": {
+                        "sql": "SQL",
+                        "native": "Nativo",
+                        "tree": "Arbol"
+                    }
                 }
             },
             "tables": {
@@ -577,7 +743,8 @@
                         "table_name_format": "El formato no es válido",
                         "column_name_format": "Nombre de columna inválido",
                         "invalid_type": "Tipo no compatible",
-                        "min_columns": "Se requiere al menos {min} columna(s)"
+                        "min_columns": "Se requiere al menos {min} columna(s)",
+                        "duplicated_column": "La columna ya existe"
                     }
                 }
             }
@@ -592,6 +759,24 @@
                 "project_updated": {
                     "title": "¡Proyecto actualizado!"
                 }
+            }
+        }
+    },
+    "admin": {
+        "users": {
+            "title": "Usuarios",
+            "header": {
+                "description": "Administra usuarios"
+            },
+            "status": {
+                "active": "Activo",
+                "inactive": "Inactivo"
+            },
+            "search_input": {
+                "placeholder": "Buscar usuarios..."
+            },
+            "badges": {
+                "you": "Tú"
             }
         }
     }

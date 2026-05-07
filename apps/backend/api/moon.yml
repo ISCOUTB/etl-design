@@ -35,10 +35,13 @@ tasks:
         toolchains: python
 
     test:
+        deps:
+            - prestart
         command: uv
         args:
             - run
             - pytest
+            - -v
             - --cov=src
             - --cov-report=term-missing
             - --cov-report=html

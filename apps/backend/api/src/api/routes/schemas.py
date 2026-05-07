@@ -13,11 +13,13 @@ via gRPC, providing immediate responses without message queue overhead.
 from fastapi import APIRouter
 from proto_utils.database import dtypes
 
-from src import models, schemas
-from src.api.deps import CurrentUser, DatabaseClientDep
+from src import models, repositories, schemas
+from src.api.deps import CurrentUser, DatabaseClientDep, ProjectServiceDep
+from src.core.domain import get_import_name
 from src.exceptions import (
     AppException,
     ForbiddenException,
+    ProjectNotFoundException,
     SchemaNotFoundException,
     SchemaNotProvidedException,
 )
@@ -30,6 +32,7 @@ router = APIRouter()
 async def create_or_update_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     project_id: str,
     table_name: str,
     schema: schemas.JsonSchemaRequest,
@@ -68,7 +71,10 @@ async def create_or_update_schema(
     if not schema:
         raise SchemaNotProvidedException()
 
-    import_name = f"{project_id}__{table_name}"
+    if not project_service.get_project_by_id(project_id=project_id):
+        raise ProjectNotFoundException()
+
+    import_name = get_import_name(project_id=project_id, table_name=table_name)
     try:
         # Save to database
         db_response = await SchemaService.save_schema(
@@ -97,6 +103,7 @@ async def create_or_update_schema(
 async def get_raw_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     project_id: str,
     table_name: str,
 ) -> schemas.MongoSchemasResponse:
@@ -123,7 +130,10 @@ async def get_raw_schema(
     if not has_permission:
         raise ForbiddenException()
 
-    import_name = f"{project_id}__{table_name}"
+    if not project_service.get_project_by_id(project_id=project_id):
+        raise ProjectNotFoundException()
+
+    import_name = get_import_name(project_id=project_id, table_name=table_name)
     try:
         # Retrieve raw schema from database
         raw_schema = await SchemaService.get_raw_schema(
@@ -144,6 +154,7 @@ async def get_raw_schema(
 async def search_schemas(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     project_id: str,
 ) -> schemas.MongoGetSchemasByImportResponse:
     """
@@ -168,6 +179,9 @@ async def search_schemas(
     if not has_permission:
         raise ForbiddenException()
 
+    if not project_service.get_project_by_id(project_id=project_id):
+        raise ProjectNotFoundException()
+
     try:
         # Search for schemas in the database
         search_results = await SchemaService.get_schemas_by_project_id(
@@ -184,6 +198,7 @@ async def search_schemas(
 async def get_schema(
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     project_id: str,
     table_name: str,
 ) -> schemas.JsonSchemaRequest:
@@ -217,7 +232,10 @@ async def get_schema(
     if not has_permission:
         raise ForbiddenException()
 
-    import_name = f"{project_id}__{table_name}"
+    if not project_service.get_project_by_id(project_id=project_id):
+        raise ProjectNotFoundException()
+
+    import_name = get_import_name(project_id=project_id, table_name=table_name)
     try:
         # Retrieve schema from database
         active_schema = await SchemaService.get_active_schema(
@@ -239,6 +257,7 @@ async def delete_schema(
     project_id: str,
     current_user: CurrentUser,
     database_client: DatabaseClientDep,
+    project_service: ProjectServiceDep,
     table_name: str,
 ) -> dtypes.ApiResponse:
     """
@@ -272,12 +291,19 @@ async def delete_schema(
     if not has_permission:
         raise ForbiddenException()
 
-    import_name = f"{project_id}__{table_name}"
+    if not project_service.get_project_by_id(project_id=project_id):
+        raise ProjectNotFoundException()
+
+    import_name = get_import_name(project_id=project_id, table_name=table_name)
     try:
         # Remove schema from database
         db_response = await SchemaService.remove_schema(
-            import_name=import_name,
+            project_id=project_id,
+            table_name=table_name,
             database_client=database_client,
+            upload_repository=repositories.UploadRepository(
+                db=project_service.repository.db
+            ),
         )
     except Exception as e:
         raise AppException(message=f"Failed to remove schema: {repr(e)}") from e

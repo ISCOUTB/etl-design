@@ -201,6 +201,22 @@ class MongoConnection:
             return self.__collection.delete_one(filter, session=session)
         return self.__collection.delete_one(filter)
 
+    def delete_many(
+        self, filter: Dict, session: Optional[ClientSession] = None
+    ) -> pymongo.results.DeleteResult:
+        """Delete multiple documents in the collection (supports transactions).
+
+        Args:
+            filter (Dict): Query filter to identify the documents to delete.
+            session (ClientSession, optional): MongoDB session for transaction support.
+
+        Returns:
+            pymongo.results.DeleteResult: Result of the delete operation.
+        """
+        if session:
+            return self.__collection.delete_many(filter, session=session)
+        return self.__collection.delete_many(filter)
+
     # ==================== Transactions ====================
 
     @contextmanager

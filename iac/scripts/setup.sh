@@ -85,7 +85,7 @@ create_tfvars() {
 environment = "$env"
 
 # Project name (used as prefix for all resources)
-project_name = "etl-design"
+project_name = "sloth"
 
 # ============================================
 # Cluster Configuration

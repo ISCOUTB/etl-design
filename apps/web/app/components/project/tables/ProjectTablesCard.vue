@@ -1,6 +1,6 @@
 <script setup lang="ts">
     import type { z } from "zod";
-    import { ChevronRight, Edit, Eye, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
+    import { ChevronRight, Edit, Eye, Pickaxe, RotateCcw, Table2, Trash2 } from "lucide-vue-next";
     import { cn } from "~/lib/utils";
 
     interface Props {
@@ -37,13 +37,14 @@
         })),
     );
 
+    const { VIEWS, queryBuilder } = useProject();
     const modal = useModal();
 
     const { $localeRoute } = useNuxtApp();
     const route = useRoute();
     const config = useAppConfig();
     const events = useAppEvents();
-    const { state, tables } = useProject();
+    const { project, tables } = useProject();
     const actions = computed<Action[]>(() =>
         [
             {
@@ -55,14 +56,24 @@
                 },
             },
             {
+                label: "projects.id.sections.tables.card.dropdown.query",
+                icon: Pickaxe,
+                action() {
+                    queryBuilder.state.schema.value = table.value;
+                    events.emit("event:projects:change-tab", {
+                        value: VIEWS.value.QueryBuilder.value,
+                    });
+                },
+            },
+            {
                 label: "projects.id.sections.tables.card.dropdown.edit",
                 icon: Edit,
-                action() {
-                    navigateTo(
+                async action() {
+                    await navigateTo(
                         $localeRoute({
                             name: "projects-id-tables-tableName-edit",
                             params: {
-                                id: state.project.value.id,
+                                id: project.value.id,
                                 tableName: TableUtils.getTableName(table.value.import_name),
                             },
                             query: { [config.constants.CALLBACK_KEY]: route.fullPath },
@@ -81,7 +92,7 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: table.value,
-                            projectId: state.project.value.id,
+                            projectId: project.value.id,
                             kind: "revert",
                         },
                     });
@@ -98,8 +109,8 @@
                         key: ModalKeys.Projects.Tables.Delete,
                         props: {
                             table: table.value,
-                            projectId: state.project.value.id,
-                            kind: "revert",
+                            projectId: project.value.id,
+                            kind: "delete",
                         },
                     });
                 },
@@ -170,7 +181,11 @@
                             <Tooltip :delay-duration="800">
                                 <TooltipProvider>
                                     <TooltipTrigger as-child>
-                                        <Button variant="ghost" size="icon" @click="action.action">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            @click.stop="action.action"
+                                        >
                                             <component :is="action.icon" />
                                         </Button>
                                     </TooltipTrigger>

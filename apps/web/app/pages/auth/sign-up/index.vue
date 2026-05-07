@@ -9,6 +9,7 @@
         i18n: {
             paths: {
                 en: "/auth/sign-up",
+                es: "/authenticacion/crear-usuario",
             },
         },
     });

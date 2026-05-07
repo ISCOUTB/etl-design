@@ -1,4 +1,5 @@
 import type { MongoRaw, ResponseProject } from "#shared/utils/schemas/types";
+import { v7 } from "uuid";
 
 function $<T>(context: T | undefined, defaultValue: string, value: (value: T) => string) {
     if (!context) {
@@ -94,10 +95,65 @@ export const NuxtKeys = {
                     both: (id, name) => `project:${id}:tables:${name}:edit:columns`,
                 }),
         },
+        QueryBuilder: {
+            SelectedSchema: (projectId: ResponseProject["id"]) =>
+                $(
+                    projectId,
+                    "project:query-builder:selected-schema",
+                    (value) => `project:${value}:selected-schema`,
+                ),
+            SelectedOutput: (
+                projectId: ResponseProject["id"] | undefined,
+                tableName: MongoRaw["import_name"] | undefined,
+            ) =>
+                $$(projectId, tableName, {
+                    none: "project:query-builder:selected-output",
+                    onlyA: (id) => `project:${id}:query-builder:selected-output`,
+                    both: (id, name) => `project:${id}:query-builder:${name}:selected-output`,
+                }),
+            Rows: (projectId: ResponseProject["id"] | undefined) =>
+                $(
+                    projectId,
+                    "project:query-builder:rows",
+                    (id) => `project:${id}:query-builder:rows`,
+                ),
+        },
+        CookieTab: (projectId: ResponseProject["id"] | undefined) =>
+            $(projectId, "sloth:project:tab", (id) => `sloth:project:${id}:tab`),
     },
     Components: {
         DataTable: {
             Sorting: (route: string) => `data-table:sorting-state:${route}`,
+        },
+        QueryBuilder: {
+            SelectedColumns: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:selected-columns",
+                    (value) => `query-builder:${value.id}:selected-columns`,
+                ),
+            WhereTree: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:where-tree",
+                    (value) => `query-builder:${value.id}:where-tree`,
+                ),
+            OrderBy: (schema: MongoRaw | undefined) =>
+                $(
+                    schema,
+                    "query-builder:order-by",
+                    (value) => `query-builder:${value.id}:order-by`,
+                ),
+            Limit: (schema: MongoRaw | undefined) =>
+                $(schema, "query-builder:limit", (value) => `query-builder:${value.id}:limit`),
+            Rows: (route: string) => `query-builder:${route}:rows`,
+        },
+        InputPassword: () => `input:${v7()}`,
+    },
+    Composables: {
+        ViewManager: {
+            StateKey: (route: string) => `view-manager:${route}:state-key`,
+            ActiveView: (stateKey: string) => `${stateKey}:active-view`,
         },
     },
     Sidebar: {
@@ -122,6 +178,9 @@ export const ModalKeys = {
         },
         Tables: {
             Delete: "projects:tables:delete-schema",
+        },
+        QueryBuilder: {
+            Generate: "project:query-builder:generate",
         },
     },
 } as const;

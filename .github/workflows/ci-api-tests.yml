@@ -26,6 +26,13 @@ jobs:
           POSTGRES_DB: api_db
 
     steps:
+      # One dependency (pyaegis) needs clang to be installed,
+      # so, just in case it is not installed in the runner, we will install it before running the tests
+      - name: Install Clang
+        run: |
+          sudo apt update
+          sudo apt install -y clang
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

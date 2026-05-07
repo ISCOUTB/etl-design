@@ -36,6 +36,8 @@ tasks:
             - --cov-report=html
             - --cov-report=xml
         toolchains: python
+        options:
+            cache: false
 
     format:
         command: uv

@@ -8,7 +8,7 @@ export default defineNuxtPlugin({
         return {
             provide: {
                 api: $fetch.create({
-                    baseURL: runtimeConfig.public.apiBase,
+                    baseURL: runtimeConfig.public.API_BASE,
                     onRequest({ options }) {
                         const accessToken = auth.data.value?.accessToken;
                         if (accessToken) {

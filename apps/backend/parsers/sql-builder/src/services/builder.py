@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from igraph import Graph
 from proto_utils.parsers.dtypes import AllASTs, SQLResponseSQLContent
@@ -24,6 +24,7 @@ def build_sql(
     dependency_graph: Graph,
     dtypes: Dict[str, Dict[str, str]],
     table_name: str,
+    scheme: Optional[str] = None,
 ) -> Dict[int, List[SQLResponseSQLContent]]:
     """
     Build SQL expressions from the provided column definitions and their dependencies.
@@ -62,8 +63,7 @@ def build_sql(
     else:
         primary_key_constraint = ""
 
-    # Generate SQL for level 0 columns (those without dependencies)
-    columns_lvl0 = []
+    # Generate SQL for level 0 columns (those columns without dependencies)
     columns_sql = []
     for col in level_0_cols:
         # In 'extra' we can add things like 'NOT NULL', 'UNIQUE', etc.
@@ -71,18 +71,23 @@ def build_sql(
             dtypes[col].get("extra", "")
         )
         base_sql = f"{col} {dtypes[col]['type']} {extra_statements}".strip()
-        columns_lvl0.append(col)
         columns_sql.append(base_sql)
 
     if primary_key_constraint:
         columns_sql.append(primary_key_constraint)
 
+    # Create the SQL statement for creating the table with level 0 columns
+    scheme_sql = ""
+    if scheme is not None and scheme.strip() != "":
+        table_name = f"{scheme}.{table_name}"
+        scheme_sql = f"CREATE SCHEMA IF NOT EXISTS {scheme};"
+
     sql_level0 = (
-        f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_sql)});"
-    )
+        f"{scheme_sql}\n" if scheme_sql else ""
+    ) + f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_sql)});"
 
     sql_expressions[0] = [
-        SQLResponseSQLContent(sql=sql_level0, columns=columns_lvl0)
+        SQLResponseSQLContent(sql=sql_level0, columns=level_0_cols)
     ]
 
     # Sort based on the priority
@@ -106,7 +111,10 @@ def build_sql(
             f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS "
             f"{col} {dtypes[col]['type']} {extra_statements} ".strip()
         )
-        sql_expression += f" GENERATED ALWAYS AS ({cols[col]['sql']}) STORED"
+        sql_expression += (
+            f" GENERATED ALWAYS AS (({cols[col]['sql']})::{dtypes[col]['type']}) "
+            "STORED"
+        )
         sql_expressions[level].append(
             SQLResponseSQLContent(
                 sql=f"{sql_expression.strip()};", columns=[col]

@@ -50,6 +50,8 @@ export const BaseProjectSchema = z.object({
 export const ResponseProjectSchema = z
     .object({
         id: z.string(),
+        owner_id: z.string(),
+        owner_user: z.string(),
         created_at: z.iso.datetime({ offset: true }),
         updated_at: z.iso.datetime({ offset: true }),
     })
@@ -148,10 +150,24 @@ export const SpreadsheetDtypesSchema = z.discriminatedUnion("dtype", [
 
 export const ColumnDtypesSchema = z.record(z.string(), SpreadsheetDtypesSchema);
 
+const BooleanSchema = z.preprocess((value) => {
+    if (typeof value === "string") {
+        if (value.toLowerCase() === "true") {
+            return true;
+        }
+
+        if (value.toLowerCase() === "false") {
+            return false;
+        }
+    }
+
+    return value;
+}, z.boolean());
+
 export const JsonSchemaPropertyConstraints = z.object({
-    unique: z.coerce.boolean().optional(),
-    optional: z.coerce.boolean().optional(),
-    primary_key: z.coerce.boolean().optional(),
+    unique: BooleanSchema.optional(),
+    optional: BooleanSchema.optional(),
+    primary_key: BooleanSchema.optional(),
 });
 
 export const JsonSchema = z.preprocess(
@@ -206,13 +222,6 @@ export const MongoRawSchema = z.object({
 
 export const MongoGetSchemasResponse = z.object({ schemas: z.array(MongoRawSchema) });
 
-export const API_CONSTANTS = {
-    TASK: {
-        VALIDATION_TASK: "validation",
-        INSERTION_TASK: "insertion",
-    },
-} as const;
-
 export const ProjectTask = ApiResponse(
     z
         .object({
@@ -220,8 +229,31 @@ export const ProjectTask = ApiResponse(
             project_id: z.string(),
             import_name: z.string(),
             error: z.string().optional(),
-            upload_date: z.string(),
-            update_date: z.string(),
+            upload_date: z.string().optional(),
+            update_date: z.string().optional(),
+            results: z
+                .unknown()
+                .transform<Record<string, unknown> | undefined>((data, ctx) => {
+                    if (data === null || data === undefined) {
+                        return undefined;
+                    }
+
+                    if (typeof data === "string") {
+                        try {
+                            return JSON.parse(data);
+                        } catch {
+                            ctx.addIssue({ code: "custom", message: "Invalid JSON" });
+                            return z.NEVER;
+                        }
+                    }
+
+                    if (typeof data === "object") {
+                        return data as Record<string, unknown>;
+                    }
+
+                    return data;
+                })
+                .optional(),
         })
         .catchall(z.unknown()),
 );

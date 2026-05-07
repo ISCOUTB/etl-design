@@ -28,6 +28,7 @@ message BuildSQLRequest {
   map<string, ddl_generator.DDLResponse> cols       = 1;  // Map of column names to their DDL responses from formula processing
   map<string, ColumnInfo>                dtypes     = 2;  // Map of column names to their data type information
   string                                 table_name = 3;  // Name of the target database table
+  optional string                        scheme     = 4;  // Optional database schema name for organizing tables
 }
 
 // Response message containing the constructed SQL statements

@@ -1,0 +1,70 @@
+graph TB
+    subgraph "Feature Development"
+        A[Feature Branch] -->|Pull Request| B{Target Branch?}
+    end
+
+    subgraph "CI - Testing Phase (Moon Task Runner)"
+        B -->|To Development| C_dev[CI Tests - Development]
+        B -->|To Staging| C[CI Tests - Staging]
+        B -->|To Main| D[CI Tests - Production]
+
+        C_dev --> E_dev[moon run service:test]
+        C --> E[moon run service:test]
+        D --> F[moon run service:test]
+
+        E_dev --> G_dev[moon run service:docker-build]
+        E --> G[moon run service:docker-build]
+        F --> H[moon run service:docker-build]
+
+        G_dev --> I_dev{Tests Pass?}
+        G --> I{Tests Pass?}
+        H --> J{Tests Pass?}
+    end
+
+    subgraph "Merge & Tag"
+        I_dev -->|Yes| K_dev[Merge to Development]
+        I -->|Yes| K[Merge to Staging]
+        J -->|Yes| L[Merge to Main]
+        I_dev -->|No| M[Fix Issues]
+        I -->|No| M
+        J -->|No| M
+        M --> A
+        K_dev -->|No tag created| K_dev_end[Development updated]
+        K --> N[Create Tag: X.XX-rc]
+        L --> O[Create Tag: X.XX]
+    end
+
+    subgraph "CD - Build & Push Phase"
+        N --> P[CD Master - Staging]
+        O --> Q[CD Master - Production]
+        P --> R[Build Docker Images]
+        Q --> S[Build Docker Images]
+        R --> T[Push to Docker Hub<br/>tag: X.XX-rc]
+        S --> U[Push to Docker Hub<br/>tag: X.XX]
+        T --> V[Update docker-stack.yml<br/>staging]
+        U --> W[Update docker-stack.yml<br/>production]
+        V --> X[Commit Changes]
+        W --> Y[Commit Changes]
+    end
+
+    subgraph "CD - Deployment Phase"
+        X --> Z[CD Staging Workflow]
+        Y --> AA[CD Production Workflow]
+        Z --> AB[SSH to Staging Cluster]
+        AA --> AC[SSH to Production Cluster]
+        AB --> AD[docker stack deploy<br/>Only changed services]
+        AC --> AE[docker stack deploy<br/>Only changed services]
+        AD --> AF[Staging Deployment Complete]
+        AE --> AG[Production Deployment Complete]
+    end
+
+    style C_dev fill:#e8f5e9
+    style C fill:#e1f5ff
+    style D fill:#e1f5ff
+    style P fill:#fff4e1
+    style Q fill:#fff4e1
+    style Z fill:#e8f5e9
+    style AA fill:#e8f5e9
+    style AF fill:#c8e6c9
+    style AG fill:#c8e6c9
+    style K_dev_end fill:#dcedc8

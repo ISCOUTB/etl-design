@@ -56,30 +56,36 @@
 </script>
 
 <template>
-    <Select v-model:model-value="model">
-        <SelectTrigger :class="cn('w-48', props.class)">
-            <div class="flex items-center">
-                <SchemaDtype :dtype="resolvedModel">
-                    <template #icon>
-                        <component :is="TableUtils.getIcon(resolvedModel)" />
-                    </template>
-                </SchemaDtype>
-                <SelectValue
-                    :placeholder="
-                        $t('projects.id.sections.upload_schema.datatype_table.header.data_type')
-                    "
-                />
-            </div>
-        </SelectTrigger>
-        <SelectContent :body-lock="false">
-            <SelectItem v-for="item in items" :key="item.value" :value="item.value">
-                <SchemaDtype :dtype="item.value">
-                    <template #icon>
-                        <component :is="TableUtils.getIcon(item.value)" />
-                    </template>
-                    {{ item.label }}
-                </SchemaDtype>
-            </SelectItem>
-        </SelectContent>
-    </Select>
+    <ClientOnly>
+        <Select v-model:model-value="model">
+            <SelectTrigger :class="cn('w-48', props.class)">
+                <div class="flex items-center">
+                    <SchemaDtype :dtype="resolvedModel">
+                        <template #icon>
+                            <component :is="TableUtils.getIcon(resolvedModel)" />
+                        </template>
+                    </SchemaDtype>
+                    <SelectValue
+                        :placeholder="
+                            $t('projects.id.sections.upload_schema.datatype_table.header.data_type')
+                        "
+                    />
+                </div>
+            </SelectTrigger>
+            <SelectContent :body-lock="false">
+                <SelectItem v-for="item in items" :key="item.value" :value="item.value">
+                    <SchemaDtype :dtype="item.value">
+                        <template #icon>
+                            <component :is="TableUtils.getIcon(item.value)" />
+                        </template>
+                        {{ item.label }}
+                    </SchemaDtype>
+                </SelectItem>
+            </SelectContent>
+        </Select>
+
+        <template #fallback>
+            <Skeleton :class="cn('w-48 h-9', props.class)" />
+        </template>
+    </ClientOnly>
 </template>

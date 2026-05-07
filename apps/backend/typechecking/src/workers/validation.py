@@ -512,6 +512,7 @@ class ValidationWorker:
                                     overwrite=insert_overwrite,
                                     db_uri=db_uri,
                                     table_name=message["table_name"],
+                                    scheme=message.get("scheme"),
                                     idempotency_key=message["idempotency_key"],
                                     traceparent=traceparent,
                                     tracestate=tracestate,

@@ -2,6 +2,8 @@ from typing import Optional
 
 from pydantic_core import MultiHostUrl
 
+from src.core.config import settings
+
 
 def create_postgres_uri(
     host: Optional[str],
@@ -26,28 +28,29 @@ def create_postgres_uri(
         str: A PostgreSQL URI string in the format:
             postgresql://user:password@host:port/db_name?query
     """
-    if host is None:
-        raise ValueError("Host is required to create a PostgreSQL URI")
+    if host is not None:
+        if port is not None and isinstance(port, str):
+            try:
+                port = int(port)
+            except ValueError:
+                raise ValueError(
+                    f"Port must be an integer or a string representing an integer, got '{port}'"
+                )
 
-    if port is None:
-        raise ValueError("Port is required to create a PostgreSQL URI")
-
-    if isinstance(port, str):
-        try:
-            port = int(port)
-        except ValueError:
-            raise ValueError(
-                f"Port must be an integer or a string representing an integer, got '{port}'"
+        return str(
+            MultiHostUrl.build(
+                scheme="postgresql",
+                username=user,
+                password=password,
+                host=host,
+                port=port,
+                path=db_name,
+                query=query,
             )
-
-    return str(
-        MultiHostUrl.build(
-            scheme="postgresql",
-            username=user,
-            password=password,
-            host=host,
-            port=port,
-            path=db_name,
-            query=query,
         )
-    )
+
+    # If host is None, return the default project PostgreSQL URI from settings
+    try:
+        return str(settings.DEFAULT_PROJECT_POSTGRES_URI)
+    except ValueError:
+        raise ValueError("Host is required to create a PostgreSQL URI")

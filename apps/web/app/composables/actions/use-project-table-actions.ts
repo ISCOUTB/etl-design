@@ -29,6 +29,7 @@ export default function () {
         project: ResponseProject,
         tableName: string,
         dtypes: Record<string, Record<string, ColumnConfig>>,
+        insertData: boolean,
     ) {
         loading.value = true;
 
@@ -42,7 +43,7 @@ export default function () {
                     .append("dtypes_str", JSON.stringify(dtypes))
                     .build(),
                 query: {
-                    execute_sql: Boolean(project.db_host && project.db_port),
+                    insert_data: insertData,
                 },
             });
 
@@ -59,9 +60,6 @@ export default function () {
             const response = await $api("/uploads/table-json", {
                 method: "POST",
                 body: SchemaUtils.Builder.buildJsonSchema(tableName, project.id, schema, []),
-                query: {
-                    execute_sql: Boolean(project.db_host && project.db_port),
-                },
             });
 
             return response;

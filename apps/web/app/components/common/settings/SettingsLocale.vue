@@ -6,6 +6,12 @@
     import { toast } from "vue-sonner";
     import { cn } from "~/lib/utils";
 
+    interface Props {
+        behaviour?: "change-locale" | "select";
+        modelValue?: Locale;
+        contentProps?: SelectContentProps;
+    }
+
     defineOptions({
         inheritAttrs: false,
     });
@@ -18,23 +24,19 @@
 
     const emit = defineEmits<{ "update:modelValue": [value: Locale] }>();
 
-    interface Props {
-        behaviour?: "change-locale" | "select";
-        modelValue?: Locale;
-        contentProps?: SelectContentProps;
-    }
-
     const { locale, locales } = useI18n();
 
     const router = useRouter();
     const switchLocalePath = useSwitchLocalePath();
 
-    function handleChange(locale: AcceptableValue) {
+    async function handleChange(locale: AcceptableValue) {
         const targetLocale = locale as Locale;
 
         if (props.behaviour === "change-locale") {
             const targetPath = switchLocalePath(targetLocale);
             router.push(targetPath);
+
+            await nextTick();
 
             toast.success($t("settings.locale.changed_to", { locale: targetLocale }));
 

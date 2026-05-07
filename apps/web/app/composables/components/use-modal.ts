@@ -17,6 +17,7 @@ export default function () {
         currentKind: "sheet",
         open: false,
         componentProps: {},
+        containerProps: {},
     }));
 
     const currentComponent = computed(() => {
@@ -27,11 +28,11 @@ export default function () {
         );
     });
 
-    function loadComponent<C extends Component>(
-        args: MaybeRefOrGetter<Components.Modal.Args<C>>,
+    function loadComponent<C extends Component, Args extends Components.Modal.Args<C>>(
+        args: MaybeRefOrGetter<Args>,
         options: LoadComponentOptions = { autoOpen: true },
     ) {
-        const { key, loader, kind = "sheet", props } = toValue(args);
+        const { key, loader, kind = "sheet", props, containerProps } = toValue(args);
 
         const existingEntry = componentRegistry.value.find((component) => component.key === key);
 
@@ -60,7 +61,12 @@ export default function () {
             { key, component: markRaw(component) },
         ];
 
-        setState({ currentModalKey: key, currentKind: kind, componentProps: props as object });
+        setState({
+            currentModalKey: key,
+            currentKind: kind,
+            componentProps: props,
+            containerProps,
+        });
 
         if (options.autoOpen) {
             setOpen(true);

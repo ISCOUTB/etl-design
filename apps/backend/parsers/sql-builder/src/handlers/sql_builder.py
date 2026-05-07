@@ -22,6 +22,7 @@ def sql_builder_handler(
     try:
         # Log request processing start
         table_name = request.table_name
+        scheme = request.scheme if request.scheme else None
         column_count = len(request.cols)
 
         logger.info(
@@ -47,7 +48,10 @@ def sql_builder_handler(
         # Generate SQL
         logger.debug("[HANDLER] Invoking core SQL building service...")
         output = sql_builder(
-            cols=columns, dtypes=dtypes_map, table_name=table_name
+            cols=columns,  # type: ignore
+            dtypes=dtypes_map,
+            table_name=table_name,
+            scheme=scheme,
         )
 
         # Log generation results

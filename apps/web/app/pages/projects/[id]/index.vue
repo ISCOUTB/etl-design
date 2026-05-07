@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { FileIcon, Info, Settings, Table, Upload } from "lucide-vue-next";
+    import { FileIcon, Info, Pickaxe, Settings, Table, Upload, User } from "lucide-vue-next";
     import { cn } from "@/lib/utils";
 
     definePageMeta({
@@ -9,6 +9,7 @@
         i18n: {
             paths: {
                 en: "/projects/[id]",
+                es: "/proyectos/[id]",
             },
         },
         breadcrumb: {
@@ -33,11 +34,13 @@
     const projectId = useRouteParams("id");
     const setI18nParams = useSetI18nParams();
     setI18nParams({ en: { id: projectId.value } });
-    const { state, uploadSchema } = useProvideProjectState(projectId.value?.toString());
+    const { VIEWS, project, view, uploadSchema } = useProvideProjectState(
+        projectId.value?.toString(),
+    );
     useSeoMeta({
         title: () =>
             $t("projects.id.title", {
-                projectName: state.project.value?.name,
+                projectName: project.value?.name,
             }),
         description: () => $t("projects.id.description"),
 
@@ -57,16 +60,16 @@
         robots: "noindex, nofollow",
     });
     watchEffect(() => {
-        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = state.project.value.name;
+        BREADCRUMB_OVERRIDES.value.PROJECT_TITLE = project.value.name;
     });
 
     const animations = useViewManagerAnimations();
     const views = useViewManager(
-        () => [
+        [
             {
                 meta: {
                     label: "projects.id.sections.overview.tab",
-                    value: state.VIEWS.value.Overview,
+                    value: VIEWS.value.Overview.value,
                     icon: Info,
                 },
                 component: () => import("~/components/project/overview/ProjectOverview.vue"),
@@ -75,7 +78,7 @@
             {
                 meta: {
                     label: "projects.id.sections.upload_schema.tab",
-                    value: state.VIEWS.value.UploadFile,
+                    value: VIEWS.value.UploadFile.value,
                     icon: Upload,
                 },
                 component: () =>
@@ -85,7 +88,7 @@
             {
                 meta: {
                     label: "projects.id.sections.tables.tab",
-                    value: state.VIEWS.value.Tables,
+                    value: VIEWS.value.Tables.value,
                     icon: Table,
                 },
                 component: () => import("~/components/project/tables/ProjectTables.vue"),
@@ -93,29 +96,39 @@
             },
             {
                 meta: {
+                    label: "projects.id.sections.query_builder.tab",
+                    value: VIEWS.value.QueryBuilder.value,
+                    icon: Pickaxe,
+                },
+                component: () =>
+                    import("@/components/project/query-builder/ProjectQueryBuilder.vue"),
+                props: {},
+            },
+            {
+                meta: {
                     label: "projects.id.sections.settings.tab",
-                    value: state.VIEWS.value.Settings,
+                    value: VIEWS.value.Settings.value,
                     icon: Settings,
                 },
                 component: () => import("@/components/project/ProjectSettings.vue"),
                 props: {},
             },
         ],
-        { model: state.view },
+        { key: "project-views", model: view },
     );
 
     watch(
         () => uploadSchema.state.value.uploadedFile,
         (file) => {
             const hasTab = views.computed.filteredViews.value.some(
-                (entry) => entry.meta.value === state.VIEWS.value.File,
+                (entry) => entry.meta.value === VIEWS.value.File.value,
             );
 
             if (file && !hasTab) {
                 views.dispatch.addView({
                     meta: {
                         label: "projects.id.sections.file.tab",
-                        value: state.VIEWS.value.File,
+                        value: VIEWS.value.File.value,
                         icon: FileIcon,
                         class: cn(
                             "relative transition-colors",
@@ -139,7 +152,7 @@
             }
 
             if (!file && hasTab) {
-                views.dispatch.removeView(state.VIEWS.value.File);
+                views.dispatch.removeView(VIEWS.value.File.value);
             }
         },
         { immediate: true },
@@ -147,56 +160,70 @@
 
     const events = useAppEvents();
     onMounted(() => {
-        views.dispatch.preload([state.VIEWS.value.UploadFile, state.VIEWS.value.Tables]);
+        views.dispatch.preload([
+            VIEWS.value.UploadFile.value,
+            VIEWS.value.Tables.value,
+            VIEWS.value.QueryBuilder.value,
+        ]);
         events.on("event:projects:change-tab", ({ value }) => views.dispatch.setActive(value));
     });
 </script>
 
 <template>
     <div class="mx-auto w-full max-w-5xl">
-        <div class="mb-8">
-            <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
-                {{ state.project.value.name }}
-            </h1>
-            <p class="mt-1.5 text-sm text-muted-foreground">
-                {{ state.project.value.description }}
-            </p>
-        </div>
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="space-y-1.5">
+                    <h1 class="text-2xl font-semibold tracking-tight text-foreground text-balance">
+                        {{ project.name }}
+                    </h1>
+                    <p class="text-sm text-muted-foreground">
+                        {{ project.description }}
+                    </p>
+                </div>
 
-        <Tabs v-model="state.view.value" :default-value="state.VIEWS.value.Overview">
-            <TabsList>
-                <TabsTrigger
-                    v-for="entry in views.computed.filteredViews.value"
-                    :key="entry.meta.value"
-                    :value="entry.meta.value"
-                    :class="entry.meta.class"
-                    @click="views.dispatch.setActive(entry.meta.value)"
+                <AuthRole>
+                    <Badge variant="outline">
+                        <span>{{ project.owner_user }}</span>
+                        <User />
+                    </Badge>
+                </AuthRole>
+            </div>
+
+            <Tabs v-model="view" :default-value="VIEWS.Overview.value">
+                <TabsList class="w-full flex-wrap h-full">
+                    <TabsTrigger
+                        v-for="entry in views.computed.filteredViews.value"
+                        :key="entry.meta.value"
+                        :value="entry.meta.value"
+                        :class="cn('cursor-pointer', entry.meta.class)"
+                    >
+                        <component :is="entry.meta.icon" v-if="entry.meta.icon" />
+                        <span>
+                            {{ $t(entry.meta.label) }}
+                        </span>
+                    </TabsTrigger>
+                </TabsList>
+                <Transition
+                    mode="out-in"
+                    :css="false"
+                    @enter="animations.onPanelEnter"
+                    @leave="animations.onPanelLeave"
                 >
-                    <component :is="entry.meta.icon" v-if="entry.meta.icon" />
-                    <span>
-                        {{ $t(entry.meta.label) }}
-                    </span>
-                </TabsTrigger>
-            </TabsList>
-            <Transition
-                mode="out-in"
-                :css="false"
-                @enter="animations.onPanelEnter"
-                @leave="animations.onPanelLeave"
-            >
-                <TabsContent
-                    v-if="views.state.activeView.value && views.computed.component.value"
-                    :key="views.state.activeView.value"
-                    :value="views.state.activeView.value"
-                    class="mt-6"
-                >
-                    <component
-                        :is="views.computed.component.value"
-                        v-bind="{ ...views.computed.props.value }"
-                    />
-                </TabsContent>
-            </Transition>
-        </Tabs>
+                    <TabsContent
+                        v-if="views.state.activeView.value && views.computed.component.value"
+                        :key="views.state.activeView.value"
+                        :value="views.state.activeView.value"
+                        class="mt-6"
+                    >
+                        <component
+                            :is="views.computed.component.value"
+                            v-bind="{ ...views.computed.props.value }"
+                        />
+                    </TabsContent>
+                </Transition>
+            </Tabs>
+        </div>
 
         <div class="my-24" />
     </div>

@@ -10,10 +10,8 @@
     } from "lucide-vue-next";
     import { toast } from "vue-sonner";
 
-    const {
-        state: { project },
-        uploadSchema,
-    } = useProject();
+    const { project, uploadSchema } = useProject();
+    const { $logger } = useNuxtApp();
 
     const events = useAppEvents();
 
@@ -101,6 +99,8 @@
         }
     }
 
+    const [loading] = useToggle(false);
+
     function _uploadSchema() {
         if (!uploadSchema.state.value.tableName) {
             toast.error($t("projects.id.sections.upload_schema.validation.table_name_not_empty"));
@@ -117,10 +117,10 @@
                 uploadSchema.state.value.tableName,
                 uploadSchema.computed.jsonSchema.value,
             )
-            .then(async () => {
-                if (project.value) {
-                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
-                }
+            .then(async (response) => {
+                $logger.info(response);
+
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
 
                 toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
                     description: $t(
@@ -134,10 +134,15 @@
                 handleCloseModal();
                 events.emit("event:schema:table-created", undefined);
             })
-            .catch((error) => {
+            .catch(async (error) => {
                 handleCloseModal();
                 errorToast.handleServer(error);
-            });
+
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+
+                $logger.error(error);
+            })
+            .finally(() => (loading.value = false));
     }
 
     function _uploadFile() {
@@ -169,15 +174,17 @@
                 project.value,
                 uploadSchema.state.value.tableName,
                 dtypes,
+                uploadSchema.state.value.insertData,
             )
-            .then(async () => {
-                if (project.value) {
-                    await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
-                }
+            .then(async (response) => {
+                $logger.log(response);
+                console.warn(response);
+
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
 
                 toast.success($t("projects.id.sections.upload_schema.events.table_created.title"), {
                     description: $t(
-                        "projects.id.sections.schema.events.table_created.description",
+                        "projects.id.sections.upload_schema.events.table_created.description",
                         {
                             tab: $t("projects.id.sections.tables.tab"),
                         },
@@ -187,10 +194,15 @@
                 handleCloseModal();
                 events.emit("event:schema:table-created", undefined);
             })
-            .catch((error) => {
+            .catch(async (error) => {
                 handleCloseModal();
                 errorToast.handleServer(error);
-            });
+
+                await refreshNuxtData(NuxtKeys.Projects.Tables.RawSchemas(project.value.id));
+
+                $logger.error(error);
+            })
+            .finally(() => (loading.value = false));
     }
 
     function handleUpload(_event: Event) {
@@ -205,6 +217,8 @@
                         errorToast.handle(ResponseCodesRecord.Server.Project.Schema.NoFileProvided);
                         return;
                     }
+
+                    loading.value = true;
 
                     if (uploadSchema.state.value.uploadedFile.type === "json") {
                         _uploadSchema();
@@ -340,6 +354,7 @@
                 <ProjectUploadSchemaForm
                     v-if="selectedFile"
                     :can-submit="canSubmit"
+                    :loading="loading"
                     class="space-y-6"
                     @submit="handleUpload"
                 />
@@ -400,9 +415,53 @@
                                         )
                                     }}
                                 </TableHead>
-                                <TableHead> Primary </TableHead>
-                                <TableHead> Unique </TableHead>
-                                <TableHead> Optional </TableHead>
+                                <TableHead>
+                                    {{
+                                        $t(
+                                            "projects.id.sections.tables.details.properties_table.primary",
+                                        )
+                                    }}
+                                </TableHead>
+                                <TableHead>
+                                    <div class="flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.unique",
+                                                )
+                                            }}
+                                        </span>
+
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) =>
+                                                    uploadSchema.dispatch.setAllColumnsUnique(
+                                                        !!value,
+                                                    )
+                                            "
+                                        />
+                                    </div>
+                                </TableHead>
+                                <TableHead>
+                                    <div class="flex items-center space-x-2">
+                                        <span>
+                                            {{
+                                                $t(
+                                                    "projects.id.sections.tables.details.properties_table.optional",
+                                                )
+                                            }}
+                                        </span>
+
+                                        <Checkbox
+                                            @update:model-value="
+                                                (value) =>
+                                                    uploadSchema.dispatch.setAllColumnsOptional(
+                                                        !!value,
+                                                    )
+                                            "
+                                        />
+                                    </div>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -490,6 +549,7 @@
 
                 <ProjectUploadSchemaForm
                     :can-submit="canSubmit"
+                    :loading="loading"
                     class="space-y-6 disabled:cursor-not-allowed"
                     @submit="handleUpload"
                 />

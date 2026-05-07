@@ -1,5 +1,6 @@
 /* eslint-disable style/indent */
 import type { UseWebSocketReturn } from "@vueuse/core";
+import type { ConsolaInstance } from "consola";
 import type { gsap } from "gsap";
 import type { $Fetch, NitroFetchRequest } from "nitropack";
 import "vue-router";
@@ -28,17 +29,21 @@ type AuthMiddlewareMeta =
           navigateUnauthenticatedTo?: string;
       };
 
+interface PageMetaEvents {}
+
 declare module "#app" {
     interface NuxtApp {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
         $api: $Fetch<unknown, NitroFetchRequest>;
+        $logger: ConsolaInstance;
     }
 
     interface PageMeta {
         title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
+        events?: Partial<PageMetaEvents>;
     }
 }
 
@@ -47,6 +52,7 @@ declare module "vue" {
         $socket: UseWebSocketReturn<WebSocket.Message>;
         $gsap: typeof gsap;
         $api: $Fetch<unknown, NitroFetchRequest>;
+        $logger: ConsolaInstance;
     }
 }
 
@@ -55,5 +61,6 @@ declare module "vue-router" {
         title?: string;
         auth?: AuthMiddlewareMeta;
         breadcrumb?: Breadcrumb.PageMeta;
+        events?: Partial<PageMetaEvents>;
     }
 }
