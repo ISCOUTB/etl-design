@@ -4,6 +4,8 @@
 .github
 docs
 iac
+.output
+.nuxt
 .venv
 node_modules
 dist
