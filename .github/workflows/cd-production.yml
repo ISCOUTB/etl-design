@@ -17,6 +17,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Copy Production Certificates
+        shell: bash
+        run: |
+          printf '%s' "${{ secrets.DOMAIN_PRIVATE_KEY }}" > iac/swarm/production/certs/domain.key
+          printf '%s' "${{ secrets.DOMAIN_FULLCHAIN }}" > iac/swarm/production/certs/fullchain.crt
+
       - uses: ./.github/actions/deploy-cluster
         with:
           private_ssh_key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
