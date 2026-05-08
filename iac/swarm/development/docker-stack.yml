@@ -980,22 +980,26 @@ services:
                 - prometheus-path=/api/v1/metrics
 
     web:
-        image: vulcan99/web:latest
+        image: vulcan99/web:test-02
         environment:
             NUXT_SITE_ENV: dev
-            API_BASE_URL: "http://api:8000${API_V1_STR:-/api/v1}"
-            HOMEPAGE_URL: https://web.swarm.${DOMAIN}
             NUXT_SITE_URL: https://web.swarm.${DOMAIN}
-            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
-            AUTH_SECRET: ${AUTH_SECRET?Variable not set}
-            AUTH_SIGN: ${AUTH_SIGN?Variable not set}
             NUXT_SITE_NAME: ${NUXT_SITE_NAME-"S.L.O.T.H"}
             NUXT_OG_IMAGE_SECRET: ${NUXT_OG_IMAGE_SECRET?Variable not set}
-            DEFAULT_PROJECT_POSTGRES_HOST: default-bi-postgres
-            DEFAULT_PROJECT_POSTGRES_PORT: 5432
-            DEFAULT_PROJECT_POSTGRES_USER:  ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
-            DEFAULT_PROJECT_POSTGRES_PASSWORD: ${DEFAULT_PROJECT_POSTGRES_PASSWORD?Variable not set}
-            DEFAULT_PROJECT_POSTGRES_DB: ${DEFAULT_PROJECT_POSTGRES_DB?Variable not set}
+            
+            NUXT_AUTH_SECRET: ${AUTH_SECRET?Variable not set}
+            NUXT_AUTH_SIGN: ${AUTH_SIGN?Variable not set}
+            AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
+            NUXT_PUBLIC_API_BASE: "http://api:8000${API_V1_STR:-/api/v1}"
+            
+            NUXT_PUBLIC_HOMEPAGE_URL: https://web.swarm.${DOMAIN}
+            NUXT_PUBLIC_I18N_BASE_URL:  https://web.swarm.${DOMAIN}
+
+            NUXT_DATABASE_DEFAULT_HOST: default-bi-postgres
+            NUXT_DATABASE_DEFAULT_PORT: 5432
+            NUXT_DATABASE_DEFAULT_USER:  ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
+            NUXT_DATABASE_DEFAULT_PASSWORD: ${DEFAULT_PROJECT_POSTGRES_PASSWORD?Variable not set}
+            NUXT_DATABASE_DEFAULT_DB: ${DEFAULT_PROJECT_POSTGRES_DB?Variable not set}
         depends_on:
             - api
         networks:

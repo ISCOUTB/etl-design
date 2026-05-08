@@ -98,6 +98,9 @@ export default defineNuxtConfig({
         public: {
             API_BASE: process.env.API_BASE_URL,
             HOMEPAGE_URL: process.env.HOMEPAGE_URL,
+            i18n: {
+                baseUrl: process.env.HOMEPAGE_URL,
+            },
         },
         keys: {
             MODEL_API_KEY: process.env.MODEL_API_KEY,
@@ -126,7 +129,6 @@ export default defineNuxtConfig({
         classSuffix: "",
     },
     i18n: {
-        baseUrl: process.env.HOMEPAGE_URL,
         skipSettingLocaleOnNavigate: false,
         detectBrowserLanguage: {
             useCookie: true,
@@ -271,15 +273,6 @@ export default defineNuxtConfig({
         },
         devProxy: {
             "/sw.js": { target: "/sw.js" },
-        },
-    },
-
-    ///////////////////////////////////////////////////////
-    // HOOKS
-    ///////////////////////////////////////////////////////
-    hooks: {
-        ready(nuxt) {
-            console.info(nuxt.options.runtimeConfig);
         },
     },
 });
