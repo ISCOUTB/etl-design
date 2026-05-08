@@ -258,7 +258,6 @@ export default defineNuxtConfig({
         payloadExtraction: false,
         appManifest: false,
         scanPageMeta: true,
-        // buildCache: true,
     },
     nitro: {
         experimental: {
@@ -272,6 +271,15 @@ export default defineNuxtConfig({
         },
         devProxy: {
             "/sw.js": { target: "/sw.js" },
+        },
+    },
+
+    ///////////////////////////////////////////////////////
+    // HOOKS
+    ///////////////////////////////////////////////////////
+    hooks: {
+        ready(nuxt) {
+            console.info(nuxt.options.runtimeConfig);
         },
     },
 });
