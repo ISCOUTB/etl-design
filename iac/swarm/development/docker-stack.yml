@@ -983,7 +983,7 @@ services:
         image: vulcan99/web:latest
         environment:
             NUXT_SITE_ENV: dev
-            API_BASE_URL: ${API_V1_STR-/api/v1}
+            API_BASE_URL: "http://api:8000${API_V1_STR:-/api/v1}"
             HOMEPAGE_URL: https://web.swarm.${DOMAIN}
             NUXT_SITE_URL: https://web.swarm.${DOMAIN}
             AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
@@ -991,6 +991,11 @@ services:
             AUTH_SIGN: ${AUTH_SIGN?Variable not set}
             NUXT_SITE_NAME: ${NUXT_SITE_NAME-"S.L.O.T.H"}
             NUXT_OG_IMAGE_SECRET: ${NUXT_OG_IMAGE_SECRET?Variable not set}
+            DEFAULT_PROJECT_POSTGRES_HOST: default-bi-postgres
+            DEFAULT_PROJECT_POSTGRES_PORT: 5432
+            DEFAULT_PROJECT_POSTGRES_USER:  ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
+            DEFAULT_PROJECT_POSTGRES_PASSWORD: ${DEFAULT_PROJECT_POSTGRES_PASSWORD?Variable not set}
+            DEFAULT_PROJECT_POSTGRES_DB: ${DEFAULT_PROJECT_POSTGRES_DB?Variable not set}
         depends_on:
             - api
         networks:
