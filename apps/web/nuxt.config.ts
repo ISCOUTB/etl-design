@@ -258,11 +258,14 @@ export default defineNuxtConfig({
         payloadExtraction: false,
         appManifest: false,
         scanPageMeta: true,
-        buildCache: true,
+        // buildCache: true,
     },
     nitro: {
         experimental: {
             websocket: true,
+        },
+        externals: {
+            inline: ["xlsx"],
         },
         imports: {
             dirs: ["./shared/utils/**/!(*test|*.spec).{ts,js,mjs,mts}"],
