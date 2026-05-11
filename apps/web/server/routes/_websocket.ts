@@ -1,34 +1,44 @@
 import { $makeWebSocketMessage, WebSocketMessageSchema } from "#shared/utils/websocket";
 
 export default defineWebSocketHandler({
-    message(peer, message) {
-        const parsedMessage = WebSocketMessageSchema.safeParse(JSON.parse(message.toString()));
+    async message(peer, message) {
+        const logger = Logger.getInstance();
 
-        if (parsedMessage.error || !parsedMessage.success) {
-            peer.send($makeWebSocketMessage({ key: "socket:bad-payload" }).serialize());
-            return;
-        }
+        try {
+            const parsedMessage = WebSocketMessageSchema.safeParse(JSON.parse(message.toString()));
 
-        switch (parsedMessage.data.key) {
-            case "ping":
-            case "pong": {
-                peer.send($makeWebSocketMessage({ key: "pong" }).serialize());
-                break;
-            }
-
-            case "user-logged": {
-                /**
-                 * Manage user logged here
-                 * Should send and http notification to backend to be
-                 * registered
-                 */
-
-                break;
-            }
-
-            default: {
+            if (parsedMessage.error || !parsedMessage.success) {
                 peer.send($makeWebSocketMessage({ key: "socket:bad-payload" }).serialize());
+                return;
             }
+
+            const redis = RedisService.getInstance();
+
+            switch (parsedMessage.data.key) {
+                case "ping": {
+                    if (parsedMessage.data.userId) {
+                        await redis.expire(WebSocketKeys.User.Connected(parsedMessage.data.userId), 300);
+                    }
+                    peer.send($makeWebSocketMessage({ key: "pong" }).serialize());
+                    break;
+                }
+
+                case "pong": {
+                    peer.send($makeWebSocketMessage({ key: "ping" }).serialize());
+                    break;
+                }
+
+                case "user-logged": {
+                    await redis.set(WebSocketKeys.User.Connected(parsedMessage.data.userId), peer.id, "EX", 300);
+                    break;
+                }
+
+                default: {
+                    peer.send($makeWebSocketMessage({ key: "socket:bad-payload" }).serialize());
+                }
+            }
+        } catch (e) {
+            logger.error(`socket: ${e}`);
         }
     },
 });

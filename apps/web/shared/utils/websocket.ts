@@ -26,7 +26,7 @@ export function $makeWebSocketMessage<M extends WebSocket.Message>(message: M) {
 }
 
 export const WebSocketMessageSchema = z.discriminatedUnion("key", [
-    $message("ping"),
+    $message("ping", { userId: z.string().optional() }),
     $message("pong"),
     $message(ResponseCodesRecord.WebSocket.BadPayload),
     $message("user-logged", { userId: z.string(), accessToken: z.string() }),

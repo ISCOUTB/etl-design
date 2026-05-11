@@ -997,6 +997,11 @@ services:
             NUXT_DATABASE_DEFAULT_USER: ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
             NUXT_DATABASE_DEFAULT_PASSWORD: ${DEFAULT_PROJECT_POSTGRES_PASSWORD?Variable not set}
             NUXT_DATABASE_DEFAULT_DB: ${DEFAULT_PROJECT_POSTGRES_DB?Variable not set}
+
+            NUXT_DATABASE_REDIS_HOST: redis
+            NUXT_DATABASE_REDIS_PORT: 6379
+            NUXT_DATABASE_REDIS_PASSWORD: ${REDIS_PASSWORD?Variable not set}
+            NUXT_DATABASE_REDIS_DB: ${REDIS_DB?Variable not set}
         depends_on:
             - api
         networks:
@@ -1014,6 +1019,10 @@ services:
                 - "traefik.http.routers.web.entrypoints=websecure"
                 - "traefik.http.routers.web.tls=true"
                 - "traefik.http.services.web.loadbalancer.server.port=3000"
+                - "traefik.http.services.web.loadbalancer.sticky.cookie=true"
+                - "traefik.http.services.web.loadbalancer.sticky.cookie.name=instance"
+                - "traefik.http.services.web.loadbalancer.sticky.cookie.httponly=true"
+                - "traefik.http.services.web.loadbalancer.sticky.cookie.secure=true"
 
 # =============================================================================
 # Networks, Configs, Volumes

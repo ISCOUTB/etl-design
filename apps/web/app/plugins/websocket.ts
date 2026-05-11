@@ -9,7 +9,10 @@ export default defineNuxtPlugin({
         const socket = useWebSocket<WebSocket.Message>(config.handlers.websocket.url, {
             autoReconnect: true,
             heartbeat: {
-                message: $makeWebSocketMessage({ key: "ping" }).serialize(),
+                message: $makeWebSocketMessage({
+                    key: "ping",
+                    userId: auth.data.value?.user.id,
+                }).serialize(),
                 pongTimeout: config.handlers.websocket.pongTimeout,
                 scheduler: (callback) =>
                     useIntervalFn(callback, config.handlers.websocket.pingInterval),

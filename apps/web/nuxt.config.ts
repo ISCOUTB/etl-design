@@ -120,6 +120,12 @@ export default defineNuxtConfig({
                 PASSWORD: process.env.DEFAULT_PROJECT_POSTGRES_PASSWORD,
                 DB: process.env.DEFAULT_PROJECT_POSTGRES_DB,
             },
+            redis: {
+                HOST: process.env.REDIS_HOST,
+                PORT: process.env.REDIS_PORT,
+                PASSWORD: process.env.REDIS_PASSWORD,
+                DB: process.env.REDIS_DB,
+            },
         },
     },
 
