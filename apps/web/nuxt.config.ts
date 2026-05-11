@@ -97,9 +97,15 @@ export default defineNuxtConfig({
         },
         public: {
             API_BASE: process.env.API_BASE_URL,
-            HOMEPAGE_URL: process.env.HOMEPAGE_URL,
             i18n: {
-                baseUrl: process.env.HOMEPAGE_URL,
+                baseUrl: process.env.NUXT_SITE_URL,
+            },
+            services: {
+                ai: !!(process.env.MODEL_API_KEY && process.env.MODEL_ENDPOINT),
+                auth: {
+                    signUp: true,
+                    signIn: true,
+                },
             },
         },
         keys: {

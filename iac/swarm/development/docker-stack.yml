@@ -992,9 +992,6 @@ services:
             AUTH_ORIGIN: https://web.swarm.${DOMAIN}/api/auth
             NUXT_PUBLIC_API_BASE: "https://api.swarm.${DOMAIN}${API_V1_STR-/api/v1}"
 
-            NUXT_PUBLIC_HOMEPAGE_URL: https://web.swarm.${DOMAIN}
-            NUXT_PUBLIC_I18N_BASE_URL: https://web.swarm.${DOMAIN}
-
             NUXT_DATABASE_DEFAULT_HOST: default-bi-postgres
             NUXT_DATABASE_DEFAULT_PORT: 5432
             NUXT_DATABASE_DEFAULT_USER: ${DEFAULT_PROJECT_POSTGRES_USER?Variable not set}
