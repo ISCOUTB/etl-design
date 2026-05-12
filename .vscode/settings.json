@@ -148,7 +148,13 @@
     ],
     "ruff.organizeImports": true,
     "tailwindCSS.experimental.classRegex": [
-        ["class\\s*:\\s*['\"`]([^'\"`]*)['\"`]", 1],
-        ["cn\\(([^)]*)\\)", 1]
+        [
+            "class\\s*:\\s*['\"`]([^'\"`]*)['\"`]",
+            1
+        ],
+        [
+            "cn\\(([^)]*)\\)",
+            1
+        ]
     ]
 }

@@ -1,4 +1,4 @@
-import { $makeWebSocketMessage, WebSocketMessageSchema } from "#shared/utils/websocket";
+import { WebSocketMessage, WebSocketMessageSchema } from "#shared/utils/websocket";
 
 export default defineWebSocketHandler({
     async message(peer, message) {
@@ -8,7 +8,7 @@ export default defineWebSocketHandler({
             const parsedMessage = WebSocketMessageSchema.safeParse(JSON.parse(message.toString()));
 
             if (parsedMessage.error || !parsedMessage.success) {
-                peer.send($makeWebSocketMessage({ key: "socket:bad-payload" }).serialize());
+                peer.send(WebSocketMessage.new({ key: "socket:bad-payload" }).serialize());
                 return;
             }
 
@@ -19,12 +19,12 @@ export default defineWebSocketHandler({
                     if (parsedMessage.data.userId) {
                         await redis.expire(WebSocketKeys.User.Connected(parsedMessage.data.userId), 300);
                     }
-                    peer.send($makeWebSocketMessage({ key: "pong" }).serialize());
+                    peer.send(WebSocketMessage.new({ key: "pong" }).serialize());
                     break;
                 }
 
                 case "pong": {
-                    peer.send($makeWebSocketMessage({ key: "ping" }).serialize());
+                    peer.send(WebSocketMessage.new({ key: "ping" }).serialize());
                     break;
                 }
 
@@ -34,7 +34,7 @@ export default defineWebSocketHandler({
                 }
 
                 default: {
-                    peer.send($makeWebSocketMessage({ key: "socket:bad-payload" }).serialize());
+                    peer.send(WebSocketMessage.new({ key: "socket:bad-payload" }).serialize());
                 }
             }
         } catch (e) {
