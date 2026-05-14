@@ -1,3 +1,4 @@
+/* eslint-disable style/indent-binary-ops */
 import { ResponseCodesRecord } from "#shared/utils/response-codes";
 import { z } from "zod";
 
@@ -37,7 +38,10 @@ class WebSocketMessageBuilder<
         this.#fields = fields;
     }
 
-    set<F extends keyof WebSocket.MessageFields<K>>(
+    set<
+        F extends Exclude<keyof WebSocket.MessageFields<K>, keyof Collected> &
+            keyof WebSocket.MessageFields<K>,
+    >(
         field: F,
         value: WebSocket.MessageFields<K>[F],
     ): WebSocketMessageBuilder<K, Collected & Pick<WebSocket.MessageFields<K>, F>> {
@@ -86,7 +90,7 @@ export class WebSocketMessage<K extends WebSocket.MessageKey = WebSocket.Message
         return JSON.stringify(this.#data);
     }
 
-    static deserialize(_content: string) {
-
+    static deserialize(content: string) {
+        return WebSocketMessageSchema.safeParse(JSON.parse(content.toString()));
     }
 }

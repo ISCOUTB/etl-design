@@ -1,11 +1,11 @@
-import { WebSocketMessage, WebSocketMessageSchema } from "#shared/utils/websocket";
+import { WebSocketMessage } from "#shared/utils/websocket";
 
 export default defineWebSocketHandler({
     async message(peer, message) {
         const logger = Logger.getInstance();
 
         try {
-            const parsedMessage = WebSocketMessageSchema.safeParse(JSON.parse(message.toString()));
+            const parsedMessage = WebSocketMessage.deserialize(message.toString());
 
             if (parsedMessage.error || !parsedMessage.success) {
                 peer.send(WebSocketMessage.new({ key: "socket:bad-payload" }).serialize());
@@ -17,7 +17,10 @@ export default defineWebSocketHandler({
             switch (parsedMessage.data.key) {
                 case "ping": {
                     if (parsedMessage.data.userId) {
-                        await redis.expire(WebSocketKeys.User.Connected(parsedMessage.data.userId), 300);
+                        await redis.expire(
+                            WebSocketKeys.User.Connected(parsedMessage.data.userId),
+                            300,
+                        );
                     }
                     peer.send(WebSocketMessage.new({ key: "pong" }).serialize());
                     break;
@@ -29,7 +32,12 @@ export default defineWebSocketHandler({
                 }
 
                 case "user-logged": {
-                    await redis.set(WebSocketKeys.User.Connected(parsedMessage.data.userId), peer.id, "EX", 300);
+                    await redis.set(
+                        WebSocketKeys.User.Connected(parsedMessage.data.userId),
+                        peer.id,
+                        "EX",
+                        300,
+                    );
                     break;
                 }
 

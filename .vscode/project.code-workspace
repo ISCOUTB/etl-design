@@ -10,7 +10,7 @@
         },
         {
             "name": "Docs",
-            "path": "../docs"
+            "path": "../docs",
         },
         {
             "name": "[ IAC ] Code",
@@ -84,6 +84,10 @@
             "**/.hg": true,
             "**/.svn": true,
             "**/Thumbs.db": true,
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[typescript]": {
+            "editor.defaultFormatter": "esbenp.prettier-vscode",
         },
     },
 }
