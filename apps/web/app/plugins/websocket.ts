@@ -9,8 +9,7 @@ export default defineNuxtPlugin({
         const socket = useWebSocket<WebSocket.Message>(config.handlers.websocket.url, {
             autoReconnect: true,
             heartbeat: {
-                message: WebSocketMessage
-                    .builder("ping")
+                message: WebSocketMessage.builder("ping")
                     .set("userId", auth.data.value?.user.id)
                     .build
                     .serialize(),
@@ -29,12 +28,9 @@ export default defineNuxtPlugin({
                     auth.data.value?.user
                 ) {
                     socket.send(
-                        WebSocketMessage
-                            .builder("user-logged")
+                        WebSocketMessage.builder("user-logged")
                             .set("userId", auth.data.value.user.id)
-                            .set("accessToken", auth.data.value.accessToken)
-                            .build
-                            .serialize(),
+                            .build.serialize(),
                     );
                 }
             },

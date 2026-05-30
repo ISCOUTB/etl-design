@@ -1002,6 +1002,8 @@ services:
             NUXT_DATABASE_REDIS_PORT: 6379
             NUXT_DATABASE_REDIS_PASSWORD: ${REDIS_PASSWORD?Variable not set}
             NUXT_DATABASE_REDIS_DB: ${REDIS_DB?Variable not set}
+            NUXT_DATABASE_REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES-5}
+            NUXT_DATABASE_REDIS_BACKOFF_FACTOR: ${REDIS_RETRY_BACKOFF_FACTOR-2}
         depends_on:
             - api
         networks:

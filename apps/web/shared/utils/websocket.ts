@@ -23,7 +23,7 @@ export const WebSocketMessageSchema = z.discriminatedUnion("key", [
     defineMessage("ping", { userId: z.string().optional() }),
     defineMessage("pong"),
     defineMessage(ResponseCodesRecord.WebSocket.BadPayload),
-    defineMessage("user-logged", { userId: z.string(), accessToken: z.string() }),
+    defineMessage("user-logged", { userId: z.string() }),
 ]);
 
 class WebSocketMessageBuilder<

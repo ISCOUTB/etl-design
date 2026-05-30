@@ -12,15 +12,14 @@ export default defineWebSocketHandler({
                 return;
             }
 
-            const redis = RedisService.getInstance();
-
             switch (parsedMessage.data.key) {
                 case "ping": {
-                    if (parsedMessage.data.userId) {
-                        await redis.expire(
-                            WebSocketKeys.User.Connected(parsedMessage.data.userId),
-                            300,
-                        );
+                    const { userId } = parsedMessage.data;
+
+                    if (userId) {
+                        await RedisService.Execute((redis) => {
+                            return redis.expire(WebSocketKeys.User.Connected(userId), 300);
+                        });
                     }
                     peer.send(WebSocketMessage.new({ key: "pong" }).serialize());
                     break;
@@ -32,12 +31,12 @@ export default defineWebSocketHandler({
                 }
 
                 case "user-logged": {
-                    await redis.set(
-                        WebSocketKeys.User.Connected(parsedMessage.data.userId),
-                        peer.id,
-                        "EX",
-                        300,
-                    );
+                    const { userId } = parsedMessage.data;
+
+                    await RedisService.Execute((redis) => {
+                        return redis.set(WebSocketKeys.User.Connected(userId), peer.id, "EX", 300);
+                    });
+
                     break;
                 }
 

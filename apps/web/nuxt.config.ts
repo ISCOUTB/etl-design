@@ -125,6 +125,8 @@ export default defineNuxtConfig({
                 PORT: process.env.REDIS_PORT,
                 PASSWORD: process.env.REDIS_PASSWORD,
                 DB: process.env.REDIS_DB,
+                MAX_RETRIES: process.env.REDIS_MAX_RETRIES,
+                BACKOFF_FACTOR: process.env.REDIS_RETRY_BACKOFF_FACTOR,
             },
         },
     },
