@@ -16,7 +16,7 @@
         "@opentelemetry/sdk-trace-node": "^2.7.1",
         "@opentelemetry/semantic-conventions": "^1.41.1",
         "@sloth/packages-proto-utils-js": "workspace:*",
-        "effect": "^3.21.2",
+        "effect": "^3.21.3",
         "excel-formula-ast": "^1.1.1",
         "excel-formula-tokenizer": "^3.0.0",
         "google-protobuf": "^4.0.2",
@@ -30,13 +30,13 @@
         "@sloth/tools-tsconfig": "workspace:*",
         "@types/lodash": "^4.17.24",
         "@types/node": "^25.9.1",
-        "@vitest/coverage-v8": "^4.1.7",
+        "@vitest/coverage-v8": "^4.1.8",
         "consola": "^3.4.2",
         "es-toolkit": "^1.47.0",
         "eslint": "^10.4.1",
         "tsconfig-paths": "^4.2.0",
         "tsup": "^8.5.1",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.7"
+        "vitest": "^4.1.8"
     }
 }
