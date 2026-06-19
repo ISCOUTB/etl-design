@@ -8,17 +8,17 @@ dependencies = [
     "proto-utils",
     "pika>=1.4.1",
     "aio-pika>=9.5.7",
-    "pydantic-settings>=2.14.1",
-    "fastuuid7>=0.1.0",
+    "pydantic-settings>=2.14.2",
+    "fastuuid7>=0.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.2",
+    "pytest>=9.1.1",
     "pytest-cov>=7.0.0",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.18",
 ]
 
 [tool.uv.sources]
