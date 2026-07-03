@@ -7,11 +7,11 @@ requires-python = ">=3.12.10"
 dependencies = [
     "asyncio>=4.0.0",
     "opentelemetry-instrumentation-grpc>=0.63b1",
-    "opentelemetry-sdk>=1.40.0",
+    "opentelemetry-sdk>=1.43.0",
     "opentelemetry-exporter-otlp-proto-http>=1.41.1",
     "proto-utils",
     "py-async-grpc-prometheus>=0.2.0",
-    "pydantic-settings>=2.14.1",
+    "pydantic-settings>=2.14.2",
     "python-json-logger>=4.0.0",
     "watchfiles>=1.2.0",
 ]
@@ -22,11 +22,11 @@ proto-utils = { path = "../../../../packages/proto-utils/proto-utils-py", editab
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
+    "pytest>=9.1.1",
     "pytest-cov>=7.0.0",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.20",
 ]
 
 [tool.pytest.ini_options]
